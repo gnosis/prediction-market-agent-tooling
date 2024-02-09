@@ -29,6 +29,3 @@ class APIKeys(BaseSettings):
             self.BET_FROM_PRIVATE_KEY,
             "BET_FROM_PRIVATE_KEY missing in the environment.",
         )
-
-
-print(APIKeys().manifold_api_key)

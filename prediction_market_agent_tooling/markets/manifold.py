@@ -1,6 +1,7 @@
 import requests
 import typing as t
 from prediction_market_agent_tooling.gtypes import Mana
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.data_models import (
     ManifoldMarket,
 )
@@ -43,7 +44,7 @@ def pick_binary_market() -> ManifoldMarket:
     return get_manifold_binary_markets(1)[0]
 
 
-def place_bet(amount: Mana, market_id: str, outcome: bool, api_key: str) -> None:
+def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
     outcome_str = "YES" if outcome else "NO"
     url = "https://api.manifold.markets/v0/bet"
     params = {
@@ -53,7 +54,7 @@ def place_bet(amount: Mana, market_id: str, outcome: bool, api_key: str) -> None
     }
 
     headers = {
-        "Authorization": f"Key {api_key}",
+        "Authorization": f"Key {APIKeys().manifold_api_key}",
         "Content-Type": "application/json",
     }
     response = requests.post(url, json=params, headers=headers)

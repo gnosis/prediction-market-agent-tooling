@@ -6,7 +6,6 @@ from prediction_market_agent_tooling.deploy.agent import (
     DeploymentType,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.config import APIKeys
 
 
 def test_local_deployment() -> None:
@@ -24,7 +23,6 @@ def test_local_deployment() -> None:
         sleep_time=0.001,
         market_type=MarketType.MANIFOLD,
         deployment_type=DeploymentType.LOCAL,
-        api_keys=APIKeys(),
         timeout=0.01,
         place_bet=False,
     )

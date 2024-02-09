@@ -31,22 +31,19 @@ def get_bet_amount(amount: Decimal, market_type: MarketType) -> BetAmount:
 @t.overload
 def get_binary_markets(
     market_type: t.Literal[MarketType.MANIFOLD],
-) -> list[manifold.ManifoldMarket]:
-    ...
+) -> list[manifold.ManifoldMarket]: ...
 
 
 @t.overload
 def get_binary_markets(
     market_type: t.Literal[MarketType.OMEN],
-) -> list[omen.OmenMarket]:
-    ...
+) -> list[omen.OmenMarket]: ...
 
 
 @t.overload
 def get_binary_markets(
     market_type: MarketType,
-) -> t.Union[list[manifold.ManifoldMarket], list[omen.OmenMarket]]:
-    ...
+) -> t.Union[list[manifold.ManifoldMarket], list[omen.OmenMarket]]: ...
 
 
 def get_binary_markets(
@@ -65,10 +62,10 @@ def get_binary_markets(
 def place_bet(
     market: t.Union[omen.OmenMarket, manifold.ManifoldMarket],
     outcome: bool,
-    keys: APIKeys,
     omen_auto_deposit: bool,
     amount: BetAmount,
 ) -> None:
+    keys = APIKeys()
     if isinstance(market, manifold.ManifoldMarket):
         if amount.currency != Currency.Mana:
             raise ValueError(f"Manifold bets are made in Mana. Got {amount.currency}.")
@@ -77,7 +74,6 @@ def place_bet(
             amount=check_not_none(amount_mana),
             market_id=market.id,
             outcome=outcome,
-            api_key=check_not_none(keys.manifold_api_key),
         )
     elif isinstance(market, omen.OmenMarket):
         if amount.currency != Currency.xDai:

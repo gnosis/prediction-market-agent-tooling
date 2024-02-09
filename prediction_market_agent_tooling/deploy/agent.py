@@ -37,7 +37,6 @@ class DeployableAgent(BaseModel):
         self,
         market_type: MarketType,
         deployment_type: DeploymentType,
-        api_keys: APIKeys,
         sleep_time: float,
         timeout: float,
         place_bet: bool,
@@ -50,16 +49,12 @@ class DeployableAgent(BaseModel):
         elif deployment_type == DeploymentType.LOCAL:
             start_time = time.time()
             while True:
-                self.run(
-                    market_type=market_type, api_keys=api_keys, _place_bet=place_bet
-                )
+                self.run(market_type=market_type, _place_bet=place_bet)
                 time.sleep(sleep_time)
                 if time.time() - start_time > timeout:
                     break
 
-    def run(
-        self, market_type: MarketType, api_keys: APIKeys, _place_bet: bool = True
-    ) -> None:
+    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
         available_markets = [
             x.to_agent_market() for x in get_binary_markets(market_type)
         ]
@@ -72,7 +67,6 @@ class DeployableAgent(BaseModel):
                     market=market.original_market,
                     amount=get_tiny_bet(market_type),
                     outcome=result,
-                    keys=api_keys,
                     omen_auto_deposit=True,
                 )
 

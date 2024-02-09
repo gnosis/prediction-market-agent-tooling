@@ -5,7 +5,6 @@ import random
 from prediction_market_agent_tooling.markets.data_models import AgentMarket
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.config import APIKeys
 
 
 class DeployableCoinFlipAgent(DeployableAgent):
@@ -20,5 +19,5 @@ class DeployableCoinFlipAgent(DeployableAgent):
 
 @functions_framework.http
 def main(request: Request) -> str:
-    DeployableCoinFlipAgent().run(market_type=MarketType.MANIFOLD, api_keys=APIKeys())
+    DeployableCoinFlipAgent().run(market_type=MarketType.MANIFOLD)
     return "Success"

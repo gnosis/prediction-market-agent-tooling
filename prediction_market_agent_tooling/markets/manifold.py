@@ -3,7 +3,9 @@ import typing as t
 from prediction_market_agent_tooling.gtypes import Mana
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.data_models import (
+    ManifoldBet,
     ManifoldMarket,
+    ManifoldUser,
 )
 
 """
@@ -69,3 +71,23 @@ def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
         raise Exception(
             f"Placing bet failed: {response.status_code} {response.reason} {response.text}"
         )
+
+
+def get_authenticated_user() -> ManifoldUser:
+    url = "https://api.manifold.markets/v0/me"
+    headers = {
+        "Authorization": f"Key {APIKeys().manifold_api_key}",
+        "Content-Type": "application/json",
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return ManifoldUser.model_validate(response.json())
+
+
+def get_bets(user_id: str) -> list[ManifoldBet]:
+    url = "https://api.manifold.markets/v0/bets"
+
+    params: dict[str, str] = {"userId": user_id}
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    return [ManifoldBet.model_validate(x) for x in response.json()]

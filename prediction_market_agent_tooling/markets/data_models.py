@@ -116,7 +116,7 @@ class ManifoldPool(BaseModel):
 
 class ManifoldMarket(BaseModel):
     """
-    https://manifold.markets
+    https://docs.manifold.markets/api#get-v0markets
     """
 
     BET_AMOUNT_CURRENCY: Currency = Currency.Mana
@@ -131,7 +131,7 @@ class ManifoldMarket(BaseModel):
     creatorUsername: str
     isResolved: bool
     lastBetTime: datetime
-    lastCommentTime: t.Optional[datetime] = None  # Not always present
+    lastCommentTime: t.Optional[datetime] = None
     lastUpdatedTime: datetime
     mechanism: str
     outcomeType: str
@@ -160,3 +160,79 @@ class ManifoldMarket(BaseModel):
 
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
+
+
+class ProfitCached(BaseModel):
+    daily: Mana
+    weekly: Mana
+    monthly: Mana
+    allTime: Mana
+
+
+class ManifoldUser(BaseModel):
+    """
+    https://docs.manifold.markets/api#get-v0userusername
+    """
+
+    id: str
+    createdTime: datetime
+    name: str
+    username: str
+    url: str
+    avatarUrl: t.Optional[str] = None
+    bio: t.Optional[str] = None
+    bannerUrl: t.Optional[str] = None
+    website: t.Optional[str] = None
+    twitterHandle: t.Optional[str] = None
+    discordHandle: t.Optional[str] = None
+    isBot: t.Optional[bool] = None
+    isAdmin: t.Optional[bool] = None
+    isTrustworthy: t.Optional[bool] = None
+    isBannedFromPosting: t.Optional[bool] = None
+    userDeleted: t.Optional[bool] = None
+    balance: Mana
+    totalDeposits: Mana
+    lastBetTime: t.Optional[datetime] = None
+    currentBettingStreak: t.Optional[int] = None
+    profitCached: ProfitCached
+
+
+class ManifoldBetFills(BaseModel):
+    amount: Mana
+    matchedBetId: t.Optional[str]
+    shares: Decimal
+    timestamp: int
+
+
+class ManifoldBetFees(BaseModel):
+    platformFee: Decimal
+    liquidityFee: Decimal
+    creatorFee: Decimal
+
+
+class ManifoldBet(BaseModel):
+    """
+    https://docs.manifold.markets/api#get-v0bets
+    """
+
+    shares: Decimal
+    probBefore: Probability
+    isFilled: t.Optional[bool] = None
+    probAfter: Probability
+    userId: str
+    amount: Mana
+    contractId: str
+    id: str
+    fees: ManifoldBetFees
+    isCancelled: t.Optional[bool] = None
+    loanAmount: Mana
+    orderAmount: t.Optional[Mana] = None
+    fills: t.Optional[list[ManifoldBetFills]] = None
+    createdTime: int
+    outcome: str
+
+
+class Bet(BaseModel):
+    amount: BetAmount
+    outcome: bool
+    created_time: datetime

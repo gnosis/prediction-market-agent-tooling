@@ -9,6 +9,8 @@ from prediction_market_agent_tooling.gtypes import (
     PrivateKey,
     ChecksumAddress,
     xdai_type,
+    HexAddress,
+    HexStr,
 )
 
 ONE_NONCE = Nonce(1)
@@ -30,6 +32,14 @@ def xdai_to_wei(native: xDai) -> Wei:
 
 
 RemoveOrAddFractionAmountType = TypeVar("RemoveOrAddFractionAmountType", bound=int)
+
+
+def verify_address(address: str) -> ChecksumAddress:
+    if not Web3.is_checksum_address(address):
+        raise ValueError(
+            f"The address {address} is not a valid checksum address, please fix your input."
+        )
+    return ChecksumAddress(HexAddress(HexStr(address)))
 
 
 def remove_fraction(

@@ -3,7 +3,7 @@ description: "Set up Python and install dependencies"
 runs:
   using: "composite"
   steps:
-    - name: Set up Python 3.9
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}

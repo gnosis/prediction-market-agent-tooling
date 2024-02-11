@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.9.x", "3.10.x", "3.11.x", "3.12.x" ]
+        python-version: [ '3.9.x', '3.10.x', '3.11.x', '3.12.x' ]
     name: Python ${{ matrix.python-version }} pytest
     steps:
       - uses: actions/checkout@v2
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.9.x", "3.10.x", "3.11.x", "3.12.x" ]
+        python-version: [ '3.9.x', '3.10.x', '3.11.x', '3.12.x' ]
     name: Python ${{ matrix.python-version }} pytest with paid tests
     steps:
       - uses: actions/checkout@v2
@@ -46,8 +46,8 @@ jobs:
       - name: Run pytest
         run: poetry run pytest
         env:
-          RUN_PAID_TESTS: "1"
-    if: github.event_name == "workflow_dispatch"
+          RUN_PAID_TESTS: '1'
+    if: github.event_name == 'workflow_dispatch'
     # TODO: Remove once the environment variables are fixed in the new repository.
     continue-on-error: true
 

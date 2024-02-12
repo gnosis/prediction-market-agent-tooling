@@ -6,7 +6,9 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
 
 
 class APIKeys(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     MANIFOLD_API_KEY: t.Optional[str] = None
     BET_FROM_ADDRESS: t.Optional[ChecksumAddress] = None

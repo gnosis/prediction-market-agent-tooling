@@ -1,8 +1,10 @@
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 import typing as t
 from pydantic import BaseModel
 from web3 import Web3
+
 from prediction_market_agent_tooling.gtypes import (
     USD,
     HexAddress,
@@ -13,7 +15,6 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     Wei,
 )
-from datetime import datetime
 
 
 class Currency(str, Enum):
@@ -24,6 +25,28 @@ class Currency(str, Enum):
 class BetAmount(BaseModel):
     amount: Decimal
     currency: Currency
+
+
+class ProfitAmount(BaseModel):
+    amount: Decimal
+    currency: Currency
+
+
+class Bet(BaseModel):
+    amount: BetAmount
+    outcome: bool
+    created_time: datetime
+    market_question: str
+
+
+class ResolvedBet(Bet):
+    market_outcome: bool
+    resolved_time: datetime
+    profit: ProfitAmount
+
+    @property
+    def is_correct(self) -> bool:
+        return self.outcome == self.market_outcome
 
 
 class AgentMarket(BaseModel):
@@ -130,6 +153,8 @@ class ManifoldMarket(BaseModel):
     creatorName: str
     creatorUsername: str
     isResolved: bool
+    resolution: t.Optional[str] = None
+    resolutionTime: t.Optional[datetime] = None
     lastBetTime: datetime
     lastCommentTime: t.Optional[datetime] = None
     lastUpdatedTime: datetime
@@ -228,11 +253,28 @@ class ManifoldBet(BaseModel):
     loanAmount: Mana
     orderAmount: t.Optional[Mana] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
-    createdTime: int
+    createdTime: datetime
     outcome: str
 
 
-class Bet(BaseModel):
-    amount: BetAmount
-    outcome: bool
-    created_time: datetime
+class ManifoldContractMetric(BaseModel):
+    """
+    https://docs.manifold.markets/api#get-v0marketmarketidpositions
+    """
+
+    contractId: str
+    hasNoShares: bool
+    hasShares: bool
+    hasYesShares: bool
+    invested: Decimal
+    loan: Decimal
+    maxSharesOutcome: t.Optional[str]
+    payout: Decimal
+    profit: Decimal
+    profitPercent: Decimal
+    totalShares: dict[str, Decimal]
+    userId: str
+    userUsername: str
+    userName: str
+    userAvatarUrl: str
+    lastBetTime: datetime

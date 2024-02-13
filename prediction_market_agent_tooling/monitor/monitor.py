@@ -2,16 +2,16 @@ import altair as alt
 from datetime import datetime
 from pydantic import BaseModel
 import pandas as pd
-import pytz
 import streamlit as st
 import typing as t
+from zoneinfo import ZoneInfo
 
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 
 
 class DeployedAgent(BaseModel):
     name: str
-    start_time: datetime = datetime.now().astimezone(tz=pytz.UTC)
+    start_time: datetime = datetime.now().astimezone(tz=ZoneInfo("UTC"))
     end_time: t.Optional[datetime] = None
 
     def get_resolved_bets(self) -> list[ResolvedBet]:

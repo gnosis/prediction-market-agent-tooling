@@ -13,7 +13,6 @@ def gcloud_deploy_cmd(
     api_keys: dict[str, str],
     memory: int,  # in MB
 ) -> str:
-    api_keys_str = " ".join([f"{k}={v}" for k, v in api_keys.items()])
     cmd = (
         f"gcloud functions deploy {gcp_function_name} "
         f"--runtime {get_gcloud_python_runtime_str()} "
@@ -25,8 +24,8 @@ def gcloud_deploy_cmd(
         f"--memory {memory}MB "
         f"--no-allow-unauthenticated "
     )
-    if api_keys:
-        cmd += f"--set-env-vars {api_keys_str} "
+    for k, v in api_keys.items():
+        cmd += f"--set-env-vars {k}={v} "
 
     return cmd
 

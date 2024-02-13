@@ -119,6 +119,8 @@ def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
     market = get_manifold_market(bet.contractId)
     if not market.isResolved:
         raise ValueError(f"Market {market.id} is not resolved.")
+    if not market.resolutionTime:
+        raise ValueError(f"Market {market.id} has no resolution time.")
 
     # Get the profit for this bet from the corresponding position
     positions = get_market_positions(market.id, bet.userId)
@@ -130,7 +132,7 @@ def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
         outcome=bet.outcome == "YES",
         created_time=bet.createdTime,
         market_question=market.question,
-        market_outcome=market.resolution,
+        market_outcome=market.resolution == "YES",
         resolved_time=market.resolutionTime,
         profit=ProfitAmount(amount=profit, currency=Currency.Mana),
     )

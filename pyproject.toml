@@ -22,6 +22,7 @@ web3 = "^6.15.1"
 eth-typing = "^4.0.0"
 pydantic-settings = "^2.1.0"
 numpy = "^1.26.4"
+autoflake = "^2.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

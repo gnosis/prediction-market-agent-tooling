@@ -8,7 +8,6 @@ from prediction_market_agent_tooling.markets.markets import (
     get_binary_markets,
     place_bet,
 )
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,

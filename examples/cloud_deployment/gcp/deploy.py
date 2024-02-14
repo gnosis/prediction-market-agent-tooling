@@ -13,9 +13,9 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.realpath(__file__))
     fname = deploy_to_gcp(
-        requirements_file=f"{current_dir}/../../pyproject.toml",
+        requirements_file=f"{current_dir}/../../../pyproject.toml",
         extra_deps=[
-            "git+https://github.com/gnosis/prediction-market-agent.git@evan/deploy-agent"
+            "git+https://github.com/gnosis/prediction-market-agent-tooling.git"
         ],
         function_file=f"{current_dir}/agent.py",
         market_type=MarketType.MANIFOLD,
@@ -30,8 +30,8 @@ if __name__ == "__main__":
     response = run_deployed_gcp_function(fname)
     assert response.ok
 
-    # Schedule the function
-    schedule_deployed_gcp_function(fname, cron_schedule="* * * * *")
+    # Schedule the function to run once every 2 hours
+    schedule_deployed_gcp_function(fname, cron_schedule="0 */2 * * *")
 
     # Delete the function
     remove_deployed_gcp_function(fname)

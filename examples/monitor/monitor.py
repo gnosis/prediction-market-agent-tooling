@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import streamlit as st
 
 from prediction_market_agent_tooling.markets.manifold import get_authenticated_user
 from prediction_market_agent_tooling.monitor.markets.manifold import (
@@ -14,4 +15,5 @@ if __name__ == "__main__":
         start_time=start_time.astimezone(ZoneInfo("UTC")),
         manifold_user_id=get_authenticated_user().id,
     )
+    st.set_page_config(layout="wide")  # Best viewed with a wide screen
     monitor_agent(agent)

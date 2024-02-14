@@ -4,14 +4,13 @@ from pydantic import BaseModel
 import pandas as pd
 import streamlit as st
 import typing as t
-from zoneinfo import ZoneInfo
 
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 
 
 class DeployedAgent(BaseModel):
     name: str
-    start_time: datetime = datetime.now().astimezone(tz=ZoneInfo("UTC"))
+    start_time: datetime = datetime.utcnow()
     end_time: t.Optional[datetime] = None
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
@@ -31,7 +30,6 @@ def monitor_agent(agent: DeployedAgent) -> None:
     }
     bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
 
-    st.set_page_config(layout="wide")
     st.title(f"Monitoring Agent: '{agent.name}'")
 
     # Metrics

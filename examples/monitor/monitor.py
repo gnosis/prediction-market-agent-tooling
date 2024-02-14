@@ -16,4 +16,5 @@ if __name__ == "__main__":
         manifold_user_id=get_authenticated_user().id,
     )
     st.set_page_config(layout="wide")  # Best viewed with a wide screen
+    st.title(f"Monitoring Agent: '{agent.name}'")
     monitor_agent(agent)

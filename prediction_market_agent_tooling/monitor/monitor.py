@@ -30,8 +30,6 @@ def monitor_agent(agent: DeployedAgent) -> None:
     }
     bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
 
-    st.title(f"Monitoring Agent: '{agent.name}'")
-
     # Metrics
     col1, col2 = st.columns(2)
     col1.metric(label="Number of bets", value=f"{len(agent_bets)}")

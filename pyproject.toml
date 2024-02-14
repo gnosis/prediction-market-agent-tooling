@@ -10,7 +10,7 @@ buy_omen = "scripts.bet_omen:buy"
 sell_omen = "scripts.bet_omen:sell"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.4"
+python = "^3.10"
 typer = "^0.9.0"
 pydantic = "^2.6.1"
 web3 = "^6.15.1"

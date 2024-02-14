@@ -1,18 +1,20 @@
+import os
 import typing as t
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import verify_address
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
+
+load_dotenv()
 
 
-class APIKeys(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
-
-    MANIFOLD_API_KEY: t.Optional[str] = None
-    BET_FROM_ADDRESS: t.Optional[ChecksumAddress] = None
-    BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
+class APIKeys(BaseModel):
+    MANIFOLD_API_KEY: t.Optional[str] = os.getenv("MANIFOLD_API_KEY")
+    BET_FROM_ADDRESS: t.Optional[ChecksumAddress] = os.getenv("BET_FROM_ADDRESS")
+    BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = os.getenv("BET_FROM_PRIVATE_KEY")
 
     @property
     def manifold_api_key(self) -> str:

@@ -1,12 +1,13 @@
 from decimal import Decimal
 from typing import NewType, Union
-from web3.types import Wei
-from eth_typing.evm import (
+
+from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     Address,
-    HexStr,
-    HexAddress,
     ChecksumAddress,
-)  # noqa: F401  # Import for the sake of easy importing with others from here.
+    HexAddress,
+    HexStr,
+)
+from web3.types import Wei
 
 Wad = Wei  # Wei tends to be referred to as `wad` variable in contracts.
 USD = NewType(

@@ -1,19 +1,21 @@
+import typing as t
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-import typing as t
+
 from pydantic import BaseModel
 from web3 import Web3
+
 from prediction_market_agent_tooling.gtypes import (
     USD,
-    HexAddress,
     ChecksumAddress,
-    Probability,
+    HexAddress,
     Mana,
     OmenOutcomeToken,
-    xDai,
+    Probability,
     Wei,
+    xDai,
 )
-from datetime import datetime
 
 
 class Currency(str, Enum):

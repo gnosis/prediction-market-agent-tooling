@@ -1,10 +1,10 @@
-import requests
 import typing as t
-from prediction_market_agent_tooling.gtypes import Mana
+
+import requests
+
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.markets.data_models import (
-    ManifoldMarket,
-)
+from prediction_market_agent_tooling.gtypes import Mana
+from prediction_market_agent_tooling.markets.data_models import ManifoldMarket
 
 """
 Python API for Manifold Markets

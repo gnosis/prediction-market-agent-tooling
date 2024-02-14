@@ -1,9 +1,11 @@
 import time
+
 import pytest
-from tests.utils import RUN_PAID_TESTS
+
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.markets.markets import omen
 from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.markets.markets import omen
+from tests.utils import RUN_PAID_TESTS
 
 
 def test_omen_pick_binary_market() -> None:

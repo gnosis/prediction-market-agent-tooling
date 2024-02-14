@@ -60,3 +60,13 @@ jobs:
         run: |
           poetry run autoflake --in-place --remove-all-unused-imports --remove-unused-variables --recursive .
           git diff --exit-code --quiet || exit 1
+
+  isort:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/python_prepare
+      - name: Check with isort
+        run: |
+          poetry run isort --recursive --apply .
+          git diff --exit-code --quiet || exit 1

@@ -10,7 +10,9 @@ def gcloud_deploy_cmd(
     gcp_function_name: str,
     source: str,
     entry_point: str,
-    api_keys: dict[str, str],
+    labels: dict[str, str],
+    env_vars: dict[str, str],
+    secrets: dict[str, str],
     memory: int,  # in MB
 ) -> str:
     cmd = (
@@ -24,8 +26,12 @@ def gcloud_deploy_cmd(
         f"--memory {memory}MB "
         f"--no-allow-unauthenticated "
     )
-    for k, v in api_keys.items():
+    for k, v in labels.items():
+        cmd += f"--update-labels {k}={v} "
+    for k, v in env_vars.items():
         cmd += f"--set-env-vars {k}={v} "
+    for k, v in secrets.items():
+        cmd += f"--set-secrets {k}={v} "
 
     return cmd
 

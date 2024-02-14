@@ -9,7 +9,6 @@ from prediction_market_agent_tooling.gtypes import (
     PrivateKey,
     xdai_type,
 )
-from eth_typing import HexStr
 
 app = typer.Typer()
 

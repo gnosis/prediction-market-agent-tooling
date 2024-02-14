@@ -3,6 +3,7 @@ import requests
 import shutil
 import subprocess
 import tempfile
+import typing as t
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent
 from prediction_market_agent_tooling.tools.utils import export_requirements_from_toml
 from prediction_market_agent_tooling.deploy.gcp.utils import (
@@ -20,13 +21,13 @@ from cron_validator import CronValidator
 
 def deploy_to_gcp(
     function_file: str,
-    requirements_file: str,
+    requirements_file: t.Optional[str],
     extra_deps: list[str],
     api_keys: dict[str, str],
     market_type: MarketType,
     memory: int,  # in MB
 ) -> str:
-    if not os.path.exists(requirements_file):
+    if requirements_file and not os.path.exists(requirements_file):
         raise ValueError(f"File {requirements_file} does not exist")
 
     if not os.path.exists(function_file):
@@ -40,10 +41,19 @@ def deploy_to_gcp(
         shutil.copy(function_file, f"{tempdir}/main.py")
 
         # If the file is a .toml file, convert it to a requirements.txt file
-        if requirements_file.endswith(".toml"):
-            export_requirements_from_toml(output_dir=tempdir, extra_deps=extra_deps)
+        if requirements_file is None:
+            # Just create an empty file.
+            with open(f"{tempdir}/requirements.txt", "w"):
+                pass
+        elif requirements_file.endswith(".toml"):
+            export_requirements_from_toml(output_dir=tempdir)
         else:
             shutil.copy(requirements_file, f"{tempdir}/requirements.txt")
+
+        if extra_deps:
+            with open(f"{tempdir}/requirements.txt", "a") as f:
+                for dep in extra_deps:
+                    f.write(f"{dep}\n")
 
         # Create the topic used to trigger the function. Note we use the
         # convention that the topic name is the same as the function name

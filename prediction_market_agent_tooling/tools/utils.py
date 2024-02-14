@@ -50,7 +50,7 @@ def should_not_happen(
     raise exp(msg)
 
 
-def export_requirements_from_toml(output_dir: str, extra_deps: list[str] = []) -> None:
+def export_requirements_from_toml(output_dir: str) -> None:
     if not os.path.exists(output_dir):
         raise ValueError(f"Directory {output_dir} does not exist")
     output_file = f"{output_dir}/requirements.txt"
@@ -58,8 +58,4 @@ def export_requirements_from_toml(output_dir: str, extra_deps: list[str] = []) -
         f"poetry export -f requirements.txt --without-hashes --output {output_file}",
         shell=True,
     )
-    if extra_deps:
-        with open(output_file, "a") as f:
-            for dep in extra_deps:
-                f.write(f"{dep}\n")
     print(f"Saved requirements to {output_dir}/requirements.txt")

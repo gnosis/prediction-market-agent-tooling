@@ -6,7 +6,7 @@ import requests
 from pydantic import BaseModel, validator
 
 
-class EvalautedQuestion(BaseModel):
+class EvaluatedQuestion(BaseModel):
     question: str
     is_predictable: bool
 
@@ -60,7 +60,7 @@ class OutcomePrediction(BaseModel):
 
 
 class Prediction(BaseModel):
-    evaluation: t.Optional[EvalautedQuestion] = None
+    evaluation: t.Optional[EvaluatedQuestion] = None
     outcome_prediction: t.Optional[OutcomePrediction] = None
 
     time: t.Optional[float] = None

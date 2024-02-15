@@ -4,7 +4,7 @@ import pytest
 
 import prediction_market_agent_tooling.benchmark.benchmark as bm
 from prediction_market_agent_tooling.benchmark.utils import (
-    EvalautedQuestion,
+    EvaluatedQuestion,
     MarketSource,
     OutcomePrediction,
     get_markets,
@@ -17,7 +17,7 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
 
     def evaluate_research_predict(self, market_question: str) -> bm.Prediction:
         return bm.Prediction(
-            evaluation=EvalautedQuestion(
+            evaluation=EvaluatedQuestion(
                 question=market_question,
                 is_predictable=True,
             ),
@@ -40,7 +40,7 @@ class DummyAgentNoPrediction(bm.AbstractBenchmarkedAgent):
 
     def evaluate_research_predict(self, market_question: str) -> bm.Prediction:
         return bm.Prediction(
-            evaluation=EvalautedQuestion(
+            evaluation=EvaluatedQuestion(
                 question=market_question,
                 is_predictable=False,
             ),

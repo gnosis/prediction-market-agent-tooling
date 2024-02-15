@@ -23,7 +23,6 @@ from prediction_market_agent_tooling.markets.markets import (
 
 
 class DeployableAgent:
-
     def pick_markets(self, markets: list[AgentMarket]) -> list[AgentMarket]:
         """
         This method should be implemented by the subclass to pick the markets to bet on. By default, it picks only the first market.

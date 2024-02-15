@@ -118,9 +118,8 @@ def main(request) -> str:
                     omen_auto_deposit=True,
                 )
 
-    @classmethod
-    def get_gcloud_fname(cls, market_type: MarketType) -> str:
-        return f"{cls.__class__.__name__.lower()}-{market_type}-{int(time.time())}"
+    def get_gcloud_fname(self, market_type: MarketType) -> str:
+        return f"{self.__class__.__name__.lower()}-{market_type}-{int(time.time())}"
 
 
 def get_tiny_bet(market_type: MarketType) -> BetAmount:

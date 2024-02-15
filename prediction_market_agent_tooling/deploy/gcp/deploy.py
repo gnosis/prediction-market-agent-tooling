@@ -4,7 +4,6 @@ import shutil
 import subprocess
 import tempfile
 import typing as t
-from prediction_market_agent_tooling.deploy.agent import DeployableAgent
 from prediction_market_agent_tooling.tools.utils import export_requirements_from_toml
 from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcloud_create_topic_cmd,
@@ -20,13 +19,13 @@ from cron_validator import CronValidator
 
 
 def deploy_to_gcp(
+    gcp_fname: str,
     function_file: str,
     requirements_file: t.Optional[str],
     extra_deps: list[str],
-    labels: dict[str, str],
-    env_vars: dict[str, str],
-    secrets: dict[str, str],
-    market_type: MarketType,
+    labels: dict[str, str] | None,
+    env_vars: dict[str, str] | None,
+    secrets: dict[str, str] | None,
     memory: int,  # in MB
 ) -> str:
     if requirements_file and not os.path.exists(requirements_file):
@@ -34,8 +33,6 @@ def deploy_to_gcp(
 
     if not os.path.exists(function_file):
         raise ValueError(f"File {function_file} does not exist")
-
-    gcp_fname = DeployableAgent().get_gcloud_fname(market_type=market_type)
 
     # Make a tempdir to store the requirements file and the function
     with tempfile.TemporaryDirectory() as tempdir:

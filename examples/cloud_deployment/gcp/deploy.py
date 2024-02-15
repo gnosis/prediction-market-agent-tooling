@@ -1,5 +1,6 @@
 import os
 import getpass
+import random
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
@@ -9,16 +10,26 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
 )
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.data_models import AgentMarket
+from prediction_market_agent_tooling.deploy.agent import DeployableAgent
+
+
+class DeployableCoinFlipAgent(DeployableAgent):
+    def pick_markets(self, markets: list[AgentMarket]) -> list[AgentMarket]:
+        if len(markets) > 1:
+            return random.sample(markets, 1)
+        return markets
+
+    def answer_binary_market(self, market: AgentMarket) -> bool:
+        return random.choice([True, False])
 
 
 if __name__ == "__main__":
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    fname = deploy_to_gcp(
-        requirements_file=None,
-        extra_deps=[
-            "git+https://github.com/gnosis/prediction-market-agent-tooling.git@main"
-        ],
-        function_file=f"{current_dir}/agent.py",
+    agent = DeployableCoinFlipAgent()
+    agent.deploy_gcp(
+        agent_init_string="DeployableCoinFlipAgent",
+        # TODO: Switch to main.
+        repository="git+https://github.com/gnosis/prediction-market-agent-tooling.git@peter/refactor-deployment",
         market_type=MarketType.MANIFOLD,
         labels={
             "owner": getpass.getuser()
@@ -28,18 +39,6 @@ if __name__ == "__main__":
         secrets={
             "MANIFOLD_API_KEY": f"JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest"
         },  # Must be in the format "env_var_in_container => secret_name:version", you can create secrets using `gcloud secrets create --labels owner=<your-name> <secret-name>` command.
-        memory=512,
+        memory=256,
+        cron_schedule="0 */2 * * *",
     )
-
-    # Check that the function is deployed
-    assert gcp_function_is_active(fname)
-
-    # Run the function
-    response = run_deployed_gcp_function(fname)
-    assert response.ok
-
-    # Schedule the function
-    schedule_deployed_gcp_function(fname, cron_schedule="* * * * *")
-
-    # Delete the function
-    remove_deployed_gcp_function(fname)

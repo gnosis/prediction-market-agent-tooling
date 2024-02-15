@@ -1,6 +1,7 @@
 import time
-from enum import Enum
-from pydantic import BaseModel
+import os
+import tempfile
+import inspect
 from decimal import Decimal
 from prediction_market_agent_tooling.markets.data_models import AgentMarket
 from prediction_market_agent_tooling.markets.markets import (
@@ -8,19 +9,20 @@ from prediction_market_agent_tooling.markets.markets import (
     get_binary_markets,
     place_bet,
 )
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
 )
+from prediction_market_agent_tooling.deploy.gcp.deploy import (
+    deploy_to_gcp,
+    run_deployed_gcp_function,
+    schedule_deployed_gcp_function,
+)
+from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 
 
-class DeploymentType(str, Enum):
-    GOOGLE_CLOUD = "google_cloud"
-    LOCAL = "local"
+class DeployableAgent:
 
-
-class DeployableAgent(BaseModel):
     def pick_markets(self, markets: list[AgentMarket]) -> list[AgentMarket]:
         """
         This method should be implemented by the subclass to pick the markets to bet on. By default, it picks only the first market.
@@ -33,26 +35,73 @@ class DeployableAgent(BaseModel):
         """
         raise NotImplementedError("This method must be implemented by the subclass")
 
-    def deploy(
+    def deploy_local(
         self,
         market_type: MarketType,
-        deployment_type: DeploymentType,
         sleep_time: float,
         timeout: float,
         place_bet: bool,
     ) -> None:
-        if deployment_type == DeploymentType.GOOGLE_CLOUD:
-            # Deploy to Google Cloud Functions, and use Google Cloud Scheduler to run the function
-            raise NotImplementedError(
-                "TODO not currently possible via DeployableAgent class. See examples/cloud_deployment/ instead."
+        start_time = time.time()
+        while True:
+            self.run(market_type=market_type, _place_bet=place_bet)
+            time.sleep(sleep_time)
+            if time.time() - start_time > timeout:
+                break
+
+    def deploy_gcp(
+        self,
+        agent_init_string: str,
+        repository: str,
+        market_type: MarketType,
+        memory: int,
+        labels: dict[str, str] | None = None,
+        env_vars: dict[str, str] | None = None,
+        secrets: dict[str, str] | None = None,
+        cron_schedule: str | None = None,
+    ) -> None:
+        path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
+
+        entrypoint_template = f"""
+from {path_to_agent_file.replace("/", ".").replace(".py", "")} import *
+import functions_framework
+from prediction_market_agent_tooling.markets.markets import MarketType
+
+@functions_framework.http
+def main(request) -> str:
+    {agent_init_string}().run(market_type=market_type)
+    return "Success"
+"""
+
+        gcp_fname = self.get_gcloud_fname(market_type)
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
+            f.write(entrypoint_template)
+            f.flush()
+
+            fname = deploy_to_gcp(
+                gcp_fname=gcp_fname,
+                requirements_file=None,
+                extra_deps=[repository],
+                function_file=f.name,
+                labels=labels,
+                env_vars=env_vars,
+                secrets=secrets,
+                memory=memory,
             )
-        elif deployment_type == DeploymentType.LOCAL:
-            start_time = time.time()
-            while True:
-                self.run(market_type=market_type, _place_bet=place_bet)
-                time.sleep(sleep_time)
-                if time.time() - start_time > timeout:
-                    break
+
+        # Check that the function is deployed
+        if not gcp_function_is_active(fname):
+            raise RuntimeError("Failed to deploy the function")
+
+        # Run the function
+        response = run_deployed_gcp_function(fname)
+        if not response.ok:
+            raise RuntimeError("Failed to run the deployed function")
+
+        # Schedule the function
+        if cron_schedule:
+            schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
 
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
         available_markets = [

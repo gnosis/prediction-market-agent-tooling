@@ -1,7 +1,6 @@
-import os
 import getpass
+import os
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
     remove_deployed_gcp_function,

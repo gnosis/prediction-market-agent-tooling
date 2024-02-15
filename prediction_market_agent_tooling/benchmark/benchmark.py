@@ -120,7 +120,7 @@ class Benchmarker:
     def get_prediction(self, agent_name: str, question: str) -> Prediction:
         return self.predictions.get_prediction(agent_name=agent_name, question=question)
 
-    def run_agents(self) -> None:
+    def run_agents(self, enable_timing: bool = True) -> None:
         for agent in tqdm(self.registered_agents, desc="Running agents"):
             # Filter out cached predictions
             markets_to_run = [
@@ -138,8 +138,7 @@ class Benchmarker:
                         market_question=market.question
                     )
 
-                    # TODO Set time only if we aren't using cache, otherwise it won't be accurate.
-                    prediction.time = time.time() - start
+                    prediction.time = time.time() - start if enable_timing else None
 
                     if cb.total_tokens > 0 and cb.total_cost == 0:
                         # TODO: this is a hack to get the cost for an unsupported model

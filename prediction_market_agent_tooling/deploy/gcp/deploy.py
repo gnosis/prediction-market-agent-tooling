@@ -25,7 +25,9 @@ def deploy_to_gcp(
     function_file: str,
     requirements_file: t.Optional[str],
     extra_deps: list[str],
-    api_keys: dict[str, str],
+    labels: dict[str, str],
+    env_vars: dict[str, str],
+    secrets: dict[str, str],
     market_type: MarketType,
     memory: int,  # in MB
 ) -> str:
@@ -66,7 +68,9 @@ def deploy_to_gcp(
             gcp_function_name=gcp_fname,
             source=tempdir,
             entry_point="main",  # TODO check this function exists in main.py
-            api_keys=api_keys,
+            labels=labels,
+            env_vars=env_vars,
+            secrets=secrets,
             memory=memory,
         )
         subprocess.run(cmd, shell=True)

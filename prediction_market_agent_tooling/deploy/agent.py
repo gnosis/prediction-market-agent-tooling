@@ -51,7 +51,6 @@ class DeployableAgent:
 
     def deploy_gcp(
         self,
-        agent_init_string: str,
         repository: str,
         market_type: MarketType,
         memory: int,
@@ -69,7 +68,7 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 
 @functions_framework.http
 def main(request) -> str:
-    {agent_init_string}().run(market_type=market_type)
+    {self.__class__.__name__}().run(market_type=market_type)
     return "Success"
 """
 

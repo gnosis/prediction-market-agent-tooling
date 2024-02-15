@@ -1,14 +1,6 @@
-import os
 import getpass
 import random
 
-from prediction_market_agent_tooling.deploy.gcp.deploy import (
-    deploy_to_gcp,
-    remove_deployed_gcp_function,
-    run_deployed_gcp_function,
-    schedule_deployed_gcp_function,
-)
-from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.data_models import AgentMarket
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent
@@ -27,7 +19,6 @@ class DeployableCoinFlipAgent(DeployableAgent):
 if __name__ == "__main__":
     agent = DeployableCoinFlipAgent()
     agent.deploy_gcp(
-        agent_init_string="DeployableCoinFlipAgent",
         # TODO: Switch to main.
         repository="git+https://github.com/gnosis/prediction-market-agent-tooling.git@peter/refactor-deployment",
         market_type=MarketType.MANIFOLD,

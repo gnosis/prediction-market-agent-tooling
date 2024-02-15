@@ -49,7 +49,7 @@ class DummyAgentNoPrediction(bm.AbstractBenchmarkedAgent):
 
 
 @pytest.fixture
-def dummy_agent_no_prediciton() -> DummyAgentNoPrediction:
+def dummy_agent_no_prediction() -> DummyAgentNoPrediction:
     return DummyAgentNoPrediction()
 
 
@@ -64,11 +64,11 @@ def test_agent_prediction(dummy_agent: DummyAgent) -> None:
 
 
 def test_benchmark_run(
-    dummy_agent: DummyAgent, dummy_agent_no_prediciton: DummyAgentNoPrediction
+    dummy_agent: DummyAgent, dummy_agent_no_prediction: DummyAgentNoPrediction
 ) -> None:
     benchmarker = bm.Benchmarker(
         markets=get_markets(number=1, source=MarketSource.MANIFOLD),
-        agents=[dummy_agent, dummy_agent_no_prediciton],
+        agents=[dummy_agent, dummy_agent_no_prediction],
     )
     benchmarker.run_agents()
     benchmarker.generate_markdown_report()

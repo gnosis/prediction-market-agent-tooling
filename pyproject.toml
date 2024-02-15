@@ -22,6 +22,9 @@ web3 = "^6.15.1"
 eth-typing = "^4.0.0"
 pydantic-settings = "^2.1.0"
 numpy = "^1.26.4"
+autoflake = "^2.2.1"
+isort = "^5.13.2"
+streamlit = "^1.31.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

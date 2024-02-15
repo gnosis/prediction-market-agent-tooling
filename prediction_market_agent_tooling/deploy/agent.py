@@ -3,7 +3,12 @@ import os
 import tempfile
 import inspect
 from decimal import Decimal
-from prediction_market_agent_tooling.markets.data_models import AgentMarket
+
+from prediction_market_agent_tooling.markets.data_models import (
+    AgentMarket,
+    BetAmount,
+    Currency,
+)
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,

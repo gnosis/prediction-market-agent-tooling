@@ -1,7 +1,8 @@
 import pytest
-from tests.utils import RUN_PAID_TESTS
-from prediction_market_agent_tooling.markets import manifold
+
 from prediction_market_agent_tooling.gtypes import mana_type
+from prediction_market_agent_tooling.markets import manifold
+from tests.utils import RUN_PAID_TESTS
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")

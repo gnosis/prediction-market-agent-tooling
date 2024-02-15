@@ -23,7 +23,7 @@ if __name__ == "__main__":
         labels={
             "owner": getpass.getuser()
         },  # Only lowercase letters, numbers, hyphens and underscores are allowed.
-        env_vars={"MARKET": "MANIFOLD"},
+        env_vars={"EXAMPLE_ENV_VAR": "Gnosis"},
         # You can allow the cloud function to access secrets by adding the role: `gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} --member=serviceAccount:${GCP_SVC_ACC} --role=roles/container.admin`.
         secrets={
             "MANIFOLD_API_KEY": f"JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest"

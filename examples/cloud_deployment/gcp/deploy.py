@@ -1,5 +1,6 @@
 import os
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
     remove_deployed_gcp_function,
@@ -8,7 +9,6 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
 )
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.config import APIKeys
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.realpath(__file__))

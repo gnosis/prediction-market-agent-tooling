@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
 import streamlit as st
 
 from prediction_market_agent_tooling.markets.manifold import get_authenticated_user

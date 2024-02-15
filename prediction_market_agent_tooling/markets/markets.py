@@ -1,17 +1,15 @@
-from decimal import Decimal
 import typing as t
+from decimal import Decimal
 from enum import Enum
-from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
-    Currency,
-)
-from prediction_market_agent_tooling.markets import manifold, omen
-from prediction_market_agent_tooling.gtypes import Mana, xDai
-from prediction_market_agent_tooling.tools.utils import (
-    should_not_happen,
-    check_not_none,
-)
+
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import Mana, xDai
+from prediction_market_agent_tooling.markets import manifold, omen
+from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    should_not_happen,
+)
 
 
 class MarketType(str, Enum):

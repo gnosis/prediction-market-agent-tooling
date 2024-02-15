@@ -6,31 +6,33 @@ but to not use our own credits, seems we can use their api deployment directly: 
 """
 
 import os
-import requests
 from typing import Optional
+
+import requests
 from web3 import Web3
-from web3.types import TxReceipt, TxParams
-from prediction_market_agent_tooling.markets.data_models import OmenMarket
-from prediction_market_agent_tooling.tools.web3_utils import (
-    call_function_on_contract,
-    call_function_on_contract_tx,
-    WXDAI_ABI,
-    xdai_to_wei,
-    remove_fraction,
-    add_fraction,
-    check_tx_receipt,
-    ONE_NONCE,
-    Nonce,
-)
-from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
+from web3.types import TxParams, TxReceipt
+
 from prediction_market_agent_tooling.gtypes import (
     ABI,
-    HexAddress,
-    PrivateKey,
-    xDai,
-    Wei,
     ChecksumAddress,
+    HexAddress,
     OmenOutcomeToken,
+    PrivateKey,
+    Wei,
+    xDai,
+)
+from prediction_market_agent_tooling.markets.data_models import OmenMarket
+from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
+from prediction_market_agent_tooling.tools.web3_utils import (
+    ONE_NONCE,
+    WXDAI_ABI,
+    Nonce,
+    add_fraction,
+    call_function_on_contract,
+    call_function_on_contract_tx,
+    check_tx_receipt,
+    remove_fraction,
+    xdai_to_wei,
 )
 
 OMEN_TRUE_OUTCOME = "Yes"

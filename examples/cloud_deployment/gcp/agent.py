@@ -1,9 +1,10 @@
-from flask.wrappers import Request
-import functions_framework
 import random
 
-from prediction_market_agent_tooling.markets.data_models import AgentMarket
+import functions_framework
+from flask.wrappers import Request
+
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent
+from prediction_market_agent_tooling.markets.data_models import AgentMarket
 from prediction_market_agent_tooling.markets.markets import MarketType
 
 

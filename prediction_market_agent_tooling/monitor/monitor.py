@@ -1,9 +1,10 @@
-import altair as alt
+import typing as t
 from datetime import datetime
-from pydantic import BaseModel
+
+import altair as alt
 import pandas as pd
 import streamlit as st
-import typing as t
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 

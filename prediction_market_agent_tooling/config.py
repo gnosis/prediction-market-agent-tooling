@@ -1,8 +1,10 @@
 import typing as t
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import verify_address
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
 
 
 class APIKeys(BaseSettings):

@@ -1,6 +1,6 @@
 import os
 import subprocess
-from typing import NoReturn, Type, TypeVar, Optional
+from typing import NoReturn, Optional, Type, TypeVar
 
 T = TypeVar("T")
 

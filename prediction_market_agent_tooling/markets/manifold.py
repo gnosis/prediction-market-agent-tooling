@@ -1,17 +1,19 @@
-from datetime import datetime
-import requests
 import typing as t
-from prediction_market_agent_tooling.gtypes import Mana
+from datetime import datetime
+
+import requests
+
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import Mana
 from prediction_market_agent_tooling.markets.data_models import (
-    ProfitAmount,
-    ResolvedBet,
     BetAmount,
     Currency,
     ManifoldBet,
+    ManifoldContractMetric,
     ManifoldMarket,
     ManifoldUser,
-    ManifoldContractMetric,
+    ProfitAmount,
+    ResolvedBet,
 )
 
 """

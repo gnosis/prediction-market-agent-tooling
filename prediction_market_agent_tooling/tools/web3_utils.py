@@ -1,16 +1,18 @@
 import os
-from typing import Optional, Any, TypeVar
-from web3 import Web3
 from decimal import Decimal
-from web3.types import Wei, TxReceipt, TxParams, Nonce
+from typing import Any, Optional, TypeVar
+
+from web3 import Web3
+from web3.types import Nonce, TxParams, TxReceipt, Wei
+
 from prediction_market_agent_tooling.gtypes import (
     ABI,
-    xDai,
-    PrivateKey,
     ChecksumAddress,
-    xdai_type,
     HexAddress,
     HexStr,
+    PrivateKey,
+    xDai,
+    xdai_type,
 )
 
 ONE_NONCE = Nonce(1)

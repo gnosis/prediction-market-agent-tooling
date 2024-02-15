@@ -1,9 +1,15 @@
-import time
+import inspect
 import os
 import tempfile
-import inspect
+import time
 from decimal import Decimal
 
+from prediction_market_agent_tooling.deploy.gcp.deploy import (
+    deploy_to_gcp,
+    run_deployed_gcp_function,
+    schedule_deployed_gcp_function,
+)
+from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.markets.data_models import (
     AgentMarket,
     BetAmount,
@@ -14,16 +20,6 @@ from prediction_market_agent_tooling.markets.markets import (
     get_binary_markets,
     place_bet,
 )
-from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
-    Currency,
-)
-from prediction_market_agent_tooling.deploy.gcp.deploy import (
-    deploy_to_gcp,
-    run_deployed_gcp_function,
-    schedule_deployed_gcp_function,
-)
-from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 
 
 class DeployableAgent:

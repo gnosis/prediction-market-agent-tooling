@@ -1,9 +1,9 @@
 import getpass
 import random
 
-from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.markets.data_models import AgentMarket
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent
+from prediction_market_agent_tooling.markets.data_models import AgentMarket
+from prediction_market_agent_tooling.markets.markets import MarketType
 
 
 class DeployableCoinFlipAgent(DeployableAgent):

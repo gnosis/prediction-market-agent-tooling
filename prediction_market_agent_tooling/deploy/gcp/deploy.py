@@ -4,7 +4,6 @@ import subprocess
 import tempfile
 import typing as t
 
-
 import requests
 from cron_validator import CronValidator
 

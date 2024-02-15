@@ -68,7 +68,7 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 
 @functions_framework.http
 def main(request) -> str:
-    {self.__class__.__name__}().run(market_type={market_type})
+    {self.__class__.__name__}().run(market_type={market_type.__class__.__name__}.{market_type.name})
     return "Success"
 """
 

@@ -1,6 +1,7 @@
 import os
 import getpass
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
     remove_deployed_gcp_function,
@@ -9,7 +10,6 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
 )
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.markets.markets import MarketType
-
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -38,8 +38,8 @@ if __name__ == "__main__":
     response = run_deployed_gcp_function(fname)
     assert response.ok
 
-    # Schedule the function
-    schedule_deployed_gcp_function(fname, cron_schedule="* * * * *")
+    # Schedule the function to run once every 2 hours
+    schedule_deployed_gcp_function(fname, cron_schedule="0 */2 * * *")
 
     # Delete the function
     remove_deployed_gcp_function(fname)

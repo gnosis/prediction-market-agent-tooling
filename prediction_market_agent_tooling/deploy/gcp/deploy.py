@@ -1,11 +1,13 @@
 import os
-import requests
 import shutil
 import subprocess
 import tempfile
 import typing as t
+
+import requests
+from cron_validator import CronValidator
+
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent
-from prediction_market_agent_tooling.tools.utils import export_requirements_from_toml
 from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcloud_create_topic_cmd,
     gcloud_delete_function_cmd,
@@ -16,7 +18,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     get_gcloud_id_token,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
-from cron_validator import CronValidator
+from prediction_market_agent_tooling.tools.utils import export_requirements_from_toml
 
 
 def deploy_to_gcp(

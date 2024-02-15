@@ -1,17 +1,18 @@
 import time
-from enum import Enum
-from pydantic import BaseModel
 from decimal import Decimal
-from prediction_market_agent_tooling.markets.data_models import AgentMarket
+from enum import Enum
+
+from pydantic import BaseModel
+
+from prediction_market_agent_tooling.markets.data_models import (
+    AgentMarket,
+    BetAmount,
+    Currency,
+)
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
     place_bet,
-)
-from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
-    Currency,
 )
 
 

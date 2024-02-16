@@ -91,7 +91,6 @@ class OutcomePrediction(BaseModel):
 class Prediction(BaseModel):
     is_predictable: bool = True
     outcome_prediction: t.Optional[OutcomePrediction] = None
-    time_restriction_up_to: t.Optional[datetime] = None
 
     time: t.Optional[float] = None
     cost: t.Optional[float] = None

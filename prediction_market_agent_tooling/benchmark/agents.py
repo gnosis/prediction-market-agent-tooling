@@ -68,10 +68,7 @@ class AbstractBenchmarkedAgent:
             time_restriction_up_to=time_restriction_up_to,
         )
         if not is_predictable:
-            return Prediction(
-                is_predictable=is_predictable,
-                time_restriction_up_to=time_restriction_up_to,
-            )
+            return Prediction(is_predictable=is_predictable)
         return self.predict_restricted(
             market_question=market_question,
             time_restriction_up_to=time_restriction_up_to,

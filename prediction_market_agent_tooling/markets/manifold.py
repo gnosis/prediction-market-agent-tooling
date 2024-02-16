@@ -81,10 +81,10 @@ def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
         )
 
 
-def get_authenticated_user() -> ManifoldUser:
+def get_authenticated_user(api_key: str) -> ManifoldUser:
     url = "https://api.manifold.markets/v0/me"
     headers = {
-        "Authorization": f"Key {APIKeys().manifold_api_key}",
+        "Authorization": f"Key {api_key}",
         "Content-Type": "application/json",
     }
     response = requests.get(url, headers=headers)

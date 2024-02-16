@@ -1,8 +1,8 @@
 import random
 import typing as t
+from datetime import datetime
 
 from prediction_market_agent_tooling.benchmark.utils import (
-    EvaluatedQuestion,
     OutcomePrediction,
     Prediction,
 )
@@ -13,44 +13,75 @@ class AbstractBenchmarkedAgent:
         self.agent_name = agent_name
         self.max_workers = max_workers  # Limit the number of workers that can run this worker in parallel threads
 
-    def evaluate(self, market_question: str) -> EvaluatedQuestion:
+    def is_predictable(self, market_question: str) -> bool:
+        """
+        Override if the agent can decide to not predict the question, before doing the hard work.
+        """
+        return True
+
+    def predict(self, market_question: str) -> Prediction:
+        """
+        Predict the outcome of the market question.
+        """
         raise NotImplementedError
 
-    def research(self, market_question: str) -> t.Optional[str]:
-        raise NotImplementedError
+    def check_and_predict(self, market_question: str) -> Prediction:
+        is_predictable = self.is_predictable(market_question=market_question)
+        if not is_predictable:
+            return Prediction(is_predictable=is_predictable)
+        return self.predict(market_question=market_question)
 
-    def predict(
-        self, market_question: str, researched: str, evaluated: EvaluatedQuestion
+    def is_predictable_restricted(
+        self,
+        market_question: str,
+        time_restriction_up_to: datetime,
+    ) -> bool:
+        """
+        Override if the agent can decide to not predict the question, before doing the hard work.
+
+        Data used for the evaluation must be restricted to the time_restriction_up_to.
+        """
+        return True
+
+    def predict_restricted(
+        self,
+        market_question: str,
+        time_restriction_up_to: datetime,
     ) -> Prediction:
+        """
+        Predict the outcome of the market question.
+
+        Data used for the prediction must be restricted to the time_restriction_up_to.
+        """
         raise NotImplementedError
 
-    def evaluate_research_predict(self, market_question: str) -> Prediction:
-        eval = self.evaluate(market_question=market_question)
-        if not eval.is_predictable:
-            return Prediction(evaluation=eval)
-        researched = self.research(market_question=market_question)
-        if researched is None:
-            return Prediction(evaluation=eval)
-        return self.predict(
+    def check_and_predict_restricted(
+        self,
+        market_question: str,
+        time_restriction_up_to: datetime,
+    ) -> Prediction:
+        """
+        Data used must be restricted to the time_restriction_up_to.
+        """
+        is_predictable = self.is_predictable_restricted(
             market_question=market_question,
-            researched=researched,
-            evaluated=eval,
+            time_restriction_up_to=time_restriction_up_to,
+        )
+        if not is_predictable:
+            return Prediction(
+                is_predictable=is_predictable,
+                time_restriction_up_to=time_restriction_up_to,
+            )
+        return self.predict_restricted(
+            market_question=market_question,
+            time_restriction_up_to=time_restriction_up_to,
         )
 
 
 class RandomAgent(AbstractBenchmarkedAgent):
-    def evaluate(self, market_question: str) -> EvaluatedQuestion:
-        return EvaluatedQuestion(question=market_question, is_predictable=True)
-
-    def research(self, market_question: str) -> str:
-        return ""  # No research for a random agent, but can't be None.
-
-    def predict(
-        self, market_question: str, researched: str, evaluated: EvaluatedQuestion
-    ) -> Prediction:
+    def predict(self, market_question: str) -> Prediction:
         p_yes, confidence = random.random(), random.random()
         return Prediction(
-            evaluation=evaluated,
             outcome_prediction=OutcomePrediction(
                 p_yes=p_yes,
                 confidence=confidence,
@@ -66,18 +97,9 @@ class FixedAgent(AbstractBenchmarkedAgent):
         super().__init__(agent_name, max_workers)
         self.fixed_answer = fixed_answer
 
-    def evaluate(self, market_question: str) -> EvaluatedQuestion:
-        return EvaluatedQuestion(question=market_question, is_predictable=True)
-
-    def research(self, market_question: str) -> str:
-        return ""  # No research for a fixed agent, but can't be None.
-
-    def predict(
-        self, market_question: str, researched: str, evaluated: EvaluatedQuestion
-    ) -> Prediction:
+    def predict(self, market_question: str) -> Prediction:
         p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
         return Prediction(
-            evaluation=evaluated,
             outcome_prediction=OutcomePrediction(
                 p_yes=p_yes,
                 confidence=confidence,

@@ -134,8 +134,13 @@ class Benchmarker:
             def get_prediction_result(market: Market) -> tuple[str, Prediction]:
                 with get_openai_callback() as cb:
                     start = time.time()
-                    prediction = agent.evaluate_research_predict(
-                        market_question=market.question
+                    prediction = (
+                        agent.check_and_predict(market_question=market.question)
+                        if not market.is_resolved
+                        else agent.check_and_predict_restricted(
+                            market_question=market.question,
+                            time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
+                        )
                     )
 
                     prediction.time = time.time() - start if enable_timing else None
@@ -332,9 +337,7 @@ class Benchmarker:
     def _compute_ratio_evaluated_as_answerable(
         self, predictions: t.List[Prediction], markets: t.List[Market]
     ) -> float:
-        return sum(
-            1 for p in predictions if p.evaluation and p.evaluation.is_predictable
-        ) / len(predictions)
+        return sum(1 for p in predictions if p.is_predictable) / len(predictions)
 
     def _compute_ratio_answered(
         self, predictions: t.List[Prediction], markets: t.List[Market]
@@ -375,21 +378,19 @@ class Benchmarker:
             markets_summary[f"{agent} p_yes"] = [
                 (
                     p.outcome_prediction.p_yes
-                    if p.evaluation
-                    and p.evaluation.is_predictable
+                    if p.is_predictable
                     and p.outcome_prediction  # Is answerable and answered
-                    else "N/A"
-                    if not p.evaluation
-                    and not p.outcome_prediction  # Not evaluated for some reason
-                    else "S"
-                    if p.evaluation
-                    and not p.evaluation.is_predictable  # Skipped (evaluated to be not predictable)
-                    else "F"
-                    if p.evaluation
-                    and p.evaluation.is_predictable
-                    and not p.outcome_prediction  # Failed (no prediction)
-                    else should_not_happen(
-                        f"Unexpected case in get_markets_summary() for {p}."
+                    else (
+                        "S"
+                        if not p.is_predictable  # Skipped (evaluated to be not predictable)
+                        else (
+                            "F"
+                            if p.is_predictable
+                            and not p.outcome_prediction  # Failed (no prediction)
+                            else should_not_happen(
+                                f"Unexpected case in get_markets_summary() for {p}."
+                            )
+                        )
                     )
                 )
                 for p in agent_predictions

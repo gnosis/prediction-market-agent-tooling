@@ -1,19 +1,28 @@
 import json
 import typing as t
+from datetime import datetime
 from enum import Enum
 
+import pytz
 import requests
 from pydantic import BaseModel, validator
 
-
-class EvaluatedQuestion(BaseModel):
-    question: str
-    is_predictable: bool
+from prediction_market_agent_tooling.tools.utils import should_not_happen
 
 
 class MarketSource(str, Enum):
     MANIFOLD = "manifold"
     POLYMARKET = "polymarket"
+
+
+class MarketFilter(str, Enum):
+    open = "open"
+    resolved = "resolved"
+
+
+class MarketResolution(str, Enum):
+    YES = "yes"
+    NO = "no"
 
 
 class Market(BaseModel):
@@ -22,8 +31,8 @@ class Market(BaseModel):
     url: str
     p_yes: float
     volume: float
-    is_resolved: bool
-    resolution: str | None = None
+    created_time: datetime
+    resolution: MarketResolution | None = None
     outcomePrices: list[float] | None = None
 
     @validator("outcomePrices", pre=True)
@@ -33,6 +42,16 @@ class Market(BaseModel):
         if len(value) != 2:
             raise ValueError("outcomePrices must have exactly 2 elements.")
         return value
+
+    @validator("created_time")
+    def _validate_created_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=pytz.UTC)
+        return value
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.resolution is not None
 
     @property
     def p_no(self) -> float:
@@ -60,8 +79,9 @@ class OutcomePrediction(BaseModel):
 
 
 class Prediction(BaseModel):
-    evaluation: t.Optional[EvaluatedQuestion] = None
+    is_predictable: bool = True
     outcome_prediction: t.Optional[OutcomePrediction] = None
+    time_restriction_up_to: t.Optional[datetime] = None
 
     time: t.Optional[float] = None
     cost: t.Optional[float] = None
@@ -129,15 +149,24 @@ def get_manifold_markets(
         m["source"] = MarketSource.MANIFOLD
 
     # Map JSON fields to Market fields
-    fields_map = {
-        "probability": "p_yes",
-        "isResolved": "is_resolved",
+    fields_map = {"probability": "p_yes", "createdTime": "created_time"}
+    process_values = {
+        "resolution": lambda v: v.lower() if v else None,
     }
 
-    def _map_fields(old: dict[str, str], mapping: dict[str, str]) -> dict[str, str]:
-        return {mapping.get(k, k): v for k, v in old.items()}
+    def _map_fields(
+        old: dict[str, str],
+        mapping: dict[str, str],
+        processing: dict[str, t.Callable[[t.Any], t.Any]],
+    ) -> dict[str, str]:
+        return {
+            mapping.get(k, k): processing.get(k, lambda x: x)(v) for k, v in old.items()
+        }
 
-    markets = [Market.parse_obj(_map_fields(m, fields_map)) for m in markets_json]
+    markets = [
+        Market.parse_obj(_map_fields(m, fields_map, process_values))
+        for m in markets_json
+    ]
 
     # Filter out markets with excluded questions
     markets = [m for m in markets if m.question not in excluded_questions]
@@ -171,6 +200,21 @@ def get_polymarket_markets(
             print(f"Skipping market with 'excluded question': {m_json['question']}")
             continue
 
+        resolution = (
+            MarketResolution.YES
+            if closed and m_json["outcomePrices"][0] == "1.0"
+            else (
+                MarketResolution.NO
+                if closed and m_json["outcomePrices"][1] == "1.0"
+                else (
+                    should_not_happen()
+                    if closed
+                    and m_json["outcomePrices"] not in (["1.0", "0.0"], ["0.0", "1.0"])
+                    else None
+                )
+            )
+        )
+
         markets.append(
             Market(
                 question=m_json["question"],
@@ -178,9 +222,10 @@ def get_polymarket_markets(
                 p_yes=m_json["outcomePrices"][
                     0
                 ],  # For binary markets on Polymarket, the first outcome is "Yes" and outcomePrices are equal to probabilities.
+                created_time=m_json["created_at"],
                 outcomePrices=m_json["outcomePrices"],
                 volume=m_json["volume"],
-                is_resolved=False,
+                resolution=resolution,
                 source=MarketSource.POLYMARKET,
             )
         )
@@ -191,14 +236,25 @@ def get_markets(
     number: int,
     source: MarketSource,
     excluded_questions: t.List[str] = [],
+    filter_: MarketFilter = MarketFilter.open,
 ) -> t.List[Market]:
     if source == MarketSource.MANIFOLD:
         return get_manifold_markets(
-            number=number, excluded_questions=excluded_questions
+            number=number, excluded_questions=excluded_questions, filter_=filter_.value
         )
     elif source == MarketSource.POLYMARKET:
         return get_polymarket_markets(
-            number=number, excluded_questions=excluded_questions
+            number=number,
+            excluded_questions=excluded_questions,
+            closed=(
+                True
+                if filter_ == MarketFilter.resolved
+                else (
+                    False
+                    if filter_ == MarketFilter.open
+                    else should_not_happen(f"Unknown filter {filter_} for polymarket.")
+                )
+            ),
         )
     else:
         raise ValueError(f"Unknown market source: {source}")
@@ -233,7 +289,3 @@ def get_llm_api_call_cost(
     model_cost += model_costs[model]["completion_tokens"] * completion_tokens
     model_cost /= 1000
     return model_cost
-
-
-def should_not_happen(message: str, E: t.Type[Exception] = RuntimeError) -> t.NoReturn:
-    raise E(message)

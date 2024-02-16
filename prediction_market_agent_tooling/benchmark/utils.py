@@ -72,7 +72,9 @@ class Market(BaseModel):
         return (
             self.resolution
             if self.resolution is not None
-            else MarketResolution.YES if self.p_yes > 0.5 else MarketResolution.NO
+            else MarketResolution.YES
+            if self.p_yes > 0.5
+            else MarketResolution.NO
         )
 
 

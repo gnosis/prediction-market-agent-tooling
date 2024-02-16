@@ -13,11 +13,11 @@ from tqdm import tqdm
 from prediction_market_agent_tooling.benchmark.agents import AbstractBenchmarkedAgent
 from prediction_market_agent_tooling.benchmark.utils import (
     Market,
+    MarketResolution,
     Prediction,
     PredictionsCache,
     get_llm_api_call_cost,
     should_not_happen,
-    MarketResolution,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
@@ -290,7 +290,12 @@ class Benchmarker:
             (1 if m.probable_resolution == MarketResolution.YES else 0) for m in markets
         ]
         y_pred = [
-            (1 if check_not_none(p.outcome_prediction).probable_resolution == MarketResolution.YES else 0)
+            (
+                1
+                if check_not_none(p.outcome_prediction).probable_resolution
+                == MarketResolution.YES
+                else 0
+            )
             for p in predictions
         ]
 
@@ -402,7 +407,9 @@ class Benchmarker:
                 )
                 for p in agent_predictions
             ]
-        markets_summary[f"reference p_yes"] = [f"{m.p_yes} [{m.probable_resolution}]" for m in self.markets]
+        markets_summary[f"reference p_yes"] = [
+            f"{m.p_yes} [{m.probable_resolution}]" for m in self.markets
+        ]
         return markets_summary
 
     def calculate_expected_returns(

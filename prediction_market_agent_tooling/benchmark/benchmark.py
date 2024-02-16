@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.benchmark.utils import (
     PredictionsCache,
     get_llm_api_call_cost,
     should_not_happen,
+    MarketResolution,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
@@ -268,8 +269,9 @@ class Benchmarker:
 
         correct_outcome_count = 0
         for p, m in zip(predictions, markets):
-            if (check_not_none(p.outcome_prediction).p_yes > 0.5 and m.p_yes > 0.5) or (
-                check_not_none(p.outcome_prediction).p_yes < 0.5 and m.p_yes < 0.5
+            if (
+                check_not_none(p.outcome_prediction).probable_resolution
+                == m.probable_resolution
             ):
                 correct_outcome_count += 1
 
@@ -284,8 +286,13 @@ class Benchmarker:
         if not predictions:
             return None, None
 
-        ground_truth = [m.p_yes > 0.5 for m in markets]
-        y_pred = [check_not_none(p.outcome_prediction).p_yes > 0.5 for p in predictions]
+        ground_truth = [
+            (1 if m.probable_resolution == MarketResolution.YES else 0) for m in markets
+        ]
+        y_pred = [
+            (1 if check_not_none(p.outcome_prediction).probable_resolution == MarketResolution.YES else 0)
+            for p in predictions
+        ]
 
         precision = precision_score(
             ground_truth, y_pred, pos_label=pos_label, zero_division=0.0
@@ -377,7 +384,7 @@ class Benchmarker:
             ]
             markets_summary[f"{agent} p_yes"] = [
                 (
-                    p.outcome_prediction.p_yes
+                    f"{p.outcome_prediction.p_yes} [{p.outcome_prediction.probable_resolution.value}]"
                     if p.is_predictable
                     and p.outcome_prediction  # Is answerable and answered
                     else (
@@ -395,7 +402,7 @@ class Benchmarker:
                 )
                 for p in agent_predictions
             ]
-        markets_summary[f"reference p_yes"] = [m.p_yes for m in self.markets]
+        markets_summary[f"reference p_yes"] = [f"{m.p_yes} [{m.probable_resolution}]" for m in self.markets]
         return markets_summary
 
     def calculate_expected_returns(
@@ -410,7 +417,6 @@ class Benchmarker:
         # TODO: Add support for different bet sizes -- if we bet a low amount (such as <10 units), the real shares will be very close to that we calculate below (bet_units / share_price),
         # but if one bets a lot, it will change the share price along the way, and so he/she receives less than `bet_units / share_price`, but it's more complicated to calculate.
         bet_units = 10  # Assuming the agent always bet 10 units per market.
-        buy_yes_threshold = 0.5  # If the agent's prediction is > 50% it should buy "yes", otherwise "no".
 
         assert prediction.outcome_prediction is not None
         # Assume that market starts at 50/50 and so the price is 0.5 at the time we are buying it,
@@ -418,13 +424,13 @@ class Benchmarker:
         # as it's the same as the probability.
         yes_shares = (
             bet_units / 0.5  # market.yes_outcome_price
-            if prediction.outcome_prediction.p_yes > buy_yes_threshold
+            if prediction.outcome_prediction.probable_resolution == MarketResolution.YES
             and market.yes_outcome_price > 0
             else 0
         )
         no_shares = (
             bet_units / 0.5  # market.no_outcome_price
-            if prediction.outcome_prediction.p_yes <= buy_yes_threshold
+            if prediction.outcome_prediction.probable_resolution == MarketResolution.NO
             and market.no_outcome_price > 0
             else 0
         )

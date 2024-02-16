@@ -67,6 +67,14 @@ class Market(BaseModel):
         # Use the outcome price if available, otherwise assume it's p_yes.
         return self.outcomePrices[1] if self.outcomePrices else 1 - self.p_yes
 
+    @property
+    def probable_resolution(self) -> MarketResolution:
+        return (
+            self.resolution
+            if self.resolution is not None
+            else MarketResolution.YES if self.p_yes > 0.5 else MarketResolution.NO
+        )
+
 
 class OutcomePrediction(BaseModel):
     p_yes: float
@@ -74,8 +82,8 @@ class OutcomePrediction(BaseModel):
     info_utility: t.Optional[float]
 
     @property
-    def binary_answer(self) -> bool:
-        return self.p_yes > 0.5
+    def probable_resolution(self) -> MarketResolution:
+        return MarketResolution.YES if self.p_yes > 0.5 else MarketResolution.NO
 
 
 class Prediction(BaseModel):

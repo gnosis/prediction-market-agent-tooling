@@ -89,6 +89,11 @@ class RandomAgent(AbstractBenchmarkedAgent):
             ),
         )
 
+    def predict_restricted(
+        self, market_question: str, time_restriction_up_to: datetime
+    ) -> Prediction:
+        return self.predict(market_question)
+
 
 class FixedAgent(AbstractBenchmarkedAgent):
     def __init__(
@@ -106,3 +111,8 @@ class FixedAgent(AbstractBenchmarkedAgent):
                 info_utility=None,
             ),
         )
+
+    def predict_restricted(
+        self, market_question: str, time_restriction_up_to: datetime
+    ) -> Prediction:
+        return self.predict(market_question)

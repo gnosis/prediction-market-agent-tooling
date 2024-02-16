@@ -2,6 +2,7 @@ import inspect
 import os
 import tempfile
 import time
+import typing as t
 from decimal import Decimal
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
@@ -23,6 +24,18 @@ from prediction_market_agent_tooling.markets.markets import (
 
 
 class DeployableAgent:
+    def __init__(self) -> None:
+        self.load()
+
+    def __init_subclass__(cls, **kwargs: t.Any) -> None:
+        if cls.__init__ is not DeployableAgent.__init__:
+            raise TypeError(
+                "Cannot override __init__ method of DeployableAgent class, please override the `load` method to set up the agent."
+            )
+
+    def load(self) -> None:
+        pass
+
     def pick_markets(self, markets: list[AgentMarket]) -> list[AgentMarket]:
         """
         This method should be implemented by the subclass to pick the markets to bet on. By default, it picks only the first market.

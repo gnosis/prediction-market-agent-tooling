@@ -389,7 +389,7 @@ class Benchmarker:
             ]
             markets_summary[f"{agent} p_yes"] = [
                 (
-                    f"{p.outcome_prediction.p_yes} [{p.outcome_prediction.probable_resolution.value}]"
+                    f"{p.outcome_prediction.p_yes:.2f} [{p.outcome_prediction.probable_resolution.value}]"
                     if p.is_predictable
                     and p.outcome_prediction  # Is answerable and answered
                     else (
@@ -408,7 +408,7 @@ class Benchmarker:
                 for p in agent_predictions
             ]
         markets_summary[f"reference p_yes"] = [
-            f"{m.p_yes} [{m.probable_resolution}]" for m in self.markets
+            f"{m.p_yes:.2f} [{m.probable_resolution}]" for m in self.markets
         ]
         return markets_summary
 

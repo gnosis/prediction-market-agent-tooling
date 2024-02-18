@@ -235,6 +235,9 @@ class ManifoldBetFees(BaseModel):
     liquidityFee: Decimal
     creatorFee: Decimal
 
+    def get_total(self) -> Decimal:
+        return sum([self.platformFee, self.liquidityFee, self.creatorFee])
+
 
 class ManifoldBet(BaseModel):
     """
@@ -256,6 +259,19 @@ class ManifoldBet(BaseModel):
     fills: t.Optional[list[ManifoldBetFills]] = None
     createdTime: datetime
     outcome: str
+
+    def get_profit(self, market_outcome: bool) -> ProfitAmount:
+        outcome_bool = self.outcome == "YES"
+        profit = (
+            self.shares - self.amount
+            if outcome_bool == market_outcome
+            else -self.amount
+        )
+        profit -= self.fees.get_total()
+        return ProfitAmount(
+            amount=profit,
+            currency=Currency.Mana,
+        )
 
 
 class ManifoldContractMetric(BaseModel):

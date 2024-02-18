@@ -12,7 +12,6 @@ from prediction_market_agent_tooling.markets.data_models import (
     ManifoldContractMetric,
     ManifoldMarket,
     ManifoldUser,
-    ProfitAmount,
     ResolvedBet,
 )
 
@@ -124,19 +123,15 @@ def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
     if not market.resolutionTime:
         raise ValueError(f"Market {market.id} has no resolution time.")
 
-    # Get the profit for this bet from the corresponding position
-    positions = get_market_positions(market.id, bet.userId)
-    bet_position = next(p for p in positions if p.contractId == bet.contractId)
-    profit = bet_position.profit
-
+    market_outcome = market.resolution == "YES"
     return ResolvedBet(
         amount=BetAmount(amount=bet.amount, currency=Currency.Mana),
         outcome=bet.outcome == "YES",
         created_time=bet.createdTime,
         market_question=market.question,
-        market_outcome=market.resolution == "YES",
+        market_outcome=market_outcome,
         resolved_time=market.resolutionTime,
-        profit=ProfitAmount(amount=profit, currency=Currency.Mana),
+        profit=bet.get_profit(market_outcome=market_outcome),
     )
 
 

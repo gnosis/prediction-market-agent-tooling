@@ -197,7 +197,7 @@ class ManifoldMarket(BaseModel):
     def is_resolved_non_cancelled(self) -> bool:
         return (
             self.isResolved
-            and self.resolutionTime
+            and self.resolutionTime is not None
             and self.get_resolution_enum() != Resolution.CANCEL
         )
 

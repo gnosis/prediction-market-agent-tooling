@@ -123,6 +123,8 @@ def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
     market = get_manifold_market(bet.contractId)
     if not market.is_resolved_non_cancelled():
         raise ValueError(f"Market {market.id} is not resolved.")
+    if not market.resolutionTime:
+        raise ValueError(f"Market {market.id} has no resolution time.")
 
     market_outcome = market.get_resolution_enum() == Resolution.YES
     return ResolvedBet(

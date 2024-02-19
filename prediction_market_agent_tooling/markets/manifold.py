@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ManifoldContractMetric,
     ManifoldMarket,
     ManifoldUser,
+    Resolution,
     ResolvedBet,
 )
 
@@ -112,21 +113,21 @@ def get_resolved_manifold_bets(
     bets = [b for b in bets if b.createdTime >= start_time]
     if end_time:
         bets = [b for b in bets if b.createdTime < end_time]
-    bets = [b for b in bets if get_manifold_market(b.contractId).isResolved]
+    bets = [
+        b for b in bets if get_manifold_market(b.contractId).is_resolved_non_cancelled()
+    ]
     return bets
 
 
 def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
     market = get_manifold_market(bet.contractId)
-    if not market.isResolved:
+    if not market.is_resolved_non_cancelled():
         raise ValueError(f"Market {market.id} is not resolved.")
-    if not market.resolutionTime:
-        raise ValueError(f"Market {market.id} has no resolution time.")
 
-    market_outcome = market.resolution == "YES"
+    market_outcome = market.get_resolution_enum() == Resolution.YES
     return ResolvedBet(
         amount=BetAmount(amount=bet.amount, currency=Currency.Mana),
-        outcome=bet.outcome == "YES",
+        outcome=bet.get_resolved_boolean_outcome(),
         created_time=bet.createdTime,
         market_question=market.question,
         market_outcome=market_outcome,

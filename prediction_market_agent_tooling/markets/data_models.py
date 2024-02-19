@@ -6,6 +6,7 @@ from enum import Enum
 from pydantic import BaseModel
 from web3 import Web3
 
+from prediction_market_agent_tooling.benchmark.utils import should_not_happen
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
@@ -21,6 +22,12 @@ from prediction_market_agent_tooling.gtypes import (
 class Currency(str, Enum):
     xDai = "xDai"
     Mana = "Mana"
+
+
+class Resolution(str, Enum):
+    YES = "YES"
+    NO = "NO"
+    CANCEL = "CANCEL"
 
 
 class BetAmount(BaseModel):
@@ -184,6 +191,16 @@ class ManifoldMarket(BaseModel):
             original_market=self,
         )
 
+    def get_resolution_enum(self) -> Resolution:
+        return Resolution(self.resolution)
+
+    def is_resolved_non_cancelled(self) -> bool:
+        return (
+            self.isResolved
+            and self.resolutionTime
+            and self.get_resolution_enum() != Resolution.CANCEL
+        )
+
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
 
@@ -260,11 +277,19 @@ class ManifoldBet(BaseModel):
     createdTime: datetime
     outcome: str
 
+    def get_resolved_boolean_outcome(self) -> bool:
+        outcome = Resolution(self.outcome)
+        if self.outcome == Resolution.YES:
+            return True
+        elif self.outcome == Resolution.NO:
+            return False
+        else:
+            should_not_happen(f"Unexpected bet outcome string, '{outcome.value}'.")
+
     def get_profit(self, market_outcome: bool) -> ProfitAmount:
-        outcome_bool = self.outcome == "YES"
         profit = (
             self.shares - self.amount
-            if outcome_bool == market_outcome
+            if self.get_resolved_boolean_outcome() == market_outcome
             else -self.amount
         )
         profit -= self.fees.get_total()

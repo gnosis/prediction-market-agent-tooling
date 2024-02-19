@@ -18,7 +18,6 @@ def main(
         "always_raise": DeployableAlwaysRaiseAgent,
     }[agent_name]()
     agent.deploy_gcp(
-        # TODO: Switch to main.
         repository=f"git+https://github.com/gnosis/prediction-market-agent-tooling.git@{branch}",
         market_type=MarketType.MANIFOLD,
         labels={

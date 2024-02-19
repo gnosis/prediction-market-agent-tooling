@@ -11,7 +11,10 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 
 
 def main(
-    agent_name: str, cron_schedule: str = "0 */2 * * *", branch: str = "main"
+    agent_name: str,
+    cron_schedule: str = "0 */2 * * *",
+    branch: str = "main",
+    custom_gcp_fname: str | None = None,
 ) -> None:
     agent: DeployableAgent = {
         "coin_flip": DeployableCoinFlipAgent,
@@ -30,6 +33,7 @@ def main(
         },  # Must be in the format "env_var_in_container => secret_name:version", you can create secrets using `gcloud secrets create --labels owner=<your-name> <secret-name>` command.
         memory=256,
         cron_schedule=cron_schedule,
+        gcp_fname=custom_gcp_fname,
     )
 
 

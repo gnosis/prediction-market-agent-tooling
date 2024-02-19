@@ -264,7 +264,9 @@ def get_markets(
     excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     if source == MarketSource.MANIFOLD:
-        return get_manifold_markets_paged(number=number, excluded_questions=excluded_questions)
+        return get_manifold_markets_paged(
+            number=number, excluded_questions=excluded_questions
+        )
     elif source == MarketSource.POLYMARKET:
         return get_polymarket_markets(
             limit=number, excluded_questions=excluded_questions

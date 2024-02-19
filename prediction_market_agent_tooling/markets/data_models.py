@@ -156,7 +156,7 @@ class ManifoldMarket(BaseModel):
     isResolved: bool
     resolution: t.Optional[str] = None
     resolutionTime: t.Optional[datetime] = None
-    lastBetTime: datetime
+    lastBetTime: t.Optional[datetime] = None
     lastCommentTime: t.Optional[datetime] = None
     lastUpdatedTime: datetime
     mechanism: str

@@ -28,6 +28,7 @@ def deploy_to_gcp(
     env_vars: dict[str, str] | None,
     secrets: dict[str, str] | None,
     memory: int,  # in MB
+    entrypoint_function_name: str,
 ) -> str:
     if requirements_file and not os.path.exists(requirements_file):
         raise ValueError(f"File {requirements_file} does not exist")
@@ -63,7 +64,7 @@ def deploy_to_gcp(
         cmd = gcloud_deploy_cmd(
             gcp_function_name=gcp_fname,
             source=tempdir,
-            entry_point="main",  # TODO check this function exists in main.py
+            entry_point=entrypoint_function_name,
             labels=labels,
             env_vars=env_vars,
             secrets=secrets,

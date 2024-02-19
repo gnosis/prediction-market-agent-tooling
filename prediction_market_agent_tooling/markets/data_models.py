@@ -279,9 +279,9 @@ class ManifoldBet(BaseModel):
 
     def get_resolved_boolean_outcome(self) -> bool:
         outcome = Resolution(self.outcome)
-        if self.outcome == Resolution.YES:
+        if outcome == Resolution.YES:
             return True
-        elif self.outcome == Resolution.NO:
+        elif outcome == Resolution.NO:
             return False
         else:
             should_not_happen(f"Unexpected bet outcome string, '{outcome.value}'.")

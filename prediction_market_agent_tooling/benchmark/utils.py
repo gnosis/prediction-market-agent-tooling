@@ -261,11 +261,14 @@ def get_polymarket_markets(
 def get_markets(
     number: int,
     source: MarketSource,
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     if source == MarketSource.MANIFOLD:
-        return get_manifold_markets(limit=number)
+        return get_manifold_markets_paged(number=number, excluded_questions=excluded_questions)
     elif source == MarketSource.POLYMARKET:
-        return get_polymarket_markets(limit=number)
+        return get_polymarket_markets(
+            limit=number, excluded_questions=excluded_questions
+        )
     else:
         raise ValueError(f"Unknown market source: {source}")
 

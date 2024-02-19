@@ -8,9 +8,8 @@ import pandas as pd
 import streamlit as st
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.benchmark.utils import get_manifold_markets_dated
+from prediction_market_agent_tooling.benchmark.utils import Market
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
 
@@ -71,22 +70,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
     st.table(bets_df)
 
 
-def monitor_market(start_time: datetime, market_type: MarketType) -> None:
-    assert (
-        market_type == MarketType.MANIFOLD
-    ), "TODO: Add support for other market types."
-    with st.spinner("Loading market data..."):
-        open_markets = get_manifold_markets_dated(
-            oldest_date=start_time, filter_="open"
-        )
-        resolved_markets = [
-            m
-            for m in get_manifold_markets_dated(
-                oldest_date=start_time, filter_="resolved"
-            )
-            if m.resolution not in ("CANCEL", "MKT")
-        ]
-
+def monitor_market(open_markets: list[Market], resolved_markets: list[Market]) -> None:
     date_to_open_yes_proportion = {
         d: np.mean([int(m.p_yes > 0.5) for m in markets])
         for d, markets in groupby(open_markets, lambda x: x.created_time.date())

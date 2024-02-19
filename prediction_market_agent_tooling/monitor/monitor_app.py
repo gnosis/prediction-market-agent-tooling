@@ -5,6 +5,7 @@ import pytz
 import streamlit as st
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from prediction_market_agent_tooling.benchmark.utils import get_manifold_markets_dated
 from prediction_market_agent_tooling.markets.manifold import get_authenticated_user
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
@@ -48,7 +49,13 @@ def monitor_app() -> None:
         return
 
     st.subheader("Market resolution")
-    monitor_market(start_time, market_type)
+    open_markets = get_manifold_markets_dated(oldest_date=start_time, filter_="open")
+    resolved_markets = [
+        m
+        for m in get_manifold_markets_dated(oldest_date=start_time, filter_="resolved")
+        if m.resolution not in ("CANCEL", "MKT")
+    ]
+    monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
 
     with st.spinner("Loading Manifold agents..."):
         agents: list[DeployedManifoldAgent] = []

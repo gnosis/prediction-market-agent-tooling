@@ -15,6 +15,8 @@ def gcloud_deploy_cmd(
     env_vars: dict[str, str] | None,
     secrets: dict[str, str] | None,
     memory: int,  # in MB
+    timeout: int = 180,
+    retry_on_failure: bool = False,
 ) -> str:
     cmd = (
         f"gcloud functions deploy {gcp_function_name} "
@@ -26,7 +28,14 @@ def gcloud_deploy_cmd(
         f"--entry-point {entry_point} "
         f"--memory {memory}MB "
         f"--no-allow-unauthenticated "
+        f"--timeout {timeout}s "
+        # Explicitly set no concurrency, min instances to 0 (agent is executed only once in a while) and max instances to 1 (parallel agents aren't allowed).
+        "--concurrency 1 "
+        "--min-instances 0 "
+        "--max-instances 1 "
     )
+    if retry_on_failure:
+        cmd += "--retry "
     if labels:
         for k, v in labels.items():
             cmd += f"--update-labels {k}={v} "

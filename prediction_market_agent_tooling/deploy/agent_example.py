@@ -6,9 +6,12 @@ from prediction_market_agent_tooling.markets.data_models import AgentMarket
 
 class DeployableCoinFlipAgent(DeployableAgent):
     def pick_markets(self, markets: list[AgentMarket]) -> list[AgentMarket]:
-        if len(markets) > 1:
-            return random.sample(markets, 1)
-        return markets
+        return random.sample(markets, 1)
 
     def answer_binary_market(self, market: AgentMarket) -> bool:
         return random.choice([True, False])
+
+
+class DeployableAlwaysRaiseAgent(DeployableAgent):
+    def answer_binary_market(self, market: AgentMarket) -> bool:
+        raise RuntimeError("I always raise!")

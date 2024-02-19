@@ -18,7 +18,7 @@ def main(
     }[agent_name]()
     agent.deploy_gcp(
         # TODO: Switch to main.
-        repository="git+https://github.com/gnosis/prediction-market-agent-tooling.git@{branch}",
+        repository=f"git+https://github.com/gnosis/prediction-market-agent-tooling.git@{branch}",
         market_type=MarketType.MANIFOLD,
         labels={
             "owner": getpass.getuser()

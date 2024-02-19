@@ -236,7 +236,7 @@ class ManifoldBetFees(BaseModel):
     creatorFee: Decimal
 
     def get_total(self) -> Decimal:
-        return sum([self.platformFee, self.liquidityFee, self.creatorFee])
+        return Decimal(sum([self.platformFee, self.liquidityFee, self.creatorFee]))
 
 
 class ManifoldBet(BaseModel):

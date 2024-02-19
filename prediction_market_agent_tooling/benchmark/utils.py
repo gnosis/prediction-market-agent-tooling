@@ -163,6 +163,7 @@ def get_manifold_markets_paged(
     ] = "open",
     sort: t.Literal["liquidity", "score", "newest"] = "liquidity",
     starting_offset: int = 0,
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     markets: list[Market] = []
 
@@ -176,7 +177,11 @@ def get_manifold_markets_paged(
         )
         if not new_markets:
             break
-        markets.extend(new_markets)
+        markets.extend(
+            market
+            for market in new_markets
+            if not excluded_questions or market.question not in excluded_questions
+        )
         offset += len(new_markets)
 
     return markets
@@ -187,6 +192,7 @@ def get_manifold_markets_dated(
     filter_: t.Literal[
         "open", "closed", "resolved", "closing-this-month", "closing-next-month"
     ] = "open",
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     markets: list[Market] = []
 
@@ -203,7 +209,8 @@ def get_manifold_markets_dated(
         for market in new_markets:
             if market.created_time < oldest_date:
                 return markets
-            markets.append(market)
+            if not excluded_questions or market.question not in excluded_questions:
+                markets.append(market)
             offset += 1
 
     return markets
@@ -213,6 +220,7 @@ def get_polymarket_markets(
     limit: int = 100,
     active: bool | None = True,
     closed: bool | None = False,
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     params: dict[str, str | int] = {
         "_limit": limit,
@@ -228,6 +236,9 @@ def get_polymarket_markets(
         # Skip non-binary markets. Unfortunately no way to filter in the API call
         # TODO support CATEGORICAL markets
         if m_json["outcomes"] != ["Yes", "No"]:
+            continue
+
+        if excluded_questions and m_json["question"] in excluded_questions:
             continue
 
         markets.append(

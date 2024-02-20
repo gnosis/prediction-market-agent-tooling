@@ -4,7 +4,6 @@ import pytest
 
 import prediction_market_agent_tooling.benchmark.benchmark as bm
 from prediction_market_agent_tooling.benchmark.utils import (
-    EvaluatedQuestion,
     MarketSource,
     OutcomePrediction,
     get_markets,
@@ -15,12 +14,9 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
     def __init__(self) -> None:
         super().__init__(agent_name="dummy")
 
-    def evaluate_research_predict(self, market_question: str) -> bm.Prediction:
+    def check_and_predict(self, market_question: str) -> bm.Prediction:
         return bm.Prediction(
-            evaluation=EvaluatedQuestion(
-                question=market_question,
-                is_predictable=True,
-            ),
+            is_predictable=True,
             outcome_prediction=OutcomePrediction(
                 p_yes=0.6,
                 confidence=0.8,
@@ -38,12 +34,9 @@ class DummyAgentNoPrediction(bm.AbstractBenchmarkedAgent):
     def __init__(self) -> None:
         super().__init__(agent_name="dummy_no_prediction")
 
-    def evaluate_research_predict(self, market_question: str) -> bm.Prediction:
+    def check_and_predict(self, market_question: str) -> bm.Prediction:
         return bm.Prediction(
-            evaluation=EvaluatedQuestion(
-                question=market_question,
-                is_predictable=False,
-            ),
+            is_predictable=False,
             outcome_prediction=None,
         )
 
@@ -54,9 +47,7 @@ def dummy_agent_no_prediction() -> DummyAgentNoPrediction:
 
 
 def test_agent_prediction(dummy_agent: DummyAgent) -> None:
-    prediction = dummy_agent.evaluate_research_predict(
-        market_question="Will GNO go up?"
-    )
+    prediction = dummy_agent.check_and_predict(market_question="Will GNO go up?")
     assert prediction.outcome_prediction is not None
     assert prediction.outcome_prediction.p_yes == 0.6
     assert prediction.outcome_prediction.confidence == 0.8

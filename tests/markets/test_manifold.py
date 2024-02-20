@@ -12,4 +12,4 @@ from tests.utils import RUN_PAID_TESTS
 def test_manifold() -> None:
     market = pick_binary_market()
     print("Placing bet on market:", market.question)
-    place_bet(mana_type(0.01), market.id, True)
+    place_bet(mana_type(1), market.id, True)

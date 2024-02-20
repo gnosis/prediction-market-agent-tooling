@@ -4,13 +4,13 @@ import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
-from prediction_market_agent_tooling.markets.omen.api import (
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
     get_market,
     pick_binary_market,
 )
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from tests.utils import RUN_PAID_TESTS
 
 

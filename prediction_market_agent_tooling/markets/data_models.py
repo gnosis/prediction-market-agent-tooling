@@ -6,6 +6,7 @@ from enum import Enum
 from pydantic import BaseModel
 from web3 import Web3
 
+from prediction_market_agent_tooling.benchmark.utils import should_not_happen
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
@@ -21,6 +22,12 @@ from prediction_market_agent_tooling.gtypes import (
 class Currency(str, Enum):
     xDai = "xDai"
     Mana = "Mana"
+
+
+class Resolution(str, Enum):
+    YES = "YES"
+    NO = "NO"
+    CANCEL = "CANCEL"
 
 
 class BetAmount(BaseModel):
@@ -156,7 +163,7 @@ class ManifoldMarket(BaseModel):
     isResolved: bool
     resolution: t.Optional[str] = None
     resolutionTime: t.Optional[datetime] = None
-    lastBetTime: datetime
+    lastBetTime: t.Optional[datetime] = None
     lastCommentTime: t.Optional[datetime] = None
     lastUpdatedTime: datetime
     mechanism: str
@@ -182,6 +189,16 @@ class ManifoldMarket(BaseModel):
             outcomes=self.outcomes,
             bet_amount_currency=self.BET_AMOUNT_CURRENCY,
             original_market=self,
+        )
+
+    def get_resolution_enum(self) -> Resolution:
+        return Resolution(self.resolution)
+
+    def is_resolved_non_cancelled(self) -> bool:
+        return (
+            self.isResolved
+            and self.resolutionTime is not None
+            and self.get_resolution_enum() != Resolution.CANCEL
         )
 
     def __repr__(self) -> str:
@@ -235,6 +252,9 @@ class ManifoldBetFees(BaseModel):
     liquidityFee: Decimal
     creatorFee: Decimal
 
+    def get_total(self) -> Decimal:
+        return Decimal(sum([self.platformFee, self.liquidityFee, self.creatorFee]))
+
 
 class ManifoldBet(BaseModel):
     """
@@ -256,6 +276,27 @@ class ManifoldBet(BaseModel):
     fills: t.Optional[list[ManifoldBetFills]] = None
     createdTime: datetime
     outcome: str
+
+    def get_resolved_boolean_outcome(self) -> bool:
+        outcome = Resolution(self.outcome)
+        if outcome == Resolution.YES:
+            return True
+        elif outcome == Resolution.NO:
+            return False
+        else:
+            should_not_happen(f"Unexpected bet outcome string, '{outcome.value}'.")
+
+    def get_profit(self, market_outcome: bool) -> ProfitAmount:
+        profit = (
+            self.shares - self.amount
+            if self.get_resolved_boolean_outcome() == market_outcome
+            else -self.amount
+        )
+        profit -= self.fees.get_total()
+        return ProfitAmount(
+            amount=profit,
+            currency=Currency.Mana,
+        )
 
 
 class ManifoldContractMetric(BaseModel):

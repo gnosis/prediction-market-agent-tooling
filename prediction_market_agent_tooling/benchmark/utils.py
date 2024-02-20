@@ -132,22 +132,24 @@ class PredictionsCache(BaseModel):
     @staticmethod
     def load(path: str) -> "PredictionsCache":
         with open(path, "r") as f:
-            return PredictionsCache.parse_obj(json.load(f))
+            return PredictionsCache.model_validate(json.load(f))
 
 
 def get_manifold_markets(
-    number: int = 100,
-    excluded_questions: t.List[str] = [],
+    limit: int = 100,
+    offset: int = 0,
     filter_: t.Literal[
         "open", "closed", "resolved", "closing-this-month", "closing-next-month"
     ] = "open",
+    sort: t.Literal["liquidity", "score", "newest"] = "liquidity",
 ) -> t.List[Market]:
     url = "https://api.manifold.markets/v0/search-markets"
     params = {
         "term": "",
-        "sort": "liquidity",
+        "sort": sort,
         "filter": filter_,
-        "limit": f"{number + len(excluded_questions)}",
+        "limit": f"{limit}",
+        "offset": offset,
         "contractType": "BINARY",  # TODO support CATEGORICAL markets
     }
     response = requests.get(url, params=params)
@@ -173,24 +175,81 @@ def get_manifold_markets(
         }
 
     markets = [
-        Market.parse_obj(_map_fields(m, fields_map, process_values))
+        Market.model_validate(_map_fields(m, fields_map, process_values))
         for m in markets_json
     ]
 
-    # Filter out markets with excluded questions
-    markets = [m for m in markets if m.question not in excluded_questions]
+    return markets
 
-    return markets[:number]
+
+def get_manifold_markets_paged(
+    number: int = 100,
+    filter_: t.Literal[
+        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
+    ] = "open",
+    sort: t.Literal["liquidity", "score", "newest"] = "liquidity",
+    starting_offset: int = 0,
+    excluded_questions: set[str] | None = None,
+) -> t.List[Market]:
+    markets: list[Market] = []
+
+    offset = starting_offset
+    while len(markets) < number:
+        new_markets = get_manifold_markets(
+            limit=min(MANIFOLD_API_LIMIT, number - len(markets)),
+            offset=offset,
+            filter_=filter_,
+            sort=sort,
+        )
+        if not new_markets:
+            break
+        markets.extend(
+            market
+            for market in new_markets
+            if not excluded_questions or market.question not in excluded_questions
+        )
+        offset += len(new_markets)
+
+    return markets
+
+
+def get_manifold_markets_dated(
+    oldest_date: datetime,
+    filter_: t.Literal[
+        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
+    ] = "open",
+    excluded_questions: set[str] | None = None,
+) -> t.List[Market]:
+    markets: list[Market] = []
+
+    offset = 0
+    while True:
+        new_markets = get_manifold_markets(
+            limit=MANIFOLD_API_LIMIT,
+            offset=offset,
+            filter_=filter_,
+            sort="newest",  # Enforce sorting by newest, because there aren't date filters on the API.
+        )
+        if not new_markets:
+            break
+        for market in new_markets:
+            if market.created_time < oldest_date:
+                return markets
+            if not excluded_questions or market.question not in excluded_questions:
+                markets.append(market)
+            offset += 1
+
+    return markets
 
 
 def get_polymarket_markets(
-    number: int = 100,
-    excluded_questions: t.List[str] = [],
+    limit: int = 100,
     active: bool | None = True,
     closed: bool | None = False,
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     params: dict[str, str | int] = {
-        "_limit": number + len(excluded_questions),
+        "_limit": limit,
     }
     if active is not None:
         params["active"] = "true" if active else "false"
@@ -205,8 +264,7 @@ def get_polymarket_markets(
         if m_json["outcomes"] != ["Yes", "No"]:
             continue
 
-        if m_json["question"] in excluded_questions:
-            print(f"Skipping market with 'excluded question': {m_json['question']}")
+        if excluded_questions and m_json["question"] in excluded_questions:
             continue
 
         resolution = (
@@ -244,11 +302,11 @@ def get_polymarket_markets(
 def get_markets(
     number: int,
     source: MarketSource,
-    excluded_questions: t.List[str] = [],
     filter_: MarketFilter = MarketFilter.open,
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     if source == MarketSource.MANIFOLD:
-        return get_manifold_markets(
+        return get_manifold_markets_paged(
             number=number, excluded_questions=excluded_questions, filter_=filter_.value
         )
     elif source == MarketSource.POLYMARKET:
@@ -264,7 +322,6 @@ def get_markets(
                     else should_not_happen(f"Unknown filter {filter_} for polymarket.")
                 )
             ),
-        )
     else:
         raise ValueError(f"Unknown market source: {source}")
 

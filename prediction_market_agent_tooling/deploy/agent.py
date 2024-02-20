@@ -71,21 +71,23 @@ class DeployableAgent:
         env_vars: dict[str, str] | None = None,
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
+        gcp_fname: str | None = None,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
+        entrypoint_function_name = "main"
         entrypoint_template = f"""
 from {path_to_agent_file.replace("/", ".").replace(".py", "")} import *
 import functions_framework
 from prediction_market_agent_tooling.markets.markets import MarketType
 
 @functions_framework.http
-def main(request) -> str:
+def {entrypoint_function_name}(request) -> str:
     {self.__class__.__name__}().run(market_type={market_type.__class__.__name__}.{market_type.name})
     return "Success"
 """
 
-        gcp_fname = self.get_gcloud_fname(market_type)
+        gcp_fname = gcp_fname or self.get_gcloud_fname(market_type)
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
             f.write(entrypoint_template)
@@ -100,6 +102,7 @@ def main(request) -> str:
                 env_vars=env_vars,
                 secrets=secrets,
                 memory=memory,
+                entrypoint_function_name=entrypoint_function_name,
             )
 
         # Check that the function is deployed

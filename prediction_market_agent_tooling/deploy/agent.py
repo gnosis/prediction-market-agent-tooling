@@ -71,6 +71,7 @@ class DeployableAgent:
         env_vars: dict[str, str] | None = None,
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
+        gcp_fname: str | None = None,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
@@ -85,7 +86,7 @@ def main(request) -> str:
     return "Success"
 """
 
-        gcp_fname = self.get_gcloud_fname(market_type)
+        gcp_fname = gcp_fname or self.get_gcloud_fname(market_type)
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
             f.write(entrypoint_template)

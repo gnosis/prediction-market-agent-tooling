@@ -1,19 +1,30 @@
 import json
 import typing as t
+from datetime import datetime
 from enum import Enum
 
+import pytz
 import requests
 from pydantic import BaseModel, validator
 
+from prediction_market_agent_tooling.tools.utils import should_not_happen
 
-class EvaluatedQuestion(BaseModel):
-    question: str
-    is_predictable: bool
+MANIFOLD_API_LIMIT = 1000  # Manifold will only return up to 1000 markets
 
 
 class MarketSource(str, Enum):
     MANIFOLD = "manifold"
     POLYMARKET = "polymarket"
+
+
+class MarketFilter(str, Enum):
+    open = "open"
+    resolved = "resolved"
+
+
+class MarketResolution(str, Enum):
+    YES = "yes"
+    NO = "no"
 
 
 class Market(BaseModel):
@@ -22,8 +33,8 @@ class Market(BaseModel):
     url: str
     p_yes: float
     volume: float
-    is_resolved: bool
-    resolution: str | None = None
+    created_time: datetime
+    resolution: MarketResolution | None = None
     outcomePrices: list[float] | None = None
 
     @validator("outcomePrices", pre=True)
@@ -33,6 +44,16 @@ class Market(BaseModel):
         if len(value) != 2:
             raise ValueError("outcomePrices must have exactly 2 elements.")
         return value
+
+    @validator("created_time")
+    def _validate_created_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=pytz.UTC)
+        return value
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.resolution is not None
 
     @property
     def p_no(self) -> float:
@@ -48,6 +69,16 @@ class Market(BaseModel):
         # Use the outcome price if available, otherwise assume it's p_yes.
         return self.outcomePrices[1] if self.outcomePrices else 1 - self.p_yes
 
+    @property
+    def probable_resolution(self) -> MarketResolution:
+        return (
+            self.resolution
+            if self.resolution is not None
+            else MarketResolution.YES
+            if self.p_yes > 0.5
+            else MarketResolution.NO
+        )
+
 
 class OutcomePrediction(BaseModel):
     p_yes: float
@@ -55,12 +86,12 @@ class OutcomePrediction(BaseModel):
     info_utility: t.Optional[float]
 
     @property
-    def binary_answer(self) -> bool:
-        return self.p_yes > 0.5
+    def probable_resolution(self) -> MarketResolution:
+        return MarketResolution.YES if self.p_yes > 0.5 else MarketResolution.NO
 
 
 class Prediction(BaseModel):
-    evaluation: t.Optional[EvaluatedQuestion] = None
+    is_predictable: bool = True
     outcome_prediction: t.Optional[OutcomePrediction] = None
 
     time: t.Optional[float] = None
@@ -103,22 +134,24 @@ class PredictionsCache(BaseModel):
     @staticmethod
     def load(path: str) -> "PredictionsCache":
         with open(path, "r") as f:
-            return PredictionsCache.parse_obj(json.load(f))
+            return PredictionsCache.model_validate(json.load(f))
 
 
 def get_manifold_markets(
-    number: int = 100,
-    excluded_questions: t.List[str] = [],
+    limit: int = 100,
+    offset: int = 0,
     filter_: t.Literal[
         "open", "closed", "resolved", "closing-this-month", "closing-next-month"
     ] = "open",
+    sort: t.Literal["liquidity", "score", "newest"] = "liquidity",
 ) -> t.List[Market]:
     url = "https://api.manifold.markets/v0/search-markets"
     params = {
         "term": "",
-        "sort": "liquidity",
+        "sort": sort,
         "filter": filter_,
-        "limit": f"{number + len(excluded_questions)}",
+        "limit": f"{limit}",
+        "offset": offset,
         "contractType": "BINARY",  # TODO support CATEGORICAL markets
     }
     response = requests.get(url, params=params)
@@ -129,30 +162,96 @@ def get_manifold_markets(
         m["source"] = MarketSource.MANIFOLD
 
     # Map JSON fields to Market fields
-    fields_map = {
-        "probability": "p_yes",
-        "isResolved": "is_resolved",
+    fields_map = {"probability": "p_yes", "createdTime": "created_time"}
+    process_values = {
+        "resolution": lambda v: v.lower() if v else None,
     }
 
-    def _map_fields(old: dict[str, str], mapping: dict[str, str]) -> dict[str, str]:
-        return {mapping.get(k, k): v for k, v in old.items()}
+    def _map_fields(
+        old: dict[str, str],
+        mapping: dict[str, str],
+        processing: dict[str, t.Callable[[t.Any], t.Any]],
+    ) -> dict[str, str]:
+        return {
+            mapping.get(k, k): processing.get(k, lambda x: x)(v) for k, v in old.items()
+        }
 
-    markets = [Market.parse_obj(_map_fields(m, fields_map)) for m in markets_json]
+    markets = [
+        Market.model_validate(_map_fields(m, fields_map, process_values))
+        for m in markets_json
+    ]
 
-    # Filter out markets with excluded questions
-    markets = [m for m in markets if m.question not in excluded_questions]
+    return markets
 
-    return markets[:number]
+
+def get_manifold_markets_paged(
+    number: int = 100,
+    filter_: t.Literal[
+        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
+    ] = "open",
+    sort: t.Literal["liquidity", "score", "newest"] = "liquidity",
+    starting_offset: int = 0,
+    excluded_questions: set[str] | None = None,
+) -> t.List[Market]:
+    markets: list[Market] = []
+
+    offset = starting_offset
+    while len(markets) < number:
+        new_markets = get_manifold_markets(
+            limit=min(MANIFOLD_API_LIMIT, number - len(markets)),
+            offset=offset,
+            filter_=filter_,
+            sort=sort,
+        )
+        if not new_markets:
+            break
+        markets.extend(
+            market
+            for market in new_markets
+            if not excluded_questions or market.question not in excluded_questions
+        )
+        offset += len(new_markets)
+
+    return markets
+
+
+def get_manifold_markets_dated(
+    oldest_date: datetime,
+    filter_: t.Literal[
+        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
+    ] = "open",
+    excluded_questions: set[str] | None = None,
+) -> t.List[Market]:
+    markets: list[Market] = []
+
+    offset = 0
+    while True:
+        new_markets = get_manifold_markets(
+            limit=MANIFOLD_API_LIMIT,
+            offset=offset,
+            filter_=filter_,
+            sort="newest",  # Enforce sorting by newest, because there aren't date filters on the API.
+        )
+        if not new_markets:
+            break
+        for market in new_markets:
+            if market.created_time < oldest_date:
+                return markets
+            if not excluded_questions or market.question not in excluded_questions:
+                markets.append(market)
+            offset += 1
+
+    return markets
 
 
 def get_polymarket_markets(
-    number: int = 100,
-    excluded_questions: t.List[str] = [],
+    limit: int = 100,
     active: bool | None = True,
     closed: bool | None = False,
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     params: dict[str, str | int] = {
-        "_limit": number + len(excluded_questions),
+        "_limit": limit,
     }
     if active is not None:
         params["active"] = "true" if active else "false"
@@ -167,9 +266,23 @@ def get_polymarket_markets(
         if m_json["outcomes"] != ["Yes", "No"]:
             continue
 
-        if m_json["question"] in excluded_questions:
-            print(f"Skipping market with 'excluded question': {m_json['question']}")
+        if excluded_questions and m_json["question"] in excluded_questions:
             continue
+
+        resolution = (
+            MarketResolution.YES
+            if closed and m_json["outcomePrices"][0] == "1.0"
+            else (
+                MarketResolution.NO
+                if closed and m_json["outcomePrices"][1] == "1.0"
+                else (
+                    should_not_happen()
+                    if closed
+                    and m_json["outcomePrices"] not in (["1.0", "0.0"], ["0.0", "1.0"])
+                    else None
+                )
+            )
+        )
 
         markets.append(
             Market(
@@ -178,9 +291,10 @@ def get_polymarket_markets(
                 p_yes=m_json["outcomePrices"][
                     0
                 ],  # For binary markets on Polymarket, the first outcome is "Yes" and outcomePrices are equal to probabilities.
+                created_time=m_json["created_at"],
                 outcomePrices=m_json["outcomePrices"],
                 volume=m_json["volume"],
-                is_resolved=False,
+                resolution=resolution,
                 source=MarketSource.POLYMARKET,
             )
         )
@@ -190,15 +304,26 @@ def get_polymarket_markets(
 def get_markets(
     number: int,
     source: MarketSource,
-    excluded_questions: t.List[str] = [],
+    filter_: MarketFilter = MarketFilter.open,
+    excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     if source == MarketSource.MANIFOLD:
-        return get_manifold_markets(
-            number=number, excluded_questions=excluded_questions
+        return get_manifold_markets_paged(
+            number=number, excluded_questions=excluded_questions, filter_=filter_.value
         )
     elif source == MarketSource.POLYMARKET:
         return get_polymarket_markets(
-            number=number, excluded_questions=excluded_questions
+            limit=number,
+            excluded_questions=excluded_questions,
+            closed=(
+                True
+                if filter_ == MarketFilter.resolved
+                else (
+                    False
+                    if filter_ == MarketFilter.open
+                    else should_not_happen(f"Unknown filter {filter_} for polymarket.")
+                )
+            ),
         )
     else:
         raise ValueError(f"Unknown market source: {source}")
@@ -233,7 +358,3 @@ def get_llm_api_call_cost(
     model_cost += model_costs[model]["completion_tokens"] * completion_tokens
     model_cost /= 1000
     return model_cost
-
-
-def should_not_happen(message: str, E: t.Type[Exception] = RuntimeError) -> t.NoReturn:
-    raise E(message)

@@ -9,6 +9,8 @@ from pydantic import BaseModel, validator
 
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
+MANIFOLD_API_LIMIT = 1000  # Manifold will only return up to 1000 markets
+
 
 class MarketSource(str, Enum):
     MANIFOLD = "manifold"
@@ -72,9 +74,7 @@ class Market(BaseModel):
         return (
             self.resolution
             if self.resolution is not None
-            else MarketResolution.YES
-            if self.p_yes > 0.5
-            else MarketResolution.NO
+            else MarketResolution.YES if self.p_yes > 0.5 else MarketResolution.NO
         )
 
 
@@ -311,7 +311,7 @@ def get_markets(
         )
     elif source == MarketSource.POLYMARKET:
         return get_polymarket_markets(
-            number=number,
+            limit=number,
             excluded_questions=excluded_questions,
             closed=(
                 True
@@ -322,6 +322,7 @@ def get_markets(
                     else should_not_happen(f"Unknown filter {filter_} for polymarket.")
                 )
             ),
+        )
     else:
         raise ValueError(f"Unknown market source: {source}")
 

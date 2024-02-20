@@ -6,7 +6,7 @@ import streamlit as st
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import get_manifold_markets_dated
-from prediction_market_agent_tooling.markets.manifold import get_authenticated_user
+from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,

@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 
-from prediction_market_agent_tooling.markets.manifold import get_authenticated_user
+from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )

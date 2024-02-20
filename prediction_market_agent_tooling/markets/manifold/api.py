@@ -8,12 +8,14 @@ from prediction_market_agent_tooling.gtypes import Mana
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
+    Resolution,
+    ResolvedBet,
+)
+from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldBet,
     ManifoldContractMetric,
     ManifoldMarket,
     ManifoldUser,
-    Resolution,
-    ResolvedBet,
 )
 
 """

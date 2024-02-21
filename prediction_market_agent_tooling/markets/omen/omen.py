@@ -122,7 +122,7 @@ with open(
 with open(
     os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
-        "../abis/omen_fpmm_factory.abi.json",
+        "../../abis/omen_fpmm_factory.abi.json",
     )
 ) as f:
     # Contract ABI taken from https://gnosisscan.io/address/0x9083A2B699c0a4AD06F63580BDE2635d26a3eeF0#code.
@@ -146,7 +146,7 @@ with open(
 with open(
     os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
-        "../abis/omen_realitio.abi.json",
+        "../../abis/omen_realitio.abi.json",
     )
 ) as f:
     # Contract ABI taken from https://gnosisscan.io/address/0x79e32aE03fb27B07C89c0c568F80287C01ca2E57#code.
@@ -158,7 +158,7 @@ with open(
 with open(
     os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
-        "../abis/omen_oracle.abi.json",
+        "../../abis/omen_oracle.abi.json",
     )
 ) as f:
     # Contract ABI taken from https://gnosisscan.io/address/0xAB16D643bA051C11962DA645f74632d3130c81E2#code.
@@ -170,7 +170,7 @@ with open(
 with open(
     os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
-        "../abis/omen_kleros.abi.json",
+        "../../abis/omen_kleros.abi.json",
     )
 ) as f:
     # Contract ABI taken from https://gnosisscan.io/address/0xe40DD83a262da3f56976038F1554Fe541Fa75ecd#code.
@@ -182,7 +182,7 @@ with open(
 with open(
     os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
-        "../abis/omen_dxdao.abi.json",
+        "../../abis/omen_dxdao.abi.json",
     )
 ) as f:
     # Contract ABI taken from https://gnosisscan.io/address/0xFe14059344b74043Af518d12931600C0f52dF7c5#code.

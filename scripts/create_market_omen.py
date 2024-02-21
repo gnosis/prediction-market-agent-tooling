@@ -11,8 +11,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
-app = typer.Typer()
-
 
 def main(
     question: str = typer.Option(),

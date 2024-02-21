@@ -3,7 +3,7 @@ from datetime import datetime
 import typer
 
 from prediction_market_agent_tooling.gtypes import PrivateKey, xdai_type
-from prediction_market_agent_tooling.markets.omen import (
+from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,

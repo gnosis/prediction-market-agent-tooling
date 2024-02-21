@@ -1,8 +1,8 @@
 import os
-import tenacity
 from decimal import Decimal
 from typing import Any, Optional, TypeVar
 
+import tenacity
 from web3 import Web3
 from web3.types import Nonce, TxParams, TxReceipt, Wei
 
@@ -15,7 +15,6 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xdai_type,
 )
-
 
 GNOSIS_NETWORK_ID = 100  # xDai network.
 ONE_NONCE = Nonce(1)

@@ -1,14 +1,14 @@
 from decimal import Decimal
 from typing import NewType, Union
 
-from hexbytes import (  # noqa: F401  # Import for the sake of easy importing with others from here.
-    HexBytes,
-)
 from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     Address,
     ChecksumAddress,
     HexAddress,
     HexStr,
+)
+from hexbytes import (  # noqa: F401  # Import for the sake of easy importing with others from here.
+    HexBytes,
 )
 from web3.types import Wei
 

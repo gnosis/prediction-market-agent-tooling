@@ -1,8 +1,9 @@
 import typer
+
 from prediction_market_agent_tooling.benchmark.utils import (
-    get_markets,
     MarketFilter,
     MarketSource,
+    get_markets,
 )
 
 

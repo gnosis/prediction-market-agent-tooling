@@ -1,11 +1,13 @@
-import typer
 from datetime import datetime
+
+import typer
+
 from prediction_market_agent_tooling.gtypes import PrivateKey, xdai_type
 from prediction_market_agent_tooling.markets.omen import (
     OMEN_DEFAULT_MARKET_FEE,
-    omen_create_market_tx,
-    OMEN_TRUE_OUTCOME,
     OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+    omen_create_market_tx,
 )
 from prediction_market_agent_tooling.tools.web3_utils import verify_address
 

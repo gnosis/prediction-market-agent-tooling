@@ -5,30 +5,33 @@ Their API is available as graph on https://thegraph.com/explorer/subgraphs/9V1aH
 but to not use our own credits, seems we can use their api deployment directly: https://api.thegraph.com/subgraphs/name/protofire/omen-xdai/graphql (link to the online playground)
 """
 
-import os
 import json
-import typing as t
+import os
 import random
-import requests
+import typing as t
+from datetime import datetime
 from enum import Enum
+
+import requests
 from web3 import Web3
 from web3.types import TxParams, TxReceipt
-from datetime import datetime
+
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
     HexAddress,
+    HexBytes,
     OmenOutcomeToken,
     PrivateKey,
     Wei,
     xDai,
-    HexBytes,
 )
 from prediction_market_agent_tooling.markets.data_models import OmenMarket
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.web3_utils import (
     ONE_NONCE,
     WXDAI_ABI,
+    WXDAI_CONTRACT_ADDRESS,
     Nonce,
     add_fraction,
     call_function_on_contract,
@@ -36,7 +39,6 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     remove_fraction,
     xdai_to_wei,
     xdai_type,
-    WXDAI_CONTRACT_ADDRESS,
 )
 
 OMEN_TRUE_OUTCOME = "Yes"

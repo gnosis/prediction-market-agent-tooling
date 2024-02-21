@@ -3,7 +3,6 @@ import os
 import tempfile
 import time
 import typing as t
-from decimal import Decimal
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
@@ -11,15 +10,10 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
     schedule_deployed_gcp_function,
 )
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
-from prediction_market_agent_tooling.markets.data_models import (
-    AgentMarket,
-    BetAmount,
-    Currency,
-)
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
-    place_bet,
 )
 
 
@@ -119,29 +113,16 @@ def {entrypoint_function_name}(request) -> str:
             schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
 
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
-        available_markets = [
-            x.to_agent_market() for x in get_binary_markets(market_type)
-        ]
+        available_markets = get_binary_markets(market_type)
         markets = self.pick_markets(available_markets)
         for market in markets:
             result = self.answer_binary_market(market)
             if _place_bet:
                 print(f"Placing bet on {market} with result {result}")
-                place_bet(
-                    market=market.original_market,
-                    amount=get_tiny_bet(market_type),
+                market.place_bet(
+                    amount=market.get_tiny_bet_amount(),
                     outcome=result,
-                    omen_auto_deposit=True,
                 )
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{int(time.time())}"
-
-
-def get_tiny_bet(market_type: MarketType) -> BetAmount:
-    if market_type == MarketType.OMEN:
-        return BetAmount(amount=Decimal(0.00001), currency=Currency.xDai)
-    elif market_type == MarketType.MANIFOLD:
-        return BetAmount(amount=Decimal(1), currency=Currency.Mana)
-    else:
-        raise ValueError(f"Unknown market type: {market_type}")

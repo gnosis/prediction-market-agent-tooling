@@ -1,3 +1,13 @@
+import typing as t
+from decimal import Decimal
+
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
+from prediction_market_agent_tooling.tools.utils import check_not_none
+
 """
 Python API for Omen prediction market.
 
@@ -5,8 +15,55 @@ Their API is available as graph on https://thegraph.com/explorer/subgraphs/9V1aH
 but to not use our own credits, seems we can use their api deployment directly: https://api.thegraph.com/subgraphs/name/protofire/omen-xdai/graphql (link to the online playground)
 """
 
-import json
+
+class OmenAgentMarket(AgentMarket):
+    """
+    Omen's market class that can be used by agents to make predictions.
+    """
+
+    currency: t.ClassVar[Currency] = Currency.xDai
+    collateral_token_contract_address_checksummed: ChecksumAddress
+    market_maker_contract_address_checksummed: ChecksumAddress
+
+    def get_tiny_bet_amount(self) -> BetAmount:
+        return BetAmount(amount=Decimal(0.00001), currency=self.currency)
+
+    def place_bet(
+        self, outcome: bool, amount: BetAmount, omen_auto_deposit: bool = True
+    ) -> None:
+        if amount.currency != self.currency:
+            raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
+        amount_xdai = xDai(amount.amount)
+        keys = APIKeys()
+        binary_omen_buy_outcome_tx(
+            amount=check_not_none(amount_xdai),
+            from_address=check_not_none(keys.bet_from_address),
+            from_private_key=check_not_none(keys.bet_from_private_key),
+            market=self,
+            binary_outcome=outcome,
+            auto_deposit=omen_auto_deposit,
+        )
+
+    @staticmethod
+    def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
+        return OmenAgentMarket(
+            id=model.id,
+            question=model.title,
+            outcomes=model.outcomes,
+            collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
+            market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
+        )
+
+    @staticmethod
+    def get_binary_markets(limit: int) -> list[AgentMarket]:
+        return [
+            OmenAgentMarket.from_data_model(m)
+            for m in get_omen_binary_markets(limit=limit)
+        ]
+
+
 import os
+import json
 import random
 import typing as t
 from datetime import datetime
@@ -26,7 +83,7 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     xDai,
 )
-from prediction_market_agent_tooling.markets.data_models import OmenMarket
+from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.web3_utils import (
     ONE_NONCE,
@@ -54,7 +111,7 @@ class Arbitrator(str, Enum):
 
 with open(
     os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "../abis/omen_fpmm.abi.json"
+        os.path.dirname(os.path.realpath(__file__)), "../../abis/omen_fpmm.abi.json"
     )
 ) as f:
     # File content taken from https://github.com/protofire/omen-exchange/blob/master/app/src/abi/marketMaker.json.
@@ -77,7 +134,7 @@ with open(
 with open(
     os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
-        "../abis/omen_fpmm_conditionaltokens.abi.json",
+        "../../abis/omen_fpmm_conditionaltokens.abi.json",
     )
 ) as f:
     # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.
@@ -252,7 +309,7 @@ def omen_approve_market_maker_to_spend_collateral_token_tx(
 
 def omen_approve_all_market_maker_to_move_conditionaltokens_tx(
     web3: Web3,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     approve: bool,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
@@ -298,7 +355,7 @@ def omen_deposit_collateral_token_tx(
 
 def omen_withdraw_collateral_token_tx(
     web3: Web3,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     amount_wei: Wei,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
@@ -318,7 +375,7 @@ def omen_withdraw_collateral_token_tx(
 
 def omen_calculate_buy_amount(
     web3: Web3,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     investment_amount: Wei,
     outcome_index: int,
 ) -> OmenOutcomeToken:
@@ -337,7 +394,7 @@ def omen_calculate_buy_amount(
 
 def omen_calculate_sell_amount(
     web3: Web3,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     return_amount: Wei,
     outcome_index: int,
 ) -> OmenOutcomeToken:
@@ -356,7 +413,7 @@ def omen_calculate_sell_amount(
 
 def omen_get_market_maker_conditionaltokens_address(
     web3: Web3,
-    market: OmenMarket,
+    market: OmenAgentMarket,
 ) -> HexAddress:
     address: HexAddress = call_function_on_contract(
         web3,
@@ -369,7 +426,7 @@ def omen_get_market_maker_conditionaltokens_address(
 
 def omen_buy_shares_tx(
     web3: Web3,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     amount_wei: Wei,
     outcome_index: int,
     min_outcome_tokens_to_buy: OmenOutcomeToken,
@@ -395,7 +452,7 @@ def omen_buy_shares_tx(
 
 def omen_sell_shares_tx(
     web3: Web3,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     amount_wei: Wei,
     outcome_index: int,
     max_outcome_tokens_to_sell: OmenOutcomeToken,
@@ -423,7 +480,7 @@ def omen_buy_outcome_tx(
     amount: xDai,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     outcome: str,
     auto_deposit: bool,
 ) -> None:
@@ -487,7 +544,7 @@ def binary_omen_buy_outcome_tx(
     amount: xDai,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     binary_outcome: bool,
     auto_deposit: bool,
 ) -> None:
@@ -505,7 +562,7 @@ def omen_sell_outcome_tx(
     amount: xDai,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     outcome: str,
     auto_withdraw: bool,
 ) -> None:
@@ -570,7 +627,7 @@ def binary_omen_sell_outcome_tx(
     amount: xDai,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    market: OmenMarket,
+    market: OmenAgentMarket,
     binary_outcome: bool,
     auto_withdraw: bool,
 ) -> None:

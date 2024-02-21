@@ -1,7 +1,8 @@
 import typer
 
 from prediction_market_agent_tooling.gtypes import PrivateKey, xdai_type
-from prediction_market_agent_tooling.markets.omen import (
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
     get_market,
     omen_buy_outcome_tx,
     omen_sell_outcome_tx,
@@ -34,7 +35,7 @@ def buy(
 
     Market ID can be found easily in the URL: https://aiomen.eth.limo/#/0x86376012a5185f484ec33429cadfa00a8052d9d4
     """
-    market = get_market(market_id)
+    market = OmenAgentMarket.from_data_model(get_market(market_id))
     omen_buy_outcome_tx(
         amount=xdai_type(amount),
         from_address=verify_address(from_address),
@@ -68,7 +69,7 @@ def sell(
 
     Market ID can be found easily in the URL: https://aiomen.eth.limo/#/0x86376012a5185f484ec33429cadfa00a8052d9d4
     """
-    market = get_market(market_id)
+    market = OmenAgentMarket.from_data_model(get_market(market_id))
     omen_sell_outcome_tx(
         amount=xdai_type(amount),
         from_address=verify_address(from_address),

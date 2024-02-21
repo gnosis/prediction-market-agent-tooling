@@ -1,5 +1,6 @@
 import typing as t
 from datetime import datetime
+from decimal import Decimal
 
 from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    BetAmount,
     Currency,
     ProfitAmount,
     ResolvedBet,
@@ -111,7 +113,7 @@ class OmenBetFPMM(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome_index = self.outcomes.index(self.currentAnswer)
+        outcome_index = self.outcomes.index(self.currentAnswer)  # type: ignore # TODO Mypy doesn't understand that self.currentAnswer is known non-None
 
         if outcome_index not in OMEN_BINARY_MARKET_OUTCOME_MAPPING:
             raise ValueError(
@@ -153,7 +155,7 @@ class OmenBet(BaseModel):
     def get_profit(self) -> ProfitAmount:
         bet_amount_xdai = wei_to_xdai(self.collateralAmount)
         profit = (
-            wei_to_xdai(self.outcomeTokensTraded) - bet_amount_xdai
+            wei_to_xdai(Wei(self.outcomeTokensTraded)) - bet_amount_xdai
             if self.boolean_outcome == self.fpmm.boolean_outcome
             else -bet_amount_xdai
         )
@@ -164,12 +166,19 @@ class OmenBet(BaseModel):
         )
 
     def to_generic_resolved_bet(self) -> ResolvedBet:
+        if not self.fpmm.is_resolved:
+            raise ValueError(
+                f"Bet with title {self.title} is not resolved. It has no resolved time."
+            )
+
         return ResolvedBet(
-            amount=xDai(self.collateralAmountUSD),
+            amount=BetAmount(
+                amount=Decimal(self.collateralAmountUSD), currency=Currency.xDai
+            ),
             outcome=self.boolean_outcome,
             created_time=datetime.fromtimestamp(self.creationTimestamp),
             market_question=self.title,
-            market_outcome=self.fpmm.binary_outcome,
-            resolved_time=datetime.fromtimestamp(self.fpmm.answerFinalizedTimestamp),
+            market_outcome=self.fpmm.boolean_outcome,
+            resolved_time=datetime.fromtimestamp(self.fpmm.answerFinalizedTimestamp),  # type: ignore # TODO Mypy doesn't understand that self.fpmm.is_resolved is True and therefore timestamp is known non-None
             profit=self.get_profit(),
         )

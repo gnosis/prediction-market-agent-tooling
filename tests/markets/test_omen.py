@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 
 import pytest
+from eth_typing import ChecksumAddress, HexAddress, HexStr
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
@@ -58,7 +59,9 @@ def test_omen_buy_and_sell_outcome() -> None:
 
 
 def test_get_bets() -> None:
-    AN_ADDRESS = "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"
+    AN_ADDRESS = ChecksumAddress(
+        HexAddress(HexStr("0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"))
+    )
     bets = get_resolved_bets(
         better_address=AN_ADDRESS,
         start_time=datetime(2024, 2, 20),

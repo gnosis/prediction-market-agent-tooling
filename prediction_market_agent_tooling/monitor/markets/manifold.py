@@ -1,5 +1,5 @@
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.markets.manifold import (
+from prediction_market_agent_tooling.markets.manifold.api import (
     get_resolved_manifold_bets,
     manifold_to_generic_resolved_bet,
 )

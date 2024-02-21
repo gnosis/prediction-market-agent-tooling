@@ -1,10 +1,11 @@
+from datetime import datetime
 from decimal import Decimal
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
-from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
+from prediction_market_agent_tooling.markets.omen.data_models import OmenBet, OmenMarket
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 """
@@ -553,3 +554,11 @@ def binary_omen_sell_outcome_tx(
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
         auto_withdraw=auto_withdraw,
     )
+
+
+def get_resolved_bets(
+    better_address: ChecksumAddress,
+    start_time: datetime,
+    end_time: datetime,
+) -> list[OmenBet]:
+    return []

@@ -1,4 +1,6 @@
 import typing as t
+from datetime import datetime
+from decimal import Decimal
 
 from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel
@@ -10,6 +12,11 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
     Wei,
     xDai,
+)
+from prediction_market_agent_tooling.markets.data_models import (
+    Currency,
+    ProfitAmount,
+    ResolvedBet,
 )
 
 
@@ -64,3 +71,14 @@ class OmenMarket(BaseModel):
 
     def __repr__(self) -> str:
         return f"Omen's market: {self.title}"
+
+
+class OmenBet(BaseModel):
+    shares: Decimal
+
+    def to_generic_resolved_bet(self) -> ResolvedBet:
+        return ResolvedBet(
+            market_outcome=True,
+            resolved_time=datetime.now(),
+            profit=ProfitAmount(amount=0.01, currency=Currency.xDai),
+        )

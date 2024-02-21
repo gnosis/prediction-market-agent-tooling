@@ -1,3 +1,4 @@
+import typing as t
 from decimal import Decimal
 
 from prediction_market_agent_tooling.gtypes import Mana
@@ -15,7 +16,7 @@ class ManifoldAgentMarket(AgentMarket):
     Manifold's market class that can be used by agents to make predictions.
     """
 
-    currency: Currency = Currency.Mana
+    currency: t.ClassVar[Currency] = Currency.Mana
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(1), currency=self.currency)

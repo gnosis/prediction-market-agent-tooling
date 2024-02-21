@@ -1,3 +1,4 @@
+import typing as t
 from datetime import datetime
 from decimal import Decimal
 
@@ -21,7 +22,7 @@ class OmenAgentMarket(AgentMarket):
     Omen's market class that can be used by agents to make predictions.
     """
 
-    currency: Currency = Currency.xDai
+    currency: t.ClassVar[Currency] = Currency.xDai
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
 

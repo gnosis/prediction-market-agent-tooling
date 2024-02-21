@@ -1,3 +1,4 @@
+import typing as t
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ class AgentMarket(BaseModel):
     id: str
     question: str
     outcomes: list[str]
-    currency: Currency
+    currency: t.ClassVar[Currency]
 
     def get_bet_amount(self, amount: Decimal) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)

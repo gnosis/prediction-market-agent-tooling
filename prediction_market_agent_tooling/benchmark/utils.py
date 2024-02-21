@@ -22,6 +22,11 @@ class MarketFilter(str, Enum):
     resolved = "resolved"
 
 
+class MarketSort(str, Enum):
+    liquidity = "liquidity"
+    newest = "newest"
+
+
 class MarketResolution(str, Enum):
     YES = "yes"
     NO = "no"
@@ -305,13 +310,19 @@ def get_markets(
     number: int,
     source: MarketSource,
     filter_: MarketFilter = MarketFilter.open,
+    sort: MarketSort | None = None,
     excluded_questions: set[str] | None = None,
 ) -> t.List[Market]:
     if source == MarketSource.MANIFOLD:
         return get_manifold_markets_paged(
-            number=number, excluded_questions=excluded_questions, filter_=filter_.value
+            number=number,
+            excluded_questions=excluded_questions,
+            filter_=filter_.value,
+            sort=(sort or MarketSort.liquidity).value,
         )
     elif source == MarketSource.POLYMARKET:
+        if sort is not None:
+            raise ValueError(f"Polymarket doesn't support sorting.")
         return get_polymarket_markets(
             limit=number,
             excluded_questions=excluded_questions,

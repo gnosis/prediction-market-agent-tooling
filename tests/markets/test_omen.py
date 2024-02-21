@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 
 import pytest
 
@@ -9,6 +10,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
     get_market,
+    get_resolved_bets,
     pick_binary_market,
 )
 from tests.utils import RUN_PAID_TESTS
@@ -52,4 +54,18 @@ def test_omen_buy_and_sell_outcome() -> None:
         market=market,
         binary_outcome=True,
         auto_withdraw=True,
+    )
+
+
+def test_get_bets() -> None:
+    AN_ADDRESS = "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"
+    bets = get_resolved_bets(
+        better_address=AN_ADDRESS,
+        start_time=datetime(2024, 2, 20),
+        end_time=datetime(2024, 2, 21),
+    )
+    assert len(bets) == 1
+    assert (
+        bets[0].id
+        == "0x5b1457bb7525eed03d3c78a542ce6d89be6090e10x3666da333dadd05083fef9ff6ddee588d26e43070x1"
     )

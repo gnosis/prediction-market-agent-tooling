@@ -1,6 +1,5 @@
 import typing as t
 from datetime import datetime
-from decimal import Decimal
 
 from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel
@@ -18,6 +17,12 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProfitAmount,
     ResolvedBet,
 )
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
+
+OMEN_BINARY_MARKET_OUTCOME_MAPPING = {
+    0: True,
+    1: False,
+}
 
 
 class OmenMarket(BaseModel):
@@ -73,12 +78,98 @@ class OmenMarket(BaseModel):
         return f"Omen's market: {self.title}"
 
 
+class OmenBetCreator(BaseModel):
+    id: HexAddress
+
+
+class OmenBetFPMM(BaseModel):
+    id: HexAddress
+    outcomes: list[str]
+    title: str
+    answerFinalizedTimestamp: t.Optional[int] = None
+    currentAnswer: t.Optional[str] = None
+    isPendingArbitration: bool
+    arbitrationOccurred: bool
+    openingTimestamp: int
+
+    @property
+    def is_resolved(self) -> bool:
+        return (
+            self.answerFinalizedTimestamp is not None and self.currentAnswer is not None
+        )
+
+    @property
+    def is_binary(self) -> bool:
+        return len(self.outcomes) == 2
+
+    @property
+    def boolean_outcome(self) -> bool:
+        if not self.is_binary:
+            raise ValueError(
+                f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
+            )
+        if not self.is_resolved:
+            raise ValueError(f"Bet with title {self.title} is not resolved.")
+
+        outcome_index = self.outcomes.index(self.currentAnswer)
+
+        if outcome_index not in OMEN_BINARY_MARKET_OUTCOME_MAPPING:
+            raise ValueError(
+                f"Outcome index `{outcome_index}` not valid for binary market."
+            )
+
+        return OMEN_BINARY_MARKET_OUTCOME_MAPPING[outcome_index]
+
+
 class OmenBet(BaseModel):
-    shares: Decimal
+    id: HexAddress
+    title: str
+    collateralToken: HexAddress
+    outcomeTokenMarginalPrice: xDai
+    oldOutcomeTokenMarginalPrice: xDai
+    type: str
+    creator: OmenBetCreator
+    creationTimestamp: int
+    collateralAmount: Wei
+    collateralAmountUSD: USD
+    feeAmount: Wei
+    outcomeIndex: int
+    outcomeTokensTraded: int
+    transactionHash: HexAddress
+    fpmm: OmenBetFPMM
+
+    @property
+    def creation_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.creationTimestamp)
+
+    @property
+    def boolean_outcome(self) -> bool:
+        if self.outcomeIndex not in OMEN_BINARY_MARKET_OUTCOME_MAPPING:
+            raise ValueError(
+                f"Outcome index `{self.outcomeIndex}` not valid for binary market."
+            )
+        return OMEN_BINARY_MARKET_OUTCOME_MAPPING[self.outcomeIndex]
+
+    def get_profit(self) -> ProfitAmount:
+        bet_amount_xdai = wei_to_xdai(self.collateralAmount)
+        profit = (
+            wei_to_xdai(self.outcomeTokensTraded) - bet_amount_xdai
+            if self.boolean_outcome == self.fpmm.boolean_outcome
+            else -bet_amount_xdai
+        )
+        profit -= wei_to_xdai(self.feeAmount)
+        return ProfitAmount(
+            amount=profit,
+            currency=Currency.xDai,
+        )
 
     def to_generic_resolved_bet(self) -> ResolvedBet:
         return ResolvedBet(
-            market_outcome=True,
-            resolved_time=datetime.now(),
-            profit=ProfitAmount(amount=0.01, currency=Currency.xDai),
+            amount=xDai(self.collateralAmountUSD),
+            outcome=self.boolean_outcome,
+            created_time=datetime.fromtimestamp(self.creationTimestamp),
+            market_question=self.title,
+            market_outcome=self.fpmm.binary_outcome,
+            resolved_time=datetime.fromtimestamp(self.fpmm.answerFinalizedTimestamp),
+            profit=self.get_profit(),
         )

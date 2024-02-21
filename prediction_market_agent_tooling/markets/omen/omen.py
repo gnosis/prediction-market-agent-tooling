@@ -62,8 +62,8 @@ class OmenAgentMarket(AgentMarket):
         ]
 
 
-import os
 import json
+import os
 import random
 import typing as t
 from datetime import datetime

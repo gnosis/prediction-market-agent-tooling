@@ -5,10 +5,13 @@ from decimal import Decimal
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
-from prediction_market_agent_tooling.markets.data_models import (BetAmount,
-                                                                 Currency)
+from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OmenBet, OmenMarket)
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+    OmenBet,
+    OmenMarket,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 """
@@ -76,19 +79,31 @@ import requests
 from web3 import Web3
 from web3.types import TxParams, TxReceipt
 
-from prediction_market_agent_tooling.gtypes import (ABI, ChecksumAddress,
-                                                    HexAddress, HexBytes,
-                                                    OmenOutcomeToken,
-                                                    PrivateKey, Wei, xDai)
+from prediction_market_agent_tooling.gtypes import (
+    ABI,
+    ChecksumAddress,
+    HexAddress,
+    HexBytes,
+    OmenOutcomeToken,
+    PrivateKey,
+    Wei,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.web3_utils import (
-    ONE_NONCE, WXDAI_ABI, WXDAI_CONTRACT_ADDRESS, Nonce, add_fraction,
-    call_function_on_contract, call_function_on_contract_tx, remove_fraction,
-    xdai_to_wei, xdai_type)
+    ONE_NONCE,
+    WXDAI_ABI,
+    WXDAI_CONTRACT_ADDRESS,
+    Nonce,
+    add_fraction,
+    call_function_on_contract,
+    call_function_on_contract_tx,
+    remove_fraction,
+    xdai_to_wei,
+    xdai_type,
+)
 
-OMEN_TRUE_OUTCOME = "Yes"
-OMEN_FALSE_OUTCOME = "No"
 OMEN_QUERY_BATCH_SIZE = 1000
 OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
 DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS = WXDAI_CONTRACT_ADDRESS
@@ -257,14 +272,6 @@ def get_omen_binary_markets(limit: int) -> list[OmenMarket]:
 
 def pick_binary_market() -> OmenMarket:
     return get_omen_binary_markets(limit=1)[0]
-
-
-def get_boolean_outcome(outcome_str: str) -> bool:
-    if outcome_str == OMEN_TRUE_OUTCOME:
-        return True
-    if outcome_str == OMEN_FALSE_OUTCOME:
-        return False
-    raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
 
 
 def get_market(market_id: str) -> OmenMarket:
@@ -639,7 +646,6 @@ def binary_omen_sell_outcome_tx(
     )
 
 
-
 # Order by id, so we can use id_gt for pagination.
 _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKER_TRADES = """
 query getFixedProductMarketMakerTrades(
@@ -738,6 +744,7 @@ def get_resolved_bets(
         all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
 
     return all_bets
+
 
 def omen_realitio_ask_question_tx(
     web3: Web3,

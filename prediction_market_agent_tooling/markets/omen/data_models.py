@@ -19,9 +19,19 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProfitAmount,
     ResolvedBet,
 )
-from prediction_market_agent_tooling.markets.omen.omen import get_boolean_outcome
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
+
+OMEN_TRUE_OUTCOME = "Yes"
+OMEN_FALSE_OUTCOME = "No"
+
+
+def get_boolean_outcome(outcome_str: str) -> bool:
+    if outcome_str == OMEN_TRUE_OUTCOME:
+        return True
+    if outcome_str == OMEN_FALSE_OUTCOME:
+        return False
+    raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
 
 
 class OmenMarket(BaseModel):

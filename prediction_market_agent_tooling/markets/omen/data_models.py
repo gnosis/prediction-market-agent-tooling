@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProfitAmount,
     ResolvedBet,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 OMEN_BINARY_MARKET_OUTCOME_MAPPING = {
@@ -113,7 +114,7 @@ class OmenBetFPMM(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome_index = self.outcomes.index(check_not_none(self.currentAnswer)) 
+        outcome_index = self.outcomes.index(check_not_none(self.currentAnswer))
 
         if outcome_index not in OMEN_BINARY_MARKET_OUTCOME_MAPPING:
             raise ValueError(

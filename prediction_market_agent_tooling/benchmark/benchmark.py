@@ -412,6 +412,30 @@ class Benchmarker:
         ]
         return markets_summary
 
+    def get_markets_overall_info(self) -> dict[str, list[str | float]]:
+        return {
+            "Number of markets": [len(self.markets)],
+            "Proportion resolved": [
+                sum(1 for m in self.markets if m.is_resolved) / len(self.markets)
+            ],
+            "Proportion YES": [
+                sum(
+                    1
+                    for m in self.markets
+                    if m.probable_resolution == MarketResolution.YES
+                )
+                / len(self.markets)
+            ],
+            "Proportion NO": [
+                sum(
+                    1
+                    for m in self.markets
+                    if m.probable_resolution == MarketResolution.NO
+                )
+                / len(self.markets)
+            ],
+        }
+
     def calculate_expected_returns(
         self, prediction: Prediction, market: Market
     ) -> float | None:
@@ -498,6 +522,9 @@ class Benchmarker:
 
     def generate_markdown_report(self) -> str:
         md = "# Comparison Report\n\n"
+        md += "## Overall Info\n\n"
+        md += pd.DataFrame(self.get_markets_overall_info()).to_markdown(index=False)
+        md += "\n\n"
         md += "## Summary Statistics\n\n"
         md += pd.DataFrame(self.compute_metrics()).to_markdown(index=False)
         md += "\n\n"

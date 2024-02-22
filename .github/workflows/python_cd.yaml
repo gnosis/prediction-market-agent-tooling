@@ -1,0 +1,21 @@
+name: Python CD
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  publish-pypi-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish PyPi package
+        uses: code-specialist/pypi-poetry-publish@v1  # https://github.com/marketplace/actions/pypi-poetry-publish
+        with:
+          BRANCH: main
+          PYTHON_VERSION: "3.10"
+          POETRY_VERSION: 1.7.1
+          POETRY_CORE_VERSION: 1.9.0
+          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_REGISTRY_PASSWORD: ${{ secrets.PYPI_TOKEN }}

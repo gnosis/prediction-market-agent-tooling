@@ -8,24 +8,6 @@ on:
   release:
     types: [ published ]
 
-inputs:
-  BRANCH:
-    description: "Branch to publish from"
-    required: false
-    default: "main"
-  POETRY_VERSION:
-    description: "The version of Poetry to use"
-    required: false
-    default: "1.7.1"
-  POETRY_CORE_VERSION:
-    description: "The version of Poetry Core to use"
-    required: false
-    default: "1.8.1"
-  PUBLISH_REGISTRY:
-    description: "The registry to publish to"
-    required: false
-    default: "https://upload.pypi.org/legacy/"
-
 jobs:
   publish-pypi-package:
     runs-on: ubuntu-latest
@@ -35,19 +17,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.BRANCH }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Verify the tag version in the pyproject.toml
         run: grep -q "version = \"${{ github.event.release.tag_name }}\"" pyproject.toml || exit 1
         shell: bash
-      - name: Install poetry
-        run: pip install poetry${{ inputs.POETRY_VERSION != '' && format('=={0}', inputs.POETRY_VERSION) || '' }} poetry-core${{ inputs.POETRY_CORE_VERSION != '' && format('=={0}', inputs.POETRY_CORE_VERSION) || '' }}
-        shell: bash
-      - name: Install dependencies
-        run: poetry install --no-root
-        shell: bash
+      - uses: ./.github/actions/python_prepare
       - name: Build and Publish
-        run: |
-          poetry config repositories.publish ${{ inputs.PUBLISH_REGISTRY }}    
-          poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" -r publish --build
+        run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" -r publish --build
         shell: bash

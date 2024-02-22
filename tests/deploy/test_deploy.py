@@ -1,10 +1,7 @@
 import random
 
-from prediction_market_agent_tooling.markets.data_models import AgentMarket
-from prediction_market_agent_tooling.deploy.agent import (
-    DeployableAgent,
-    DeploymentType,
-)
+from prediction_market_agent_tooling.deploy.agent import DeployableAgent
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.markets import MarketType
 
 
@@ -19,10 +16,9 @@ def test_local_deployment() -> None:
             return random.choice([True, False])
 
     agent = DeployableCoinFlipAgent()
-    agent.deploy(
+    agent.deploy_local(
         sleep_time=0.001,
         market_type=MarketType.MANIFOLD,
-        deployment_type=DeploymentType.LOCAL,
         timeout=0.01,
         place_bet=False,
     )

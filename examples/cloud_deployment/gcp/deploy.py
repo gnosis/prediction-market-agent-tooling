@@ -1,37 +1,41 @@
-import os
+import getpass
 
-from prediction_market_agent_tooling.deploy.gcp.deploy import (
-    deploy_to_gcp,
-    remove_deployed_gcp_function,
-    run_deployed_gcp_function,
-    schedule_deployed_gcp_function,
+import typer
+
+from prediction_market_agent_tooling.deploy.agent_example import (
+    DeployableAgent,
+    DeployableAlwaysRaiseAgent,
+    DeployableCoinFlipAgent,
 )
-from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.config import APIKeys
 
-if __name__ == "__main__":
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    fname = deploy_to_gcp(
-        requirements_file=f"{current_dir}/../../pyproject.toml",
-        extra_deps=[
-            "git+https://github.com/gnosis/prediction-market-agent.git@evan/deploy-agent"
-        ],
-        function_file=f"{current_dir}/agent.py",
+
+def main(
+    agent_name: str,
+    cron_schedule: str = "0 */2 * * *",
+    branch: str = "main",
+    custom_gcp_fname: str | None = None,
+) -> None:
+    agent: DeployableAgent = {
+        "coin_flip": DeployableCoinFlipAgent,
+        "always_raise": DeployableAlwaysRaiseAgent,
+    }[agent_name]()
+    agent.deploy_gcp(
+        repository=f"git+https://github.com/gnosis/prediction-market-agent-tooling.git@{branch}",
         market_type=MarketType.MANIFOLD,
-        api_keys={"MANIFOLD_API_KEY": APIKeys().manifold_api_key},
-        memory=512,
+        labels={
+            "owner": getpass.getuser()
+        },  # Only lowercase letters, numbers, hyphens and underscores are allowed.
+        env_vars={"EXAMPLE_ENV_VAR": "Gnosis"},
+        # You can allow the cloud function to access secrets by adding the role: `gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} --member=serviceAccount:${GCP_SVC_ACC} --role=roles/container.admin`.
+        secrets={
+            "MANIFOLD_API_KEY": f"JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest"
+        },  # Must be in the format "env_var_in_container => secret_name:version", you can create secrets using `gcloud secrets create --labels owner=<your-name> <secret-name>` command.
+        memory=256,
+        cron_schedule=cron_schedule,
+        gcp_fname=custom_gcp_fname,
     )
 
-    # Check that the function is deployed
-    assert gcp_function_is_active(fname)
 
-    # Run the function
-    response = run_deployed_gcp_function(fname)
-    assert response.ok
-
-    # Schedule the function
-    schedule_deployed_gcp_function(fname, cron_schedule="* * * * *")
-
-    # Delete the function
-    remove_deployed_gcp_function(fname)
+if __name__ == "__main__":
+    typer.run(main)

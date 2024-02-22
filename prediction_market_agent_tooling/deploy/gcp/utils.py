@@ -1,5 +1,6 @@
 import subprocess
 import sys
+
 from google.cloud.functions_v2.services.function_service.client import (
     FunctionServiceClient,
 )
@@ -10,10 +11,13 @@ def gcloud_deploy_cmd(
     gcp_function_name: str,
     source: str,
     entry_point: str,
-    api_keys: dict[str, str],
+    labels: dict[str, str] | None,
+    env_vars: dict[str, str] | None,
+    secrets: dict[str, str] | None,
     memory: int,  # in MB
+    timeout: int = 180,
+    retry_on_failure: bool = False,
 ) -> str:
-    api_keys_str = " ".join([f"{k}={v}" for k, v in api_keys.items()])
     cmd = (
         f"gcloud functions deploy {gcp_function_name} "
         f"--runtime {get_gcloud_python_runtime_str()} "
@@ -24,9 +28,23 @@ def gcloud_deploy_cmd(
         f"--entry-point {entry_point} "
         f"--memory {memory}MB "
         f"--no-allow-unauthenticated "
+        f"--timeout {timeout}s "
+        # Explicitly set no concurrency, min instances to 0 (agent is executed only once in a while) and max instances to 1 (parallel agents aren't allowed).
+        "--concurrency 1 "
+        "--min-instances 0 "
+        "--max-instances 1 "
     )
-    if api_keys:
-        cmd += f"--set-env-vars {api_keys_str} "
+    if retry_on_failure:
+        cmd += "--retry "
+    if labels:
+        for k, v in labels.items():
+            cmd += f"--update-labels {k}={v} "
+    if env_vars:
+        for k, v in env_vars.items():
+            cmd += f"--set-env-vars {k}={v} "
+    if secrets:
+        for k, v in secrets.items():
+            cmd += f"--set-secrets {k}={v} "
 
     return cmd
 

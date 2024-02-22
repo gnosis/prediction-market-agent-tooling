@@ -113,7 +113,7 @@ class OmenBetFPMM(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome_index = self.outcomes.index(self.currentAnswer)  # type: ignore # TODO Mypy doesn't understand that self.currentAnswer is known non-None
+        outcome_index = self.outcomes.index(check_not_none(self.currentAnswer)) 
 
         if outcome_index not in OMEN_BINARY_MARKET_OUTCOME_MAPPING:
             raise ValueError(

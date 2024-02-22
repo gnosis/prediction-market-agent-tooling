@@ -412,6 +412,30 @@ class Benchmarker:
         ]
         return markets_summary
 
+    def get_markets_results(self) -> dict[str, list[str | float]]:
+        return {
+            "Number of markets": [len(self.markets)],
+            "Proportion resolved": [
+                sum(1 for m in self.markets if m.is_resolved) / len(self.markets)
+            ],
+            "Proportion YES": [
+                sum(
+                    1
+                    for m in self.markets
+                    if m.probable_resolution == MarketResolution.YES
+                )
+                / len(self.markets)
+            ],
+            "Proportion NO": [
+                sum(
+                    1
+                    for m in self.markets
+                    if m.probable_resolution == MarketResolution.NO
+                )
+                / len(self.markets)
+            ],
+        }
+
     def calculate_expected_returns(
         self, prediction: Prediction, market: Market
     ) -> float | None:
@@ -498,13 +522,17 @@ class Benchmarker:
 
     def generate_markdown_report(self) -> str:
         md = "# Comparison Report\n\n"
-        md += "## Summary Statistics\n\n"
+        md += "## Market Results\n\n"
+        md += pd.DataFrame(self.get_markets_results()).to_markdown(index=False)
+        md += "\n\n"
+        md += "## Agent Results\n\n"
+        md += "### Summary Statistics\n\n"
         md += pd.DataFrame(self.compute_metrics()).to_markdown(index=False)
         md += "\n\n"
-        md += "## Markets\n\n"
+        md += "### Markets\n\n"
         md += pd.DataFrame(self.get_markets_summary()).to_markdown(index=False)
         md += "\n\n"
-        md += "## Expected value\n\n"
+        md += "### Expected value\n\n"
         overall_summary, per_market = self.compute_expected_returns_summary()
         md += pd.DataFrame(overall_summary).to_markdown(index=False)
         md += "\n\n"

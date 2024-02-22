@@ -412,7 +412,7 @@ class Benchmarker:
         ]
         return markets_summary
 
-    def get_markets_overall_info(self) -> dict[str, list[str | float]]:
+    def get_markets_results(self) -> dict[str, list[str | float]]:
         return {
             "Number of markets": [len(self.markets)],
             "Proportion resolved": [
@@ -523,7 +523,7 @@ class Benchmarker:
     def generate_markdown_report(self) -> str:
         md = "# Comparison Report\n\n"
         md += "## Market Results\n\n"
-        md += pd.DataFrame(self.get_markets_overall_info()).to_markdown(index=False)
+        md += pd.DataFrame(self.get_markets_results()).to_markdown(index=False)
         md += "\n\n"
         md += "## Agent Results\n\n"
         md += "### Summary Statistics\n\n"

@@ -653,6 +653,6 @@ def get_resolved_bets(
         # Increment id_gt for the next batch of bets
         id_gt = bets[-1]["id"]
 
-        all_bets.extend([OmenBet.model_validate(bet) for bet in bets])
+        all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
 
     return all_bets

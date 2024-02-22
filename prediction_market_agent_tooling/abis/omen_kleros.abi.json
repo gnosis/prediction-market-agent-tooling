@@ -1,0 +1,307 @@
+[
+  {
+    "inputs": [
+      { "internalType": "contract IAMB", "name": "_amb", "type": "address" },
+      { "internalType": "address", "name": "_foreignProxy", "type": "address" },
+      {
+        "internalType": "bytes32",
+        "name": "_foreignChainId",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "contract RealitioInterface",
+        "name": "_realitio",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_questionID",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "_requester",
+        "type": "address"
+      }
+    ],
+    "name": "ArbitrationFailed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_questionID",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ArbitrationFinished",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_questionID",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "_answer",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ArbitratorAnswered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_questionID",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "_requester",
+        "type": "address"
+      }
+    ],
+    "name": "RequestAcknowledged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_questionID",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "_requester",
+        "type": "address"
+      }
+    ],
+    "name": "RequestCanceled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_questionID",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "_requester",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_maxPrevious",
+        "type": "uint256"
+      }
+    ],
+    "name": "RequestNotified",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_questionID",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "_requester",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_maxPrevious",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "_reason",
+        "type": "string"
+      }
+    ],
+    "name": "RequestRejected",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "amb",
+    "outputs": [
+      { "internalType": "contract IAMB", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "foreignChainId",
+    "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "foreignProxy",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "_questionID", "type": "bytes32" },
+      { "internalType": "address", "name": "_requester", "type": "address" }
+    ],
+    "name": "handleNotifiedRequest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "_questionID", "type": "bytes32" },
+      { "internalType": "address", "name": "_requester", "type": "address" }
+    ],
+    "name": "handleRejectedRequest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "metadata",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+    "name": "questionIDToRequester",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "realitio",
+    "outputs": [
+      {
+        "internalType": "contract RealitioInterface",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "_questionID", "type": "bytes32" },
+      { "internalType": "bytes32", "name": "_answer", "type": "bytes32" }
+    ],
+    "name": "receiveArbitrationAnswer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "_questionID", "type": "bytes32" },
+      { "internalType": "address", "name": "_requester", "type": "address" }
+    ],
+    "name": "receiveArbitrationFailure",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "_questionID", "type": "bytes32" },
+      { "internalType": "address", "name": "_requester", "type": "address" },
+      { "internalType": "uint256", "name": "_maxPrevious", "type": "uint256" }
+    ],
+    "name": "receiveArbitrationRequest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "_questionID", "type": "bytes32" },
+      {
+        "internalType": "bytes32",
+        "name": "_lastHistoryHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "_lastAnswerOrCommitmentID",
+        "type": "bytes32"
+      },
+      { "internalType": "address", "name": "_lastAnswerer", "type": "address" }
+    ],
+    "name": "reportArbitrationAnswer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "", "type": "bytes32" },
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "name": "requests",
+    "outputs": [
+      {
+        "internalType": "enum RealitioHomeArbitrationProxy.Status",
+        "name": "status",
+        "type": "uint8"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "arbitratorAnswer",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

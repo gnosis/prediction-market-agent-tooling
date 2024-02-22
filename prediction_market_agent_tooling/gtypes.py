@@ -7,6 +7,9 @@ from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy import
     HexAddress,
     HexStr,
 )
+from hexbytes import (  # noqa: F401  # Import for the sake of easy importing with others from here.
+    HexBytes,
+)
 from web3.types import Wei
 
 Wad = Wei  # Wei tends to be referred to as `wad` variable in contracts.

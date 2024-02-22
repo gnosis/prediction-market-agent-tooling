@@ -19,5 +19,5 @@ jobs:
         shell: bash
       - uses: ./.github/actions/python_prepare
       - name: Build and Publish
-        run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" -r publish --build
+        run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
         shell: bash

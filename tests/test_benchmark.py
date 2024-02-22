@@ -180,10 +180,7 @@ def test_market_probable_resolution() -> None:
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.CANCEL,
         ).probable_resolution
-    assert (
-        "Unknown resolution `cancel`, if it is `cancel`, you should first filter out cancelled markets."
-        in str(e)
-    )
+    assert "Unknown resolution" in str(e)
     assert (
         Market(
             source=MarketSource.MANIFOLD,

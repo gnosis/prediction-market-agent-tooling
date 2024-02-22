@@ -16,6 +16,6 @@ jobs:
           BRANCH: main
           PYTHON_VERSION: "3.10"
           POETRY_VERSION: 1.7.1
-          POETRY_CORE_VERSION: 1.9.0
+          POETRY_CORE_VERSION: 1.8.1
           ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLISH_REGISTRY_PASSWORD: ${{ secrets.PYPI_TOKEN }}

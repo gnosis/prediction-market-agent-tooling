@@ -21,13 +21,7 @@ jobs:
       - name: Verify the tag version in the pyproject.toml
         run: grep -q "version = \"${{ github.event.release.tag_name }}\"" pyproject.toml || exit 1
         shell: bash
-      - name: Install poetry
-        run: pip install poetry poetry-core
-        shell: bash
-      - name: Install dependencies
-        run: poetry install --no-root
-        shell: bash
+      - uses: ./.github/actions/python_prepare
       - name: Build and Publish
-        run: |
-          poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" -r publish --build
+        run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" -r publish --build
         shell: bash

@@ -1,9 +1,5 @@
 name: Python CD
 
-branding:
-  icon: "package"
-  color: "blue"
-
 on:
   release:
     types: [ published ]

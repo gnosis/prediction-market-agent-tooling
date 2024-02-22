@@ -3,7 +3,9 @@ import os
 import requests
 from web3.types import Wei
 
-GNOSIS_RPC_URL = os.getenv("GNOSIS_RPC_URL", "https://gnosis-rpc.publicnode.com")
+GNOSIS_RPC_URL = os.getenv(
+    "GNOSIS_RPC_URL", "https://lb.nodies.app/v1/406d8dcc043f4cb3959ed7d6673d311a"
+)
 
 
 def get_balance(address: str) -> Wei:

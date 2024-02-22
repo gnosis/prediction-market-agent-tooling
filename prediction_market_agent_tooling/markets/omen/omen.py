@@ -5,8 +5,10 @@ from decimal import Decimal
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
-from prediction_market_agent_tooling.markets.omen.data_models import OmenBet, OmenMarket
+from prediction_market_agent_tooling.markets.data_models import (BetAmount,
+                                                                 Currency)
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OmenBet, OmenMarket)
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 """
@@ -63,39 +65,39 @@ class OmenAgentMarket(AgentMarket):
         ]
 
 
+import json
 import os
-from typing import Optional
+import random
+import typing as t
+from datetime import datetime
+from enum import Enum
 
 import requests
 from web3 import Web3
 from web3.types import TxParams, TxReceipt
 
-from prediction_market_agent_tooling.gtypes import (
-    ABI,
-    ChecksumAddress,
-    HexAddress,
-    OmenOutcomeToken,
-    PrivateKey,
-    Wei,
-    xDai,
-)
+from prediction_market_agent_tooling.gtypes import (ABI, ChecksumAddress,
+                                                    HexAddress, HexBytes,
+                                                    OmenOutcomeToken,
+                                                    PrivateKey, Wei, xDai)
 from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.web3_utils import (
-    ONE_NONCE,
-    WXDAI_ABI,
-    Nonce,
-    add_fraction,
-    call_function_on_contract,
-    call_function_on_contract_tx,
-    check_tx_receipt,
-    remove_fraction,
-    xdai_to_wei,
-)
+    ONE_NONCE, WXDAI_ABI, WXDAI_CONTRACT_ADDRESS, Nonce, add_fraction,
+    call_function_on_contract, call_function_on_contract_tx, remove_fraction,
+    xdai_to_wei, xdai_type)
 
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
 OMEN_QUERY_BATCH_SIZE = 1000
+OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
+DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS = WXDAI_CONTRACT_ADDRESS
+
+
+class Arbitrator(str, Enum):
+    KLEROS = "kleros"
+    DXDAO = "dxdao"
+
 
 with open(
     os.path.join(
@@ -105,6 +107,19 @@ with open(
     # File content taken from https://github.com/protofire/omen-exchange/blob/master/app/src/abi/marketMaker.json.
     # Factory contract at https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0.
     OMEN_FPMM_ABI = ABI(f.read())
+    # This doesn't have a fixed contract address, as this is something created by the factory below.
+
+with open(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "../../abis/omen_fpmm_factory.abi.json",
+    )
+) as f:
+    # Contract ABI taken from https://gnosisscan.io/address/0x9083A2B699c0a4AD06F63580BDE2635d26a3eeF0#code.
+    OMEN_FPMM_FACTORY_ABI = ABI(f.read())
+    OMEN_FPMM_FACTORY_CONTRACT_ADDRESS: ChecksumAddress = Web3.to_checksum_address(
+        "0x9083A2B699c0a4AD06F63580BDE2635d26a3eeF0"
+    )
 
 with open(
     os.path.join(
@@ -112,8 +127,60 @@ with open(
         "../../abis/omen_fpmm_conditionaltokens.abi.json",
     )
 ) as f:
-    # Based on the code from OMEN_FPMM_ABI's factory contract.
+    # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.
     OMEN_FPMM_CONDITIONALTOKENS_ABI = ABI(f.read())
+    OMEN_FPMM_CONDITIONALTOKENS_CONTRACT_ADDRESS: ChecksumAddress = (
+        Web3.to_checksum_address("0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce")
+    )
+
+with open(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "../../abis/omen_realitio.abi.json",
+    )
+) as f:
+    # Contract ABI taken from https://gnosisscan.io/address/0x79e32aE03fb27B07C89c0c568F80287C01ca2E57#code.
+    OMEN_REALITIO_ABI = ABI(f.read())
+    OMEN_REALITIO_CONTRACT_ADDRESS: ChecksumAddress = Web3.to_checksum_address(
+        "0x79e32aE03fb27B07C89c0c568F80287C01ca2E57"
+    )
+
+with open(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "../../abis/omen_oracle.abi.json",
+    )
+) as f:
+    # Contract ABI taken from https://gnosisscan.io/address/0xAB16D643bA051C11962DA645f74632d3130c81E2#code.
+    OMEN_ORACLE_ABI = ABI(f.read())
+    OMEN_ORACLE_CONTRACT_ADDRESS: ChecksumAddress = Web3.to_checksum_address(
+        "0xAB16D643bA051C11962DA645f74632d3130c81E2"
+    )
+
+with open(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "../../abis/omen_kleros.abi.json",
+    )
+) as f:
+    # Contract ABI taken from https://gnosisscan.io/address/0xe40DD83a262da3f56976038F1554Fe541Fa75ecd#code.
+    OMEN_KLEROS_ABI = ABI(f.read())
+    OMEN_KLEROS_CONTRACT_ADDRESS: ChecksumAddress = Web3.to_checksum_address(
+        "0xe40DD83a262da3f56976038F1554Fe541Fa75ecd"
+    )
+
+with open(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "../../abis/omen_dxdao.abi.json",
+    )
+) as f:
+    # Contract ABI taken from https://gnosisscan.io/address/0xFe14059344b74043Af518d12931600C0f52dF7c5#code.
+    OMEN_DXDAO_ABI = ABI(f.read())
+    OMEN_DXDAO_CONTRACT_ADDRESS: ChecksumAddress = Web3.to_checksum_address(
+        "0xFe14059344b74043Af518d12931600C0f52dF7c5"
+    )
+
 
 THEGRAPH_QUERY_URL = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
 
@@ -157,6 +224,16 @@ query getFixedProductMarketMakers($first: Int!, $outcomes: [String!]) {
     }
 }
 """
+
+
+def get_arbitrator_contract_address_and_abi(
+    arbitrator: Arbitrator,
+) -> tuple[ChecksumAddress, ABI]:
+    if arbitrator == Arbitrator.KLEROS:
+        return OMEN_KLEROS_CONTRACT_ADDRESS, OMEN_KLEROS_ABI
+    if arbitrator == Arbitrator.DXDAO:
+        return OMEN_DXDAO_CONTRACT_ADDRESS, OMEN_DXDAO_ABI
+    raise ValueError(f"Unknown arbitrator: {arbitrator}")
 
 
 def get_omen_markets(first: int, outcomes: list[str]) -> list[OmenMarket]:
@@ -206,21 +283,22 @@ def get_market(market_id: str) -> OmenMarket:
 
 def omen_approve_market_maker_to_spend_collateral_token_tx(
     web3: Web3,
-    market: OmenAgentMarket,
+    market_maker_contract_address: ChecksumAddress,
+    collateral_token_contract_address: ChecksumAddress,
     amount_wei: Wei,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    tx_params: Optional[TxParams] = None,
+    tx_params: t.Optional[TxParams] = None,
 ) -> TxReceipt:
     return call_function_on_contract_tx(
         web3=web3,
-        contract_address=market.collateral_token_contract_address_checksummed,
+        contract_address=collateral_token_contract_address,
         contract_abi=WXDAI_ABI,
         from_address=from_address,
         from_private_key=from_private_key,
         function_name="approve",
         function_params=[
-            market.market_maker_contract_address_checksummed,
+            market_maker_contract_address,
             amount_wei,
         ],
         tx_params=tx_params,
@@ -233,7 +311,7 @@ def omen_approve_all_market_maker_to_move_conditionaltokens_tx(
     approve: bool,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    tx_params: Optional[TxParams] = None,
+    tx_params: t.Optional[TxParams] = None,
 ) -> TxReceipt:
     # Get the address of conditional token's of this market.
     conditionaltokens_address = omen_get_market_maker_conditionaltokens_address(
@@ -256,15 +334,15 @@ def omen_approve_all_market_maker_to_move_conditionaltokens_tx(
 
 def omen_deposit_collateral_token_tx(
     web3: Web3,
-    market: OmenAgentMarket,
+    collateral_token_contract_address: ChecksumAddress,
     amount_wei: Wei,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    tx_params: Optional[TxParams] = None,
+    tx_params: t.Optional[TxParams] = None,
 ) -> TxReceipt:
     return call_function_on_contract_tx(
         web3=web3,
-        contract_address=market.collateral_token_contract_address_checksummed,
+        contract_address=collateral_token_contract_address,
         contract_abi=WXDAI_ABI,
         from_address=from_address,
         from_private_key=from_private_key,
@@ -279,7 +357,7 @@ def omen_withdraw_collateral_token_tx(
     amount_wei: Wei,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    tx_params: Optional[TxParams] = None,
+    tx_params: t.Optional[TxParams] = None,
 ) -> TxReceipt:
     return call_function_on_contract_tx(
         web3=web3,
@@ -352,7 +430,7 @@ def omen_buy_shares_tx(
     min_outcome_tokens_to_buy: OmenOutcomeToken,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    tx_params: Optional[TxParams] = None,
+    tx_params: t.Optional[TxParams] = None,
 ) -> TxReceipt:
     return call_function_on_contract_tx(
         web3=web3,
@@ -378,7 +456,7 @@ def omen_sell_shares_tx(
     max_outcome_tokens_to_sell: OmenOutcomeToken,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    tx_params: Optional[TxParams] = None,
+    tx_params: t.Optional[TxParams] = None,
 ) -> TxReceipt:
     return call_function_on_contract_tx(
         web3=web3,
@@ -424,31 +502,30 @@ def omen_buy_outcome_tx(
     # Allow 1% slippage.
     expected_shares = remove_fraction(expected_shares, 0.01)
     # Approve the market maker to withdraw our collateral token.
-    approve_tx_receipt = omen_approve_market_maker_to_spend_collateral_token_tx(
+    omen_approve_market_maker_to_spend_collateral_token_tx(
         web3=web3,
-        market=market,
+        market_maker_contract_address=market.market_maker_contract_address_checksummed,
+        collateral_token_contract_address=market.collateral_token_contract_address_checksummed,
         amount_wei=amount_wei,
         from_address=from_address_checksummed,
         from_private_key=from_private_key,
         tx_params={"nonce": nonce},
     )
     nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
-    check_tx_receipt(approve_tx_receipt)
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
     if auto_deposit:
-        deposit_receipt = omen_deposit_collateral_token_tx(
+        omen_deposit_collateral_token_tx(
             web3=web3,
-            market=market,
+            collateral_token_contract_address=market.collateral_token_contract_address_checksummed,
             amount_wei=amount_wei,
             from_address=from_address_checksummed,
             from_private_key=from_private_key,
             tx_params={"nonce": nonce},
         )
         nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
-        check_tx_receipt(deposit_receipt)
     # Buy shares using the deposited xDai in the collateral token.
-    buy_receipt = omen_buy_shares_tx(
+    omen_buy_shares_tx(
         web3,
         market,
         amount_wei,
@@ -459,7 +536,6 @@ def omen_buy_outcome_tx(
         tx_params={"nonce": nonce},
     )
     nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
-    check_tx_receipt(buy_receipt)
 
 
 def binary_omen_buy_outcome_tx(
@@ -511,7 +587,7 @@ def omen_sell_outcome_tx(
     max_outcome_tokens_to_sell = add_fraction(max_outcome_tokens_to_sell, 0.01)
 
     # Approve the market maker to move our (all) conditional tokens.
-    approve_tx_receipt = omen_approve_all_market_maker_to_move_conditionaltokens_tx(
+    omen_approve_all_market_maker_to_move_conditionaltokens_tx(
         web3=web3,
         market=market,
         approve=True,
@@ -520,9 +596,8 @@ def omen_sell_outcome_tx(
         tx_params={"nonce": nonce},
     )
     nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
-    check_tx_receipt(approve_tx_receipt)
     # Sell the shares.
-    sell_receipt = omen_sell_shares_tx(
+    omen_sell_shares_tx(
         web3,
         market,
         amount_wei,
@@ -533,10 +608,9 @@ def omen_sell_outcome_tx(
         tx_params={"nonce": nonce},
     )
     nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
-    check_tx_receipt(sell_receipt)
     if auto_withdraw:
         # Optionally, withdraw from the collateral token back to the `from_address` wallet.
-        withdraw_receipt = omen_withdraw_collateral_token_tx(
+        omen_withdraw_collateral_token_tx(
             web3=web3,
             market=market,
             amount_wei=amount_wei,
@@ -545,7 +619,6 @@ def omen_sell_outcome_tx(
             tx_params={"nonce": nonce},
         )
         nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
-        check_tx_receipt(withdraw_receipt)
 
 
 def binary_omen_sell_outcome_tx(
@@ -564,6 +637,7 @@ def binary_omen_sell_outcome_tx(
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
         auto_withdraw=auto_withdraw,
     )
+
 
 
 # Order by id, so we can use id_gt for pagination.
@@ -664,3 +738,259 @@ def get_resolved_bets(
         all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
 
     return all_bets
+
+def omen_realitio_ask_question_tx(
+    web3: Web3,
+    question: str,
+    category: str,
+    outcomes: list[str],
+    language: str,
+    arbitrator: Arbitrator,
+    opening: datetime,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    nonce: int | None = None,
+    tx_params: t.Optional[TxParams] = None,
+) -> HexBytes:
+    """
+    After the question is created, you can find it at https://reality.eth.link/app/#!/creator/{from_address}.
+    """
+    arbitrator_contract_address, _ = get_arbitrator_contract_address_and_abi(arbitrator)
+    # See https://realitio.github.io/docs/html/contracts.html#templates
+    # for possible template ids and how to format the question.
+    template_id = 2
+    realitio_question = "␟".join(
+        [
+            question,
+            json.dumps(outcomes),
+            category,
+            language,
+        ]
+    )
+    receipt_tx = call_function_on_contract_tx(
+        web3=web3,
+        contract_address=OMEN_REALITIO_CONTRACT_ADDRESS,
+        contract_abi=OMEN_REALITIO_ABI,
+        from_address=from_address,
+        from_private_key=from_private_key,
+        function_name="askQuestion",
+        function_params=dict(
+            template_id=template_id,
+            question=realitio_question,
+            arbitrator=arbitrator_contract_address,
+            timeout=86400,  # See https://github.com/protofire/omen-exchange/blob/2cfdf6bfe37afa8b169731d51fea69d42321d66c/app/src/util/networks.ts#L278.
+            opening_ts=int(opening.timestamp()),
+            nonce=(
+                nonce if nonce is not None else random.randint(0, 1000000)
+            ),  # Two equal questions need to have different nonces.
+        ),
+        tx_params=tx_params,
+    )
+    question_id: HexBytes = receipt_tx["logs"][0]["topics"][
+        1
+    ]  # The question id is available in the first emitted log, in the second topic.
+    return question_id
+
+
+def omen_construct_condition_id(
+    web3: Web3,
+    question_id: HexBytes,
+    oracle_address: ChecksumAddress,
+    outcomes_slot_count: int,
+) -> HexBytes:
+    id_: HexBytes = call_function_on_contract(
+        web3,
+        OMEN_FPMM_CONDITIONALTOKENS_CONTRACT_ADDRESS,
+        OMEN_FPMM_CONDITIONALTOKENS_ABI,
+        "getConditionId",
+        [oracle_address, question_id, outcomes_slot_count],
+    )
+    return id_
+
+
+def omen_does_condition_exist(
+    web3: Web3,
+    condition_id: HexBytes,
+) -> bool:
+    count: int = call_function_on_contract(
+        web3,
+        OMEN_FPMM_CONDITIONALTOKENS_CONTRACT_ADDRESS,
+        OMEN_FPMM_CONDITIONALTOKENS_ABI,
+        "getOutcomeSlotCount",
+        [condition_id],
+    )
+    return count > 0
+
+
+def omen_prepare_condition_tx(
+    web3: Web3,
+    question_id: HexBytes,
+    oracle_address: ChecksumAddress,
+    outcomes_slot_count: int,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    tx_params: t.Optional[TxParams] = None,
+) -> None:
+    call_function_on_contract_tx(
+        web3=web3,
+        contract_address=OMEN_FPMM_CONDITIONALTOKENS_CONTRACT_ADDRESS,
+        contract_abi=OMEN_FPMM_CONDITIONALTOKENS_ABI,
+        from_address=from_address,
+        from_private_key=from_private_key,
+        function_name="prepareCondition",
+        function_params=[
+            oracle_address,
+            question_id,
+            outcomes_slot_count,
+        ],
+        tx_params=tx_params,
+    )
+
+
+def omen_create_market_tx(
+    initial_funds: xDai,
+    question: str,
+    closing_time: datetime,
+    category: str,
+    language: str,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    outcomes: list[str],
+    auto_deposit: bool,
+    fee: float = OMEN_DEFAULT_MARKET_FEE,
+) -> ChecksumAddress:
+    """
+    Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
+    """
+    web3 = Web3(Web3.HTTPProvider(GNOSIS_RPC_URL))
+    from_address_checksummed = Web3.to_checksum_address(from_address)
+
+    initial_funds_wei = xdai_to_wei(initial_funds)
+    fee_wei = xdai_to_wei(
+        xdai_type(fee)
+    )  # We need to convert this to the wei units, but in reality it's % fee as stated in the `OMEN_DEFAULT_MARKET_FEE` variable.
+
+    # These checks were originally maded somewhere in the middle of the process, but it's safer to do them right away.
+    # Double check that the oracle's realitio address is the same as we are using.
+    if (
+        call_function_on_contract(
+            web3,
+            OMEN_ORACLE_CONTRACT_ADDRESS,
+            OMEN_ORACLE_ABI,
+            "realitio",
+        )
+        != OMEN_REALITIO_CONTRACT_ADDRESS
+    ):
+        raise RuntimeError(
+            "The oracle's realitio address is not the same as we are using."
+        )
+    # Double check that the oracle's conditional tokens address is the same as we are using.
+    if (
+        call_function_on_contract(
+            web3,
+            OMEN_ORACLE_CONTRACT_ADDRESS,
+            OMEN_ORACLE_ABI,
+            "conditionalTokens",
+        )
+        != OMEN_FPMM_CONDITIONALTOKENS_CONTRACT_ADDRESS
+    ):
+        raise RuntimeError(
+            "The oracle's conditional tokens address is not the same as we are using."
+        )
+
+    # Get the current nonce for the given from_address.
+    # If making multiple transactions quickly after each other,
+    # it's better to increae it manually (otherwise we could get stale value from the network and error out).
+    nonce: Nonce = web3.eth.get_transaction_count(from_address_checksummed)
+
+    # Approve the market maker to withdraw our collateral token.
+    omen_approve_market_maker_to_spend_collateral_token_tx(
+        web3=web3,
+        market_maker_contract_address=OMEN_FPMM_FACTORY_CONTRACT_ADDRESS,
+        collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
+        amount_wei=initial_funds_wei,
+        from_address=from_address_checksummed,
+        from_private_key=from_private_key,
+        tx_params={"nonce": nonce},
+    )
+    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
+
+    # Deposit xDai to the collateral token,
+    # this can be skipped, if we know we already have enough collateral tokens.
+    if auto_deposit and initial_funds_wei > 0:
+        omen_deposit_collateral_token_tx(
+            web3=web3,
+            collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
+            amount_wei=initial_funds_wei,
+            from_address=from_address_checksummed,
+            from_private_key=from_private_key,
+            tx_params={"nonce": nonce},
+        )
+        nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
+
+    # Create the question on Realitio.
+    question_id = omen_realitio_ask_question_tx(
+        web3=web3,
+        question=question,
+        category=category,
+        outcomes=outcomes,
+        language=language,
+        arbitrator=Arbitrator.KLEROS,
+        opening=closing_time,  # The question is opened at the closing time of the market.
+        from_address=from_address_checksummed,
+        from_private_key=from_private_key,
+        tx_params={"nonce": nonce},
+    )
+    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
+
+    # Construct the condition id.
+    condition_id = omen_construct_condition_id(
+        web3=web3,
+        question_id=question_id,
+        oracle_address=OMEN_ORACLE_CONTRACT_ADDRESS,
+        outcomes_slot_count=len(outcomes),
+    )
+    if not omen_does_condition_exist(web3, condition_id):
+        omen_prepare_condition_tx(
+            web3,
+            question_id=question_id,
+            oracle_address=OMEN_ORACLE_CONTRACT_ADDRESS,
+            outcomes_slot_count=len(outcomes),
+            from_address=from_address_checksummed,
+            from_private_key=from_private_key,
+            tx_params={"nonce": nonce},
+        )
+        nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
+
+    # Create the market.
+    create_market_receipt_tx = call_function_on_contract_tx(
+        web3=web3,
+        contract_address=OMEN_FPMM_FACTORY_CONTRACT_ADDRESS,
+        contract_abi=OMEN_FPMM_FACTORY_ABI,
+        from_address=from_address,
+        from_private_key=from_private_key,
+        function_name="create2FixedProductMarketMaker",
+        function_params=dict(
+            saltNonce=random.randint(
+                0, 1000000
+            ),  # See https://github.com/protofire/omen-exchange/blob/923756c3a9ac370f8e89af8193393a53531e2c0f/app/src/services/cpk/fns.ts#L942.
+            conditionalTokens=OMEN_FPMM_CONDITIONALTOKENS_CONTRACT_ADDRESS,
+            collateralToken=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
+            conditionIds=[condition_id],
+            fee=fee_wei,
+            initialFunds=initial_funds_wei,
+            distributionHint=[],
+        ),
+        tx_params={"nonce": nonce},
+    )
+    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
+
+    # Note: In the Omen's Typescript code, there is futher a creation of `stakingRewardsFactoryAddress`,
+    # (https://github.com/protofire/omen-exchange/blob/763d9c9d05ebf9edacbc1dbaa561aa5d08813c0f/app/src/services/cpk/fns.ts#L979)
+    # but address of stakingRewardsFactoryAddress on xDai/Gnosis is 0x0000000000000000000000000000000000000000,
+    # so skipping it here.
+
+    market_address = create_market_receipt_tx["logs"][-1][
+        "address"
+    ]  # The market address is available in the last emitted log, in the address field.
+    return market_address

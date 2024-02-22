@@ -164,7 +164,7 @@ def test_benchmarker_cancelled_markets() -> None:
             agents=[],
         )
     assert (
-        "Cancelled markets shoudln't be used in the benchmark, please filter them out."
+        "Cancelled markets shouldn't be used in the benchmark, please filter them out."
         in str(e)
     )
 

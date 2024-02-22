@@ -32,6 +32,12 @@ class MarketResolution(str, Enum):
     NO = "no"
 
 
+class CancelableMarketResolution(str, Enum):
+    YES = "yes"
+    NO = "no"
+    CANCEL = "cancel"
+
+
 class Market(BaseModel):
     source: MarketSource
     question: str
@@ -39,7 +45,7 @@ class Market(BaseModel):
     p_yes: float
     volume: float
     created_time: datetime
-    resolution: MarketResolution | None = None
+    resolution: CancelableMarketResolution | None = None
     outcomePrices: list[float] | None = None
 
     @validator("outcomePrices", pre=True)
@@ -61,6 +67,10 @@ class Market(BaseModel):
         return self.resolution is not None
 
     @property
+    def is_cancelled(self) -> bool:
+        return self.resolution == CancelableMarketResolution.CANCEL
+
+    @property
     def p_no(self) -> float:
         return 1 - self.p_yes
 
@@ -77,11 +87,27 @@ class Market(BaseModel):
     @property
     def probable_resolution(self) -> MarketResolution:
         return (
-            self.resolution
-            if self.resolution is not None
-            else MarketResolution.YES
-            if self.p_yes > 0.5
-            else MarketResolution.NO
+            MarketResolution.YES
+            if (
+                (
+                    self.resolution is not None
+                    and self.resolution == CancelableMarketResolution.YES
+                )
+                or (self.resolution is None and self.p_yes > 0.5)
+            )
+            else (
+                MarketResolution.NO
+                if (
+                    (
+                        self.resolution is not None
+                        and self.resolution == CancelableMarketResolution.NO
+                    )
+                    or (self.resolution is None and self.p_yes <= 0.5)
+                )
+                else should_not_happen(
+                    f"Unknown resolution `{self.resolution}`, if it is `cancel`, you should first filter out cancelled markets."
+                )
+            )
         )
 
 
@@ -275,10 +301,10 @@ def get_polymarket_markets(
             continue
 
         resolution = (
-            MarketResolution.YES
+            CancelableMarketResolution.YES
             if closed and m_json["outcomePrices"][0] == "1.0"
             else (
-                MarketResolution.NO
+                CancelableMarketResolution.NO
                 if closed and m_json["outcomePrices"][1] == "1.0"
                 else (
                     should_not_happen()

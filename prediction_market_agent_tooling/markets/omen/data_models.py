@@ -19,13 +19,9 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProfitAmount,
     ResolvedBet,
 )
+from prediction_market_agent_tooling.markets.omen.omen import get_boolean_outcome
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
-
-OMEN_BINARY_MARKET_OUTCOME_MAPPING = {
-    0: True,
-    1: False,
-}
 
 
 class OmenMarket(BaseModel):
@@ -114,14 +110,7 @@ class OmenBetFPMM(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome_index = self.outcomes.index(check_not_none(self.currentAnswer))
-
-        if outcome_index not in OMEN_BINARY_MARKET_OUTCOME_MAPPING:
-            raise ValueError(
-                f"Outcome index `{outcome_index}` not valid for binary market."
-            )
-
-        return OMEN_BINARY_MARKET_OUTCOME_MAPPING[outcome_index]
+        return get_boolean_outcome(check_not_none(self.currentAnswer))
 
 
 class OmenBet(BaseModel):
@@ -147,11 +136,7 @@ class OmenBet(BaseModel):
 
     @property
     def boolean_outcome(self) -> bool:
-        if self.outcomeIndex not in OMEN_BINARY_MARKET_OUTCOME_MAPPING:
-            raise ValueError(
-                f"Outcome index `{self.outcomeIndex}` not valid for binary market."
-            )
-        return OMEN_BINARY_MARKET_OUTCOME_MAPPING[self.outcomeIndex]
+        return get_boolean_outcome(self.fpmm.outcomes[self.outcomeIndex])
 
     def get_profit(self) -> ProfitAmount:
         bet_amount_xdai = wei_to_xdai(self.collateralAmount)

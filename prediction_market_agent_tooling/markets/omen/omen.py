@@ -182,6 +182,14 @@ def pick_binary_market() -> OmenMarket:
     return get_omen_binary_markets(limit=1)[0]
 
 
+def get_boolean_outcome(outcome_str: str) -> bool:
+    if outcome_str == OMEN_TRUE_OUTCOME:
+        return True
+    if outcome_str == OMEN_FALSE_OUTCOME:
+        return False
+    raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
+
+
 def get_market(market_id: str) -> OmenMarket:
     market = requests.post(
         THEGRAPH_QUERY_URL,

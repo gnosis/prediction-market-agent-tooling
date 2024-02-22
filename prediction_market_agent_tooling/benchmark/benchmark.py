@@ -522,16 +522,17 @@ class Benchmarker:
 
     def generate_markdown_report(self) -> str:
         md = "# Comparison Report\n\n"
-        md += "## Overall Info\n\n"
+        md += "## Market Results\n\n"
         md += pd.DataFrame(self.get_markets_overall_info()).to_markdown(index=False)
         md += "\n\n"
-        md += "## Summary Statistics\n\n"
+        md += "## Agent Results\n\n"
+        md += "### Summary Statistics\n\n"
         md += pd.DataFrame(self.compute_metrics()).to_markdown(index=False)
         md += "\n\n"
-        md += "## Markets\n\n"
+        md += "### Markets\n\n"
         md += pd.DataFrame(self.get_markets_summary()).to_markdown(index=False)
         md += "\n\n"
-        md += "## Expected value\n\n"
+        md += "### Expected value\n\n"
         overall_summary, per_market = self.compute_expected_returns_summary()
         md += pd.DataFrame(overall_summary).to_markdown(index=False)
         md += "\n\n"

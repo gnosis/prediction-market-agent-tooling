@@ -40,7 +40,7 @@ class Benchmarker:
             raise ValueError("Agents must have unique names")
         if any(m.is_cancelled for m in markets):
             raise ValueError(
-                "Cancelled markets shoudln't be used in the benchmark, please filter them out."
+                "Cancelled markets shouldn't be used in the benchmark, please filter them out."
             )
 
         # Predictions

@@ -1,9 +1,13 @@
+import datetime
 import tempfile
 
 import pytest
 
 import prediction_market_agent_tooling.benchmark.benchmark as bm
 from prediction_market_agent_tooling.benchmark.utils import (
+    CancelableMarketResolution,
+    Market,
+    MarketResolution,
     MarketSource,
     OutcomePrediction,
     get_markets,
@@ -140,3 +144,89 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
             another_benchmark_prediction.outcome_prediction.p_yes
             == prediction.outcome_prediction.p_yes
         )
+
+
+def test_benchmarker_cancelled_markets() -> None:
+    markets = [
+        Market(
+            source=MarketSource.MANIFOLD,
+            question="Will GNO go up?",
+            url="...",
+            p_yes=0.1,
+            volume=1,
+            created_time=datetime.datetime.now(),
+            resolution=CancelableMarketResolution.CANCEL,
+        )
+    ]
+    with pytest.raises(ValueError) as e:
+        bm.Benchmarker(
+            markets=markets,
+            agents=[],
+        )
+    assert (
+        "Cancelled markets shoudln't be used in the benchmark, please filter them out."
+        in str(e)
+    )
+
+
+def test_market_probable_resolution() -> None:
+    with pytest.raises(ValueError) as e:
+        Market(
+            source=MarketSource.MANIFOLD,
+            question="Will GNO go up?",
+            url="...",
+            p_yes=0.1,
+            volume=1,
+            created_time=datetime.datetime.now(),
+            resolution=CancelableMarketResolution.CANCEL,
+        ).probable_resolution
+    assert (
+        "Unknown resolution `cancel`, if it is `cancel`, you should first filter out cancelled markets."
+        in str(e)
+    )
+    assert (
+        Market(
+            source=MarketSource.MANIFOLD,
+            question="Will GNO go up?",
+            url="...",
+            p_yes=0.1,
+            volume=1,
+            created_time=datetime.datetime.now(),
+            resolution=CancelableMarketResolution.YES,
+        ).probable_resolution
+        == MarketResolution.YES
+    )
+    assert (
+        Market(
+            source=MarketSource.MANIFOLD,
+            question="Will GNO go up?",
+            url="...",
+            p_yes=0.1,
+            volume=1,
+            created_time=datetime.datetime.now(),
+            resolution=CancelableMarketResolution.NO,
+        ).probable_resolution
+        == MarketResolution.NO
+    )
+    assert (
+        Market(
+            source=MarketSource.MANIFOLD,
+            question="Will GNO go up?",
+            url="...",
+            p_yes=0.1,
+            volume=1,
+            created_time=datetime.datetime.now(),
+        ).probable_resolution
+        == MarketResolution.NO
+    )
+    assert (
+        Market(
+            source=MarketSource.MANIFOLD,
+            question="Will GNO go up?",
+            url="...",
+            p_yes=0.8,
+            volume=1,
+            created_time=datetime.datetime.now(),
+        ).probable_resolution
+        == MarketResolution.YES
+    )

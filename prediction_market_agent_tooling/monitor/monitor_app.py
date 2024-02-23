@@ -53,7 +53,7 @@ def monitor_app() -> None:
     resolved_markets = [
         m
         for m in get_manifold_markets_dated(oldest_date=start_time, filter_="resolved")
-        if m.has_successful_resolution
+        if not m.has_unsuccessful_resolution
     ]
     monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
 

@@ -70,7 +70,13 @@ def deploy_to_gcp(
             secrets=secrets,
             memory=memory,
         )
-        subprocess.run(cmd, shell=True, check=True)
+        try:
+            subprocess.run(cmd, shell=True, check=True)
+        except Exception:
+            # Delete previously created topic if we fail to deploy the function and reraise.
+            subprocess.run(gcloud_delete_topic_cmd(gcp_fname), shell=True, check=True)
+            raise
+
         # TODO test the depolyment without placing a bet
 
     return gcp_fname

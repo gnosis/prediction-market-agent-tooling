@@ -8,7 +8,10 @@ import pandas as pd
 import streamlit as st
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.benchmark.utils import Market
+from prediction_market_agent_tooling.benchmark.utils import (
+    CancelableMarketResolution,
+    Market,
+)
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
@@ -80,10 +83,10 @@ def monitor_market(open_markets: list[Market], resolved_markets: list[Market]) -
             [
                 (
                     1
-                    if m.resolution == "YES"
+                    if m.resolution == CancelableMarketResolution.YES
                     else (
                         0
-                        if m.resolution == "NO"
+                        if m.resolution == CancelableMarketResolution.NO
                         else should_not_happen(f"Unexpected resolution: {m.resolution}")
                     )
                 )
@@ -126,10 +129,10 @@ def monitor_market(open_markets: list[Market], resolved_markets: list[Market]) -
         [
             (
                 1
-                if m.resolution == "YES"
+                if m.resolution == CancelableMarketResolution.YES
                 else (
                     0
-                    if m.resolution == "NO"
+                    if m.resolution == CancelableMarketResolution.NO
                     else should_not_happen(f"Unexpected resolution: {m.resolution}")
                 )
             )

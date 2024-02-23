@@ -36,6 +36,7 @@ class CancelableMarketResolution(str, Enum):
     YES = "yes"
     NO = "no"
     CANCEL = "cancel"
+    MKT = "mkt"
 
 
 class Market(BaseModel):
@@ -65,6 +66,13 @@ class Market(BaseModel):
     @property
     def is_resolved(self) -> bool:
         return self.resolution is not None
+
+    @property
+    def has_successful_resolution(self) -> bool:
+        return self.resolution not in [
+            CancelableMarketResolution.CANCEL,
+            CancelableMarketResolution.MKT,
+        ]
 
     @property
     def is_cancelled(self) -> bool:

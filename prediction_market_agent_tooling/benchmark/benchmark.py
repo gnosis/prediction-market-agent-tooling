@@ -38,7 +38,7 @@ class Benchmarker:
             self.registered_agents
         ):
             raise ValueError("Agents must have unique names")
-        if any(m.is_cancelled for m in markets):
+        if any(m.has_unsuccessful_resolution for m in markets):
             raise ValueError(
                 "Cancelled markets shouldn't be used in the benchmark, please filter them out."
             )

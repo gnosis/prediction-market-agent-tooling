@@ -1,11 +1,17 @@
 import typing as t
+from datetime import datetime
 from decimal import Decimal
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
-from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+    OmenBet,
+    OmenMarket,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 """
@@ -98,8 +104,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     xdai_type,
 )
 
-OMEN_TRUE_OUTCOME = "Yes"
-OMEN_FALSE_OUTCOME = "No"
+OMEN_QUERY_BATCH_SIZE = 1000
 OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
 DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS = WXDAI_CONTRACT_ADDRESS
 
@@ -639,6 +644,106 @@ def binary_omen_sell_outcome_tx(
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
         auto_withdraw=auto_withdraw,
     )
+
+
+# Order by id, so we can use id_gt for pagination.
+_QUERY_GET_FIXED_PRODUCT_MARKETS_MAKER_TRADES = """
+query getFixedProductMarketMakerTrades(
+    $id_gt: String!,
+    $creator: String!,
+    $creationTimestamp_gte: Int!,
+    $creationTimestamp_lte: Int!,
+    $first: Int!,
+) {
+    fpmmTrades(
+        where: {
+            type: Buy,
+            creator: $creator,
+            creationTimestamp_gte: $creationTimestamp_gte,
+            creationTimestamp_lte: $creationTimestamp_lte,
+            id_gt: $id_gt,
+        }
+        first: $first
+        orderBy: id
+        orderDirection: asc
+    ) {
+        id
+        title
+        collateralToken
+        outcomeTokenMarginalPrice
+        oldOutcomeTokenMarginalPrice
+        type
+        creator {
+            id
+        }
+        creationTimestamp
+        collateralAmount
+        collateralAmountUSD
+        feeAmount
+        outcomeIndex
+        outcomeTokensTraded
+        transactionHash
+        fpmm {
+            id
+            outcomes
+            title
+            answerFinalizedTimestamp
+            currentAnswer
+            isPendingArbitration
+            arbitrationOccurred
+            openingTimestamp
+            condition {
+                id
+            }
+        }
+    }
+}
+"""
+
+
+def to_int_timestamp(dt: datetime) -> int:
+    return int(dt.timestamp())
+
+
+def get_resolved_bets(
+    better_address: ChecksumAddress,
+    start_time: datetime,
+    end_time: t.Optional[datetime],
+) -> list[OmenBet]:
+    if not end_time:
+        end_time = datetime.now()
+
+    # Initialize id_gt for the first batch of bets to zero
+    id_gt: str = "0"
+    all_bets: list[OmenBet] = []
+    while True:
+        query = _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKER_TRADES
+        bets = requests.post(
+            THEGRAPH_QUERY_URL,
+            json={
+                "query": query,
+                "variables": {
+                    "creator": better_address.lower(),
+                    "creationTimestamp_gte": to_int_timestamp(start_time),
+                    "creationTimestamp_lte": to_int_timestamp(end_time),
+                    "id_gt": id_gt,
+                    "first": OMEN_QUERY_BATCH_SIZE,
+                },
+            },
+            headers={"Content-Type": "application/json"},
+        ).json()
+
+        bets = bets.get("data", {}).get("fpmmTrades", [])
+
+        if not bets:
+            break
+
+        # Increment id_gt for the next batch of bets
+        id_gt = bets[-1]["id"]
+
+        all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
+
+    return all_bets
 
 
 def omen_realitio_ask_question_tx(

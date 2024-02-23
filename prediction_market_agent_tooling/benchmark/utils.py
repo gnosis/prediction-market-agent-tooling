@@ -78,6 +78,7 @@ class Market(BaseModel):
     def has_successful_resolution(self) -> bool:
         return self.is_resolved and not self.has_unsuccessful_resolution
 
+    @property
     def is_cancelled(self) -> bool:
         return self.resolution == CancelableMarketResolution.CANCEL
 

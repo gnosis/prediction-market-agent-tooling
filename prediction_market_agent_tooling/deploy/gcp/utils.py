@@ -74,7 +74,10 @@ def gcloud_delete_topic_cmd(topic_name: str) -> str:
 def get_gcloud_project_id() -> str:
     return (
         subprocess.run(
-            "gcloud config get-value project", shell=True, capture_output=True
+            "gcloud config get-value project",
+            shell=True,
+            capture_output=True,
+            check=True,
         )
         .stdout.decode()
         .strip()
@@ -88,7 +91,10 @@ def get_gcloud_parent() -> str:
 def get_gcloud_id_token() -> str:
     return (
         subprocess.run(
-            "gcloud auth print-identity-token", shell=True, capture_output=True
+            "gcloud auth print-identity-token",
+            shell=True,
+            capture_output=True,
+            check=True,
         )
         .stdout.decode()
         .strip()
@@ -109,6 +115,7 @@ def get_gcloud_function_uri(function_name: str) -> str:
             f"gcloud functions describe {function_name} --region {get_gcloud_region()} --format='value(url)'",
             shell=True,
             capture_output=True,
+            check=True,
         )
         .stdout.decode()
         .strip()

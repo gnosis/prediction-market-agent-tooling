@@ -77,7 +77,7 @@ def deploy_to_gcp(
             subprocess.run(gcloud_delete_topic_cmd(gcp_fname), shell=True, check=True)
             raise
 
-        # TODO test the depolyment without placing a bet
+            # TODO test the deployment without placing a bet
 
     return gcp_fname
 

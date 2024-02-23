@@ -16,7 +16,7 @@ def main(
     github_repo_url: str = "https://github.com/gnosis/prediction-market-agent-tooling",
     branch: str = "main",
     custom_gcp_fname: str | None = None,
-    market_type: MarketType = MarketType.OMEN,
+    market_type: MarketType = MarketType.MANIFOLD,
 ) -> None:
     agent: DeployableAgent = {
         "coin_flip": DeployableCoinFlipAgent,

@@ -705,7 +705,7 @@ def to_int_timestamp(dt: datetime) -> int:
     return int(dt.timestamp())
 
 
-def get_resolved_bets(
+def get_bets(
     better_address: ChecksumAddress,
     start_time: datetime,
     end_time: t.Optional[datetime],

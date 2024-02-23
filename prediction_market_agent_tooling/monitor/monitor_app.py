@@ -3,28 +3,35 @@ from datetime import date, datetime, timedelta
 
 import pytz
 import streamlit as st
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import get_manifold_markets_dated
-from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )
+from prediction_market_agent_tooling.monitor.markets.omen import DeployedOmenAgent
 from prediction_market_agent_tooling.monitor.monitor import (
+    DeployedAgent,
+    MonitorSettings,
     monitor_agent,
     monitor_market,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
+DEPLOYED_AGENT_TYPE_MAP: dict[MarketType, type[DeployedAgent]] = {
+    MarketType.MANIFOLD: DeployedManifoldAgent,
+    MarketType.OMEN: DeployedOmenAgent,
+}
 
-class MonitorSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env.monitor", env_file_encoding="utf-8", extra="ignore"
-    )
 
-    MANIFOLD_API_KEYS: list[str] = []
-    PAST_N_WEEKS: int = 1
+def get_deployed_agents(
+    market_type: MarketType, settings: MonitorSettings, start_time: datetime
+) -> list[DeployedAgent]:
+    cls = DEPLOYED_AGENT_TYPE_MAP.get(market_type)
+    if cls:
+        return cls.from_monitor_settings(settings=settings, start_time=start_time)
+    else:
+        raise ValueError(f"Unknown market type: {market_type}")
 
 
 def monitor_app() -> None:
@@ -44,10 +51,6 @@ def monitor_app() -> None:
         st.selectbox(label="Market type", options=list(MarketType), index=0)
     )
 
-    if market_type != MarketType.MANIFOLD:
-        st.warning("Only Manifold markets are supported for now.")
-        return
-
     st.subheader("Market resolution")
     open_markets = get_manifold_markets_dated(oldest_date=start_time, filter_="open")
     resolved_markets = [
@@ -57,17 +60,13 @@ def monitor_app() -> None:
     ]
     monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
 
-    with st.spinner("Loading Manifold agents..."):
-        agents: list[DeployedManifoldAgent] = []
-        for key in settings.MANIFOLD_API_KEYS:
-            manifold_user = get_authenticated_user(key)
-            agents.append(
-                DeployedManifoldAgent(
-                    name=manifold_user.name,
-                    manifold_user_id=manifold_user.id,
-                    start_time=start_time,
-                )
+    with st.spinner("Loading agents..."):
+        agents: list[DeployedAgent] = [
+            agent
+            for agent in get_deployed_agents(
+                market_type=market_type, settings=settings, start_time=start_time
             )
+        ]
 
     st.subheader("Agent bets")
     for agent in agents:

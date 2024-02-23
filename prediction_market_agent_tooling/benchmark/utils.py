@@ -68,13 +68,16 @@ class Market(BaseModel):
         return self.resolution is not None
 
     @property
-    def has_successful_resolution(self) -> bool:
-        return self.resolution not in [
+    def has_unsuccessful_resolution(self) -> bool:
+        return self.resolution in [
             CancelableMarketResolution.CANCEL,
             CancelableMarketResolution.MKT,
         ]
 
     @property
+    def has_successful_resolution(self) -> bool:
+        return self.is_resolved and not self.has_unsuccessful_resolution
+
     def is_cancelled(self) -> bool:
         return self.resolution == CancelableMarketResolution.CANCEL
 

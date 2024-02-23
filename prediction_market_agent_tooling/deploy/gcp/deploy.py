@@ -58,7 +58,7 @@ def deploy_to_gcp(
 
         # Create the topic used to trigger the function. Note we use the
         # convention that the topic name is the same as the function name
-        subprocess.run(gcloud_create_topic_cmd(gcp_fname), shell=True)
+        subprocess.run(gcloud_create_topic_cmd(gcp_fname), shell=True, check=True)
 
         # Deploy the function
         cmd = gcloud_deploy_cmd(
@@ -70,7 +70,7 @@ def deploy_to_gcp(
             secrets=secrets,
             memory=memory,
         )
-        subprocess.run(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
         # TODO test the depolyment without placing a bet
 
     return gcp_fname
@@ -82,7 +82,7 @@ def schedule_deployed_gcp_function(function_name: str, cron_schedule: str) -> No
         raise ValueError(f"Invalid cron schedule {cron_schedule}")
 
     cmd = gcloud_schedule_cmd(function_name=function_name, cron_schedule=cron_schedule)
-    subprocess.run(cmd, shell=True)
+    subprocess.run(cmd, shell=True, check=True)
 
 
 def run_deployed_gcp_function(function_name: str) -> requests.Response:
@@ -92,5 +92,5 @@ def run_deployed_gcp_function(function_name: str) -> requests.Response:
 
 
 def remove_deployed_gcp_function(function_name: str) -> None:
-    subprocess.run(gcloud_delete_function_cmd(function_name), shell=True)
-    subprocess.run(gcloud_delete_topic_cmd(function_name), shell=True)
+    subprocess.run(gcloud_delete_function_cmd(function_name), shell=True, check=True)
+    subprocess.run(gcloud_delete_topic_cmd(function_name), shell=True, check=True)

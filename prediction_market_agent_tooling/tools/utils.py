@@ -57,5 +57,6 @@ def export_requirements_from_toml(output_dir: str) -> None:
     subprocess.run(
         f"poetry export -f requirements.txt --without-hashes --output {output_file}",
         shell=True,
+        check=True,
     )
     print(f"Saved requirements to {output_dir}/requirements.txt")

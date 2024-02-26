@@ -39,6 +39,8 @@ class OmenMarket(BaseModel):
     https://aiomen.eth.limo
     """
 
+    BET_AMOUNT_CURRENCY: t.ClassVar[Currency] = Currency.xDai
+
     id: HexAddress
     title: str
     collateralVolume: Wei
@@ -73,15 +75,16 @@ class OmenMarket(BaseModel):
             else None
         )
 
-    def get_outcome_str(self, outcome_index: int) -> str:
-        n_outcomes = len(self.outcomes)
-        if outcome_index >= n_outcomes:
-            raise ValueError(
-                f"Outcome index `{outcome_index}` not valid. There are only "
-                f"`{n_outcomes}` outcomes."
-            )
-        else:
-            return self.outcomes[outcome_index]
+    @property
+    def p_yes(self) -> Probability:
+        return check_not_none(
+            self.outcomeTokenProbabilities,
+            "outcomeTokenProbabilities not available",
+        )[self.outcomes.index(OMEN_TRUE_OUTCOME)]
+
+    @property
+    def p_no(self) -> Probability:
+        return Probability(1 - self.p_yes)
 
     def __repr__(self) -> str:
         return f"Omen's market: {self.title}"

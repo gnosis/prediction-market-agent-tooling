@@ -1,9 +1,16 @@
+from datetime import datetime
+
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.markets.omen.omen import get_resolved_bets
-from prediction_market_agent_tooling.monitor.monitor import DeployedAgent, MarketType
+from prediction_market_agent_tooling.markets.omen.omen import get_bets
+from prediction_market_agent_tooling.monitor.monitor import (
+    DeployedAgent,
+    MarketType,
+    MonitorConfig,
+    MonitorSettings,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
@@ -18,12 +25,12 @@ class DeployedOmenAgent(DeployedAgent):
         )
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
-        bets = get_resolved_bets(
+        bets = get_bets(
             better_address=self.wallet_address,
             start_time=self.monitor_config.start_time,
             end_time=None,
         )
-        return [b.to_generic_resolved_bet() for b in bets]
+        return [b.to_generic_resolved_bet() for b in bets if b.fpmm.is_resolved]
 
     @staticmethod
     def get_all_deployed_agents_gcp() -> list["DeployedOmenAgent"]:
@@ -32,3 +39,21 @@ class DeployedOmenAgent(DeployedAgent):
             for agent in DeployedAgent.get_all_deployed_agents_gcp()
             if agent.market_type == MarketType.OMEN
         ]
+
+    @staticmethod
+    def from_monitor_settings(
+        settings: MonitorSettings, start_time: datetime
+    ) -> list[DeployedAgent]:
+        if settings.OMEN_PUBLIC_KEYS:
+            return [
+                DeployedOmenAgent(
+                    name="OmenAgent",
+                    agent_class="DeployableAgent",
+                    market_type=MarketType.OMEN,
+                    monitor_config=MonitorConfig(
+                        start_time=start_time, omen_public_key=settings.OMEN_PUBLIC_KEYS
+                    ),
+                )
+            ]
+        else:
+            return []

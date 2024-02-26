@@ -1,9 +1,17 @@
+from datetime import datetime
+
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.manifold.api import (
+    get_authenticated_user,
     get_resolved_manifold_bets,
     manifold_to_generic_resolved_bet,
 )
-from prediction_market_agent_tooling.monitor.monitor import DeployedAgent, MarketType
+from prediction_market_agent_tooling.monitor.monitor import (
+    DeployedAgent,
+    MarketType,
+    MonitorConfig,
+    MonitorSettings,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
@@ -30,3 +38,23 @@ class DeployedManifoldAgent(DeployedAgent):
             for agent in DeployedAgent.get_all_deployed_agents_gcp()
             if agent.market_type == MarketType.MANIFOLD
         ]
+
+    @staticmethod
+    def from_monitor_settings(
+        settings: MonitorSettings, start_time: datetime
+    ) -> list[DeployedAgent]:
+        agents = []
+        for key in settings.MANIFOLD_API_KEYS:
+            agents.append(
+                DeployedManifoldAgent(
+                    name="ManifoldAgent",
+                    agent_class="DeployableAgent",
+                    market_type=MarketType.MANIFOLD,
+                    monitor_config=MonitorConfig(
+                        start_time=start_time,
+                        manifold_user_id=get_authenticated_user(key).id,
+                    ),
+                )
+            )
+        else:
+            return []

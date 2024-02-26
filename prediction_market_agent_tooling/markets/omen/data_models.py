@@ -120,7 +120,8 @@ class OmenBetFPMM(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        return get_boolean_outcome(check_not_none(self.currentAnswer))
+        outcome: str = self.outcomes[int(check_not_none(self.currentAnswer), 16)]
+        return get_boolean_outcome(outcome)
 
 
 class OmenBet(BaseModel):

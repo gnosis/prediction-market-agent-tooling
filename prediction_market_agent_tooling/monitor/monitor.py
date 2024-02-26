@@ -1,4 +1,5 @@
 import typing as t
+from datetime import datetime
 from itertools import groupby
 
 import altair as alt
@@ -6,6 +7,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from pydantic import BaseModel
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import (
     CancelableMarketResolution,
@@ -15,6 +17,21 @@ from prediction_market_agent_tooling.deploy.agent import MarketType, MonitorConf
 from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.tools.utils import should_not_happen
+
+
+class MonitorSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env.monitor", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    LOAD_FROM_GCP: bool = False
+    MANIFOLD_API_KEYS: list[str] = []
+    OMEN_PUBLIC_KEYS: t.Optional[str] = None
+    PAST_N_WEEKS: int = 1
+
+    @property
+    def has_manual_agents(self) -> bool:
+        return bool(self.MANIFOLD_API_KEYS or self.OMEN_PUBLIC_KEYS)
 
 
 class DeployedAgent(BaseModel):
@@ -51,6 +68,12 @@ class DeployedAgent(BaseModel):
         return agents
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @staticmethod
+    def from_monitor_settings(
+        settings: MonitorSettings, start_time: datetime
+    ) -> list["DeployedAgent"]:
         raise NotImplementedError("Subclasses must implement this method.")
 
 

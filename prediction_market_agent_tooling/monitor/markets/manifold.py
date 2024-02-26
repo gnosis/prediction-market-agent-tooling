@@ -46,7 +46,7 @@ class DeployedManifoldAgent(DeployedAgent):
         return [
             DeployedManifoldAgent(
                 name="ManifoldAgent",
-                agent_class="DeployableAgent",
+                agent_class=DeployedAgent.__name__,
                 market_type=MarketType.MANIFOLD,
                 monitor_config=MonitorConfig(
                     start_time=start_time,

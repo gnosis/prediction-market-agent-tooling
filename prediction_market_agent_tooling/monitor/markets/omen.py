@@ -47,7 +47,7 @@ class DeployedOmenAgent(DeployedAgent):
         return [
             DeployedOmenAgent(
                 name="OmenAgent",
-                agent_class="DeployableAgent",
+                agent_class=DeployedAgent.__name__,
                 market_type=MarketType.OMEN,
                 monitor_config=MonitorConfig(
                     start_time=start_time, omen_public_key=omen_public_key

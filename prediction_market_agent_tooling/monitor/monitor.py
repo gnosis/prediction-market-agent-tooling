@@ -53,22 +53,26 @@ class DeployedAgent(BaseModel):
         agents: list[DeployedAgent] = []
 
         for function in list_gcp_functions():
-            agents.append(
-                DeployedAgent(
+            try:
+                agent = DeployedAgent(
                     name=function.name,
-                    agent_class=function.environment_variables[AGENT_CLASS_KEY],
+                    agent_class=function.service_config.environment_variables[
+                        AGENT_CLASS_KEY
+                    ],
                     market_type=MarketType(function.labels[MARKET_TYPE_KEY]),
                     monitor_config=MonitorConfig.model_validate(
                         {
                             k.replace(MonitorConfig.LABEL_PREFIX, ""): v
-                            for k, v in function.environment_variables.items()
+                            for k, v in function.service_config.environment_variables.items()
                             if k.startswith(MonitorConfig.LABEL_PREFIX)
                         }
                     ),
                     raw_labels=dict(function.labels),
                     raw_env_vars=dict(function.service_config.environment_variables),
                 )
-            )
+                agents.append(agent)
+            except ValueError:
+                print(f"Could not parse `{function.name}` into DeployedAgent.")
 
         return agents
 

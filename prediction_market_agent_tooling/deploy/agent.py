@@ -6,7 +6,7 @@ import typing as t
 from datetime import datetime
 
 import git
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
 )
+from prediction_market_agent_tooling.tools.utils import add_timezone_validator
 
 AGENT_CLASS_KEY = "agent_class"
 MARKET_TYPE_KEY = "market_type"
@@ -30,11 +31,13 @@ class MonitorConfig(BaseModel):
     LABEL_PREFIX: t.ClassVar[str] = "monitor_config_"
 
     start_time: datetime
-    end_time: t.Optional[
-        datetime
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[datetime] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
     manifold_user_id: str | None = None
     omen_public_key: str | None = None
+
+    _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
 
     def validate_monitor_config(self, market_type: MarketType) -> None:
         if market_type == MarketType.MANIFOLD and not self.manifold_user_id:

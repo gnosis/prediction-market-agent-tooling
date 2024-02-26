@@ -10,8 +10,8 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
+    get_bets,
     get_market,
-    get_resolved_bets,
     pick_binary_market,
 )
 from tests.utils import RUN_PAID_TESTS
@@ -60,7 +60,7 @@ def test_omen_buy_and_sell_outcome() -> None:
 
 def test_get_bets() -> None:
     AN_ADDRESS = Web3.to_checksum_address("0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307")
-    bets = get_resolved_bets(
+    bets = get_bets(
         better_address=AN_ADDRESS,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 21),

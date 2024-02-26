@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from pydantic import BaseModel
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import (
     CancelableMarketResolution,
@@ -16,12 +17,28 @@ from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
 
+class MonitorSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env.monitor", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    MANIFOLD_API_KEYS: list[str] = []
+    BET_FROM_ADDRESS: t.Optional[str] = None
+    PAST_N_WEEKS: int = 1
+
+
 class DeployedAgent(BaseModel):
     name: str
     start_time: datetime = datetime.utcnow()
     end_time: t.Optional[datetime] = None
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @staticmethod
+    def from_monitor_settings(
+        settings: MonitorSettings, start_time: datetime
+    ) -> list["DeployedAgent"]:
         raise NotImplementedError("Subclasses must implement this method.")
 
 

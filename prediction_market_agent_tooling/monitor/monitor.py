@@ -102,6 +102,14 @@ def monitor_agent(agent: DeployedAgent) -> None:
     }
     bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
 
+    # Info
+    col1, col2, col3 = st.columns(3)
+    col1.markdown(
+        f"ID: `{agent.monitor_config.manifold_user_id or agent.monitor_config.omen_public_key or 'Missing-ID'}`"
+    )
+    col2.markdown(f"Class: `{agent.agent_class}`")
+    col3.markdown(f"Start Time: `{agent.monitor_config.start_time}`")
+
     # Metrics
     col1, col2 = st.columns(2)
     col1.metric(label="Number of bets", value=f"{len(agent_bets)}")

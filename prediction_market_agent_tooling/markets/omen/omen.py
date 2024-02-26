@@ -58,6 +58,7 @@ class OmenAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
+            p_yes=model.p_yes,
         )
 
     @staticmethod

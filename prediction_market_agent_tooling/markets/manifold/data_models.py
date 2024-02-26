@@ -23,7 +23,7 @@ class ManifoldMarket(BaseModel):
     https://docs.manifold.markets/api#get-v0markets
     """
 
-    BET_AMOUNT_CURRENCY: Currency = Currency.Mana
+    BET_AMOUNT_CURRENCY: t.ClassVar[Currency] = Currency.Mana
 
     id: str
     question: str

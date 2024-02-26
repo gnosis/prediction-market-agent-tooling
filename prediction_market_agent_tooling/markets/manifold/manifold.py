@@ -1,7 +1,7 @@
 import typing as t
 from decimal import Decimal
 
-from prediction_market_agent_tooling.gtypes import Mana
+from prediction_market_agent_tooling.gtypes import Mana, Probability
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.manifold.api import (
@@ -36,6 +36,7 @@ class ManifoldAgentMarket(AgentMarket):
             id=model.id,
             question=model.question,
             outcomes=model.outcomes,
+            p_yes=Probability(model.pool.YES),
         )
 
     @staticmethod

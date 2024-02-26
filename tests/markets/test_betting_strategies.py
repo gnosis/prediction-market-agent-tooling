@@ -4,7 +4,6 @@ from web3 import Web3
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.betting_strategies import (
     minimum_bet_to_win,
-    minimum_bet_to_win_manifold,
 )
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
@@ -57,14 +56,10 @@ def test_minimum_bet_to_win_manifold(
     amount_to_win: float,
     expected_min_bet: int,
 ) -> None:
-    min_bet = minimum_bet_to_win_manifold(
-        outcome,
-        amount_to_win,
-        ManifoldAgentMarket(
-            id="id",
-            question="question",
-            outcomes=["Yes", "No"],
-            p_yes=market_p_yes,
-        ),
-    )
+    min_bet = ManifoldAgentMarket(
+        id="id",
+        question="question",
+        outcomes=["Yes", "No"],
+        p_yes=market_p_yes,
+    ).get_minimum_bet_to_win(outcome, amount_to_win)
     assert min_bet == expected_min_bet, f"Expected {expected_min_bet}, got {min_bet}."

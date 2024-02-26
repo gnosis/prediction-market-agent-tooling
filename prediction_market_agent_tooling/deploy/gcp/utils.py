@@ -126,9 +126,14 @@ def api_keys_to_str(api_keys: dict[str, str]) -> str:
     return " ".join([f"{k}={v}" for k, v in api_keys.items()])
 
 
-def get_gcp_function(fname: str) -> Function:
+def list_gcp_functions() -> list[Function]:
     client = FunctionServiceClient()
-    response = client.list_functions(parent=get_gcloud_parent())
+    functions = list(client.list_functions(parent=get_gcloud_parent()))
+    return functions
+
+
+def get_gcp_function(fname: str) -> Function:
+    response = list_gcp_functions()
     for function in response:
         if function.name.split("/")[-1] == fname:
             return function

@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 from itertools import groupby
 
 import altair as alt
@@ -12,14 +11,44 @@ from prediction_market_agent_tooling.benchmark.utils import (
     CancelableMarketResolution,
     Market,
 )
+from prediction_market_agent_tooling.deploy.agent import MarketType, MonitorConfig
+from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
 
 class DeployedAgent(BaseModel):
     name: str
-    start_time: datetime = datetime.utcnow()
-    end_time: t.Optional[datetime] = None
+    agent_class: str
+    market_type: MarketType
+    monitor_config: MonitorConfig
+
+    raw_labels: dict[str, str] | None = None
+    raw_env_vars: dict[str, str] | None = None
+
+    @staticmethod
+    def get_all_deployed_agents_gcp() -> t.Sequence["DeployedAgent"]:
+        agents: list[DeployedAgent] = []
+
+        for function in list_gcp_functions():
+            agents.append(
+                DeployedAgent(
+                    name=function.name,
+                    agent_class=function.labels["agent_class"],
+                    market_type=MarketType(function.labels["market_type"]),
+                    monitor_config=MonitorConfig.model_validate(
+                        {
+                            k.replace(MonitorConfig.LABEL_PREFIX, ""): v
+                            for k, v in function.environment_variables.items()
+                            if k.startswith(MonitorConfig.LABEL_PREFIX)
+                        }
+                    ),
+                    raw_labels=dict(function.labels),
+                    raw_env_vars=dict(function.service_config.environment_variables),
+                )
+            )
+
+        return agents
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method.")

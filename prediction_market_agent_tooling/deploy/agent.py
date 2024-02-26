@@ -3,6 +3,10 @@ import os
 import tempfile
 import time
 import typing as t
+from datetime import datetime
+
+import git
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
@@ -15,6 +19,28 @@ from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
 )
+
+
+class MonitorConfig(BaseModel):
+    LABEL_PREFIX: t.ClassVar[str] = "monitor_config_"
+
+    start_time: datetime
+    end_time: t.Optional[datetime] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
+    manifold_user_id: str | None = None
+    omen_public_key: str | None = None
+
+    def validate_monitor_config(self, market_type: MarketType) -> None:
+        if market_type == MarketType.MANIFOLD and not self.manifold_user_id:
+            raise ValueError(
+                "You must provide a manifold_user_id when deploying a Manifold agent"
+            )
+
+        if market_type == MarketType.OMEN and not self.omen_public_key:
+            raise ValueError(
+                "You must provide a omen_public_key when deploying a Omen agent"
+            )
 
 
 class DeployableAgent:
@@ -66,6 +92,7 @@ class DeployableAgent:
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
         gcp_fname: str | None = None,
+        monitor_config: MonitorConfig | None = None,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
@@ -82,6 +109,23 @@ def {entrypoint_function_name}(request) -> str:
 """
 
         gcp_fname = gcp_fname or self.get_gcloud_fname(market_type)
+
+        labels = (labels or {}) | {
+            "repository": repository,
+            "commit": git.Repo(search_parent_directories=True).head.object.hexsha,
+            "market_type": market_type.value,
+            "agent_class": self.__class__.__name__,
+        }
+
+        if monitor_config is not None:
+            monitor_config.validate_monitor_config(market_type)
+            env_vars = (env_vars or {}) | {
+                f"{MonitorConfig.LABEL_PREFIX}{k}": v
+                for k, v in monitor_config.model_dump().items()
+                if v is not None
+            }
+        else:
+            monitor_config = MonitorConfig(start_time=datetime.utcnow())
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
             f.write(entrypoint_template)

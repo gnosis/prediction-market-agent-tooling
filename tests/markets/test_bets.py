@@ -2,7 +2,7 @@ import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import Probability
-from prediction_market_agent_tooling.markets.bets import (
+from prediction_market_agent_tooling.markets.betting_strategies import (
     minimum_bet_to_win,
     minimum_bet_to_win_manifold,
 )

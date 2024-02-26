@@ -1,10 +1,27 @@
+import json
+import os
+import random
 import typing as t
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
+
+import requests
+from web3 import Web3
+from web3.types import TxParams, TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.gtypes import (
+    ABI,
+    ChecksumAddress,
+    HexAddress,
+    HexBytes,
+    OmenOutcomeToken,
+    PrivateKey,
+    Wei,
+    xDai,
+)
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -12,7 +29,20 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
 )
+from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.web3_utils import (
+    ONE_NONCE,
+    WXDAI_ABI,
+    WXDAI_CONTRACT_ADDRESS,
+    Nonce,
+    add_fraction,
+    call_function_on_contract,
+    call_function_on_contract_tx,
+    remove_fraction,
+    xdai_to_wei,
+    xdai_type,
+)
 
 """
 Python API for Omen prediction market.
@@ -20,6 +50,10 @@ Python API for Omen prediction market.
 Their API is available as graph on https://thegraph.com/explorer/subgraphs/9V1aHHwkK4uPWgBH6ZLzwqFEkoHTHPS7XHKyjZWe8tEf?view=Overview&chain=mainnet,
 but to not use our own credits, seems we can use their api deployment directly: https://api.thegraph.com/subgraphs/name/protofire/omen-xdai/graphql (link to the online playground)
 """
+
+OMEN_QUERY_BATCH_SIZE = 1000
+OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
+DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS = WXDAI_CONTRACT_ADDRESS
 
 
 class OmenAgentMarket(AgentMarket):
@@ -61,52 +95,11 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_binary_markets(limit: int) -> list[AgentMarket]:
+    def get_binary_markets(limit: int, sort_by: SortBy) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)
-            for m in get_omen_binary_markets(limit=limit)
+            for m in get_omen_binary_markets(limit=limit, sort_by=sort_by)
         ]
-
-
-import json
-import os
-import random
-import typing as t
-from datetime import datetime
-from enum import Enum
-
-import requests
-from web3 import Web3
-from web3.types import TxParams, TxReceipt
-
-from prediction_market_agent_tooling.gtypes import (
-    ABI,
-    ChecksumAddress,
-    HexAddress,
-    HexBytes,
-    OmenOutcomeToken,
-    PrivateKey,
-    Wei,
-    xDai,
-)
-from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
-from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
-from prediction_market_agent_tooling.tools.web3_utils import (
-    ONE_NONCE,
-    WXDAI_ABI,
-    WXDAI_CONTRACT_ADDRESS,
-    Nonce,
-    add_fraction,
-    call_function_on_contract,
-    call_function_on_contract_tx,
-    remove_fraction,
-    xdai_to_wei,
-    xdai_type,
-)
-
-OMEN_QUERY_BATCH_SIZE = 1000
-OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
-DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS = WXDAI_CONTRACT_ADDRESS
 
 
 class Arbitrator(str, Enum):
@@ -216,15 +209,16 @@ query getFixedProductMarketMaker($id: String!) {
     }
 }
 """
+
 _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS = """
-query getFixedProductMarketMakers($first: Int!, $outcomes: [String!]) {
+query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $orderBy: String!, $orderDirection: String!) {
     fixedProductMarketMakers(
         where: {
             isPendingArbitration: false,
             outcomes: $outcomes
         },
-        orderBy: creationTimestamp,
-        orderDirection: desc,
+        orderBy: $orderBy,
+        orderDirection: $orderDirection,
         first: $first
     ) {
         id
@@ -251,7 +245,22 @@ def get_arbitrator_contract_address_and_abi(
     raise ValueError(f"Unknown arbitrator: {arbitrator}")
 
 
-def get_omen_markets(first: int, outcomes: list[str]) -> list[OmenMarket]:
+def ordering_from_sort_by(sort_by: SortBy) -> str:
+    """
+    Returns 'orderBy' and 'orderDirection' strings for the given SortBy.
+    """
+    if sort_by == SortBy.CLOSING_SOONEST:
+        return "creationTimestamp", "desc"  # TODO make more accurate
+    elif sort_by == SortBy.NEWEST:
+        return "creationTimestamp", "desc"
+    else:
+        raise ValueError(f"Unknown sort_by: {sort_by}")
+
+
+def get_omen_markets(
+    first: int, outcomes: list[str], sort_by: SortBy
+) -> list[OmenMarket]:
+    order_by, order_direction = ordering_from_sort_by(sort_by)
     markets = requests.post(
         THEGRAPH_QUERY_URL,
         json={
@@ -259,6 +268,8 @@ def get_omen_markets(first: int, outcomes: list[str]) -> list[OmenMarket]:
             "variables": {
                 "first": first,
                 "outcomes": outcomes,
+                "orderBy": order_by,
+                "orderDirection": order_direction,
             },
         },
         headers={"Content-Type": "application/json"},
@@ -266,12 +277,14 @@ def get_omen_markets(first: int, outcomes: list[str]) -> list[OmenMarket]:
     return [OmenMarket.model_validate(market) for market in markets]
 
 
-def get_omen_binary_markets(limit: int) -> list[OmenMarket]:
-    return get_omen_markets(limit, [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME])
+def get_omen_binary_markets(limit: int, sort_by: SortBy) -> list[OmenMarket]:
+    return get_omen_markets(
+        first=limit, outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME], sort_by=sort_by
+    )
 
 
-def pick_binary_market() -> OmenMarket:
-    return get_omen_binary_markets(limit=1)[0]
+def pick_binary_market(sort_by: SortBy = SortBy.CLOSING_SOONEST) -> OmenMarket:
+    return get_omen_binary_markets(limit=1, sort_by=sort_by)[0]
 
 
 def get_market(market_id: str) -> OmenMarket:

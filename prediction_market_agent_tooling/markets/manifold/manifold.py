@@ -2,7 +2,7 @@ import typing as t
 from decimal import Decimal
 
 from prediction_market_agent_tooling.gtypes import Mana
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_binary_markets,
@@ -39,8 +39,14 @@ class ManifoldAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_binary_markets(limit: int) -> list[AgentMarket]:
+    def get_binary_markets(limit: int, sort_by: SortBy) -> list[AgentMarket]:
+        if sort_by == SortBy.CLOSING_SOONEST:
+            sort = "close-date"
+        elif sort_by == SortBy.NEWEST:
+            sort = "newest"
+        else:
+            raise ValueError(f"Unknown sort_by: {sort_by}")
         return [
             ManifoldAgentMarket.from_data_model(m)
-            for m in get_manifold_binary_markets(limit=limit, sort="close-date")
+            for m in get_manifold_binary_markets(limit=limit, sort=sort)
         ]

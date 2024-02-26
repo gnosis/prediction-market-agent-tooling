@@ -1,9 +1,15 @@
 import typing as t
 from decimal import Decimal
+from enum import Enum
 
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+
+
+class SortBy(str, Enum):
+    CLOSING_SOONEST = "closing-soonest"
+    NEWEST = "newest"
 
 
 class AgentMarket(BaseModel):
@@ -27,7 +33,7 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
-    def get_binary_markets(limit: int) -> list["AgentMarket"]:
+    def get_binary_markets(limit: int, sort_by: SortBy) -> list["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_index(self, outcome: str) -> int:

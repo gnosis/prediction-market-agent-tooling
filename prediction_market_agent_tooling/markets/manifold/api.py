@@ -18,6 +18,8 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldUser,
 )
 
+MARKETS_LIMIT = 1000  # Manifold will only return up to 1000 markets
+
 """
 Python API for Manifold Markets
 
@@ -31,25 +33,43 @@ def get_manifold_binary_markets(
     limit: int,
     term: str = "",
     topic_slug: t.Optional[str] = None,
-    sort: str = "liquidity",
+    sort: t.Literal["liquidity", "score", "newest", "close-date"] = "liquidity",
+    filter_: t.Literal[
+        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
+    ] = "open",
 ) -> list[ManifoldMarket]:
+    all_markets = []
+
     url = "https://api.manifold.markets/v0/search-markets"
     params: dict[str, t.Union[str, int, float]] = {
         "term": term,
         "sort": sort,
+        "filter": filter_,
         "limit": limit,
         "filter": "open",
         "contractType": "BINARY",
     }
     if topic_slug:
         params["topicSlug"] = topic_slug
-    response = requests.get(url, params=params)
 
-    response.raise_for_status()
-    data = response.json()
+    offset = 0
+    while True:
+        params["offset"] = offset
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        markets = [ManifoldMarket.model_validate(x) for x in data]
 
-    markets = [ManifoldMarket.model_validate(x) for x in data]
-    return markets
+        if not markets:
+            break
+
+        all_markets.extend(markets)
+        if len(all_markets) >= limit:
+            break
+
+        offset += 1
+
+    return all_markets[:limit]
 
 
 def pick_binary_market() -> ManifoldMarket:

@@ -1,4 +1,5 @@
 import typing as t
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -33,7 +34,9 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
-    def get_binary_markets(limit: int, sort_by: SortBy) -> list["AgentMarket"]:
+    def get_binary_markets(
+        limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+    ) -> list["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_index(self, outcome: str) -> int:

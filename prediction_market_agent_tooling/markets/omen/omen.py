@@ -95,10 +95,14 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_binary_markets(limit: int, sort_by: SortBy) -> list[AgentMarket]:
+    def get_binary_markets(
+        limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+    ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)
-            for m in get_omen_binary_markets(limit=limit, sort_by=sort_by)
+            for m in get_omen_binary_markets(
+                limit=limit, sort_by=sort_by, created_after=created_after
+            )
         ]
 
 
@@ -211,11 +215,12 @@ query getFixedProductMarketMaker($id: String!) {
 """
 
 _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS = """
-query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $orderBy: String!, $orderDirection: String!) {
+query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $orderBy: String!, $orderDirection: String!, $creationTimestamp_gt: Int!) {
     fixedProductMarketMakers(
         where: {
             isPendingArbitration: false,
             outcomes: $outcomes
+            creationTimestamp_gt: $creationTimestamp_gt
         },
         orderBy: $orderBy,
         orderDirection: $orderDirection,
@@ -258,9 +263,14 @@ def ordering_from_sort_by(sort_by: SortBy) -> str:
 
 
 def get_omen_markets(
-    first: int, outcomes: list[str], sort_by: SortBy
+    first: int,
+    outcomes: list[str],
+    sort_by: SortBy,
+    created_after: t.Optional[datetime] = None,
 ) -> list[OmenMarket]:
     order_by, order_direction = ordering_from_sort_by(sort_by)
+    # if created_after is None:
+    #     created_after = datetime(2, 1, 1)
     markets = requests.post(
         THEGRAPH_QUERY_URL,
         json={
@@ -270,6 +280,9 @@ def get_omen_markets(
                 "outcomes": outcomes,
                 "orderBy": order_by,
                 "orderDirection": order_direction,
+                "creationTimestamp_gt": to_int_timestamp(created_after)
+                if created_after
+                else 0,
             },
         },
         headers={"Content-Type": "application/json"},
@@ -277,9 +290,14 @@ def get_omen_markets(
     return [OmenMarket.model_validate(market) for market in markets]
 
 
-def get_omen_binary_markets(limit: int, sort_by: SortBy) -> list[OmenMarket]:
+def get_omen_binary_markets(
+    limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+) -> list[OmenMarket]:
     return get_omen_markets(
-        first=limit, outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME], sort_by=sort_by
+        first=limit,
+        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        sort_by=sort_by,
+        created_after=created_after,
     )
 
 

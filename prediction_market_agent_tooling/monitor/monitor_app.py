@@ -4,11 +4,8 @@ from datetime import date, datetime, timedelta
 import pytz
 import streamlit as st
 
-from prediction_market_agent_tooling.benchmark.utils import (
-    Market,
-    get_manifold_markets_dated,
-)
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )
@@ -40,29 +37,34 @@ def get_deployed_agents(
 def get_open_and_resolved_markets(
     start_time: datetime,
     market_type: MarketType,
-) -> tuple[list[Market], list[Market]]:
-    open_markets: list[Market]
-    resolved_markets: list[Market]
+) -> tuple[list[AgentMarket], list[AgentMarket]]:
+    open_markets: list[AgentMarket] = []
+    resolved_markets: list[AgentMarket] = []
 
-    if market_type == MarketType.MANIFOLD:
-        open_markets = get_manifold_markets_dated(
-            oldest_date=start_time, filter_="open"
-        )
-        resolved_markets = [
-            m
-            for m in get_manifold_markets_dated(
-                oldest_date=start_time, filter_="resolved"
-            )
-            if not m.has_unsuccessful_resolution
-        ]
-
-    elif market_type == MarketType.OMEN:
-        # TODO: Add Omen market support: https://github.com/gnosis/prediction-market-agent-tooling/issues/56
-        open_markets = []
-        resolved_markets = []
-
-    else:
+    cls = MARKET_TYPE_MAP.get(market_type)
+    if market_type is None:
         raise ValueError(f"Unknown market type: {market_type}")
+
+    markets = cls.get_binary_markets(
+        limit=1000, sort_by="newest", created_after=start_time
+    )  # TODO filter by open and resolved
+
+    # if market_type == MarketType.MANIFOLD:
+    #     open_markets = get_manifold_markets_dated(
+    #         oldest_date=start_time, filter_="open"
+    #     )
+    #     resolved_markets = [
+    #         m
+    #         for m in get_manifold_markets_dated(
+    #             oldest_date=start_time, filter_="resolved"
+    #         )
+    #         if not m.has_unsuccessful_resolution
+    #     ]
+
+    # elif market_type == MarketType.OMEN:
+    #     # TODO: Add Omen market support: https://github.com/gnosis/prediction-market-agent-tooling/issues/56
+    #     open_markets = []
+    #     resolved_markets = []
 
     return open_markets, resolved_markets
 

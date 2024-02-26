@@ -37,6 +37,7 @@ def get_manifold_binary_markets(
     filter_: t.Literal[
         "open", "closed", "resolved", "closing-this-month", "closing-next-month"
     ] = "open",
+    created_after: t.Optional[datetime] = None,
 ) -> list[ManifoldMarket]:
     all_markets = []
 
@@ -63,7 +64,11 @@ def get_manifold_binary_markets(
         if not markets:
             break
 
-        all_markets.extend(markets)
+        for market in markets:
+            if created_after and market.createdTime < created_after:
+                return all_markets[:limit]
+            all_markets.append(market)
+
         if len(all_markets) >= limit:
             break
 

@@ -1,4 +1,5 @@
 import typing as t
+from datetime import datetime
 from decimal import Decimal
 
 from prediction_market_agent_tooling.gtypes import Mana
@@ -39,7 +40,9 @@ class ManifoldAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_binary_markets(limit: int, sort_by: SortBy) -> list[AgentMarket]:
+    def get_binary_markets(
+        limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+    ) -> list[AgentMarket]:
         if sort_by == SortBy.CLOSING_SOONEST:
             sort = "close-date"
         elif sort_by == SortBy.NEWEST:
@@ -48,5 +51,7 @@ class ManifoldAgentMarket(AgentMarket):
             raise ValueError(f"Unknown sort_by: {sort_by}")
         return [
             ManifoldAgentMarket.from_data_model(m)
-            for m in get_manifold_binary_markets(limit=limit, sort=sort)
+            for m in get_manifold_binary_markets(
+                limit=limit, sort=sort, created_after=created_after
+            )
         ]

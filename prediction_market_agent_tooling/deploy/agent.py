@@ -123,7 +123,11 @@ def {entrypoint_function_name}(request) -> str:
         if monitor_config is not None:
             monitor_config.validate_monitor_config(market_type)
             env_vars |= {
-                f"{MonitorConfig.LABEL_PREFIX}{k}": v
+                f"{MonitorConfig.LABEL_PREFIX}{k}": (
+                    v.strftime("%Y-%m-%dT%H:%M:%S")
+                    if isinstance(v, datetime)
+                    else str(v)
+                )
                 for k, v in monitor_config.model_dump().items()
                 if v is not None
             }

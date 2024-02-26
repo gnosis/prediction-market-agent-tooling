@@ -44,16 +44,14 @@ class DeployedOmenAgent(DeployedAgent):
     def from_monitor_settings(
         settings: MonitorSettings, start_time: datetime
     ) -> list[DeployedAgent]:
-        if settings.OMEN_PUBLIC_KEYS:
-            return [
-                DeployedOmenAgent(
-                    name="OmenAgent",
-                    agent_class="DeployableAgent",
-                    market_type=MarketType.OMEN,
-                    monitor_config=MonitorConfig(
-                        start_time=start_time, omen_public_key=settings.OMEN_PUBLIC_KEYS
-                    ),
-                )
-            ]
-        else:
-            return []
+        return [
+            DeployedOmenAgent(
+                name="OmenAgent",
+                agent_class="DeployableAgent",
+                market_type=MarketType.OMEN,
+                monitor_config=MonitorConfig(
+                    start_time=start_time, omen_public_key=omen_public_key
+                ),
+            )
+            for omen_public_key in settings.OMEN_PUBLIC_KEYS
+        ]

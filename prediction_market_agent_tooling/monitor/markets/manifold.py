@@ -43,18 +43,15 @@ class DeployedManifoldAgent(DeployedAgent):
     def from_monitor_settings(
         settings: MonitorSettings, start_time: datetime
     ) -> list[DeployedAgent]:
-        agents = []
-        for key in settings.MANIFOLD_API_KEYS:
-            agents.append(
-                DeployedManifoldAgent(
-                    name="ManifoldAgent",
-                    agent_class="DeployableAgent",
-                    market_type=MarketType.MANIFOLD,
-                    monitor_config=MonitorConfig(
-                        start_time=start_time,
-                        manifold_user_id=get_authenticated_user(key).id,
-                    ),
-                )
+        return [
+            DeployedManifoldAgent(
+                name="ManifoldAgent",
+                agent_class="DeployableAgent",
+                market_type=MarketType.MANIFOLD,
+                monitor_config=MonitorConfig(
+                    start_time=start_time,
+                    manifold_user_id=get_authenticated_user(key).id,
+                ),
             )
-        else:
-            return []
+            for key in settings.MANIFOLD_API_KEYS
+        ]

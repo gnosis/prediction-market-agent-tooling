@@ -26,7 +26,7 @@ class MonitorSettings(BaseSettings):
 
     LOAD_FROM_GCP: bool = False
     MANIFOLD_API_KEYS: list[str] = []
-    OMEN_PUBLIC_KEYS: t.Optional[str] = None
+    OMEN_PUBLIC_KEYS: list[str] = []
     PAST_N_WEEKS: int = 1
 
     @property
@@ -89,7 +89,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
         "Created Time": [bet.created_time for bet in agent_bets],
         "Resolved Time": [bet.resolved_time for bet in agent_bets],
         "Is Correct": [bet.is_correct for bet in agent_bets],
-        "Profit": [bet.profit.amount for bet in agent_bets],
+        "Profit": [round(bet.profit.amount, 2) for bet in agent_bets],
     }
     bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
 

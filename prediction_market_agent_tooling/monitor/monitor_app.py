@@ -30,8 +30,7 @@ DEPLOYED_AGENT_TYPE_MAP: dict[MarketType, type[DeployedAgent]] = {
 def get_deployed_agents(
     market_type: MarketType,
     start_time: datetime,
-    from_gcp: bool = False,
-    from_settings: MonitorSettings | None = None,
+    settings: MonitorSettings,
 ) -> list[DeployedAgent]:
     cls = DEPLOYED_AGENT_TYPE_MAP.get(market_type)
     if cls is None:
@@ -39,13 +38,10 @@ def get_deployed_agents(
 
     agents: list[DeployedAgent] = []
 
-    if from_gcp:
+    if settings.LOAD_FROM_GCP:
         agents.extend(cls.get_all_deployed_agents_gcp())
 
-    if from_settings:
-        agents.extend(
-            cls.from_monitor_settings(settings=from_settings, start_time=start_time)
-        )
+    agents.extend(cls.from_monitor_settings(settings=settings, start_time=start_time))
 
     return agents
 
@@ -101,18 +97,22 @@ def monitor_app() -> None:
         agents: list[DeployedAgent] = get_deployed_agents(
             market_type=market_type,
             start_time=start_time,
-            from_gcp=settings.LOAD_FROM_GCP,
-            from_settings=settings,
+            settings=settings,
         )
 
     oldest_start_time = min(agent.monitor_config.start_time for agent in agents)
 
     st.subheader("Market resolution")
 
-    open_markets, resolved_markets = get_open_and_resolved_markets(
-        start_time=oldest_start_time, market_type=market_type
+    with st.spinner("Loading markets"):
+        open_markets, resolved_markets = get_open_and_resolved_markets(
+            start_time=oldest_start_time, market_type=market_type
+        )
+    (
+        monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
+        if open_markets and resolved_markets
+        else st.warning("No market data found.")
     )
-    monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
 
     st.subheader("Agent bets")
     for agent in agents:

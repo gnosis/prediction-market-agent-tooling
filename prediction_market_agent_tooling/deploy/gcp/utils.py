@@ -5,6 +5,7 @@ from google.cloud.functions_v2.services.function_service.client import (
     FunctionServiceClient,
 )
 from google.cloud.functions_v2.types.functions import Function
+from google.cloud.secretmanager import SecretManagerServiceClient
 
 
 def gcloud_deploy_cmd(
@@ -144,3 +145,10 @@ def get_gcp_function(fname: str) -> Function:
 
 def gcp_function_is_active(fname: str) -> bool:
     return get_gcp_function(fname).state == Function.State.ACTIVE
+
+
+def gcp_get_secret_value(name: str, version: str = "latest") -> str:
+    client = SecretManagerServiceClient()
+    return client.access_secret_version(
+        name=f"projects/{get_gcloud_project_id()}/secrets/{name}/versions/{version}"
+    ).payload.data.decode("utf-8")

@@ -124,8 +124,6 @@ def {entrypoint_function_name}(request) -> str:
                 for k, v in monitor_config.model_dump().items()
                 if v is not None
             }
-        else:
-            monitor_config = MonitorConfig(start_time=datetime.utcnow())
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
             f.write(entrypoint_template)

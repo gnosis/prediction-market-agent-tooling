@@ -55,7 +55,7 @@ class DeployedAgent(BaseModel):
         for function in list_gcp_functions():
             try:
                 agent = DeployedAgent(
-                    name=function.name,
+                    name=function.name.split("/")[-1],
                     agent_class=function.service_config.environment_variables[
                         AGENT_CLASS_KEY
                     ],

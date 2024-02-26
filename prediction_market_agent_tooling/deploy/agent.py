@@ -19,21 +19,20 @@ from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
 )
-from prediction_market_agent_tooling.monitor.monitor import (
-    AGENT_CLASS_KEY,
-    COMMIT_KEY,
-    MARKET_TYPE_KEY,
-    REPOSITORY_KEY,
-)
+
+AGENT_CLASS_KEY = "agent_class"
+MARKET_TYPE_KEY = "market_type"
+REPOSITORY_KEY = "repository"
+COMMIT_KEY = "commit"
 
 
 class MonitorConfig(BaseModel):
     LABEL_PREFIX: t.ClassVar[str] = "monitor_config_"
 
     start_time: datetime
-    end_time: t.Optional[datetime] = (
-        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
-    )
+    end_time: t.Optional[
+        datetime
+    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
     manifold_user_id: str | None = None
     omen_public_key: str | None = None
 

@@ -13,15 +13,15 @@ from prediction_market_agent_tooling.benchmark.utils import (
     CancelableMarketResolution,
     Market,
 )
-from prediction_market_agent_tooling.deploy.agent import MarketType, MonitorConfig
+from prediction_market_agent_tooling.deploy.agent import (
+    AGENT_CLASS_KEY,
+    MARKET_TYPE_KEY,
+    MarketType,
+    MonitorConfig,
+)
 from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.tools.utils import should_not_happen
-
-AGENT_CLASS_KEY = "agent_class"
-MARKET_TYPE_KEY = "market_type"
-REPOSITORY_KEY = "repository"
-COMMIT_KEY = "commit"
 
 
 class MonitorSettings(BaseSettings):

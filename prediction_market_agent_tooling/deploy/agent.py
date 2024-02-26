@@ -31,9 +31,9 @@ class MonitorConfig(BaseModel):
     LABEL_PREFIX: t.ClassVar[str] = "monitor_config_"
 
     start_time: datetime
-    end_time: t.Optional[datetime] = (
-        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
-    )
+    end_time: t.Optional[
+        datetime
+    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
     manifold_user_id: str | None = None
     omen_public_key: str | None = None
 

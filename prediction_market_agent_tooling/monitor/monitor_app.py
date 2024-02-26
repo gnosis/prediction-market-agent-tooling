@@ -29,8 +29,8 @@ DEPLOYED_AGENT_TYPE_MAP: dict[MarketType, type[DeployedAgent]] = {
 
 def get_deployed_agents(
     market_type: MarketType,
-    start_time: datetime,
     settings: MonitorSettings,
+    start_time: datetime | None,
 ) -> list[DeployedAgent]:
     cls = DEPLOYED_AGENT_TYPE_MAP.get(market_type)
     if cls is None:
@@ -41,7 +41,11 @@ def get_deployed_agents(
     if settings.LOAD_FROM_GCP:
         agents.extend(cls.get_all_deployed_agents_gcp())
 
-    agents.extend(cls.from_monitor_settings(settings=settings, start_time=start_time))
+    agents.extend(
+        cls.from_monitor_settings(
+            settings=settings, start_time=start_time or datetime.utcnow()
+        )
+    )
 
     return agents
 
@@ -81,23 +85,27 @@ def monitor_app() -> None:
     market_type: MarketType = check_not_none(
         st.selectbox(label="Market type", options=list(MarketType), index=0)
     )
-    start_time = datetime.combine(
-        t.cast(
-            # This will be always a date for us, so casting.
-            date,
-            st.date_input(
-                "Start time",
-                value=datetime.now() - timedelta(weeks=settings.PAST_N_WEEKS),
+    start_time: datetime | None = (
+        datetime.combine(
+            t.cast(
+                # This will be always a date for us, so casting.
+                date,
+                st.date_input(
+                    "Start time",
+                    value=datetime.now() - timedelta(weeks=settings.PAST_N_WEEKS),
+                ),
             ),
-        ),
-        datetime.min.time(),
-    ).replace(tzinfo=pytz.UTC)
+            datetime.min.time(),
+        ).replace(tzinfo=pytz.UTC)
+        if settings.has_manual_agents
+        else None
+    )
 
     with st.spinner("Loading agents"):
         agents: list[DeployedAgent] = get_deployed_agents(
             market_type=market_type,
-            start_time=start_time,
             settings=settings,
+            start_time=start_time,
         )
 
     oldest_start_time = min(agent.monitor_config.start_time for agent in agents)

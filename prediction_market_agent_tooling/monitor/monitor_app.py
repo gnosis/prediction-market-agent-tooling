@@ -76,36 +76,6 @@ def get_open_and_resolved_markets(
     return open_markets, resolved_markets
 
 
-def get_open_and_resolved_markets(
-    start_time: datetime,
-    market_type: MarketType,
-) -> tuple[list[Market], list[Market]]:
-    open_markets: list[Market]
-    resolved_markets: list[Market]
-
-    if market_type == MarketType.MANIFOLD:
-        open_markets = get_manifold_markets_dated(
-            oldest_date=start_time, filter_="open"
-        )
-        resolved_markets = [
-            m
-            for m in get_manifold_markets_dated(
-                oldest_date=start_time, filter_="resolved"
-            )
-            if not m.has_unsuccessful_resolution
-        ]
-
-    elif market_type == MarketType.OMEN:
-        # TODO: Add Omen market support: https://github.com/gnosis/prediction-market-agent-tooling/issues/56
-        open_markets = []
-        resolved_markets = []
-
-    else:
-        raise ValueError(f"Unknown market type: {market_type}")
-
-    return open_markets, resolved_markets
-
-
 def monitor_app() -> None:
     settings = MonitorSettings()
     market_type: MarketType = check_not_none(
@@ -142,7 +112,6 @@ def monitor_app() -> None:
         if open_markets and resolved_markets
         else st.warning("No market data found.")
     )
-
 
     st.subheader("Agent bets")
     for agent in agents:

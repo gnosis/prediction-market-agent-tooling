@@ -25,9 +25,9 @@ class MonitorConfig(BaseModel):
     LABEL_PREFIX: t.ClassVar[str] = "monitor_config_"
 
     start_time: datetime
-    end_time: t.Optional[
-        datetime
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[datetime] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
     manifold_user_id: str | None = None
     omen_public_key: str | None = None
 
@@ -110,16 +110,19 @@ def {entrypoint_function_name}(request) -> str:
 
         gcp_fname = gcp_fname or self.get_gcloud_fname(market_type)
 
+        # For labels, only hyphens (-), underscores (_), lowercase characters, and numbers are allowed in values.
         labels = (labels or {}) | {
+            "market_type": market_type.value,
+        }
+        env_vars = (env_vars or {}) | {
             "repository": repository,
             "commit": git.Repo(search_parent_directories=True).head.object.hexsha,
-            "market_type": market_type.value,
             "agent_class": self.__class__.__name__,
         }
 
         if monitor_config is not None:
             monitor_config.validate_monitor_config(market_type)
-            env_vars = (env_vars or {}) | {
+            env_vars |= {
                 f"{MonitorConfig.LABEL_PREFIX}{k}": v
                 for k, v in monitor_config.model_dump().items()
                 if v is not None

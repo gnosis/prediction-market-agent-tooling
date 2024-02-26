@@ -51,7 +51,7 @@ class DeployedAgent(BaseModel):
             agents.append(
                 DeployedAgent(
                     name=function.name,
-                    agent_class=function.labels["agent_class"],
+                    agent_class=function.environment_variables["agent_class"],
                     market_type=MarketType(function.labels["market_type"]),
                     monitor_config=MonitorConfig.model_validate(
                         {

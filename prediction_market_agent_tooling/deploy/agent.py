@@ -19,6 +19,12 @@ from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
 )
+from prediction_market_agent_tooling.monitor.monitor import (
+    AGENT_CLASS_KEY,
+    COMMIT_KEY,
+    MARKET_TYPE_KEY,
+    REPOSITORY_KEY,
+)
 
 
 class MonitorConfig(BaseModel):
@@ -112,12 +118,12 @@ def {entrypoint_function_name}(request) -> str:
 
         # For labels, only hyphens (-), underscores (_), lowercase characters, and numbers are allowed in values.
         labels = (labels or {}) | {
-            "market_type": market_type.value,
+            MARKET_TYPE_KEY: market_type.value,
         }
         env_vars = (env_vars or {}) | {
-            "repository": repository,
-            "commit": git.Repo(search_parent_directories=True).head.object.hexsha,
-            "agent_class": self.__class__.__name__,
+            REPOSITORY_KEY: repository,
+            COMMIT_KEY: git.Repo(search_parent_directories=True).head.object.hexsha,
+            AGENT_CLASS_KEY: self.__class__.__name__,
         }
 
         if monitor_config is not None:

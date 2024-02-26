@@ -18,6 +18,11 @@ from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
+AGENT_CLASS_KEY = "agent_class"
+MARKET_TYPE_KEY = "market_type"
+REPOSITORY_KEY = "repository"
+COMMIT_KEY = "commit"
+
 
 class MonitorSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -51,8 +56,8 @@ class DeployedAgent(BaseModel):
             agents.append(
                 DeployedAgent(
                     name=function.name,
-                    agent_class=function.environment_variables["agent_class"],
-                    market_type=MarketType(function.labels["market_type"]),
+                    agent_class=function.environment_variables[AGENT_CLASS_KEY],
+                    market_type=MarketType(function.labels[MARKET_TYPE_KEY]),
                     monitor_config=MonitorConfig.model_validate(
                         {
                             k.replace(MonitorConfig.LABEL_PREFIX, ""): v

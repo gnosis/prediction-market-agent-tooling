@@ -6,7 +6,6 @@ import typing as t
 from datetime import datetime
 
 import git
-from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
@@ -20,36 +19,19 @@ from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
 )
-from prediction_market_agent_tooling.tools.utils import add_timezone_validator
+from prediction_market_agent_tooling.monitor.markets.manifold import (
+    DeployedManifoldAgent,
+    DeployedManifoldAgentParams,
+)
+from prediction_market_agent_tooling.monitor.markets.omen import (
+    DeployedOmenAgent,
+    DeployedOmenAgentParams,
+)
+from prediction_market_agent_tooling.tools.utils import should_not_happen
 
-AGENT_CLASS_KEY = "agent_class"
 MARKET_TYPE_KEY = "market_type"
 REPOSITORY_KEY = "repository"
 COMMIT_KEY = "commit"
-
-
-class MonitorConfig(BaseModel):
-    LABEL_PREFIX: t.ClassVar[str] = "monitor_config_"
-
-    start_time: datetime
-    end_time: t.Optional[
-        datetime
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
-    manifold_user_id: str | None = None
-    omen_public_key: str | None = None
-
-    _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
-
-    def validate_monitor_config(self, market_type: MarketType) -> None:
-        if market_type == MarketType.MANIFOLD and not self.manifold_user_id:
-            raise ValueError(
-                "You must provide a manifold_user_id when deploying a Manifold agent"
-            )
-
-        if market_type == MarketType.OMEN and not self.omen_public_key:
-            raise ValueError(
-                "You must provide a omen_public_key when deploying a Omen agent"
-            )
 
 
 class DeployableAgent:
@@ -101,7 +83,10 @@ class DeployableAgent:
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
         gcp_fname: str | None = None,
-        monitor_config: MonitorConfig | None = None,
+        start_time: datetime | None = None,
+        monitor_params: (
+            DeployedOmenAgentParams | DeployedManifoldAgentParams | None
+        ) = None,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
@@ -126,20 +111,46 @@ def {entrypoint_function_name}(request) -> str:
         env_vars = (env_vars or {}) | {
             REPOSITORY_KEY: repository,
             COMMIT_KEY: git.Repo(search_parent_directories=True).head.object.hexsha,
-            AGENT_CLASS_KEY: self.__class__.__name__,
         }
 
-        if monitor_config is not None:
-            monitor_config.validate_monitor_config(market_type)
-            env_vars |= {
-                f"{MonitorConfig.LABEL_PREFIX}{k}": (
-                    v.strftime("%Y-%m-%dT%H:%M:%S")
-                    if isinstance(v, datetime)
-                    else str(v)
+        monitor_agent = (
+            DeployedOmenAgent(
+                name=gcp_fname,
+                deployableagent_class_name=self.__class__.__name__,
+                start_time=start_time or datetime.utcnow(),
+                omen_public_key=(
+                    monitor_params.omen_public_key if monitor_params else None
+                ),
+            )
+            if market_type == MarketType.OMEN
+            and (
+                monitor_params is None
+                or isinstance(monitor_params, DeployedOmenAgentParams)
+            )
+            else (
+                DeployedManifoldAgent(
+                    name=gcp_fname,
+                    deployableagent_class_name=self.__class__.__name__,
+                    start_time=start_time or datetime.utcnow(),
+                    manifold_user_id=(
+                        monitor_params.manifold_user_id if monitor_params else None
+                    ),
                 )
-                for k, v in monitor_config.model_dump().items()
-                if v is not None
-            }
+                if market_type == MarketType.MANIFOLD
+                and (
+                    monitor_params is None
+                    or isinstance(monitor_params, DeployedManifoldAgentParams)
+                )
+                else (
+                    None
+                    if market_type is None
+                    else should_not_happen("Unknown market type.")
+                )
+            )
+        )
+
+        if monitor_agent is not None:
+            env_vars |= monitor_agent.model_dump_prefixed()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
             f.write(entrypoint_template)

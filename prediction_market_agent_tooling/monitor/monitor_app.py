@@ -39,7 +39,7 @@ def get_deployed_agents(
     agents: list[DeployedAgent] = []
 
     if settings.LOAD_FROM_GCP:
-        agents.extend(cls.get_all_deployed_agents_gcp())
+        agents.extend(cls.from_all_gcp_functions())
 
     agents.extend(
         cls.from_monitor_settings(
@@ -108,7 +108,7 @@ def monitor_app() -> None:
             start_time=start_time,
         )
 
-    oldest_start_time = min(agent.monitor_config.start_time for agent in agents)
+    oldest_start_time = min(agent.start_time for agent in agents)
 
     st.subheader("Market resolution")
     with st.spinner("Loading markets"):

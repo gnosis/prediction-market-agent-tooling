@@ -6,22 +6,20 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
-from pydantic import BaseModel
+from google.cloud.functions_v2.types.functions import Function
+from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import (
     CancelableMarketResolution,
     Market,
 )
-from prediction_market_agent_tooling.deploy.agent import (
-    AGENT_CLASS_KEY,
-    MARKET_TYPE_KEY,
-    MarketType,
-    MonitorConfig,
-)
 from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.utils import (
+    add_timezone_validator,
+    should_not_happen,
+)
 
 
 class MonitorSettings(BaseSettings):
@@ -39,42 +37,27 @@ class MonitorSettings(BaseSettings):
         return bool(self.MANIFOLD_API_KEYS or self.OMEN_PUBLIC_KEYS)
 
 
+C = t.TypeVar("C", bound="DeployedAgent")
+
+
 class DeployedAgent(BaseModel):
+    PREFIX: t.ClassVar["str"] = "deployedagent_var_"
+
     name: str
-    agent_class: str
-    market_type: MarketType
-    monitor_config: MonitorConfig
+    deployableagent_class_name: str
+
+    start_time: datetime
+    end_time: t.Optional[datetime] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
 
-    @staticmethod
-    def get_all_deployed_agents_gcp() -> t.Sequence["DeployedAgent"]:
-        agents: list[DeployedAgent] = []
+    _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
 
-        for function in list_gcp_functions():
-            try:
-                agent = DeployedAgent(
-                    name=function.name.split("/")[-1],
-                    agent_class=function.service_config.environment_variables[
-                        AGENT_CLASS_KEY
-                    ],
-                    market_type=MarketType(function.labels[MARKET_TYPE_KEY]),
-                    monitor_config=MonitorConfig.model_validate(
-                        {
-                            k.replace(MonitorConfig.LABEL_PREFIX, ""): v
-                            for k, v in function.service_config.environment_variables.items()
-                            if k.startswith(MonitorConfig.LABEL_PREFIX)
-                        }
-                    ),
-                    raw_labels=dict(function.labels),
-                    raw_env_vars=dict(function.service_config.environment_variables),
-                )
-                agents.append(agent)
-            except ValueError:
-                print(f"Could not parse `{function.name}` into DeployedAgent.")
-
-        return agents
+    def model_dump_prefixed(self) -> dict[str, t.Any]:
+        return {self.PREFIX + k: v for k, v in self.model_dump().items()}
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method.")
@@ -84,6 +67,37 @@ class DeployedAgent(BaseModel):
         settings: MonitorSettings, start_time: datetime
     ) -> list["DeployedAgent"]:
         raise NotImplementedError("Subclasses must implement this method.")
+
+    @classmethod
+    def from_gcp_function(cls: t.Type[C], function: Function) -> C:
+        return cls.model_validate(
+            {
+                "raw_labels": dict(function.labels),
+                "raw_env_vars": dict(function.service_config.environment_variables),
+            }
+            | {
+                k.replace(cls.PREFIX, ""): v
+                for k, v in function.service_config.environment_variables.items()
+                if k.startswith(cls.PREFIX)
+            }
+        )
+
+    @classmethod
+    def from_all_gcp_functions(
+        cls: t.Type[C], filter_: t.Callable[[Function], bool] = lambda x: True
+    ) -> t.Sequence[C]:
+        agents: list[C] = []
+
+        for function in list_gcp_functions():
+            if not filter_(function):
+                continue
+
+            try:
+                agents.append(cls.from_gcp_function(function))
+            except ValueError:
+                print(f"Could not parse `{function.name}` into {cls.__name__}.")
+
+        return agents
 
 
 def monitor_agent(agent: DeployedAgent) -> None:
@@ -104,11 +118,9 @@ def monitor_agent(agent: DeployedAgent) -> None:
 
     # Info
     col1, col2, col3 = st.columns(3)
-    col1.markdown(
-        f"ID: `{agent.monitor_config.manifold_user_id or agent.monitor_config.omen_public_key or 'Missing-ID'}`"
-    )
-    col2.markdown(f"Class: `{agent.agent_class}`")
-    col3.markdown(f"Start Time: `{agent.monitor_config.start_time}`")
+    col1.markdown(f"Name: `{agent.name}`")
+    col2.markdown(f"DeployableAgent Class: `{agent.deployableagent_class_name}`")
+    col3.markdown(f"Start Time: `{agent.start_time}`")
 
     # Metrics
     col1, col2 = st.columns(2)

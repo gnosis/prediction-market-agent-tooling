@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
 )
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
+from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
 
 MAX_AVAILABLE_MARKETS = 20
@@ -111,6 +112,12 @@ def {entrypoint_function_name}(request) -> str:
         if cron_schedule:
             schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
 
+    def calculate_bet_amount(self, answer: bool, market: AgentMarket) -> BetAmount:
+        """
+        Calculate the bet amount. By default, it returns the minimum bet amount.
+        """
+        return market.get_tiny_bet_amount()
+
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
         cls = MARKET_TYPE_MAP.get(market_type)
         if not cls:
@@ -126,7 +133,7 @@ def {entrypoint_function_name}(request) -> str:
             if _place_bet:
                 print(f"Placing bet on {market} with result {result}")
                 market.place_bet(
-                    amount=market.get_tiny_bet_amount(),
+                    amount=self.calculate_bet_amount(result, market),
                     outcome=result,
                 )
 

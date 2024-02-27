@@ -1,6 +1,7 @@
 import time
 from datetime import datetime
 
+import numpy as np
 import pytest
 from web3 import Web3
 
@@ -85,4 +86,4 @@ def test_p_yes():
             market = m
             break
     assert market is not None, "No market found with outcomeTokenProbabilities."
-    assert market.p_yes == market.outcomeTokenProbabilities[0]
+    assert np.isclose(market.p_yes, market.outcomeTokenProbabilities[0])

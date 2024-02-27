@@ -65,7 +65,7 @@ def get_manifold_binary_markets(
 
         for market in markets:
             if created_after and market.createdTime < created_after:
-                return all_markets[:limit]
+                continue
             all_markets.append(market)
             offset += 1
 

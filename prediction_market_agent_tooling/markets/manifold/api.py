@@ -18,8 +18,6 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldUser,
 )
 
-MARKETS_LIMIT = 1000  # Manifold will only return up to 1000 markets
-
 """
 Python API for Manifold Markets
 
@@ -27,6 +25,8 @@ https://docs.manifold.markets/api#get-v0search-markets
 
 Note: There is an existing wrapper here: https://github.com/vluzko/manifoldpy. Consider using that instead.
 """
+
+MARKETS_LIMIT = 1000  # Manifold will only return up to 1000 markets
 
 
 def get_manifold_binary_markets(
@@ -46,7 +46,7 @@ def get_manifold_binary_markets(
         "term": term,
         "sort": sort,
         "filter": filter_,
-        "limit": limit,
+        "limit": max(limit, MARKETS_LIMIT),
         "contractType": "BINARY",
     }
     if topic_slug:

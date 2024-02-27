@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.monitor.monitor import (
     monitor_agent,
     monitor_market,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 MAX_MONITOR_MARKETS = 1000
 
@@ -71,10 +72,9 @@ def monitor_app() -> None:
         ),
         datetime.min.time(),
     ).replace(tzinfo=pytz.UTC)
-    # market_type: MarketType = check_not_none(
-    #     st.selectbox(label="Market type", options=list(MarketType), index=0)
-    # )
-    market_type = MarketType.OMEN
+    market_type: MarketType = check_not_none(
+        st.selectbox(label="Market type", options=list(MarketType), index=0)
+    )
 
     st.subheader("Market resolution")
     open_markets, resolved_markets = get_open_and_resolved_markets(

@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from prediction_market_agent_tooling.deploy.agent import DeployableAgent
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
@@ -46,7 +47,7 @@ class DeployedManifoldAgent(DeployedAgent):
         return [
             DeployedManifoldAgent(
                 name="ManifoldAgent",
-                agent_class=DeployedAgent.__name__,
+                agent_class=DeployableAgent.__name__,
                 market_type=MarketType.MANIFOLD,
                 monitor_config=MonitorConfig(
                     start_time=start_time,

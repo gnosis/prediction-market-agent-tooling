@@ -91,13 +91,6 @@ class OmenMarket(BaseModel):
         )
 
     @property
-    def p_yes(self) -> Probability:
-        return check_not_none(
-            self.outcomeTokenProbabilities,
-            "outcomeTokenProbabilities not available",
-        )[self.outcomes.index(OMEN_TRUE_OUTCOME)]
-
-    @property
     def p_no(self) -> Probability:
         return Probability(1 - self.p_yes)
 
@@ -151,7 +144,7 @@ class OmenMarket(BaseModel):
         if self.boolean_outcome:
             return Resolution.YES
         else:
-            Resolution.NO
+            return Resolution.NO
 
 
 class OmenBetCreator(BaseModel):
@@ -244,6 +237,8 @@ class OmenBet(BaseModel):
             created_time=datetime.fromtimestamp(self.creationTimestamp),
             market_question=self.title,
             market_outcome=self.fpmm.boolean_outcome,
-            resolved_time=datetime.fromtimestamp(self.fpmm.resolutionTimestamp),  # type: ignore # TODO Mypy doesn't understand that self.fpmm.is_resolved is True and therefore timestamp is known non-None
+            resolved_time=datetime.fromtimestamp(
+                check_not_none(self.fpmm.resolutionTimestamp)
+            ),
             profit=self.get_profit(),
         )

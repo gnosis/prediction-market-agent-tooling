@@ -34,7 +34,6 @@ class AgentMarket(BaseModel):
     id: str
     question: str
     outcomes: list[str]
-    currency: t.ClassVar[Currency]
     resolution: t.Optional[Resolution] = None
     created_time: datetime
     p_yes: Probability

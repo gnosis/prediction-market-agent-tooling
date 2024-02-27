@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_omen_binary_markets,
     pick_binary_market,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -75,15 +76,15 @@ def test_get_bets() -> None:
     )
 
 
-def test_p_yes():
+def test_p_yes() -> None:
     # Find a market with outcomeTokenMarginalPrices and verify that p_yes is correct.
     for m in get_omen_binary_markets(
         limit=200,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
     ):
-        if m.outcomeTokenProbabilities:
+        if m.outcomeTokenProbabilities is not None:
             market = m
             break
     assert market is not None, "No market found with outcomeTokenProbabilities."
-    assert np.isclose(market.p_yes, market.outcomeTokenProbabilities[0])
+    assert np.isclose(market.p_yes, check_not_none(market.outcomeTokenProbabilities)[0])

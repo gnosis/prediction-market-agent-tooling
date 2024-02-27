@@ -39,7 +39,7 @@ def get_manifold_binary_markets(
     ] = "open",
     created_after: t.Optional[datetime] = None,
 ) -> list[ManifoldMarket]:
-    all_markets = []
+    all_markets: list[ManifoldMarket] = []
 
     url = "https://api.manifold.markets/v0/search-markets"
     params: dict[str, t.Union[str, int, float]] = {

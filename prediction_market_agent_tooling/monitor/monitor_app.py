@@ -44,9 +44,7 @@ def get_open_and_resolved_markets(
     start_time: datetime,
     market_type: MarketType,
 ) -> tuple[list[AgentMarket], list[AgentMarket]]:
-    cls = MARKET_TYPE_MAP.get(market_type)
-    if market_type is None:
-        raise ValueError(f"Unknown market type: {market_type}")
+    cls = check_not_none(MARKET_TYPE_MAP.get(market_type))
 
     open_markets = cls.get_binary_markets(
         limit=MAX_MONITOR_MARKETS,

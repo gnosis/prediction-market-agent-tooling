@@ -97,7 +97,9 @@ class OmenAgentMarket(AgentMarket):
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
             resolution=model.get_resolution_enum() if model.is_resolved else None,
-            created_time=datetime.fromtimestamp(model.creationTimestamp),
+            created_time=datetime.fromtimestamp(model.creationTimestamp)
+            if model.creationTimestamp
+            else datetime.min,
             p_yes=model.p_yes,
         )
 
@@ -273,7 +275,7 @@ def get_arbitrator_contract_address_and_abi(
     raise ValueError(f"Unknown arbitrator: {arbitrator}")
 
 
-def ordering_from_sort_by(sort_by: SortBy) -> str:
+def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
     """
     Returns 'orderBy' and 'orderDirection' strings for the given SortBy.
     """

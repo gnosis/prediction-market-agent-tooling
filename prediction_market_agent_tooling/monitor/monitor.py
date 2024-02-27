@@ -47,9 +47,9 @@ class DeployedAgent(BaseModel):
     deployableagent_class_name: str
 
     start_time: datetime
-    end_time: t.Optional[datetime] = (
-        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
-    )
+    end_time: t.Optional[
+        datetime
+    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None

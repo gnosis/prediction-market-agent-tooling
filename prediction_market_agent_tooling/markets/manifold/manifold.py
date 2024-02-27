@@ -3,7 +3,11 @@ from datetime import datetime
 from decimal import Decimal
 
 from prediction_market_agent_tooling.gtypes import Mana
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_binary_markets,
@@ -44,7 +48,10 @@ class ManifoldAgentMarket(AgentMarket):
 
     @staticmethod
     def get_binary_markets(
-        limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[datetime] = None,
     ) -> list[AgentMarket]:
         if sort_by == SortBy.CLOSING_SOONEST:
             sort = "close-date"
@@ -52,9 +59,20 @@ class ManifoldAgentMarket(AgentMarket):
             sort = "newest"
         else:
             raise ValueError(f"Unknown sort_by: {sort_by}")
+
+        if filter_by == FilterBy.OPEN:
+            filter_ = "open"
+        elif filter_by == FilterBy.CLOSED:
+            filter_ = "closed"
+        else:
+            raise ValueError(f"Unknown filter_by: {filter_by}")
+
         return [
             ManifoldAgentMarket.from_data_model(m)
             for m in get_manifold_binary_markets(
-                limit=limit, sort=sort, created_after=created_after
+                limit=limit,
+                sort=sort,
+                created_after=created_after,
+                filter_=filter_,
             )
         ]

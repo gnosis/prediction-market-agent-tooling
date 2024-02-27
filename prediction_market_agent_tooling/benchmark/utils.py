@@ -258,35 +258,6 @@ def get_manifold_markets_paged(
     return markets
 
 
-def get_manifold_markets_dated(
-    oldest_date: datetime,
-    filter_: t.Literal[
-        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
-    ] = "open",
-    excluded_questions: set[str] | None = None,
-) -> t.List[Market]:
-    markets: list[Market] = []
-
-    offset = 0
-    while True:
-        new_markets = get_manifold_markets(
-            limit=MANIFOLD_API_LIMIT,
-            offset=offset,
-            filter_=filter_,
-            sort="newest",  # Enforce sorting by newest, because there aren't date filters on the API.
-        )
-        if not new_markets:
-            break
-        for market in new_markets:
-            if market.created_time < oldest_date:
-                return markets
-            if not excluded_questions or market.question not in excluded_questions:
-                markets.append(market)
-            offset += 1
-
-    return markets
-
-
 def get_polymarket_markets(
     limit: int = 100,
     active: bool | None = True,

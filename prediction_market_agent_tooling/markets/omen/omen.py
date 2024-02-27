@@ -21,7 +21,11 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     xDai,
 )
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -99,12 +103,18 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_binary_markets(
-        limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[datetime] = None,
     ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)
             for m in get_omen_binary_markets(
-                limit=limit, sort_by=sort_by, created_after=created_after
+                limit=limit,
+                sort_by=sort_by,
+                created_after=created_after,
+                filter_by=filter_by,
             )
         ]
 
@@ -218,7 +228,13 @@ query getFixedProductMarketMaker($id: String!) {
 """
 
 _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS = """
-query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $orderBy: String!, $orderDirection: String!, $creationTimestamp_gt: Int!) {
+query getFixedProductMarketMakers(
+    $first: Int!,
+    $outcomes: [String!],
+    $orderBy: String!,
+    $orderDirection: String!,
+    $creationTimestamp_gt: Int!,
+) {
     fixedProductMarketMakers(
         where: {
             isPendingArbitration: false,
@@ -238,6 +254,7 @@ query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $orderBy: 
         outcomeTokenAmounts
         outcomeTokenMarginalPrices
         fee
+        answerFinalizedTimestamp
         resolutionTimestamp
         currentAnswer
         creationTimestamp
@@ -272,6 +289,7 @@ def get_omen_markets(
     first: int,
     outcomes: list[str],
     sort_by: SortBy,
+    filter_by: FilterBy,
     created_after: t.Optional[datetime] = None,
 ) -> list[OmenMarket]:
     order_by, order_direction = ordering_from_sort_by(sort_by)
@@ -290,23 +308,36 @@ def get_omen_markets(
             },
         },
         headers={"Content-Type": "application/json"},
-    ).json()["data"]["fixedProductMarketMakers"]
-    return [OmenMarket.model_validate(market) for market in markets]
+    ).json()
+    markets = markets["data"]["fixedProductMarketMakers"]
+    omen_markets = [OmenMarket.model_validate(market) for market in markets]
+    if filter_by == FilterBy.OPEN:
+        return [m for m in omen_markets if m.is_open]
+    elif filter_by == FilterBy.CLOSED:
+        return [m for m in omen_markets if not m.is_open]
+    else:
+        raise ValueError(f"Unknown filter_by: {filter_by}")
 
 
 def get_omen_binary_markets(
-    limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+    limit: int,
+    sort_by: SortBy,
+    filter_by: FilterBy,
+    created_after: t.Optional[datetime] = None,
 ) -> list[OmenMarket]:
     return get_omen_markets(
         first=limit,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         sort_by=sort_by,
         created_after=created_after,
+        filter_by=filter_by,
     )
 
 
-def pick_binary_market(sort_by: SortBy = SortBy.CLOSING_SOONEST) -> OmenMarket:
-    return get_omen_binary_markets(limit=1, sort_by=sort_by)[0]
+def pick_binary_market(
+    sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
+) -> OmenMarket:
+    return get_omen_binary_markets(limit=1, sort_by=sort_by, filter_by=filter_by)[0]
 
 
 def get_market(market_id: str) -> OmenMarket:

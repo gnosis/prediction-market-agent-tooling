@@ -17,6 +17,11 @@ class SortBy(str, Enum):
     NEWEST = "newest"
 
 
+class FilterBy(str, Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+
+
 class AgentMarket(BaseModel):
     """
     Common market class that can be created from vendor specific markets.
@@ -42,7 +47,10 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_binary_markets(
-        limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[datetime] = None,
     ) -> list["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 

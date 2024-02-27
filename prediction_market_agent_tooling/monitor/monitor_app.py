@@ -4,7 +4,11 @@ from datetime import date, datetime, timedelta
 import pytz
 import streamlit as st
 
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
@@ -44,17 +48,21 @@ def get_open_and_resolved_markets(
     if market_type is None:
         raise ValueError(f"Unknown market type: {market_type}")
 
-    markets = cls.get_binary_markets(
-        limit=MAX_MONITOR_MARKETS, sort_by="newest", created_after=start_time
+    open_markets = cls.get_binary_markets(
+        limit=MAX_MONITOR_MARKETS,
+        sort_by=SortBy.NEWEST,
+        created_after=start_time,
+        filter_by=FilterBy.OPEN,
     )
-    open_markets: list[AgentMarket] = []
-    resolved_markets: list[AgentMarket] = []
-    for market in markets:
-        if not market.is_resolved():
-            open_markets.append(market)
-        else:
-            if market.has_successful_resolution():
-                resolved_markets.append(market)
+    closed_markets = cls.get_binary_markets(
+        limit=MAX_MONITOR_MARKETS,
+        sort_by=SortBy.NEWEST,
+        created_after=start_time,
+        filter_by=FilterBy.CLOSED,
+    )
+    resolved_markets = [
+        m for m in closed_markets if m.is_resolved() and m.has_successful_resolution()
+    ]
 
     return open_markets, resolved_markets
 

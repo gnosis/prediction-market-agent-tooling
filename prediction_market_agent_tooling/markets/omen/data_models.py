@@ -55,8 +55,14 @@ class OmenMarket(BaseModel):
     creationTimestamp: t.Optional[int] = None
 
     @property
+    def is_open(self) -> bool:
+        return self.currentAnswer is None
+
+    @property
     def is_resolved(self) -> bool:
-        return self.resoltutionTimestamp is not None and self.currentAnswer is not None
+        return (
+            self.answerFinalizedTimestamp is not None and self.currentAnswer is not None
+        )
 
     @property
     def market_maker_contract_address(self) -> HexAddress:
@@ -146,7 +152,9 @@ class OmenBetFPMM(BaseModel):  # TODO replace with OmenMarket
 
     @property
     def is_resolved(self) -> bool:
-        return self.resoltutionTimestamp is not None and self.currentAnswer is not None
+        return (
+            self.answerFinalizedTimestamp is not None and self.currentAnswer is not None
+        )
 
     @property
     def is_binary(self) -> bool:

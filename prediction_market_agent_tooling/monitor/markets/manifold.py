@@ -4,10 +4,7 @@ from datetime import datetime
 from google.cloud.functions_v2.types.functions import Function
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.deploy.agent import (
-    MARKET_TYPE_KEY,
-    DeployableAgent,
-)
+from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
@@ -47,7 +44,7 @@ class DeployedManifoldAgent(DeployedAgent):
         return [
             DeployedManifoldAgent(
                 name=f"ManifoldAgent-{idx}",
-                deployableagent_class_name=DeployableAgent.__name__,
+                deployableagent_class_name="deployableagent_class_name",
                 start_time=start_time,
                 manifold_user_id=get_authenticated_user(key).id,
             )

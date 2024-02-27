@@ -5,10 +5,7 @@ from google.cloud.functions_v2.types.functions import Function
 from pydantic import BaseModel
 from web3 import Web3
 
-from prediction_market_agent_tooling.deploy.agent import (
-    MARKET_TYPE_KEY,
-    DeployableAgent,
-)
+from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.markets import MarketType
@@ -45,7 +42,7 @@ class DeployedOmenAgent(DeployedAgent):
         return [
             DeployedOmenAgent(
                 name=f"OmenAgent-{idx}",
-                deployableagent_class_name=DeployableAgent.__name__,
+                deployableagent_class_name="deployableagent_class_name",
                 start_time=start_time,
                 omen_public_key=Web3.to_checksum_address(omen_public_key),
             )

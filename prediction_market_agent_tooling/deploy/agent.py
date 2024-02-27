@@ -7,6 +7,11 @@ from datetime import datetime
 
 import git
 
+from prediction_market_agent_tooling.deploy.constants import (
+    COMMIT_KEY,
+    MARKET_TYPE_KEY,
+    REPOSITORY_KEY,
+)
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
     run_deployed_gcp_function,
@@ -28,10 +33,6 @@ from prediction_market_agent_tooling.monitor.markets.omen import (
     DeployedOmenAgentParams,
 )
 from prediction_market_agent_tooling.tools.utils import should_not_happen
-
-MARKET_TYPE_KEY = "market_type"
-REPOSITORY_KEY = "repository"
-COMMIT_KEY = "commit"
 
 
 class DeployableAgent:

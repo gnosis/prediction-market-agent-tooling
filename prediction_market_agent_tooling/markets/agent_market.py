@@ -5,7 +5,11 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.markets.data_models import (
+    BetAmount,
+    Currency,
+    Resolution,
+)
 
 
 class SortBy(str, Enum):
@@ -23,6 +27,9 @@ class AgentMarket(BaseModel):
     question: str
     outcomes: list[str]
     currency: t.ClassVar[Currency]
+    resolution: t.Optional[Resolution] = None
+    created_time: datetime
+    p_yes: float
 
     def get_bet_amount(self, amount: Decimal) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
@@ -38,6 +45,12 @@ class AgentMarket(BaseModel):
         limit: int, sort_by: SortBy, created_after: t.Optional[datetime] = None
     ) -> list["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
+
+    def is_resolved(self) -> bool:
+        return self.resolution is not None
+
+    def has_successful_resolution(self) -> bool:
+        return self.resolution in [Resolution.YES, Resolution.NO]
 
     def get_outcome_index(self, outcome: str) -> int:
         try:

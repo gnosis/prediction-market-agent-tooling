@@ -14,6 +14,7 @@ class Resolution(str, Enum):
     YES = "YES"
     NO = "NO"
     CANCEL = "CANCEL"
+    MKT = "MKT"
 
 
 class BetAmount(BaseModel):

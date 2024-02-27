@@ -37,6 +37,9 @@ class ManifoldAgentMarket(AgentMarket):
             id=model.id,
             question=model.question,
             outcomes=model.outcomes,
+            resolution=model.get_resolution_enum() if model.isResolved else None,
+            created_time=model.createdTime,
+            p_yes=model.probability,
         )
 
     @staticmethod

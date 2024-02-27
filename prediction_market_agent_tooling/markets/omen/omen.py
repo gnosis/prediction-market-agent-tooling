@@ -92,6 +92,9 @@ class OmenAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
+            resolution=model.get_resolution_enum() if model.is_resolved else None,
+            created_time=datetime.fromtimestamp(model.creationTimestamp),
+            p_yes=model.p_yes,
         )
 
     @staticmethod
@@ -235,6 +238,9 @@ query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $orderBy: 
         outcomeTokenAmounts
         outcomeTokenMarginalPrices
         fee
+        resolutionTimestamp
+        currentAnswer
+        creationTimestamp
     }
 }
 """
@@ -269,8 +275,6 @@ def get_omen_markets(
     created_after: t.Optional[datetime] = None,
 ) -> list[OmenMarket]:
     order_by, order_direction = ordering_from_sort_by(sort_by)
-    # if created_after is None:
-    #     created_after = datetime(2, 1, 1)
     markets = requests.post(
         THEGRAPH_QUERY_URL,
         json={
@@ -719,6 +723,7 @@ query getFixedProductMarketMakerTrades(
             outcomes
             title
             answerFinalizedTimestamp
+            resolutionTimestamp
             currentAnswer
             isPendingArbitration
             arbitrationOccurred

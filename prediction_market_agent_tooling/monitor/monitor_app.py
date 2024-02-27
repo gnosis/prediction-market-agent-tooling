@@ -16,7 +16,8 @@ from prediction_market_agent_tooling.monitor.monitor import (
     monitor_agent,
     monitor_market,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
+
+MAX_MONITOR_MARKETS = 1000
 
 DEPLOYED_AGENT_TYPE_MAP: dict[MarketType, type[DeployedAgent]] = {
     MarketType.MANIFOLD: DeployedManifoldAgent,
@@ -38,33 +39,21 @@ def get_open_and_resolved_markets(
     start_time: datetime,
     market_type: MarketType,
 ) -> tuple[list[AgentMarket], list[AgentMarket]]:
-    open_markets: list[AgentMarket] = []
-    resolved_markets: list[AgentMarket] = []
-
     cls = MARKET_TYPE_MAP.get(market_type)
     if market_type is None:
         raise ValueError(f"Unknown market type: {market_type}")
 
     markets = cls.get_binary_markets(
-        limit=1000, sort_by="newest", created_after=start_time
-    )  # TODO filter by open and resolved
-
-    # if market_type == MarketType.MANIFOLD:
-    #     open_markets = get_manifold_markets_dated(
-    #         oldest_date=start_time, filter_="open"
-    #     )
-    #     resolved_markets = [
-    #         m
-    #         for m in get_manifold_markets_dated(
-    #             oldest_date=start_time, filter_="resolved"
-    #         )
-    #         if not m.has_unsuccessful_resolution
-    #     ]
-
-    # elif market_type == MarketType.OMEN:
-    #     # TODO: Add Omen market support: https://github.com/gnosis/prediction-market-agent-tooling/issues/56
-    #     open_markets = []
-    #     resolved_markets = []
+        limit=MAX_MONITOR_MARKETS, sort_by="newest", created_after=start_time
+    )
+    open_markets: list[AgentMarket] = []
+    resolved_markets: list[AgentMarket] = []
+    for market in markets:
+        if not market.is_resolved():
+            open_markets.append(market)
+        else:
+            if market.has_successful_resolution():
+                resolved_markets.append(market)
 
     return open_markets, resolved_markets
 
@@ -82,9 +71,10 @@ def monitor_app() -> None:
         ),
         datetime.min.time(),
     ).replace(tzinfo=pytz.UTC)
-    market_type: MarketType = check_not_none(
-        st.selectbox(label="Market type", options=list(MarketType), index=0)
-    )
+    # market_type: MarketType = check_not_none(
+    #     st.selectbox(label="Market type", options=list(MarketType), index=0)
+    # )
+    market_type = MarketType.OMEN
 
     st.subheader("Market resolution")
     open_markets, resolved_markets = get_open_and_resolved_markets(

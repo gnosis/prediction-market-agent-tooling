@@ -61,7 +61,7 @@ class ManifoldAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
     ) -> list[AgentMarket]:
-        sort: t.Literal[ "newest", "close-date"]
+        sort: t.Literal["newest", "close-date"]
         if sort_by == SortBy.CLOSING_SOONEST:
             sort = "close-date"
         elif sort_by == SortBy.NEWEST:

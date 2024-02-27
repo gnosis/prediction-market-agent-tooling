@@ -19,7 +19,7 @@ class SortBy(str, Enum):
 
 class FilterBy(str, Enum):
     OPEN = "open"
-    CLOSED = "closed"
+    RESOLVED = "resolved"
 
 
 class AgentMarket(BaseModel):

@@ -313,8 +313,8 @@ def get_omen_markets(
     omen_markets = [OmenMarket.model_validate(market) for market in markets]
     if filter_by == FilterBy.OPEN:
         return [m for m in omen_markets if m.is_open]
-    elif filter_by == FilterBy.CLOSED:
-        return [m for m in omen_markets if not m.is_open]
+    elif filter_by == FilterBy.RESOLVED:
+        return [m for m in omen_markets if m.is_resolved]
     else:
         raise ValueError(f"Unknown filter_by: {filter_by}")
 

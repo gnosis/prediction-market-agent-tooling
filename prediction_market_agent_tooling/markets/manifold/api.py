@@ -47,7 +47,6 @@ def get_manifold_binary_markets(
         "sort": sort,
         "filter": filter_,
         "limit": limit,
-        "filter": "open",
         "contractType": "BINARY",
     }
     if topic_slug:

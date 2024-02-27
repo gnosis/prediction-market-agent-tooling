@@ -62,8 +62,8 @@ class ManifoldAgentMarket(AgentMarket):
 
         if filter_by == FilterBy.OPEN:
             filter_ = "open"
-        elif filter_by == FilterBy.CLOSED:
-            filter_ = "closed"
+        elif filter_by == FilterBy.RESOLVED:
+            filter_ = "resolved"
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
 

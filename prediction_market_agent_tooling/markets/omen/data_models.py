@@ -49,7 +49,7 @@ class OmenMarket(BaseModel):
     outcomeTokenAmounts: list[OmenOutcomeToken]
     outcomeTokenMarginalPrices: t.Optional[list[xDai]]
     fee: t.Optional[Wei]
-    resoltutionTimestamp: t.Optional[int] = None
+    resolutionTimestamp: t.Optional[int] = None
     answerFinalizedTimestamp: t.Optional[int] = None
     currentAnswer: t.Optional[str] = None
     creationTimestamp: t.Optional[int] = None
@@ -100,12 +100,28 @@ class OmenMarket(BaseModel):
 
     @property
     def p_yes(self) -> Probability:
-        if self.outcomeTokenProbabilities is None:
+        """
+        Calculate the probability of the outcomes from the relative token amounts.
+
+        Note, not all markets reliably have outcomeTokenMarginalPrices, hence the
+        need for this method.
+        """
+        if self.outcomeTokenAmounts is None:
             raise ValueError(
-                f"Market with title {self.title} has no outcomeTokenMarginalPrices."
+                f"Market with title {self.title} has no outcomeTokenAmounts."
+            )
+        if len(self.outcomeTokenAmounts) != 2:
+            raise ValueError(
+                f"Market with title {self.title} has {len(self.outcomeTokenAmounts)} outcomes."
             )
         true_index = self.outcomes.index(OMEN_TRUE_OUTCOME)
-        return self.outcomeTokenProbabilities[true_index]
+
+        if sum(self.outcomeTokenAmounts) == 0:
+            return Probability(0.5)
+
+        return Probability(
+            1 - self.outcomeTokenAmounts[true_index] / sum(self.outcomeTokenAmounts)
+        )
 
     def __repr__(self) -> str:
         return f"Omen's market: {self.title}"
@@ -144,7 +160,7 @@ class OmenBetFPMM(BaseModel):  # TODO replace with OmenMarket
     outcomes: list[str]
     title: str
     answerFinalizedTimestamp: t.Optional[int] = None
-    resoltutionTimestamp: t.Optional[int] = None
+    resolutionTimestamp: t.Optional[int] = None
     currentAnswer: t.Optional[str] = None
     isPendingArbitration: bool
     arbitrationOccurred: bool
@@ -225,6 +241,6 @@ class OmenBet(BaseModel):
             created_time=datetime.fromtimestamp(self.creationTimestamp),
             market_question=self.title,
             market_outcome=self.fpmm.boolean_outcome,
-            resolved_time=datetime.fromtimestamp(self.fpmm.resoltutionTimestamp),  # type: ignore # TODO Mypy doesn't understand that self.fpmm.is_resolved is True and therefore timestamp is known non-None
+            resolved_time=datetime.fromtimestamp(self.fpmm.resolutionTimestamp),  # type: ignore # TODO Mypy doesn't understand that self.fpmm.is_resolved is True and therefore timestamp is known non-None
             profit=self.get_profit(),
         )

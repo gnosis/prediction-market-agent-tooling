@@ -6,12 +6,14 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
     get_bets,
     get_market,
+    get_omen_binary_markets,
     pick_binary_market,
 )
 from tests.utils import RUN_PAID_TESTS
@@ -70,3 +72,17 @@ def test_get_bets() -> None:
         bets[0].id
         == "0x5b1457bb7525eed03d3c78a542ce6d89be6090e10x3666da333dadd05083fef9ff6ddee588d26e43070x1"
     )
+
+
+def test_p_yes():
+    # Find a market with outcomeTokenMarginalPrices and verify that p_yes is correct.
+    for m in get_omen_binary_markets(
+        limit=200,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.OPEN,
+    ):
+        if m.outcomeTokenProbabilities:
+            market = m
+            break
+    assert market is not None, "No market found with outcomeTokenProbabilities."
+    assert market.p_yes == market.outcomeTokenProbabilities[0]

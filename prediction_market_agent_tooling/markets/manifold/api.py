@@ -46,7 +46,7 @@ def get_manifold_binary_markets(
         "term": term,
         "sort": sort,
         "filter": filter_,
-        "limit": max(limit, MARKETS_LIMIT),
+        "limit": min(limit, MARKETS_LIMIT),
         "contractType": "BINARY",
     }
     if topic_slug:

@@ -86,7 +86,7 @@ def omen_replicate_from_tx(
             auto_deposit=auto_deposit,
         )
         print(
-            f"Created `{market_address}` for `{market.question}` in category {category}."
+            f"Created `{market_address}` for `{market.question}` in category {category} out of {market.url}."
         )
 
     return created_addresses

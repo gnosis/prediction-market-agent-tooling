@@ -53,20 +53,19 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             close_time_before=close_time_before,
             auto_deposit=False,
         )
-        # TODO: Enable when fetching binary markets is fixed.
-        # print(f"Replicating from {MarketSource.POLYMARKET}.")
-        # # Deposit enough of xDai for all N markets to be replicated, so we don't re-deposit in case of re-tries.
-        # omen_create_market_deposit_tx(
-        #     deposit_funds_per_replication,
-        #     keys.bet_from_address,
-        #     keys.bet_from_private_key,
-        # )
-        # omen_replicate_from_tx(
-        #     market_source=MarketSource.POLYMARKET,
-        #     n_to_replicate=settings.N_TO_REPLICATE,
-        #     initial_funds=initial_funds_per_market,
-        #     from_address=keys.bet_from_address,
-        #     from_private_key=keys.bet_from_private_key,
-        #     close_time_before=close_time_before,
-        #     auto_deposit=False,
-        # )
+        print(f"Replicating from {MarketSource.POLYMARKET}.")
+        # Deposit enough of xDai for all N markets to be replicated, so we don't re-deposit in case of re-tries.
+        omen_create_market_deposit_tx(
+            deposit_funds_per_replication,
+            keys.bet_from_address,
+            keys.bet_from_private_key,
+        )
+        omen_replicate_from_tx(
+            market_source=MarketSource.POLYMARKET,
+            n_to_replicate=settings.N_TO_REPLICATE,
+            initial_funds=initial_funds_per_market,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            close_time_before=close_time_before,
+            auto_deposit=False,
+        )

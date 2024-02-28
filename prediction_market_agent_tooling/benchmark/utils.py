@@ -340,6 +340,14 @@ def get_polymarket_markets(
             )
         )
 
+        # On Polymarket, there are markets that are actually a group of multiple Yes/No markets, for example https://polymarket.com/event/presidential-election-winner-2024.
+        # But API returns them individually, and then we receive questions such as "Will any other Republican Politician win the 2024 US Presidential Election?",
+        # which are naturally unpredictable without futher details.
+        # Also, URLs constructed for them with the logic below don't work.
+        # This is a heuristic to filter them out.
+        if len(m_json["events"]) > 1 or m_json["events"][0]["slug"] != m_json["slug"]:
+            continue
+
         markets.append(
             Market(
                 question=m_json["question"],

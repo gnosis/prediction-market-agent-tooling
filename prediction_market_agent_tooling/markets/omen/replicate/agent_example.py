@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import pytz
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import MarketSource
@@ -28,9 +29,9 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
         keys = APIKeys()
         settings = ReplicateSettings()
-        close_time_before = datetime.utcnow() + timedelta(
-            days=settings.CLOSE_TIME_UP_TO_N_DAYS
-        )
+        close_time_before = (
+            datetime.utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
+        ).replace(tzinfo=pytz.UTC)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)
         deposit_funds_per_replication = xdai_type(
             initial_funds_per_market * settings.N_TO_REPLICATE

@@ -22,7 +22,6 @@ class ReplicateSettings(BaseSettings):
 
 
 class DeployableReplicateToOmenAgent(DeployableAgent):
-
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
         keys = APIKeys()
         settings = ReplicateSettings()

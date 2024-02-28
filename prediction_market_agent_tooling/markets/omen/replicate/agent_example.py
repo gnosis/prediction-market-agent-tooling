@@ -69,3 +69,4 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             close_time_before=close_time_before,
             auto_deposit=False,
         )
+        print("Done.")

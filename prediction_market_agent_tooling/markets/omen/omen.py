@@ -205,6 +205,7 @@ query getFixedProductMarketMaker($id: String!) {
         id
         title
         category
+        creationTimestamp
         collateralVolume
         usdVolume
         collateralToken

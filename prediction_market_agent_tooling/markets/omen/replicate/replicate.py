@@ -61,6 +61,8 @@ def omen_replicate_from_tx(
         print(f"No markets found for {market_source}")
         return []
 
+    print(f"Found {len(markets_to_replicate)} markets to replicate.")
+
     # Get a set of possible categories from existing markets (but created by anyone, not just your agent)
     existing_categories = set(
         m.category

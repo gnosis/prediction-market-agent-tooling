@@ -47,7 +47,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         omen_replicate_from_tx(
             market_source=MarketSource.MANIFOLD,
             n_to_replicate=settings.N_TO_REPLICATE,
-            initial_funds=xdai_type(settings.INITIAL_FUNDS),
+            initial_funds=initial_funds_per_market,
             from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             close_time_before=close_time_before,
@@ -63,7 +63,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         omen_replicate_from_tx(
             market_source=MarketSource.POLYMARKET,
             n_to_replicate=settings.N_TO_REPLICATE,
-            initial_funds=xdai_type(settings.INITIAL_FUNDS),
+            initial_funds=initial_funds_per_market,
             from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             close_time_before=close_time_before,

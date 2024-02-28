@@ -851,6 +851,21 @@ def omen_prepare_condition_tx(
     )
 
 
+def omen_create_market_deposit_tx(
+    initial_funds: xDai,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+) -> TxReceipt:
+    web3 = Web3(Web3.HTTPProvider(GNOSIS_RPC_URL))
+    return omen_deposit_collateral_token_tx(
+        web3=web3,
+        collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
+        amount_wei=xdai_to_wei(initial_funds),
+        from_address=from_address,
+        from_private_key=from_private_key,
+    )
+
+
 def omen_create_market_tx(
     initial_funds: xDai,
     question: str,
@@ -914,13 +929,7 @@ def omen_create_market_tx(
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
     if auto_deposit and initial_funds_wei > 0:
-        omen_deposit_collateral_token_tx(
-            web3=web3,
-            collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
-            amount_wei=initial_funds_wei,
-            from_address=from_address,
-            from_private_key=from_private_key,
-        )
+        omen_create_market_deposit_tx(initial_funds, from_address, from_private_key)
 
     # Create the question on Realitio.
     question_id = omen_realitio_ask_question_tx(

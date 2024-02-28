@@ -14,6 +14,7 @@ def main(
     initial_funds: str = typer.Option(),
     from_address: str = typer.Option(),
     from_private_key: str = typer.Option(),
+    auto_deposit: bool = True,
 ) -> None:
     """
     Helper script to replicate markets to omen from others.
@@ -33,6 +34,7 @@ def main(
         initial_funds=xdai_type(initial_funds),
         from_address=verify_address(from_address),
         from_private_key=private_key_type(from_private_key),
+        auto_deposit=auto_deposit,
     )
 
 

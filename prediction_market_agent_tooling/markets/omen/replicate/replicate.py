@@ -25,6 +25,7 @@ def omen_replicate_from_tx(
     from_private_key: PrivateKey,
     last_n_omen_markets_to_fetch: int = 1000,
     close_time_before: datetime | None = None,
+    auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
     already_created_markets = get_omen_binary_markets(
         limit=last_n_omen_markets_to_fetch,
@@ -82,7 +83,7 @@ def omen_replicate_from_tx(
             from_address=from_address,
             from_private_key=from_private_key,
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
-            auto_deposit=True,
+            auto_deposit=auto_deposit,
         )
         print(
             f"Created `{market_address}` for `{market.question}` in category {category}."

@@ -1,5 +1,6 @@
 import typing as t
 
+from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
@@ -12,12 +13,13 @@ class APIKeys(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    MANIFOLD_API_KEY: t.Optional[str] = None
+    MANIFOLD_API_KEY: t.Optional[SecretStr] = None
     BET_FROM_ADDRESS: t.Optional[ChecksumAddress] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
+    OPENAI_API_KEY: t.Optional[SecretStr] = None
 
     @property
-    def manifold_api_key(self) -> str:
+    def manifold_api_key(self) -> SecretStr:
         return check_not_none(
             self.MANIFOLD_API_KEY, "MANIFOLD_API_KEY missing in the environment."
         )
@@ -36,4 +38,10 @@ class APIKeys(BaseSettings):
         return check_not_none(
             self.BET_FROM_PRIVATE_KEY,
             "BET_FROM_PRIVATE_KEY missing in the environment.",
+        )
+
+    @property
+    def openai_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."
         )

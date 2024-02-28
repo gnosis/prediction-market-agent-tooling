@@ -20,6 +20,7 @@ class MarketSource(str, Enum):
 class MarketFilter(str, Enum):
     open = "open"
     resolved = "resolved"
+    closing_this_month = "closing-this-month"
 
 
 class MarketSort(str, Enum):
@@ -42,10 +43,12 @@ class CancelableMarketResolution(str, Enum):
 class Market(BaseModel):
     source: MarketSource
     question: str
+    category: str | None = None
     url: str
     p_yes: float
     volume: float
     created_time: datetime
+    close_time: datetime
     resolution: CancelableMarketResolution | None = None
     outcomePrices: list[float] | None = None
 
@@ -59,6 +62,12 @@ class Market(BaseModel):
 
     @validator("created_time")
     def _validate_created_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=pytz.UTC)
+        return value
+
+    @validator("close_time")
+    def _validate_close_time(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
             value = value.replace(tzinfo=pytz.UTC)
         return value
@@ -205,7 +214,11 @@ def get_manifold_markets(
         m["source"] = MarketSource.MANIFOLD
 
     # Map JSON fields to Market fields
-    fields_map = {"probability": "p_yes", "createdTime": "created_time"}
+    fields_map = {
+        "probability": "p_yes",
+        "createdTime": "created_time",
+        "closeTime": "close_time",
+    }
     process_values = {
         "resolution": lambda v: v.lower() if v else None,
     }
@@ -330,17 +343,20 @@ def get_polymarket_markets(
         markets.append(
             Market(
                 question=m_json["question"],
+                category=m_json["category"],
                 url=f"https://polymarket.com/event/{m_json['slug']}",
                 p_yes=m_json["outcomePrices"][
                     0
                 ],  # For binary markets on Polymarket, the first outcome is "Yes" and outcomePrices are equal to probabilities.
                 created_time=m_json["created_at"],
+                close_time=datetime.strptime(m_json["end_date_iso"], "%Y-%m-%d"),
                 outcomePrices=m_json["outcomePrices"],
                 volume=m_json["volume"],
                 resolution=resolution,
                 source=MarketSource.POLYMARKET,
             )
         )
+
     return markets
 
 
@@ -361,6 +377,8 @@ def get_markets(
     elif source == MarketSource.POLYMARKET:
         if sort is not None:
             raise ValueError(f"Polymarket doesn't support sorting.")
+        if filter_ == MarketFilter.closing_this_month:
+            raise ValueError(f"Polymarket doesn't support filtering by closing soon.")
         return get_polymarket_markets(
             limit=number,
             excluded_questions=excluded_questions,

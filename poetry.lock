@@ -727,6 +727,17 @@ files = [
 packaging = "*"
 
 [[package]]
+name = "distro"
+version = "1.9.0"
+description = "Distro - an OS platform information API"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2"},
+    {file = "distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed"},
+]
+
+[[package]]
 name = "eth-abi"
 version = "5.0.0"
 description = "eth_abi: Python utilities for working with Ethereum ABI definitions, especially encoding and decoding"
@@ -1365,6 +1376,17 @@ setproctitle = ["setproctitle"]
 tornado = ["tornado (>=0.2)"]
 
 [[package]]
+name = "h11"
+version = "0.14.0"
+description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "h11-0.14.0-py3-none-any.whl", hash = "sha256:e3fe4ac4b851c468cc8363d500db52c2ead036020723024a109d37346efaa761"},
+    {file = "h11-0.14.0.tar.gz", hash = "sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d"},
+]
+
+[[package]]
 name = "hexbytes"
 version = "0.3.1"
 description = "hexbytes: Python `bytes` subclass that decodes hex, with a readable console output"
@@ -1380,6 +1402,51 @@ dev = ["black (>=22)", "bumpversion (>=0.5.3)", "eth-utils (>=1.0.1,<3)", "flake
 doc = ["sphinx (>=5.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
 lint = ["black (>=22)", "flake8 (==6.0.0)", "flake8-bugbear (==23.3.23)", "isort (>=5.10.1)", "mypy (==0.971)", "pydocstyle (>=5.0.0)"]
 test = ["eth-utils (>=1.0.1,<3)", "hypothesis (>=3.44.24,<=6.31.6)", "pytest (>=7.0.0)", "pytest-xdist (>=2.4.0)"]
+
+[[package]]
+name = "httpcore"
+version = "1.0.4"
+description = "A minimal low-level HTTP client."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "httpcore-1.0.4-py3-none-any.whl", hash = "sha256:ac418c1db41bade2ad53ae2f3834a3a0f5ae76b56cf5aa497d2d033384fc7d73"},
+    {file = "httpcore-1.0.4.tar.gz", hash = "sha256:cb2839ccfcba0d2d3c1131d3c3e26dfc327326fbe7a5dc0dbfe9f6c9151bb022"},
+]
+
+[package.dependencies]
+certifi = "*"
+h11 = ">=0.13,<0.15"
+
+[package.extras]
+asyncio = ["anyio (>=4.0,<5.0)"]
+http2 = ["h2 (>=3,<5)"]
+socks = ["socksio (==1.*)"]
+trio = ["trio (>=0.22.0,<0.25.0)"]
+
+[[package]]
+name = "httpx"
+version = "0.27.0"
+description = "The next generation HTTP client."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "httpx-0.27.0-py3-none-any.whl", hash = "sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5"},
+    {file = "httpx-0.27.0.tar.gz", hash = "sha256:a0cb88a46f32dc874e04ee956e4c2764aba2aa228f650b06788ba6bda2962ab5"},
+]
+
+[package.dependencies]
+anyio = "*"
+certifi = "*"
+httpcore = "==1.*"
+idna = "*"
+sniffio = "*"
+
+[package.extras]
+brotli = ["brotli", "brotlicffi"]
+cli = ["click (==8.*)", "pygments (==2.*)", "rich (>=10,<14)"]
+http2 = ["h2 (>=3,<5)"]
+socks = ["socksio (==1.*)"]
 
 [[package]]
 name = "idna"
@@ -1536,6 +1603,46 @@ files = [
 referencing = ">=0.31.0"
 
 [[package]]
+name = "langchain"
+version = "0.1.9"
+description = "Building applications with LLMs through composability"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "langchain-0.1.9-py3-none-any.whl", hash = "sha256:1436a9f4e498bb9f8e01e0ab8d185771d49c0fc96b3d2da4d5bed5055015746f"},
+    {file = "langchain-0.1.9.tar.gz", hash = "sha256:da1f89aeaf5cbc225eb1d6523af0f273c062fdc40a76ec455486c3c184f741b1"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.8.3,<4.0.0"
+async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
+dataclasses-json = ">=0.5.7,<0.7"
+jsonpatch = ">=1.33,<2.0"
+langchain-community = ">=0.0.21,<0.1"
+langchain-core = ">=0.1.26,<0.2"
+langsmith = ">=0.1.0,<0.2.0"
+numpy = ">=1,<2"
+pydantic = ">=1,<3"
+PyYAML = ">=5.3"
+requests = ">=2,<3"
+SQLAlchemy = ">=1.4,<3"
+tenacity = ">=8.1.0,<9.0.0"
+
+[package.extras]
+azure = ["azure-ai-formrecognizer (>=3.2.1,<4.0.0)", "azure-ai-textanalytics (>=5.3.0,<6.0.0)", "azure-ai-vision (>=0.11.1b1,<0.12.0)", "azure-cognitiveservices-speech (>=1.28.0,<2.0.0)", "azure-core (>=1.26.4,<2.0.0)", "azure-cosmos (>=4.4.0b1,<5.0.0)", "azure-identity (>=1.12.0,<2.0.0)", "azure-search-documents (==11.4.0b8)", "openai (<2)"]
+clarifai = ["clarifai (>=9.1.0)"]
+cli = ["typer (>=0.9.0,<0.10.0)"]
+cohere = ["cohere (>=4,<5)"]
+docarray = ["docarray[hnswlib] (>=0.32.0,<0.33.0)"]
+embeddings = ["sentence-transformers (>=2,<3)"]
+extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.0,<3.0.0)", "anthropic (>=0.3.11,<0.4.0)", "arxiv (>=1.4,<2.0)", "assemblyai (>=0.17.0,<0.18.0)", "atlassian-python-api (>=3.36.0,<4.0.0)", "beautifulsoup4 (>=4,<5)", "bibtexparser (>=1.4.0,<2.0.0)", "cassio (>=0.1.0,<0.2.0)", "chardet (>=5.1.0,<6.0.0)", "cohere (>=4,<5)", "couchbase (>=4.1.9,<5.0.0)", "dashvector (>=1.0.1,<2.0.0)", "databricks-vectorsearch (>=0.21,<0.22)", "datasets (>=2.15.0,<3.0.0)", "dgml-utils (>=0.3.0,<0.4.0)", "esprima (>=4.0.1,<5.0.0)", "faiss-cpu (>=1,<2)", "feedparser (>=6.0.10,<7.0.0)", "fireworks-ai (>=0.9.0,<0.10.0)", "geopandas (>=0.13.1,<0.14.0)", "gitpython (>=3.1.32,<4.0.0)", "google-cloud-documentai (>=2.20.1,<3.0.0)", "gql (>=3.4.1,<4.0.0)", "hologres-vector (>=0.0.6,<0.0.7)", "html2text (>=2020.1.16,<2021.0.0)", "javelin-sdk (>=0.1.8,<0.2.0)", "jinja2 (>=3,<4)", "jq (>=1.4.1,<2.0.0)", "jsonschema (>1)", "langchain-openai (>=0.0.2,<0.1)", "lxml (>=4.9.2,<5.0.0)", "markdownify (>=0.11.6,<0.12.0)", "motor (>=3.3.1,<4.0.0)", "msal (>=1.25.0,<2.0.0)", "mwparserfromhell (>=0.6.4,<0.7.0)", "mwxml (>=0.3.3,<0.4.0)", "newspaper3k (>=0.2.8,<0.3.0)", "numexpr (>=2.8.6,<3.0.0)", "openai (<2)", "openapi-pydantic (>=0.3.2,<0.4.0)", "pandas (>=2.0.1,<3.0.0)", "pdfminer-six (>=20221105,<20221106)", "pgvector (>=0.1.6,<0.2.0)", "praw (>=7.7.1,<8.0.0)", "psychicapi (>=0.8.0,<0.9.0)", "py-trello (>=0.19.0,<0.20.0)", "pymupdf (>=1.22.3,<2.0.0)", "pypdf (>=3.4.0,<4.0.0)", "pypdfium2 (>=4.10.0,<5.0.0)", "pyspark (>=3.4.0,<4.0.0)", "rank-bm25 (>=0.2.2,<0.3.0)", "rapidfuzz (>=3.1.1,<4.0.0)", "rapidocr-onnxruntime (>=1.3.2,<2.0.0)", "rdflib (==7.0.0)", "requests-toolbelt (>=1.0.0,<2.0.0)", "rspace_client (>=2.5.0,<3.0.0)", "scikit-learn (>=1.2.2,<2.0.0)", "sqlite-vss (>=0.1.2,<0.2.0)", "streamlit (>=1.18.0,<2.0.0)", "sympy (>=1.12,<2.0)", "telethon (>=1.28.5,<2.0.0)", "timescale-vector (>=0.0.1,<0.0.2)", "tqdm (>=4.48.0)", "upstash-redis (>=0.15.0,<0.16.0)", "xata (>=1.0.0a7,<2.0.0)", "xmltodict (>=0.13.0,<0.14.0)"]
+javascript = ["esprima (>=4.0.1,<5.0.0)"]
+llms = ["clarifai (>=9.1.0)", "cohere (>=4,<5)", "huggingface_hub (>=0,<1)", "manifest-ml (>=0.0.1,<0.0.2)", "nlpcloud (>=1,<2)", "openai (<2)", "openlm (>=0.0.5,<0.0.6)", "torch (>=1,<3)", "transformers (>=4,<5)"]
+openai = ["openai (<2)", "tiktoken (>=0.3.2,<0.6.0)"]
+qdrant = ["qdrant-client (>=1.3.1,<2.0.0)"]
+text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
+
+[[package]]
 name = "langchain-community"
 version = "0.0.21"
 description = "Community contributed LangChain integrations."
@@ -1563,13 +1670,13 @@ extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.
 
 [[package]]
 name = "langchain-core"
-version = "0.1.25"
+version = "0.1.27"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain_core-0.1.25-py3-none-any.whl", hash = "sha256:ff0a0ad1ed877878e7b9c7601870cd12145abf3c814aae41995968d05ea6c09d"},
-    {file = "langchain_core-0.1.25.tar.gz", hash = "sha256:065ff8b4e383c5645d175b20ae44b258330ed06457b0fc0179efee310b6f2af6"},
+    {file = "langchain_core-0.1.27-py3-none-any.whl", hash = "sha256:68eb89dc4a932baf4fb6b4b75b7119eec9e5405e892d2137e9fe0a1d24a40d0c"},
+    {file = "langchain_core-0.1.27.tar.gz", hash = "sha256:698414223525c0bc130d85a614e1493905d588ab72fe0c9ad3b537b1dc62067f"},
 ]
 
 [package.dependencies]
@@ -1584,6 +1691,22 @@ tenacity = ">=8.1.0,<9.0.0"
 
 [package.extras]
 extended-testing = ["jinja2 (>=3,<4)"]
+
+[[package]]
+name = "langchain-openai"
+version = "0.0.8"
+description = "An integration package connecting OpenAI and LangChain"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "langchain_openai-0.0.8-py3-none-any.whl", hash = "sha256:4862fc72cecbee0240aaa6df0234d5893dd30cd33ca23ac5cfdd86c11d2c44df"},
+    {file = "langchain_openai-0.0.8.tar.gz", hash = "sha256:b7aba7fcc52305e78b08197ebc54fc45cc06dbc40ba5b913bc48a22b30a4f5c9"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.1.27,<0.2.0"
+openai = ">=1.10.0,<2.0.0"
+tiktoken = ">=0.5.2,<1"
 
 [[package]]
 name = "langsmith"
@@ -2019,6 +2142,29 @@ files = [
     {file = "numpy-1.26.4-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:7e50d0a0cc3189f9cb0aeb3a6a6af18c16f59f004b866cd2be1c14b36134a4a0"},
     {file = "numpy-1.26.4.tar.gz", hash = "sha256:2a02aba9ed12e4ac4eb3ea9421c420301a0c6460d9830d74a9df87efa4912010"},
 ]
+
+[[package]]
+name = "openai"
+version = "1.12.0"
+description = "The official Python library for the openai API"
+optional = false
+python-versions = ">=3.7.1"
+files = [
+    {file = "openai-1.12.0-py3-none-any.whl", hash = "sha256:a54002c814e05222e413664f651b5916714e4700d041d5cf5724d3ae1a3e3481"},
+    {file = "openai-1.12.0.tar.gz", hash = "sha256:99c5d257d09ea6533d689d1cc77caa0ac679fa21efef8893d8b0832a86877f1b"},
+]
+
+[package.dependencies]
+anyio = ">=3.5.0,<5"
+distro = ">=1.7.0,<2"
+httpx = ">=0.23.0,<1"
+pydantic = ">=1.9.0,<3"
+sniffio = "*"
+tqdm = ">4"
+typing-extensions = ">=4.7,<5"
+
+[package.extras]
+datalib = ["numpy (>=1)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)"]
 
 [[package]]
 name = "packaging"
@@ -3301,6 +3447,58 @@ files = [
 ]
 
 [[package]]
+name = "tiktoken"
+version = "0.6.0"
+description = "tiktoken is a fast BPE tokeniser for use with OpenAI's models"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "tiktoken-0.6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:277de84ccd8fa12730a6b4067456e5cf72fef6300bea61d506c09e45658d41ac"},
+    {file = "tiktoken-0.6.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:9c44433f658064463650d61387623735641dcc4b6c999ca30bc0f8ba3fccaf5c"},
+    {file = "tiktoken-0.6.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:afb9a2a866ae6eef1995ab656744287a5ac95acc7e0491c33fad54d053288ad3"},
+    {file = "tiktoken-0.6.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c62c05b3109fefca26fedb2820452a050074ad8e5ad9803f4652977778177d9f"},
+    {file = "tiktoken-0.6.0-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:0ef917fad0bccda07bfbad835525bbed5f3ab97a8a3e66526e48cdc3e7beacf7"},
+    {file = "tiktoken-0.6.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:e095131ab6092d0769a2fda85aa260c7c383072daec599ba9d8b149d2a3f4d8b"},
+    {file = "tiktoken-0.6.0-cp310-cp310-win_amd64.whl", hash = "sha256:05b344c61779f815038292a19a0c6eb7098b63c8f865ff205abb9ea1b656030e"},
+    {file = "tiktoken-0.6.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:cefb9870fb55dca9e450e54dbf61f904aab9180ff6fe568b61f4db9564e78871"},
+    {file = "tiktoken-0.6.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:702950d33d8cabc039845674107d2e6dcabbbb0990ef350f640661368df481bb"},
+    {file = "tiktoken-0.6.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e8d49d076058f23254f2aff9af603863c5c5f9ab095bc896bceed04f8f0b013a"},
+    {file = "tiktoken-0.6.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:430bc4e650a2d23a789dc2cdca3b9e5e7eb3cd3935168d97d43518cbb1f9a911"},
+    {file = "tiktoken-0.6.0-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:293cb8669757301a3019a12d6770bd55bec38a4d3ee9978ddbe599d68976aca7"},
+    {file = "tiktoken-0.6.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:7bd1a288b7903aadc054b0e16ea78e3171f70b670e7372432298c686ebf9dd47"},
+    {file = "tiktoken-0.6.0-cp311-cp311-win_amd64.whl", hash = "sha256:ac76e000183e3b749634968a45c7169b351e99936ef46f0d2353cd0d46c3118d"},
+    {file = "tiktoken-0.6.0-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:17cc8a4a3245ab7d935c83a2db6bb71619099d7284b884f4b2aea4c74f2f83e3"},
+    {file = "tiktoken-0.6.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:284aebcccffe1bba0d6571651317df6a5b376ff6cfed5aeb800c55df44c78177"},
+    {file = "tiktoken-0.6.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0c1a3a5d33846f8cd9dd3b7897c1d45722f48625a587f8e6f3d3e85080559be8"},
+    {file = "tiktoken-0.6.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6318b2bb2337f38ee954fd5efa82632c6e5ced1d52a671370fa4b2eff1355e91"},
+    {file = "tiktoken-0.6.0-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:1f5f0f2ed67ba16373f9a6013b68da298096b27cd4e1cf276d2d3868b5c7efd1"},
+    {file = "tiktoken-0.6.0-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:75af4c0b16609c2ad02581f3cdcd1fb698c7565091370bf6c0cf8624ffaba6dc"},
+    {file = "tiktoken-0.6.0-cp312-cp312-win_amd64.whl", hash = "sha256:45577faf9a9d383b8fd683e313cf6df88b6076c034f0a16da243bb1c139340c3"},
+    {file = "tiktoken-0.6.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:7c1492ab90c21ca4d11cef3a236ee31a3e279bb21b3fc5b0e2210588c4209e68"},
+    {file = "tiktoken-0.6.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:e2b380c5b7751272015400b26144a2bab4066ebb8daae9c3cd2a92c3b508fe5a"},
+    {file = "tiktoken-0.6.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c9f497598b9f58c99cbc0eb764b4a92272c14d5203fc713dd650b896a03a50ad"},
+    {file = "tiktoken-0.6.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e65e8bd6f3f279d80f1e1fbd5f588f036b9a5fa27690b7f0cc07021f1dfa0839"},
+    {file = "tiktoken-0.6.0-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:5f1495450a54e564d236769d25bfefbf77727e232d7a8a378f97acddee08c1ae"},
+    {file = "tiktoken-0.6.0-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:6c4e4857d99f6fb4670e928250835b21b68c59250520a1941618b5b4194e20c3"},
+    {file = "tiktoken-0.6.0-cp38-cp38-win_amd64.whl", hash = "sha256:168d718f07a39b013032741867e789971346df8e89983fe3c0ef3fbd5a0b1cb9"},
+    {file = "tiktoken-0.6.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:47fdcfe11bd55376785a6aea8ad1db967db7f66ea81aed5c43fad497521819a4"},
+    {file = "tiktoken-0.6.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:fb7d2ccbf1a7784810aff6b80b4012fb42c6fc37eaa68cb3b553801a5cc2d1fc"},
+    {file = "tiktoken-0.6.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1ccb7a111ee76af5d876a729a347f8747d5ad548e1487eeea90eaf58894b3138"},
+    {file = "tiktoken-0.6.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b2048e1086b48e3c8c6e2ceeac866561374cd57a84622fa49a6b245ffecb7744"},
+    {file = "tiktoken-0.6.0-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:07f229a5eb250b6403a61200199cecf0aac4aa23c3ecc1c11c1ca002cbb8f159"},
+    {file = "tiktoken-0.6.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:432aa3be8436177b0db5a2b3e7cc28fd6c693f783b2f8722539ba16a867d0c6a"},
+    {file = "tiktoken-0.6.0-cp39-cp39-win_amd64.whl", hash = "sha256:8bfe8a19c8b5c40d121ee7938cd9c6a278e5b97dc035fd61714b4f0399d2f7a1"},
+    {file = "tiktoken-0.6.0.tar.gz", hash = "sha256:ace62a4ede83c75b0374a2ddfa4b76903cf483e9cb06247f566be3bf14e6beed"},
+]
+
+[package.dependencies]
+regex = ">=2022.1.18"
+requests = ">=2.26.0"
+
+[package.extras]
+blobfile = ["blobfile (>=2)"]
+
+[[package]]
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
@@ -3807,4 +4005,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "a865a2a39c0916578171935f6c199f8500aa862940dacd0614bd610da3c8a1a9"
+content-hash = "2ed8b17d11560c117e390694390b041e2809033b4423b6c8fe2487d93b40b598"

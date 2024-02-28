@@ -44,7 +44,7 @@ class ManifoldAgentMarket(AgentMarket):
             id=model.id,
             question=model.question,
             outcomes=model.outcomes,
-            p_yes=Probability(model.pool.YES),
+            p_yes=Probability(model.probability),
         )
 
     @staticmethod

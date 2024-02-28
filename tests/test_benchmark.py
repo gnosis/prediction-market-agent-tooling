@@ -154,6 +154,8 @@ def test_benchmarker_cancelled_markets() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.CANCEL,
         )
@@ -177,6 +179,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.CANCEL,
         ).probable_resolution
@@ -188,6 +192,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.YES,
         ).probable_resolution
@@ -200,6 +206,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.NO,
         ).probable_resolution
@@ -212,6 +220,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
         ).probable_resolution
         == MarketResolution.NO
@@ -223,6 +233,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.8,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
         ).probable_resolution
         == MarketResolution.YES

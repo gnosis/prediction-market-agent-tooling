@@ -23,6 +23,7 @@ def main(
     market_type: MarketType = MarketType.MANIFOLD,
     env_vars: str | None = None,
     secrets: str | None = None,
+    timeout: int = 180,
 ) -> None:
     agent: DeployableAgent = {
         "coin_flip": DeployableCoinFlipAgent,
@@ -43,6 +44,7 @@ def main(
         memory=512,
         cron_schedule=cron_schedule,
         gcp_fname=custom_gcp_fname,
+        timeout=timeout,
     )
 
 

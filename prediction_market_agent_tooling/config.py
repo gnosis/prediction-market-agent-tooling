@@ -55,7 +55,7 @@ class APIKeys(BaseSettings):
 
     def model_dump_secrets(self) -> dict[str, t.Any]:
         return {
-            k: v
+            k: v.get_secret_value() if isinstance(v, SecretStr) else v
             for k, v in self.model_dump().items()
             if APIKeys.model_fields[k].annotation in SECRET_TYPES
         }

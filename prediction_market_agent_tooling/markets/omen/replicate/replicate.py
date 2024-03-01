@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import pytz
 
 from prediction_market_agent_tooling.benchmark.utils import (
     MarketFilter,
@@ -75,11 +77,18 @@ def omen_replicate_from_tx(
 
     for market in markets_to_replicate:
         category = infer_category(market, existing_categories)
+        # Close a day sooner than the original market, because of timezone differences.
+        closing_time = market.close_time - timedelta(hours=24)
+        if closing_time <= datetime.utcnow().replace(tzinfo=pytz.UTC):
+            print(
+                f"Skipping `{market.question}` because it closes in less than 24 hours."
+            )
+            continue
         market_address = omen_create_market_tx(
             initial_funds=initial_funds,
             fee=OMEN_DEFAULT_MARKET_FEE,
             question=market.question,
-            closing_time=market.close_time,
+            closing_time=closing_time,
             category=category,
             language="en",
             from_address=from_address,

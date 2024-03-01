@@ -161,9 +161,12 @@ def {entrypoint_function_name}(request) -> str:
         for market in markets:
             result = self.answer_binary_market(market)
             if _place_bet:
-                print(f"Placing bet on {market} with result {result}")
+                amount = self.calculate_bet_amount(result, market)
+                print(
+                    f"Placing bet on {market} with result {result} and amount {amount}"
+                )
                 market.place_bet(
-                    amount=self.calculate_bet_amount(result, market),
+                    amount=amount,
                     outcome=result,
                 )
 

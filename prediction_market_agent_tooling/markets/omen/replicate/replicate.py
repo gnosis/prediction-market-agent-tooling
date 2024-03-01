@@ -79,9 +79,13 @@ def omen_replicate_from_tx(
         category = infer_category(market, existing_categories)
         # Close a day sooner than the original market, because of timezone differences.
         closing_time = market.close_time - timedelta(hours=24)
-        if closing_time <= datetime.utcnow().replace(tzinfo=pytz.UTC):
+        # Force at least 24 hours of open market.
+        soonest_allowed_closing_time = datetime.utcnow().replace(
+            tzinfo=pytz.UTC
+        ) + timedelta(hours=24)
+        if closing_time <= soonest_allowed_closing_time:
             print(
-                f"Skipping `{market.question}` because it closes in less than 24 hours."
+                f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_closing_time}."
             )
             continue
         market_address = omen_create_market_tx(
@@ -97,7 +101,7 @@ def omen_replicate_from_tx(
             auto_deposit=auto_deposit,
         )
         print(
-            f"Created `{market_address}` for `{market.question}` in category {category} out of {market.url}."
+            f"Created `https://aiomen.eth.limo/#/{market_address}` for `{market.question}` in category {category} out of {market.url}."
         )
 
     return created_addresses

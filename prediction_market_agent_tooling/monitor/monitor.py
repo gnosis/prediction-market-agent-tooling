@@ -49,9 +49,9 @@ class DeployedAgent(BaseModel):
     deployableagent_class_name: str
 
     start_time: datetime
-    end_time: t.Optional[
-        datetime
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[datetime] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -59,7 +59,9 @@ class DeployedAgent(BaseModel):
     _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
 
     def model_dump_prefixed(self) -> dict[str, t.Any]:
-        return {self.PREFIX + k: v for k, v in self.model_dump().items()}
+        return {
+            self.PREFIX + k: v for k, v in self.model_dump().items() if v is not None
+        }
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method.")

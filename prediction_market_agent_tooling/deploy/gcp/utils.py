@@ -41,13 +41,13 @@ def gcloud_deploy_cmd(
         cmd += "--retry "
     if labels:
         for k, v in labels.items():
-            cmd += f"--update-labels {k}={v} "
+            cmd += f'--update-labels {k}="{v}" '
     if env_vars:
         for k, v in env_vars.items():
-            cmd += f"--set-env-vars {k}={v} "
+            cmd += f'--set-env-vars {k}="{v}" '
     if secrets:
         for k, v in secrets.items():
-            cmd += f"--set-secrets {k}={v} "
+            cmd += f'--set-secrets {k}="{v}" '
 
     return cmd
 

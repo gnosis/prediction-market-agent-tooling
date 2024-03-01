@@ -2,9 +2,9 @@ import typing as t
 from datetime import datetime
 
 from google.cloud.functions_v2.types.functions import Function
-from pydantic import BaseModel
 from web3 import Web3
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
@@ -16,24 +16,30 @@ from prediction_market_agent_tooling.monitor.monitor import (
 )
 
 
-class DeployedOmenAgentParams(BaseModel):
+class DeployedOmenAgent(DeployedAgent):
     omen_public_key: ChecksumAddress
 
-
-class DeployedOmenAgent(DeployedAgent):
-    omen_public_key: ChecksumAddress | None = None
-
     def get_resolved_bets(self) -> list[ResolvedBet]:
-        bets = (
-            get_bets(
-                better_address=self.omen_public_key,
-                start_time=self.start_time,
-                end_time=self.end_time,
-            )
-            if self.omen_public_key
-            else []
+        bets = get_bets(
+            better_address=self.omen_public_key,
+            start_time=self.start_time,
+            end_time=self.end_time,
         )
         return [b.to_generic_resolved_bet() for b in bets if b.fpmm.is_resolved]
+
+    @staticmethod
+    def from_api_keys(
+        name: str,
+        deployableagent_class_name: str,
+        start_time: datetime,
+        api_keys: APIKeys,
+    ) -> "DeployedOmenAgent":
+        return DeployedOmenAgent(
+            name=name,
+            deployableagent_class_name=deployableagent_class_name,
+            start_time=start_time,
+            omen_public_key=api_keys.bet_from_address,
+        )
 
     @staticmethod
     def from_monitor_settings(

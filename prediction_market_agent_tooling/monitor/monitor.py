@@ -1,3 +1,4 @@
+import os
 import typing as t
 from datetime import datetime
 from itertools import groupby
@@ -14,6 +15,7 @@ from prediction_market_agent_tooling.benchmark.utils import (
     CancelableMarketResolution,
     Market,
 )
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.tools.utils import (
@@ -62,24 +64,52 @@ class DeployedAgent(BaseModel):
     def get_resolved_bets(self) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method.")
 
+    @classmethod
+    def from_env_vars_without_prefix(
+        cls: t.Type[C],
+        env_vars: dict[str, t.Any] | None = None,
+        extra_vars: dict[str, t.Any] | None = None,
+    ) -> C:
+        return cls.model_validate((env_vars or dict(os.environ)) | (extra_vars or {}))
+
+    @classmethod
+    def from_env_vars(
+        cls: t.Type[C],
+        env_vars: dict[str, t.Any] | None = None,
+        extra_vars: dict[str, t.Any] | None = None,
+    ) -> C:
+        return cls.from_env_vars_without_prefix(
+            env_vars={
+                k.replace(cls.PREFIX, ""): v
+                for k, v in (env_vars or dict(os.environ)).items()
+                if k.startswith(cls.PREFIX)
+            },
+            extra_vars=extra_vars,
+        )
+
     @staticmethod
     def from_monitor_settings(
         settings: MonitorSettings, start_time: datetime
     ) -> list["DeployedAgent"]:
         raise NotImplementedError("Subclasses must implement this method.")
 
+    @staticmethod
+    def from_api_keys(
+        name: str,
+        deployableagent_class_name: str,
+        start_time: datetime,
+        api_keys: APIKeys,
+    ) -> "DeployedAgent":
+        raise NotImplementedError("Subclasses must implement this method.")
+
     @classmethod
     def from_gcp_function(cls: t.Type[C], function: Function) -> C:
-        return cls.model_validate(
-            {
+        return cls.from_env_vars(
+            env_vars=dict(function.service_config.environment_variables),
+            extra_vars={
                 "raw_labels": dict(function.labels),
                 "raw_env_vars": dict(function.service_config.environment_variables),
-            }
-            | {
-                k.replace(cls.PREFIX, ""): v
-                for k, v in function.service_config.environment_variables.items()
-                if k.startswith(cls.PREFIX)
-            }
+            },
         )
 
     @classmethod

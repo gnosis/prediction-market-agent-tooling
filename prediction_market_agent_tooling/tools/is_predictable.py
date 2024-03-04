@@ -4,22 +4,27 @@ from langchain_openai import ChatOpenAI
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
 
 # I tried to make it return a JSON, but it didn't work well in combo with asking it to do chain of thought.
-QUESTION_EVALUATE_PROMPT = """Main signs about an answerable question (sometimes referred to as a "market"):
-- The question needs to be specific, without use of pronouns.
-- The question needs to have a clear future event.
-- The question needs to have a clear time frame.
+QUESTION_EVALUATE_PROMPT = """Main signs about a fully qualified question (sometimes referred to as a "market"):
+- The market's question needs to be specific, without use of pronouns.
+- The market's question needs to have a clear future event.
+- The market's question needs to have a clear time frame.
+- The event in the market's question doesn't have to be ultra-specific, it will be decided by a crowd later on.
+- If the market's question contains date, but without an year, it's okay.
+- If the market's question contains year, but without an exact date, it's okay.
+- The market's question can not be about itself or refer to itself.
 - The answer is probably Google-able, after the event happened.
-- The question can not be about itself.
 
-Follow a chain of thought to evaluate if the question is answerable:
+Follow a chain of thought to evaluate if the question is fully qualified:
 
 First, write the parts of the following question:
 
 "{question}"
 
-Then, write down what is the future event of the question, what it referrs to and when that event will happen if the question contains it.
+Then, write down what is the future event of the question, what it refers to and when that event will happen if the question contains it.
 
-Then, give your final decision, write `decision: ` followed by either "yes" or "no" about whether the question is answerable. Don't write anything else after the decision.
+Then, explain why do you think it is or isn't fully qualified.
+
+Finally, write your final decision, write `decision: ` followed by either "yes it is fully qualified" or "no it isn't fully qualified" about the question. Don't write anything else after that.
 """
 
 
@@ -36,7 +41,7 @@ def is_predictable(
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
     messages = prompt.format_messages(question=question)
-    completion = llm(messages, max_tokens=256).content
+    completion = llm(messages, max_tokens=512).content
 
     try:
         decision = completion.lower().rsplit("decision", 1)[1]

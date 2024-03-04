@@ -4,7 +4,6 @@ from enum import Enum
 
 import typer
 from pydantic.types import SecretStr
-from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
@@ -17,6 +16,7 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.replicate.agent_example import (
     DeployableReplicateToOmenAgent,
 )
+from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 
 class AgentName(str, Enum):
@@ -32,6 +32,10 @@ def main(
     branch: str = "main",
     custom_gcp_fname: str | None = None,
     market_type: MarketType = MarketType.MANIFOLD,
+    manifold_api_key_secret_name: str | None = None,
+    openai_api_key_secret_name: str | None = None,
+    bet_from_address: str | None = None,
+    bet_from_private_key_secret_name: str | None = None,
     env_vars: str | None = None,
     secrets: str | None = None,
     timeout: int = 180,
@@ -54,13 +58,24 @@ def main(
         secrets=json.loads(secrets) if secrets else None,
         memory=512,
         api_keys=APIKeys(
-            BET_FROM_ADDRESS=Web3.to_checksum_address(
-                "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"
+            BET_FROM_ADDRESS=(
+                verify_address(bet_from_address) if bet_from_address else None
             ),
             # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
-            MANIFOLD_API_KEY=SecretStr("JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest"),
-            BET_FROM_PRIVATE_KEY=private_key_type(
-                "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307:latest"
+            MANIFOLD_API_KEY=(
+                SecretStr(manifold_api_key_secret_name)
+                if manifold_api_key_secret_name
+                else None
+            ),
+            BET_FROM_PRIVATE_KEY=(
+                private_key_type(bet_from_private_key_secret_name)
+                if bet_from_private_key_secret_name
+                else None
+            ),
+            OPENAI_API_KEY=(
+                SecretStr(openai_api_key_secret_name)
+                if openai_api_key_secret_name
+                else None
             ),
         ),
         cron_schedule=cron_schedule,

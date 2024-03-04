@@ -2,12 +2,16 @@ import getpass
 import json
 
 import typer
+from pydantic.types import SecretStr
+from web3 import Web3
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
     DeployableAgent,
     DeployableAlwaysRaiseAgent,
     DeployableCoinFlipAgent,
 )
+from prediction_market_agent_tooling.gtypes import PrivateKey
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.replicate.agent_example import (
     DeployableReplicateToOmenAgent,
@@ -42,6 +46,16 @@ def main(
         # Must be in the format "env_var_in_container => secret_name:version", you can create secrets using `gcloud secrets create --labels owner=<your-name> <secret-name>` command.
         secrets=json.loads(secrets) if secrets else None,
         memory=512,
+        api_keys=APIKeys(
+            BET_FROM_ADDRESS=Web3.to_checksum_address(
+                "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"
+            ),
+            # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
+            MANIFOLD_API_KEY=SecretStr("JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest"),
+            BET_FROM_PRIVATE_KEY=PrivateKey(
+                "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307:latest"
+            ),
+        ),
         cron_schedule=cron_schedule,
         gcp_fname=custom_gcp_fname,
         timeout=timeout,

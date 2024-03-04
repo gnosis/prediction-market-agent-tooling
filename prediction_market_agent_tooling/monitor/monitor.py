@@ -1,3 +1,4 @@
+import os
 import typing as t
 from datetime import datetime
 from itertools import groupby
@@ -6,15 +7,21 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
-from pydantic import BaseModel
+from google.cloud.functions_v2.types.functions import Function
+from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import (
     CancelableMarketResolution,
     Market,
 )
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.utils import (
+    add_timezone_validator,
+    should_not_happen,
+)
 
 
 class MonitorSettings(BaseSettings):
@@ -22,24 +29,107 @@ class MonitorSettings(BaseSettings):
         env_file=".env.monitor", env_file_encoding="utf-8", extra="ignore"
     )
 
+    LOAD_FROM_GCP: bool = False
     MANIFOLD_API_KEYS: list[str] = []
-    BET_FROM_ADDRESS: t.Optional[str] = None
+    OMEN_PUBLIC_KEYS: list[str] = []
     PAST_N_WEEKS: int = 1
+
+    @property
+    def has_manual_agents(self) -> bool:
+        return bool(self.MANIFOLD_API_KEYS or self.OMEN_PUBLIC_KEYS)
+
+
+C = t.TypeVar("C", bound="DeployedAgent")
 
 
 class DeployedAgent(BaseModel):
+    PREFIX: t.ClassVar["str"] = "deployedagent_var_"
+
     name: str
-    start_time: datetime = datetime.utcnow()
-    end_time: t.Optional[datetime] = None
+    deployableagent_class_name: str
+
+    start_time: datetime
+    end_time: t.Optional[
+        datetime
+    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+
+    raw_labels: dict[str, str] | None = None
+    raw_env_vars: dict[str, str] | None = None
+
+    _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
+
+    def model_dump_prefixed(self) -> dict[str, t.Any]:
+        return {
+            self.PREFIX + k: v for k, v in self.model_dump().items() if v is not None
+        }
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method.")
+
+    @classmethod
+    def from_env_vars_without_prefix(
+        cls: t.Type[C],
+        env_vars: dict[str, t.Any] | None = None,
+        extra_vars: dict[str, t.Any] | None = None,
+    ) -> C:
+        return cls.model_validate((env_vars or dict(os.environ)) | (extra_vars or {}))
+
+    @classmethod
+    def from_env_vars(
+        cls: t.Type[C],
+        env_vars: dict[str, t.Any] | None = None,
+        extra_vars: dict[str, t.Any] | None = None,
+    ) -> C:
+        return cls.from_env_vars_without_prefix(
+            env_vars={
+                k.replace(cls.PREFIX, ""): v
+                for k, v in (env_vars or dict(os.environ)).items()
+                if k.startswith(cls.PREFIX)
+            },
+            extra_vars=extra_vars,
+        )
 
     @staticmethod
     def from_monitor_settings(
         settings: MonitorSettings, start_time: datetime
     ) -> list["DeployedAgent"]:
         raise NotImplementedError("Subclasses must implement this method.")
+
+    @staticmethod
+    def from_api_keys(
+        name: str,
+        deployableagent_class_name: str,
+        start_time: datetime,
+        api_keys: APIKeys,
+    ) -> "DeployedAgent":
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @classmethod
+    def from_gcp_function(cls: t.Type[C], function: Function) -> C:
+        return cls.from_env_vars(
+            env_vars=dict(function.service_config.environment_variables),
+            extra_vars={
+                "raw_labels": dict(function.labels),
+                "raw_env_vars": dict(function.service_config.environment_variables),
+            },
+        )
+
+    @classmethod
+    def from_all_gcp_functions(
+        cls: t.Type[C], filter_: t.Callable[[Function], bool] = lambda x: True
+    ) -> t.Sequence[C]:
+        agents: list[C] = []
+
+        for function in list_gcp_functions():
+            if not filter_(function):
+                continue
+
+            try:
+                agents.append(cls.from_gcp_function(function))
+            except ValueError:
+                print(f"Could not parse `{function.name}` into {cls.__name__}.")
+
+        return agents
 
 
 def monitor_agent(agent: DeployedAgent) -> None:
@@ -54,9 +144,15 @@ def monitor_agent(agent: DeployedAgent) -> None:
         "Created Time": [bet.created_time for bet in agent_bets],
         "Resolved Time": [bet.resolved_time for bet in agent_bets],
         "Is Correct": [bet.is_correct for bet in agent_bets],
-        "Profit": [bet.profit.amount for bet in agent_bets],
+        "Profit": [round(bet.profit.amount, 2) for bet in agent_bets],
     }
     bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
+
+    # Info
+    col1, col2, col3 = st.columns(3)
+    col1.markdown(f"Name: `{agent.name}`")
+    col2.markdown(f"DeployableAgent Class: `{agent.deployableagent_class_name}`")
+    col3.markdown(f"Start Time: `{agent.start_time}`")
 
     # Metrics
     col1, col2 = st.columns(2)

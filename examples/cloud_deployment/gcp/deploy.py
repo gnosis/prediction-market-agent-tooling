@@ -46,7 +46,7 @@ def main(
         AgentName.replicate: DeployableReplicateToOmenAgent,
     }[agent_name]()
     agent.deploy_gcp(
-        repository=f"git+{github_repo_url}.git@{branch}",
+        repository=f"git+{github_repo_url}.git@{branch}[langchain]",
         market_type=market_type,
         labels={
             # Only lowercase letters, numbers, hyphens and underscores are allowed.

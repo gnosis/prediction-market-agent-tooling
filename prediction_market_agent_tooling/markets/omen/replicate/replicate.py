@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_omen_binary_markets,
     omen_create_market_tx,
 )
+from prediction_market_agent_tooling.tools.is_predictable import is_predictable
 
 
 def omen_replicate_from_tx(
@@ -76,7 +77,11 @@ def omen_replicate_from_tx(
     created_addresses: list[ChecksumAddress] = []
 
     for market in markets_to_replicate:
-        category = infer_category(market, existing_categories)
+        if not is_predictable(market.question):
+            print(
+                f"Skipping `{market.question}` because it seems to not be predictable."
+            )
+            continue
         # Close a day sooner than the original market, because of timezone differences.
         closing_time = market.close_time - timedelta(hours=24)
         # Force at least 24 hours of open market.
@@ -88,6 +93,7 @@ def omen_replicate_from_tx(
                 f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_closing_time}."
             )
             continue
+        category = infer_category(market, existing_categories)
         market_address = omen_create_market_tx(
             initial_funds=initial_funds,
             fee=OMEN_DEFAULT_MARKET_FEE,

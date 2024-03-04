@@ -18,6 +18,9 @@ class APIKeys(BaseSettings):
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
 
+    ENABLE_CACHE: bool = True
+    CACHE_DIR: str = "./.cache"
+
     @property
     def manifold_api_key(self) -> SecretStr:
         return check_not_none(

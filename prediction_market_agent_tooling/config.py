@@ -60,12 +60,12 @@ class APIKeys(BaseSettings):
         return {
             k: v
             for k, v in self.model_dump().items()
-            if APIKeys.model_fields[k].annotation not in SECRET_TYPES
+            if APIKeys.model_fields[k].annotation not in SECRET_TYPES and v is not None
         }
 
     def model_dump_secrets(self) -> dict[str, t.Any]:
         return {
             k: v.get_secret_value() if isinstance(v, SecretStr) else v
             for k, v in self.model_dump().items()
-            if APIKeys.model_fields[k].annotation in SECRET_TYPES
+            if APIKeys.model_fields[k].annotation in SECRET_TYPES and v is not None
         }

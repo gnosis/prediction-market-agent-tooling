@@ -63,12 +63,7 @@ class Market(BaseModel):
         return value
 
     _add_timezone_validator = field_validator("created_time")(add_timezone_validator)
-
-    @validator("close_time")
-    def _validate_close_time(cls, value: datetime) -> datetime:
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=pytz.UTC)
-        return value
+    _add_timezone_validator = field_validator("close_time")(add_timezone_validator)
 
     @property
     def is_resolved(self) -> bool:

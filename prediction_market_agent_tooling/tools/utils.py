@@ -1,6 +1,9 @@
 import os
 import subprocess
+from datetime import datetime
 from typing import NoReturn, Optional, Type, TypeVar
+
+import pytz
 
 T = TypeVar("T")
 
@@ -60,3 +63,9 @@ def export_requirements_from_toml(output_dir: str) -> None:
         check=True,
     )
     print(f"Saved requirements to {output_dir}/requirements.txt")
+
+
+def add_timezone_validator(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=pytz.UTC)
+    return value

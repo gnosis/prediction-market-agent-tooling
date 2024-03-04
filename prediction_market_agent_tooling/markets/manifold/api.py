@@ -90,7 +90,7 @@ def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
     }
 
     headers = {
-        "Authorization": f"Key {APIKeys().manifold_api_key}",
+        "Authorization": f"Key {APIKeys().manifold_api_key.get_secret_value()}",
         "Content-Type": "application/json",
     }
     response = requests.post(url, json=params, headers=headers)

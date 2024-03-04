@@ -31,13 +31,26 @@ DEPLOYED_AGENT_TYPE_MAP: dict[MarketType, type[DeployedAgent]] = {
 
 
 def get_deployed_agents(
-    market_type: MarketType, settings: MonitorSettings, start_time: datetime
+    market_type: MarketType,
+    settings: MonitorSettings,
+    start_time: datetime | None,
 ) -> list[DeployedAgent]:
     cls = DEPLOYED_AGENT_TYPE_MAP.get(market_type)
-    if cls:
-        return cls.from_monitor_settings(settings=settings, start_time=start_time)
-    else:
+    if cls is None:
         raise ValueError(f"Unknown market type: {market_type}")
+
+    agents: list[DeployedAgent] = []
+
+    if settings.LOAD_FROM_GCP:
+        agents.extend(cls.from_all_gcp_functions())
+
+    agents.extend(
+        cls.from_monitor_settings(
+            settings=settings, start_time=start_time or datetime.utcnow()
+        )
+    )
+
+    return agents
 
 
 def get_open_and_resolved_markets(
@@ -64,34 +77,44 @@ def get_open_and_resolved_markets(
 
 def monitor_app() -> None:
     settings = MonitorSettings()
-    start_time = datetime.combine(
-        t.cast(
-            # This will be always a date for us, so casting.
-            date,
-            st.date_input(
-                "Start time",
-                value=datetime.now() - timedelta(weeks=settings.PAST_N_WEEKS),
-            ),
-        ),
-        datetime.min.time(),
-    ).replace(tzinfo=pytz.UTC)
     market_type: MarketType = check_not_none(
         st.selectbox(label="Market type", options=list(MarketType), index=0)
     )
+    start_time: datetime | None = (
+        datetime.combine(
+            t.cast(
+                # This will be always a date for us, so casting.
+                date,
+                st.date_input(
+                    "Start time",
+                    value=datetime.now() - timedelta(weeks=settings.PAST_N_WEEKS),
+                ),
+            ),
+            datetime.min.time(),
+        ).replace(tzinfo=pytz.UTC)
+        if settings.has_manual_agents
+        else None
+    )
+
+    with st.spinner("Loading agents"):
+        agents: list[DeployedAgent] = get_deployed_agents(
+            market_type=market_type,
+            settings=settings,
+            start_time=start_time,
+        )
+
+    oldest_start_time = min(agent.start_time for agent in agents)
 
     st.subheader("Market resolution")
-    open_markets, resolved_markets = get_open_and_resolved_markets(
-        start_time, market_type
+    with st.spinner("Loading markets"):
+        open_markets, resolved_markets = get_open_and_resolved_markets(
+            start_time=oldest_start_time, market_type=market_type
+        )
+    (
+        monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
+        if open_markets and resolved_markets
+        else st.warning("No market data found.")
     )
-    monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
-
-    with st.spinner("Loading agents..."):
-        agents: list[DeployedAgent] = [
-            agent
-            for agent in get_deployed_agents(
-                market_type=market_type, settings=settings, start_time=start_time
-            )
-        ]
 
     st.subheader("Agent bets")
     for agent in agents:

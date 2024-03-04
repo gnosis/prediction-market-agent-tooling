@@ -3,11 +3,13 @@ import typing as t
 from datetime import datetime
 from enum import Enum
 
-import pytz
 import requests
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
-from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.utils import (
+    add_timezone_validator,
+    should_not_happen,
+)
 
 MANIFOLD_API_LIMIT = 1000  # Manifold will only return up to 1000 markets
 
@@ -49,7 +51,7 @@ class Market(BaseModel):
     resolution: CancelableMarketResolution | None = None
     outcomePrices: list[float] | None = None
 
-    @validator("outcomePrices", pre=True)
+    @field_validator("outcomePrices", mode="before")
     def _validate_outcome_prices(cls, value: list[float] | None) -> list[float] | None:
         if value is None:
             return None
@@ -57,11 +59,7 @@ class Market(BaseModel):
             raise ValueError("outcomePrices must have exactly 2 elements.")
         return value
 
-    @validator("created_time")
-    def _validate_created_time(cls, value: datetime) -> datetime:
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=pytz.UTC)
-        return value
+    _add_timezone_validator = field_validator("created_time")(add_timezone_validator)
 
     @property
     def is_resolved(self) -> bool:

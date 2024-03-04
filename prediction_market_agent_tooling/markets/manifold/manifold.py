@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from math import ceil
 
-from prediction_market_agent_tooling.gtypes import Mana, mana_type
+from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -51,7 +51,7 @@ class ManifoldAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             resolution=model.get_resolution_enum() if model.isResolved else None,
             created_time=model.createdTime,
-            p_yes=model.probability,
+            p_yes=Probability(model.probability),
         )
 
     @staticmethod

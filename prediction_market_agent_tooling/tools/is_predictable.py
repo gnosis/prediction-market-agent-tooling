@@ -19,7 +19,7 @@ First, write the parts of the following question:
 
 Then, write down what is the future event of the question, what it referrs to and when that event will happen if the question contains it.
 
-Then, give your final decision, write either "yes" or "no" about whether the question is answerable.
+Then, give your final decision, write `decision: ` followed by either "yes" or "no" about whether the question is answerable. Don't write anything else after the decision.
 """
 
 
@@ -38,9 +38,11 @@ def is_predictable(
     messages = prompt.format_messages(question=question)
     completion = llm(messages, max_tokens=256).content
 
-    if "yes" in completion.lower():
+    decision = completion.lower().rsplit("decision", -1)
+
+    if "yes" in decision:
         is_predictable = True
-    elif "no" in completion.lower():
+    elif "no" in decision:
         is_predictable = False
     else:
         raise ValueError(f"Error in evaluate_question for `{question}`: {completion}")

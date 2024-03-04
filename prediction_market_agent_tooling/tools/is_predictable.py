@@ -17,7 +17,7 @@ First, write the parts of the following question:
 
 "{question}"
 
-Then, write down what is the future event of the question, what it reffers to and when that event will happen if the question contains it.
+Then, write down what is the future event of the question, what it referrs to and when that event will happen if the question contains it.
 
 Then, give your final decision, write either "yes" or "no" about whether the question is answerable.
 """

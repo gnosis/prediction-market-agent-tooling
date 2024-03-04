@@ -706,7 +706,7 @@ def to_int_timestamp(dt: datetime) -> int:
     return int(dt.timestamp())
 
 
-def get_bets(
+def get_omen_bets(
     better_address: ChecksumAddress,
     start_time: datetime,
     end_time: t.Optional[datetime],
@@ -745,6 +745,19 @@ def get_bets(
         all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
 
     return all_bets
+
+
+def get_resolved_omen_bets(
+    better_address: ChecksumAddress,
+    start_time: datetime,
+    end_time: t.Optional[datetime],
+) -> list[OmenBet]:
+    bets = get_omen_bets(
+        better_address=better_address,
+        start_time=start_time,
+        end_time=end_time,
+    )
+    return [b for b in bets if b.fpmm.is_resolved]
 
 
 def omen_realitio_ask_question_tx(

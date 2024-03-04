@@ -19,7 +19,7 @@ class DeployedManifoldAgent(DeployedAgent):
         manifold_bets = get_resolved_manifold_bets(
             user_id=self.manifold_user_id,
             start_time=self.start_time,
-            end_time=None,
+            end_time=self.end_time,
         )
         return [manifold_to_generic_resolved_bet(b) for b in manifold_bets]
 

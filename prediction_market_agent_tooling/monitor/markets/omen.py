@@ -4,7 +4,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.markets.omen.omen import get_bets
+from prediction_market_agent_tooling.markets.omen.omen import get_resolved_omen_bets
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
@@ -15,12 +15,12 @@ class DeployedOmenAgent(DeployedAgent):
     wallet_address: ChecksumAddress
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
-        bets = get_bets(
+        bets = get_resolved_omen_bets(
             better_address=self.wallet_address,
             start_time=self.start_time,
-            end_time=None,
+            end_time=self.end_time,
         )
-        return [b.to_generic_resolved_bet() for b in bets if b.fpmm.is_resolved]
+        return [b.to_generic_resolved_bet() for b in bets]
 
     @staticmethod
     def from_monitor_settings(

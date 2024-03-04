@@ -99,8 +99,13 @@ class OmenMarket(BaseModel):
         """
         Calculate the probability of the outcomes from the relative token amounts.
 
-        Note, not all markets reliably have outcomeTokenMarginalPrices, hence the
-        need for this method.
+        Note, not all markets reliably have outcomeTokenMarginalPrices, hence we
+        use the relative proportion of outcomeTokenAmounts to calculate the
+        probabilities.
+
+        The higher the proportion of available outcome tokens for a given outcome,
+        the the lower the proce of that token, and therefore the lower the
+        probability of that outcome.
         """
         if self.outcomeTokenAmounts is None:
             raise ValueError(

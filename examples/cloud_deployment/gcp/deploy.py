@@ -1,12 +1,16 @@
 import getpass
 
 import typer
+from pydantic.types import SecretStr
+from web3 import Web3
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
     DeployableAgent,
     DeployableAlwaysRaiseAgent,
     DeployableCoinFlipAgent,
 )
+from prediction_market_agent_tooling.gtypes import PrivateKey
 from prediction_market_agent_tooling.markets.markets import MarketType
 
 
@@ -28,12 +32,16 @@ def main(
         labels={
             "owner": getpass.getuser()
         },  # Only lowercase letters, numbers, hyphens and underscores are allowed.
-        env_vars={"BET_FROM_ADDRESS": "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"},
-        # You can allow the cloud function to access secrets by adding the role: `gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} --member=serviceAccount:${GCP_SVC_ACC} --role=roles/container.admin`.
-        secrets={
-            "MANIFOLD_API_KEY": "JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest",
-            "BET_FROM_PRIVATE_KEY": "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307:latest",
-        },  # Must be in the format "env_var_in_container => secret_name:version", you can create secrets using `gcloud secrets create --labels owner=<your-name> <secret-name>` command.
+        api_keys=APIKeys(
+            BET_FROM_ADDRESS=Web3.to_checksum_address(
+                "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"
+            ),
+            # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
+            MANIFOLD_API_KEY=SecretStr("JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest"),
+            BET_FROM_PRIVATE_KEY=PrivateKey(
+                "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307:latest"
+            ),
+        ),
         memory=256,
         cron_schedule=cron_schedule,
         gcp_fname=custom_gcp_fname,

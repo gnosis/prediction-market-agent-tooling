@@ -1,19 +1,18 @@
 import getpass
 import json
+from enum import Enum
 
 import typer
 from pydantic.types import SecretStr
 from web3 import Web3
 
-from enum import Enum
-from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
     DeployableAgent,
     DeployableAlwaysRaiseAgent,
     DeployableCoinFlipAgent,
 )
-from prediction_market_agent_tooling.gtypes import PrivateKey
+from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.replicate.agent_example import (
     DeployableReplicateToOmenAgent,

@@ -49,14 +49,15 @@ class DeployedAgent(BaseModel):
     deployableagent_class_name: str
 
     start_time: datetime
-    end_time: t.Optional[
-        datetime
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[datetime] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
 
     _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
+    _add_timezone_validator = field_validator("end_time")(add_timezone_validator)
 
     def model_dump_prefixed(self) -> dict[str, t.Any]:
         return {

@@ -93,7 +93,7 @@ def omen_replicate_from_tx(
                 f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_closing_time}."
             )
             continue
-        category = infer_category(market, existing_categories)
+        category = infer_category(market.question, existing_categories)
         market_address = omen_create_market_tx(
             initial_funds=initial_funds,
             fee=OMEN_DEFAULT_MARKET_FEE,

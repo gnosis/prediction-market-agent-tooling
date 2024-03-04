@@ -5,6 +5,7 @@ import typer
 from pydantic.types import SecretStr
 from web3 import Web3
 
+from enum import Enum
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
@@ -19,8 +20,14 @@ from prediction_market_agent_tooling.markets.omen.replicate.agent_example import
 )
 
 
+class AgentName(str, Enum):
+    coin_flip = "coin_flip"
+    always_raise = "always_raise"
+    replicate = "replicate"
+
+
 def main(
-    agent_name: str,
+    agent_name: AgentName,
     cron_schedule: str = "0 */2 * * *",
     github_repo_url: str = "https://github.com/gnosis/prediction-market-agent-tooling",
     branch: str = "main",
@@ -31,9 +38,9 @@ def main(
     timeout: int = 180,
 ) -> None:
     agent: DeployableAgent = {
-        "coin_flip": DeployableCoinFlipAgent,
-        "always_raise": DeployableAlwaysRaiseAgent,
-        "replicate": DeployableReplicateToOmenAgent,
+        AgentName.coin_flip: DeployableCoinFlipAgent,
+        AgentName.always_raise: DeployableAlwaysRaiseAgent,
+        AgentName.replicate: DeployableReplicateToOmenAgent,
     }[agent_name]()
     agent.deploy_gcp(
         repository=f"git+{github_repo_url}.git@{branch}",
@@ -60,6 +67,7 @@ def main(
         cron_schedule=cron_schedule,
         gcp_fname=custom_gcp_fname,
         timeout=timeout,
+        dump_monitor_agent=agent_name != AgentName.replicate,
     )
 
 

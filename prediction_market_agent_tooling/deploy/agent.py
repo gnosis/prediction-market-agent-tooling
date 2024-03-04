@@ -83,6 +83,7 @@ class DeployableAgent:
         gcp_fname: str | None = None,
         start_time: datetime | None = None,
         timeout: int = 180,
+        dump_monitor_agent: bool = True,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
@@ -113,13 +114,14 @@ def {entrypoint_function_name}(request) -> str:
         env_vars |= api_keys.model_dump_public()
         secrets |= api_keys.model_dump_secrets()
 
-        monitor_agent = DEPLOYED_AGENT_TYPE_MAP[market_type].from_api_keys(
-            name=gcp_fname,
-            deployableagent_class_name=self.__class__.__name__,
-            start_time=start_time or datetime.utcnow(),
-            api_keys=gcp_resolve_api_keys_secrets(api_keys),
-        )
-        env_vars |= monitor_agent.model_dump_prefixed()
+        if dump_monitor_agent:
+            monitor_agent = DEPLOYED_AGENT_TYPE_MAP[market_type].from_api_keys(
+                name=gcp_fname,
+                deployableagent_class_name=self.__class__.__name__,
+                start_time=start_time or datetime.utcnow(),
+                api_keys=gcp_resolve_api_keys_secrets(api_keys),
+            )
+            env_vars |= monitor_agent.model_dump_prefixed()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
             f.write(entrypoint_template)

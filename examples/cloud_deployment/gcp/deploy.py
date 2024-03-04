@@ -5,6 +5,7 @@ import typer
 from pydantic.types import SecretStr
 from web3 import Web3
 
+from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
     DeployableAgent,
@@ -52,7 +53,7 @@ def main(
             ),
             # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
             MANIFOLD_API_KEY=SecretStr("JUNG_PERSONAL_GMAIL_MANIFOLD_API_KEY:latest"),
-            BET_FROM_PRIVATE_KEY=PrivateKey(
+            BET_FROM_PRIVATE_KEY=private_key_type(
                 "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307:latest"
             ),
         ),

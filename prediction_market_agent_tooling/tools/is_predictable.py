@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
 
 # I tried to make it return a JSON, but it didn't work well in combo with asking it to do chain of thought.
-QUESTION_EVALUATE_PROMPT = """Main signs about an answerable question (sometimes reffered to as a "market"):
+QUESTION_EVALUATE_PROMPT = """Main signs about an answerable question (sometimes referred to as a "market"):
 - The question needs to be specific, without use of pronouns.
 - The question needs to have a clear future event.
 - The question needs to have a clear time frame.

@@ -38,13 +38,20 @@ def is_predictable(
     messages = prompt.format_messages(question=question)
     completion = llm(messages, max_tokens=256).content
 
-    decision = completion.lower().rsplit("decision", -1)
+    try:
+        decision = completion.lower().rsplit("decision", 1)[1]
+    except IndexError as e:
+        raise ValueError(
+            f"Invalid completion in is_predictable for `{question}`: {completion}"
+        ) from e
 
     if "yes" in decision:
         is_predictable = True
     elif "no" in decision:
         is_predictable = False
     else:
-        raise ValueError(f"Error in evaluate_question for `{question}`: {completion}")
+        raise ValueError(
+            f"Invalid completion in is_predictable for `{question}`: {completion}"
+        )
 
     return is_predictable

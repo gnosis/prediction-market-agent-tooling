@@ -56,8 +56,12 @@ class DeployedAgent(BaseModel):
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
 
-    _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
-    _add_timezone_validator = field_validator("end_time")(add_timezone_validator)
+    _add_timezone_validator_start_time = field_validator("start_time")(
+        add_timezone_validator
+    )
+    _add_timezone_validator_end_time = field_validator("end_time")(
+        add_timezone_validator
+    )
 
     def model_dump_prefixed(self) -> dict[str, t.Any]:
         return {

@@ -62,8 +62,12 @@ class Market(BaseModel):
             raise ValueError("outcomePrices must have exactly 2 elements.")
         return value
 
-    _add_timezone_validator = field_validator("created_time")(add_timezone_validator)
-    _add_timezone_validator = field_validator("close_time")(add_timezone_validator)
+    _add_timezone_validator_created_time = field_validator("created_time")(
+        add_timezone_validator
+    )
+    _add_timezone_validator_close_time = field_validator("close_time")(
+        add_timezone_validator
+    )
 
     @property
     def is_resolved(self) -> bool:

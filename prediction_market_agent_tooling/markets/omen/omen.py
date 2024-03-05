@@ -282,7 +282,7 @@ def get_resolved_fpmm_query() -> str:
     )
 
 
-def get_fpmm_query(filter_by: FilterBy):
+def get_fpmm_query(filter_by: FilterBy) -> str:
     if filter_by == FilterBy.OPEN:
         return get_open_fpmm_query()
     elif filter_by == FilterBy.RESOLVED:

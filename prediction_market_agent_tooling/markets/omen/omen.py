@@ -229,6 +229,9 @@ query getFixedProductMarketMaker($id: String!) {
 }
 """
 
+# Note: We are using `answerFinalizedTimestamp: null` to filter out closed markets
+# and `resolutionTimestamp_not: null` to filter out markets that are not resolved.
+# These are incompatible, so one line must be removed before using the query.
 _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS = """
 query getFixedProductMarketMakers(
     $first: Int!,
@@ -242,6 +245,8 @@ query getFixedProductMarketMakers(
             isPendingArbitration: false,
             outcomes: $outcomes
             creationTimestamp_gt: $creationTimestamp_gt
+            answerFinalizedTimestamp: null
+            resolutionTimestamp_not: null
         },
         orderBy: $orderBy,
         orderDirection: $orderDirection,
@@ -263,6 +268,26 @@ query getFixedProductMarketMakers(
     }
 }
 """
+
+
+def get_open_fpmm_query() -> str:
+    return _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS.replace(
+        "resolutionTimestamp_not: null", ""
+    )
+
+
+def get_resolved_fpmm_query() -> str:
+    return _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS.replace(
+        "answerFinalizedTimestamp: null", ""
+    )
+
+
+def get_fpmm_query(filter_by: FilterBy):
+    if filter_by == FilterBy.OPEN:
+        return get_open_fpmm_query()
+    elif filter_by == FilterBy.RESOLVED:
+        return get_resolved_fpmm_query()
+    raise ValueError(f"Unknown filter_by: {filter_by}")
 
 
 def get_arbitrator_contract_address_and_abi(
@@ -298,7 +323,7 @@ def get_omen_markets(
     markets = requests.post(
         THEGRAPH_QUERY_URL,
         json={
-            "query": _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS,
+            "query": get_fpmm_query(filter_by),
             "variables": {
                 "first": first,
                 "outcomes": outcomes,
@@ -312,13 +337,7 @@ def get_omen_markets(
         headers={"Content-Type": "application/json"},
     ).json()
     markets = markets["data"]["fixedProductMarketMakers"]
-    omen_markets = [OmenMarket.model_validate(market) for market in markets]
-    if filter_by == FilterBy.OPEN:
-        return [m for m in omen_markets if m.is_open]
-    elif filter_by == FilterBy.RESOLVED:
-        return [m for m in omen_markets if m.is_resolved]
-    else:
-        raise ValueError(f"Unknown filter_by: {filter_by}")
+    return [OmenMarket.model_validate(market) for market in markets]
 
 
 def get_omen_binary_markets(

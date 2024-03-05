@@ -91,6 +91,23 @@ def test_p_yes() -> None:
     assert np.isclose(market.p_yes, check_not_none(market.outcomeTokenProbabilities)[0])
 
 
+def test_filter_markets() -> None:
+    limit = 100
+    markets = get_omen_binary_markets(
+        limit=limit,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.OPEN,
+    )
+    assert len(markets) == limit
+
+    markets = get_omen_binary_markets(
+        limit=limit,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.RESOLVED,
+    )
+    assert len(markets) == limit
+
+
 def test_resolved_omen_bets() -> None:
     AN_ADDRESS = Web3.to_checksum_address("0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307")
     resolved_bets = get_resolved_omen_bets(

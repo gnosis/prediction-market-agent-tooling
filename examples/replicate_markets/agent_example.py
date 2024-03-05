@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import functions_framework
 import pytz
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,8 +10,6 @@ from prediction_market_agent_tooling.deploy.agent import DeployableAgent, Market
 from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     omen_create_market_deposit_tx,
-)
-from prediction_market_agent_tooling.markets.omen.replicate.replicate import (
     omen_replicate_from_tx,
 )
 
@@ -26,7 +25,9 @@ class ReplicateSettings(BaseSettings):
 
 
 class DeployableReplicateToOmenAgent(DeployableAgent):
-    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+    def run(
+        self, market_type: MarketType = MarketType.MANIFOLD, _place_bet: bool = True
+    ) -> None:
         keys = APIKeys()
         settings = ReplicateSettings()
         close_time_before = (
@@ -70,3 +71,9 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             auto_deposit=False,
         )
         print("Done.")
+
+
+@functions_framework.http
+def main(request) -> str:
+    DeployableReplicateToOmenAgent().run()
+    return "Success"

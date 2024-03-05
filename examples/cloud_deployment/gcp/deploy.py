@@ -13,16 +13,12 @@ from prediction_market_agent_tooling.deploy.agent_example import (
 )
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.markets.omen.replicate.agent_example import (
-    DeployableReplicateToOmenAgent,
-)
 from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 
 class AgentName(str, Enum):
     coin_flip = "coin_flip"
     always_raise = "always_raise"
-    replicate = "replicate"
 
 
 def main(
@@ -43,10 +39,9 @@ def main(
     agent: DeployableAgent = {
         AgentName.coin_flip: DeployableCoinFlipAgent,
         AgentName.always_raise: DeployableAlwaysRaiseAgent,
-        AgentName.replicate: DeployableReplicateToOmenAgent,
     }[agent_name]()
     agent.deploy_gcp(
-        repository=f"git+{github_repo_url}.git@{branch}#egg=prediction-market-agent-tooling[langchain]",
+        repository=f"git+{github_repo_url}.git@{branch}",
         market_type=market_type,
         labels={
             # Only lowercase letters, numbers, hyphens and underscores are allowed.
@@ -81,7 +76,6 @@ def main(
         cron_schedule=cron_schedule,
         gcp_fname=custom_gcp_fname,
         timeout=timeout,
-        dump_monitor_agent=agent_name != AgentName.replicate,
     )
 
 

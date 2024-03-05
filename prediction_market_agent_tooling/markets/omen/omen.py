@@ -22,9 +22,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
-    OMEN_DEFAULT_MARKET_FEE,
-    OMEN_FALSE_OUTCOME,
-    OMEN_TRUE_OUTCOME,
     get_omen_binary_markets,
     omen_create_market_tx,
 )

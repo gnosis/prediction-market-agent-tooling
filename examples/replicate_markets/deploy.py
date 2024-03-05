@@ -13,7 +13,7 @@ deploy_to_gcp(
     gcp_fname=fname,
     requirements_file=None,
     extra_deps=[
-        "git+https://github.com/gnosis/prediction-market-agent-tooling.git@evan/replicate"
+        "git+https://github.com/gnosis/prediction-market-agent-tooling.git@evan/replication"
     ],
     function_file=os.path.join(current_dir, "agent_example.py"),
     memory=512,

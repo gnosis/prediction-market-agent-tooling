@@ -80,7 +80,6 @@ def monitor_app() -> None:
     market_type: MarketType = check_not_none(
         st.selectbox(label="Market type", options=list(MarketType), index=0)
     )
-    market_type = MarketType.OMEN
     start_time: datetime | None = (
         datetime.combine(
             t.cast(

@@ -25,6 +25,7 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
+INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
@@ -57,14 +58,20 @@ class OmenMarket(BaseModel):
     creationTimestamp: t.Optional[int] = None
 
     @property
+    def answer_index(self) -> t.Optional[int]:
+        return int(self.currentAnswer, 16) if self.currentAnswer else None
+
+    @property
+    def has_valid_answer(self) -> bool:
+        return self.answer_index is not None and self.answer_index != INVALID_ANSWER
+
+    @property
     def is_open(self) -> bool:
         return self.currentAnswer is None
 
     @property
     def is_resolved(self) -> bool:
-        return (
-            self.answerFinalizedTimestamp is not None and self.currentAnswer is not None
-        )
+        return self.answerFinalizedTimestamp is not None and self.has_valid_answer
 
     @property
     def market_maker_contract_address(self) -> HexAddress:
@@ -140,7 +147,10 @@ class OmenMarket(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome: str = self.outcomes[int(check_not_none(self.currentAnswer), 16)]
+        try:
+            outcome: str = self.outcomes[self.answer_index]
+        except IndexError:
+            breakpoint()
         return get_boolean_outcome(outcome)
 
     def get_resolution_enum(self) -> t.Optional[Resolution]:
@@ -178,6 +188,10 @@ class OmenBetFPMM(BaseModel):  # TODO replace with OmenMarket
         return len(self.outcomes) == 2
 
     @property
+    def answer_index(self) -> t.Optional[int]:
+        return int(self.currentAnswer, 16) if self.currentAnswer else None
+
+    @property
     def boolean_outcome(self) -> bool:
         if not self.is_binary:
             raise ValueError(
@@ -186,7 +200,7 @@ class OmenBetFPMM(BaseModel):  # TODO replace with OmenMarket
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome: str = self.outcomes[int(check_not_none(self.currentAnswer), 16)]
+        outcome: str = self.outcomes[self.answer_index]
         return get_boolean_outcome(outcome)
 
 

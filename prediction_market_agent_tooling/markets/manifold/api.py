@@ -8,7 +8,6 @@ from prediction_market_agent_tooling.gtypes import Mana
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
-    Resolution,
     ResolvedBet,
 )
 from prediction_market_agent_tooling.markets.manifold.data_models import (
@@ -161,7 +160,7 @@ def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
     if not market.resolutionTime:
         raise ValueError(f"Market {market.id} has no resolution time.")
 
-    market_outcome = market.get_resolution_enum() == Resolution.YES
+    market_outcome = market.get_resolved_boolean_outcome()
     return ResolvedBet(
         amount=BetAmount(amount=bet.amount, currency=Currency.Mana),
         outcome=bet.get_resolved_boolean_outcome(),

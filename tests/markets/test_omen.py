@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_market,
     get_omen_bets,
     get_omen_binary_markets,
+    get_resolved_omen_bets,
     pick_binary_market,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -88,3 +89,20 @@ def test_p_yes() -> None:
             break
     assert market is not None, "No market found with outcomeTokenProbabilities."
     assert np.isclose(market.p_yes, check_not_none(market.outcomeTokenProbabilities)[0])
+
+
+def test_resolved_omen_bets() -> None:
+    AN_ADDRESS = Web3.to_checksum_address("0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307")
+    resolved_bets = get_resolved_omen_bets(
+        better_address=AN_ADDRESS,
+        start_time=datetime(2024, 2, 20),
+        end_time=datetime(2024, 2, 28),
+    )
+
+    # Verify that the bets are unique.
+    assert len(resolved_bets) > 1
+    assert len(set([bet.id for bet in resolved_bets])) == len(resolved_bets)
+
+    # Verify that all bets convert to generic resolved bets.
+    for bet in resolved_bets:
+        bet.to_generic_resolved_bet()

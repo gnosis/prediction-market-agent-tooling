@@ -80,6 +80,7 @@ def monitor_app() -> None:
     market_type: MarketType = check_not_none(
         st.selectbox(label="Market type", options=list(MarketType), index=0)
     )
+    market_type = MarketType.OMEN
     start_time: datetime | None = (
         datetime.combine(
             t.cast(
@@ -103,7 +104,11 @@ def monitor_app() -> None:
             start_time=start_time,
         )
 
-    oldest_start_time = min(agent.start_time for agent in agents)
+    oldest_start_time = (
+        min(agent.start_time for agent in agents)
+        if agents
+        else datetime(2020, 1, 1, tzinfo=pytz.UTC)
+    )
 
     st.subheader("Market resolution")
     with st.spinner("Loading markets"):

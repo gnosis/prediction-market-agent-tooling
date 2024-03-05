@@ -34,35 +34,41 @@ class ManifoldMarket(BaseModel):
     creatorName: str
     creatorUsername: str
     isResolved: bool
-    resolution: t.Optional[str] = None
+    resolution: t.Optional[Resolution] = None
     resolutionTime: t.Optional[datetime] = None
     lastBetTime: t.Optional[datetime] = None
     lastCommentTime: t.Optional[datetime] = None
     lastUpdatedTime: datetime
     mechanism: str
     outcomeType: str
-    p: float
+    p: t.Optional[float] = None
     pool: ManifoldPool
     probability: Probability
     slug: str
-    totalLiquidity: Mana
+    totalLiquidity: t.Optional[Mana] = None
     uniqueBettorCount: int
     url: str
     volume: Mana
     volume24Hours: Mana
+    creatorAvatarUrl: t.Optional[str] = None
 
     @property
     def outcomes(self) -> list[str]:
         return list(self.pool.model_fields.keys())
 
-    def get_resolution_enum(self) -> Resolution:
-        return Resolution(self.resolution)
+    def get_resolved_boolean_outcome(self) -> bool:
+        if self.resolution == Resolution.YES:
+            return True
+        elif self.resolution == Resolution.NO:
+            return False
+        else:
+            should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
 
     def is_resolved_non_cancelled(self) -> bool:
         return (
             self.isResolved
             and self.resolutionTime is not None
-            and self.get_resolution_enum() != Resolution.CANCEL
+            and self.resolution not in [Resolution.CANCEL, Resolution.MKT]
         )
 
     def __repr__(self) -> str:
@@ -139,16 +145,15 @@ class ManifoldBet(BaseModel):
     orderAmount: t.Optional[Mana] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
     createdTime: datetime
-    outcome: str
+    outcome: Resolution
 
     def get_resolved_boolean_outcome(self) -> bool:
-        outcome = Resolution(self.outcome)
-        if outcome == Resolution.YES:
+        if self.outcome == Resolution.YES:
             return True
-        elif outcome == Resolution.NO:
+        elif self.outcome == Resolution.NO:
             return False
         else:
-            should_not_happen(f"Unexpected bet outcome string, '{outcome.value}'.")
+            should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
 
     def get_profit(self, market_outcome: bool) -> ProfitAmount:
         profit = (

@@ -8,8 +8,8 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.markets.omen.omen import get_resolved_omen_bets
 from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.omen.omen import get_resolved_omen_bets
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,

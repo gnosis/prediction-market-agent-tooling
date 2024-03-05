@@ -21,7 +21,7 @@ class DeployedOmenAgent(DeployedAgent):
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         bets = get_resolved_omen_bets(
-            better_address=self.wallet_address,
+            better_address=self.omen_public_key,
             start_time=self.start_time,
             end_time=self.end_time,
         )

@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.markets.manifold.api import (
     pick_binary_market,
     place_bet,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -33,9 +34,9 @@ def test_manifold_markets() -> None:
 
 
 def test_manifold_bets() -> None:
-    api_key = APIKeys().MANIFOLD_API_KEY
+    api_key = check_not_none(APIKeys().MANIFOLD_API_KEY).get_secret_value()
     start_time = datetime(2020, 2, 1, tzinfo=pytz.UTC)
-    user_id = get_authenticated_user(api_key.get_secret_value()).id
+    user_id = get_authenticated_user(api_key).id
     bets = get_manifold_bets(
         user_id=user_id,
         start_time=start_time,
@@ -45,9 +46,9 @@ def test_manifold_bets() -> None:
 
 
 def test_resolved_manifold_bets() -> None:
-    api_key = APIKeys().MANIFOLD_API_KEY
+    api_key = check_not_none(APIKeys().MANIFOLD_API_KEY).get_secret_value()
     start_time = datetime(2024, 2, 20, tzinfo=pytz.UTC)
-    user_id = get_authenticated_user(api_key.get_secret_value()).id
+    user_id = get_authenticated_user(api_key).id
     resolved_bets = get_resolved_manifold_bets(
         user_id=user_id,
         start_time=start_time,

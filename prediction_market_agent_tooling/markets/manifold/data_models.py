@@ -30,7 +30,7 @@ class ManifoldMarket(BaseModel):
     creatorId: str
     closeTime: datetime
     createdTime: datetime
-    creatorAvatarUrl: str
+    creatorAvatarUrl: t.Optional[str] = None
     creatorName: str
     creatorUsername: str
     isResolved: bool
@@ -50,7 +50,6 @@ class ManifoldMarket(BaseModel):
     url: str
     volume: Mana
     volume24Hours: Mana
-    creatorAvatarUrl: t.Optional[str] = None
 
     @property
     def outcomes(self) -> list[str]:
@@ -62,7 +61,7 @@ class ManifoldMarket(BaseModel):
         elif self.resolution == Resolution.NO:
             return False
         else:
-            should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
+            should_not_happen(f"Unexpected bet outcome string, '{self.resolution}'.")
 
     def is_resolved_non_cancelled(self) -> bool:
         return (

@@ -148,7 +148,7 @@ class OmenMarket(BaseModel):
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
         try:
-            outcome: str = self.outcomes[self.answer_index]
+            outcome: str = self.outcomes[check_not_none(self.answer_index)]
         except IndexError:
             breakpoint()
         return get_boolean_outcome(outcome)
@@ -200,7 +200,7 @@ class OmenBetFPMM(BaseModel):  # TODO replace with OmenMarket
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome: str = self.outcomes[self.answer_index]
+        outcome: str = self.outcomes[check_not_none(self.answer_index)]
         return get_boolean_outcome(outcome)
 
 

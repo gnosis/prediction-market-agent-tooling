@@ -125,7 +125,7 @@ def get_manifold_market(market_id: str) -> ManifoldMarket:
     return ManifoldMarket.model_validate(response.json())
 
 
-def get_resolved_manifold_bets(
+def get_manifold_bets(
     user_id: str,
     start_time: datetime,
     end_time: t.Optional[datetime],
@@ -139,6 +139,15 @@ def get_resolved_manifold_bets(
     bets = [b for b in bets if b.createdTime >= start_time]
     if end_time:
         bets = [b for b in bets if b.createdTime < end_time]
+    return bets
+
+
+def get_resolved_manifold_bets(
+    user_id: str,
+    start_time: datetime,
+    end_time: t.Optional[datetime],
+) -> list[ManifoldBet]:
+    bets = get_manifold_bets(user_id, start_time, end_time)
     bets = [
         b for b in bets if get_manifold_market(b.contractId).is_resolved_non_cancelled()
     ]

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 import functions_framework
 import pytz
+from flask import Request
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.benchmark.utils import MarketSource
@@ -74,6 +75,6 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
 
 
 @functions_framework.http
-def main(request) -> str:
+def main(request: Request) -> str:
     DeployableReplicateToOmenAgent().run()
     return "Success"

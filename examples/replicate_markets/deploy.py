@@ -13,7 +13,7 @@ deploy_to_gcp(
     gcp_fname=fname,
     requirements_file=None,
     extra_deps=[
-        "git+https://github.com/gnosis/prediction-market-agent-tooling.git@evan/replication",
+        "git+https://github.com/gnosis/prediction-market-agent-tooling.git@449c67df2ec02f61411e153565c5e3f8ba01dda1",
         "langchain",
         "langchain_openai",
     ],

@@ -5,6 +5,9 @@ from google.cloud.functions_v2.services.function_service.client import (
     FunctionServiceClient,
 )
 from google.cloud.functions_v2.types.functions import Function
+from google.cloud.secretmanager import SecretManagerServiceClient
+
+from prediction_market_agent_tooling.config import APIKeys
 
 
 def gcloud_deploy_cmd(
@@ -38,13 +41,13 @@ def gcloud_deploy_cmd(
         cmd += "--retry "
     if labels:
         for k, v in labels.items():
-            cmd += f"--update-labels {k}={v} "
+            cmd += f'--update-labels {k}="{v}" '
     if env_vars:
         for k, v in env_vars.items():
-            cmd += f"--set-env-vars {k}={v} "
+            cmd += f'--set-env-vars {k}="{v}" '
     if secrets:
         for k, v in secrets.items():
-            cmd += f"--set-secrets {k}={v} "
+            cmd += f'--set-secrets {k}="{v}" '
 
     return cmd
 
@@ -126,9 +129,14 @@ def api_keys_to_str(api_keys: dict[str, str]) -> str:
     return " ".join([f"{k}={v}" for k, v in api_keys.items()])
 
 
-def get_gcp_function(fname: str) -> Function:
+def list_gcp_functions() -> list[Function]:
     client = FunctionServiceClient()
-    response = client.list_functions(parent=get_gcloud_parent())
+    functions = list(client.list_functions(parent=get_gcloud_parent()))
+    return functions
+
+
+def get_gcp_function(fname: str) -> Function:
+    response = list_gcp_functions()
     for function in response:
         if function.name.split("/")[-1] == fname:
             return function
@@ -139,3 +147,23 @@ def get_gcp_function(fname: str) -> Function:
 
 def gcp_function_is_active(fname: str) -> bool:
     return get_gcp_function(fname).state == Function.State.ACTIVE
+
+
+def gcp_get_secret_value(name: str, version: str = "latest") -> str:
+    client = SecretManagerServiceClient()
+    return client.access_secret_version(
+        name=f"projects/{get_gcloud_project_id()}/secrets/{name}/versions/{version}"
+    ).payload.data.decode("utf-8")
+
+
+def gcp_resolve_api_keys_secrets(api_keys: APIKeys) -> APIKeys:
+    return APIKeys.model_validate(
+        api_keys.model_dump_public()
+        | {
+            k: gcp_get_secret_value(
+                name=v.rsplit(":", 1)[0],
+                version=v.rsplit(":", 1)[1],
+            )
+            for k, v in api_keys.model_dump_secrets().items()
+        }
+    )

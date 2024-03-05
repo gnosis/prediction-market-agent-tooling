@@ -3,19 +3,32 @@ import os
 import tempfile
 import time
 import typing as t
+from datetime import datetime
 
+import git
+
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.constants import (
+    COMMIT_KEY,
+    MARKET_TYPE_KEY,
+    REPOSITORY_KEY,
+)
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
     run_deployed_gcp_function,
     schedule_deployed_gcp_function,
 )
-from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
+from prediction_market_agent_tooling.deploy.gcp.utils import (
+    gcp_function_is_active,
+    gcp_resolve_api_keys_secrets,
+)
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     get_binary_markets,
 )
+from prediction_market_agent_tooling.monitor.monitor_app import DEPLOYED_AGENT_TYPE_MAP
 
 
 class DeployableAgent:
@@ -61,12 +74,14 @@ class DeployableAgent:
         self,
         repository: str,
         market_type: MarketType,
+        api_keys: APIKeys,
         memory: int,
         labels: dict[str, str] | None = None,
         env_vars: dict[str, str] | None = None,
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
         gcp_fname: str | None = None,
+        start_time: datetime | None = None,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
@@ -83,6 +98,27 @@ def {entrypoint_function_name}(request) -> str:
 """
 
         gcp_fname = gcp_fname or self.get_gcloud_fname(market_type)
+
+        # For labels, only hyphens (-), underscores (_), lowercase characters, and numbers are allowed in values.
+        labels = (labels or {}) | {
+            MARKET_TYPE_KEY: market_type.value,
+        }
+        env_vars = (env_vars or {}) | {
+            REPOSITORY_KEY: repository,
+            COMMIT_KEY: git.Repo(search_parent_directories=True).head.object.hexsha,
+        }
+        secrets = secrets or {}
+
+        env_vars |= api_keys.model_dump_public()
+        secrets |= api_keys.model_dump_secrets()
+
+        monitor_agent = DEPLOYED_AGENT_TYPE_MAP[market_type].from_api_keys(
+            name=gcp_fname,
+            deployableagent_class_name=self.__class__.__name__,
+            start_time=start_time or datetime.utcnow(),
+            api_keys=gcp_resolve_api_keys_secrets(api_keys),
+        )
+        env_vars |= monitor_agent.model_dump_prefixed()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
             f.write(entrypoint_template)
@@ -125,9 +161,12 @@ def {entrypoint_function_name}(request) -> str:
         for market in markets:
             result = self.answer_binary_market(market)
             if _place_bet:
-                print(f"Placing bet on {market} with result {result}")
+                amount = self.calculate_bet_amount(result, market)
+                print(
+                    f"Placing bet on {market} with result {result} and amount {amount}"
+                )
                 market.place_bet(
-                    amount=self.calculate_bet_amount(result, market),
+                    amount=amount,
                     outcome=result,
                 )
 

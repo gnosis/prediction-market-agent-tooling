@@ -1,5 +1,5 @@
-import datetime
 import tempfile
+from datetime import timedelta
 
 import pytest
 
@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.benchmark.utils import (
     MarketSource,
     OutcomePrediction,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class DummyAgent(bm.AbstractBenchmarkedAgent):
@@ -69,8 +70,8 @@ def test_benchmark_run(
                 p_yes=0.1,
                 volume=1,
                 category="...",
-                close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-                created_time=datetime.datetime.now(),
+                close_time=utcnow(),
+                created_time=utcnow() - timedelta(hours=48),
             )
         ],
         agents=[dummy_agent, dummy_agent_no_prediction],
@@ -111,8 +112,8 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
                 p_yes=0.1,
                 volume=1,
                 category="...",
-                close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-                created_time=datetime.datetime.now(),
+                close_time=utcnow(),
+                created_time=utcnow() - timedelta(hours=48),
             )
         ]
         benchmarker = bm.Benchmarker(
@@ -176,8 +177,8 @@ def test_benchmarker_cancelled_markets() -> None:
             p_yes=0.1,
             volume=1,
             category="...",
-            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-            created_time=datetime.datetime.now(),
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.CANCEL,
         )
     ]
@@ -201,8 +202,8 @@ def test_market_probable_resolution() -> None:
             p_yes=0.1,
             volume=1,
             category="...",
-            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-            created_time=datetime.datetime.now(),
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.CANCEL,
         ).probable_resolution
     assert "Unknown resolution" in str(e)
@@ -214,8 +215,8 @@ def test_market_probable_resolution() -> None:
             p_yes=0.1,
             volume=1,
             category="...",
-            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-            created_time=datetime.datetime.now(),
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.YES,
         ).probable_resolution
         == MarketResolution.YES
@@ -228,8 +229,8 @@ def test_market_probable_resolution() -> None:
             p_yes=0.1,
             volume=1,
             category="...",
-            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-            created_time=datetime.datetime.now(),
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.NO,
         ).probable_resolution
         == MarketResolution.NO
@@ -242,8 +243,8 @@ def test_market_probable_resolution() -> None:
             p_yes=0.1,
             volume=1,
             category="...",
-            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-            created_time=datetime.datetime.now(),
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
         ).probable_resolution
         == MarketResolution.NO
     )
@@ -255,8 +256,8 @@ def test_market_probable_resolution() -> None:
             p_yes=0.8,
             volume=1,
             category="...",
-            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
-            created_time=datetime.datetime.now(),
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
         ).probable_resolution
         == MarketResolution.YES
     )

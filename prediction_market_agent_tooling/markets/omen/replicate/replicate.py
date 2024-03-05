@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta
 
-import pytz
-
 from prediction_market_agent_tooling.benchmark.utils import (
     MarketFilter,
     MarketSort,
@@ -18,6 +16,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_create_market_tx,
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 def omen_replicate_from_tx(
@@ -85,9 +84,7 @@ def omen_replicate_from_tx(
         # Close a day sooner than the original market, because of timezone differences.
         closing_time = market.close_time - timedelta(hours=24)
         # Force at least 24 hours of open market.
-        soonest_allowed_closing_time = datetime.utcnow().replace(
-            tzinfo=pytz.UTC
-        ) + timedelta(hours=24)
+        soonest_allowed_closing_time = utcnow() + timedelta(hours=24)
         if closing_time <= soonest_allowed_closing_time:
             print(
                 f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_closing_time}."

@@ -1,12 +1,11 @@
 import typing as t
-from datetime import datetime
 
 from google.cloud.functions_v2.types.functions import Function
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
-from prediction_market_agent_tooling.gtypes import ChecksumAddress
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, DatetimeWithTimezone
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import get_bets
@@ -31,7 +30,7 @@ class DeployedOmenAgent(DeployedAgent):
     def from_api_keys(
         name: str,
         deployableagent_class_name: str,
-        start_time: datetime,
+        start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedOmenAgent":
         return DeployedOmenAgent(
@@ -43,7 +42,7 @@ class DeployedOmenAgent(DeployedAgent):
 
     @staticmethod
     def from_monitor_settings(
-        settings: MonitorSettings, start_time: datetime
+        settings: MonitorSettings, start_time: DatetimeWithTimezone
     ) -> list[DeployedAgent]:
         return [
             DeployedOmenAgent(

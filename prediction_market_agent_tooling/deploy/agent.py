@@ -3,7 +3,6 @@ import os
 import tempfile
 import time
 import typing as t
-from datetime import datetime
 
 import git
 
@@ -29,6 +28,7 @@ from prediction_market_agent_tooling.markets.markets import (
     get_binary_markets,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import DEPLOYED_AGENT_TYPE_MAP
+from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
 
 
 class DeployableAgent:
@@ -81,7 +81,7 @@ class DeployableAgent:
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
         gcp_fname: str | None = None,
-        start_time: datetime | None = None,
+        start_time: DatetimeWithTimezone | None = None,
         timeout: int = 180,
         dump_monitor_agent: bool = True,
     ) -> None:
@@ -118,7 +118,7 @@ def {entrypoint_function_name}(request) -> str:
             monitor_agent = DEPLOYED_AGENT_TYPE_MAP[market_type].from_api_keys(
                 name=gcp_fname,
                 deployableagent_class_name=self.__class__.__name__,
-                start_time=start_time or datetime.utcnow(),
+                start_time=start_time or utcnow(),
                 api_keys=gcp_resolve_api_keys_secrets(api_keys),
             )
             env_vars |= monitor_agent.model_dump_prefixed()

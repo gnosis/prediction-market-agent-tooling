@@ -2,9 +2,7 @@ import typer
 
 from prediction_market_agent_tooling.benchmark.utils import MarketSource
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
-from prediction_market_agent_tooling.markets.omen.replicate.replicate import (
-    omen_replicate_from_tx,
-)
+from prediction_market_agent_tooling.markets.omen.omen import omen_replicate_from_tx
 from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 

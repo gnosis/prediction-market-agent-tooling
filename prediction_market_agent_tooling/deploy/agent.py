@@ -4,11 +4,8 @@ import tempfile
 import time
 import typing as t
 
-import git
-
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
-    COMMIT_KEY,
     MARKET_TYPE_KEY,
     REPOSITORY_KEY,
 )
@@ -83,7 +80,6 @@ class DeployableAgent:
         gcp_fname: str | None = None,
         start_time: DatetimeWithTimezone | None = None,
         timeout: int = 180,
-        dump_monitor_agent: bool = True,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
@@ -107,7 +103,6 @@ def {entrypoint_function_name}(request) -> str:
         }
         env_vars = (env_vars or {}) | {
             REPOSITORY_KEY: repository,
-            COMMIT_KEY: git.Repo(search_parent_directories=True).head.object.hexsha,
         }
         secrets = secrets or {}
 

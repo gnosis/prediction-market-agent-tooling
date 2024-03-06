@@ -3,6 +3,7 @@ import subprocess
 from datetime import datetime
 from typing import NoReturn, Optional, Type, TypeVar, cast
 
+import git
 import pytz
 
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone
@@ -81,3 +82,11 @@ def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
 
 def utcnow() -> DatetimeWithTimezone:
     return add_utc_timezone_validator(datetime.utcnow())
+
+
+def get_current_git_commit_sha() -> str:
+    return git.Repo(search_parent_directories=True).head.commit.hexsha
+
+
+def get_current_git_branch() -> str:
+    return git.Repo(search_parent_directories=True).active_branch.name

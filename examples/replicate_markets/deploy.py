@@ -32,8 +32,8 @@ def main(
     api_keys = APIKeys(
         BET_FROM_ADDRESS=verify_address(from_address),
         # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
-        BET_FROM_PRIVATE_KEY=private_key_type(from_private_key_secret_name),
-        OPENAI_API_KEY=SecretStr(openai_api_key_secret_name),
+        BET_FROM_PRIVATE_KEY=private_key_type(f"{from_private_key_secret_name}:latest"),
+        OPENAI_API_KEY=SecretStr(f"{openai_api_key_secret_name}:latest"),
     )
 
     env_vars_parsed: dict[str, str] = (

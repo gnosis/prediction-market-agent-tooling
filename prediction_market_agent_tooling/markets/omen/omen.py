@@ -1019,7 +1019,7 @@ def omen_replicate_from_tx(
     )
     if len(already_created_markets) == last_n_omen_markets_to_fetch:
         raise ValueError(
-            "TODO: Switch to paged version (once available) to fetch all markets, we don't know if we aren't creating duplicate now."
+            "TODO: Switch to paged version (once available) to fetch all markets, we don't know if we aren't creating duplicates now."
         )
 
     markets = get_markets(
@@ -1042,7 +1042,7 @@ def omen_replicate_from_tx(
         m
         for m in markets_sorted
         if close_time_before is None or m.close_time <= close_time_before
-    ][:n_to_replicate]
+    ]
     if not markets_to_replicate:
         print(f"No markets found for {market_source}")
         return []
@@ -1089,8 +1089,15 @@ def omen_replicate_from_tx(
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
             auto_deposit=auto_deposit,
         )
+        created_addresses.append(market_address)
         print(
             f"Created `https://aiomen.eth.limo/#/{market_address}` for `{market.question}` in category {category} out of {market.url}."
         )
+
+        if len(created_addresses) >= n_to_replicate:
+            print(
+                f"Replicated {len(created_addresses)} from {market_source}, breaking."
+            )
+            break
 
     return created_addresses

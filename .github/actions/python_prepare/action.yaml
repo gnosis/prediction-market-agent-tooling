@@ -12,4 +12,4 @@ runs:
       run: curl -sSL https://install.python-poetry.org | python3 -
     - name: Install dependencies
       shell: bash
-      run: poetry install
+      run: poetry install --all-extras

@@ -1,6 +1,5 @@
 import os
 import typing as t
-from datetime import datetime
 from itertools import groupby
 
 import altair as alt
@@ -16,7 +15,8 @@ from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.tools.utils import (
-    add_timezone_validator,
+    DatetimeWithTimezone,
+    add_utc_timezone_validator,
     should_not_happen,
 )
 
@@ -45,15 +45,20 @@ class DeployedAgent(BaseModel):
     name: str
     deployableagent_class_name: str
 
-    start_time: datetime
+    start_time: DatetimeWithTimezone
     end_time: t.Optional[
-        datetime
+        DatetimeWithTimezone
     ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
 
-    _add_timezone_validator = field_validator("start_time")(add_timezone_validator)
+    _add_timezone_validator_start_time = field_validator("start_time")(
+        add_utc_timezone_validator
+    )
+    _add_timezone_validator_end_time = field_validator("end_time")(
+        add_utc_timezone_validator
+    )
 
     def model_dump_prefixed(self) -> dict[str, t.Any]:
         return {
@@ -88,7 +93,7 @@ class DeployedAgent(BaseModel):
 
     @staticmethod
     def from_monitor_settings(
-        settings: MonitorSettings, start_time: datetime
+        settings: MonitorSettings, start_time: DatetimeWithTimezone
     ) -> list["DeployedAgent"]:
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -96,7 +101,7 @@ class DeployedAgent(BaseModel):
     def from_api_keys(
         name: str,
         deployableagent_class_name: str,
-        start_time: datetime,
+        start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedAgent":
         raise NotImplementedError("Subclasses must implement this method.")

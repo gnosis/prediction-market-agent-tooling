@@ -1,7 +1,6 @@
 import typing as t
 from datetime import date, datetime, timedelta
 
-import pytz
 import streamlit as st
 
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -20,7 +19,12 @@ from prediction_market_agent_tooling.monitor.monitor import (
     monitor_agent,
     monitor_market,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeWithTimezone,
+    add_utc_timezone_validator,
+    check_not_none,
+    utcnow,
+)
 
 MAX_MONITOR_MARKETS = 1000
 
@@ -33,7 +37,7 @@ DEPLOYED_AGENT_TYPE_MAP: dict[MarketType, type[DeployedAgent]] = {
 def get_deployed_agents(
     market_type: MarketType,
     settings: MonitorSettings,
-    start_time: datetime | None,
+    start_time: DatetimeWithTimezone | None,
 ) -> list[DeployedAgent]:
     cls = DEPLOYED_AGENT_TYPE_MAP.get(market_type)
     if cls is None:
@@ -45,9 +49,7 @@ def get_deployed_agents(
         agents.extend(cls.from_all_gcp_functions())
 
     agents.extend(
-        cls.from_monitor_settings(
-            settings=settings, start_time=start_time or datetime.utcnow()
-        )
+        cls.from_monitor_settings(settings=settings, start_time=start_time or utcnow())
     )
 
     return agents
@@ -80,18 +82,20 @@ def monitor_app() -> None:
     market_type: MarketType = check_not_none(
         st.selectbox(label="Market type", options=list(MarketType), index=0)
     )
-    start_time: datetime | None = (
-        datetime.combine(
-            t.cast(
-                # This will be always a date for us, so casting.
-                date,
-                st.date_input(
-                    "Start time",
-                    value=datetime.now() - timedelta(weeks=settings.PAST_N_WEEKS),
+    start_time: DatetimeWithTimezone | None = (
+        add_utc_timezone_validator(
+            datetime.combine(
+                t.cast(
+                    # This will be always a date for us, so casting.
+                    date,
+                    st.date_input(
+                        "Start time",
+                        value=utcnow() - timedelta(weeks=settings.PAST_N_WEEKS),
+                    ),
                 ),
-            ),
-            datetime.min.time(),
-        ).replace(tzinfo=pytz.UTC)
+                datetime.min.time(),
+            )
+        )
         if settings.has_manual_agents
         else None
     )

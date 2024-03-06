@@ -45,6 +45,8 @@ class OmenMarket(BaseModel):
 
     id: HexAddress
     title: str
+    category: str
+    creationTimestamp: int
     collateralVolume: Wei
     usdVolume: USD
     collateralToken: HexAddress
@@ -72,6 +74,14 @@ class OmenMarket(BaseModel):
     @property
     def is_resolved(self) -> bool:
         return self.answerFinalizedTimestamp is not None and self.has_valid_answer
+
+    @property
+    def question(self) -> str:
+        return self.title
+
+    @property
+    def creation_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.creationTimestamp)
 
     @property
     def market_maker_contract_address(self) -> HexAddress:
@@ -212,7 +222,7 @@ class OmenBet(BaseModel):
                 amount=Decimal(self.collateralAmountUSD), currency=Currency.xDai
             ),
             outcome=self.boolean_outcome,
-            created_time=datetime.fromtimestamp(self.creationTimestamp),
+            created_time=self.creation_datetime,
             market_question=self.title,
             market_outcome=self.fpmm.boolean_outcome,
             resolved_time=datetime.fromtimestamp(

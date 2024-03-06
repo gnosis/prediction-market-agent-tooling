@@ -1,9 +1,12 @@
 import os
 import subprocess
 from datetime import datetime
-from typing import NoReturn, Optional, Type, TypeVar
+from typing import NoReturn, Optional, Type, TypeVar, cast
 
+import git
 import pytz
+
+from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone
 
 T = TypeVar("T")
 
@@ -65,7 +68,25 @@ def export_requirements_from_toml(output_dir: str) -> None:
     print(f"Saved requirements to {output_dir}/requirements.txt")
 
 
-def add_timezone_validator(value: datetime) -> datetime:
+def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
+    """
+    If datetime doesn't come with a timezone, we assume it to be UTC.
+    Note: Not great, but at least the error will be constant.
+    """
     if value.tzinfo is None:
         value = value.replace(tzinfo=pytz.UTC)
-    return value
+    if value.tzinfo != pytz.UTC:
+        raise ValueError(f"Invalid timezone: {value.tzinfo}")
+    return cast(DatetimeWithTimezone, value)
+
+
+def utcnow() -> DatetimeWithTimezone:
+    return add_utc_timezone_validator(datetime.utcnow())
+
+
+def get_current_git_commit_sha() -> str:
+    return git.Repo(search_parent_directories=True).head.commit.hexsha
+
+
+def get_current_git_branch() -> str:
+    return git.Repo(search_parent_directories=True).active_branch.name

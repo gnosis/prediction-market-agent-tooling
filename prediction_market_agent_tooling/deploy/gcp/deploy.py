@@ -29,6 +29,7 @@ def deploy_to_gcp(
     secrets: dict[str, str] | None,
     memory: int,  # in MB
     entrypoint_function_name: str,
+    timeout: int,
 ) -> str:
     if requirements_file and not os.path.exists(requirements_file):
         raise ValueError(f"File {requirements_file} does not exist")
@@ -69,6 +70,7 @@ def deploy_to_gcp(
             env_vars=env_vars,
             secrets=secrets,
             memory=memory,
+            timeout=timeout,
         )
         try:
             subprocess.run(cmd, shell=True, check=True)

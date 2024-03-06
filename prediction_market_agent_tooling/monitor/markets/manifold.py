@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 from google.cloud.functions_v2.types.functions import Function
 
@@ -16,6 +15,7 @@ from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone
 
 
 class DeployedManifoldAgent(DeployedAgent):
@@ -33,7 +33,7 @@ class DeployedManifoldAgent(DeployedAgent):
     def from_api_keys(
         name: str,
         deployableagent_class_name: str,
-        start_time: datetime,
+        start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedManifoldAgent":
         return DeployedManifoldAgent(
@@ -47,7 +47,7 @@ class DeployedManifoldAgent(DeployedAgent):
 
     @staticmethod
     def from_monitor_settings(
-        settings: MonitorSettings, start_time: datetime
+        settings: MonitorSettings, start_time: DatetimeWithTimezone
     ) -> list[DeployedAgent]:
         return [
             DeployedManifoldAgent(

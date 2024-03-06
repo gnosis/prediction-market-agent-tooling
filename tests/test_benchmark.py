@@ -1,5 +1,5 @@
-import datetime
 import tempfile
+from datetime import timedelta
 
 import pytest
 
@@ -10,8 +10,8 @@ from prediction_market_agent_tooling.benchmark.utils import (
     MarketResolution,
     MarketSource,
     OutcomePrediction,
-    get_markets,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class DummyAgent(bm.AbstractBenchmarkedAgent):
@@ -62,7 +62,18 @@ def test_benchmark_run(
     dummy_agent: DummyAgent, dummy_agent_no_prediction: DummyAgentNoPrediction
 ) -> None:
     benchmarker = bm.Benchmarker(
-        markets=get_markets(number=1, source=MarketSource.MANIFOLD),
+        markets=[
+            Market(
+                source=MarketSource.MANIFOLD,
+                question="Will GNO go up?",
+                url="...",
+                p_yes=0.1,
+                volume=1,
+                category="...",
+                close_time=utcnow(),
+                created_time=utcnow() - timedelta(hours=48),
+            )
+        ],
         agents=[dummy_agent, dummy_agent_no_prediction],
     )
     benchmarker.run_agents()
@@ -93,7 +104,18 @@ def test_cache() -> None:
 def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         cache_path = f"{tmpdir}/cache.json"
-        markets = get_markets(number=1, source=MarketSource.MANIFOLD)
+        markets = [
+            Market(
+                source=MarketSource.MANIFOLD,
+                question="Will GNO go up?",
+                url="...",
+                p_yes=0.1,
+                volume=1,
+                category="...",
+                close_time=utcnow(),
+                created_time=utcnow() - timedelta(hours=48),
+            )
+        ]
         benchmarker = bm.Benchmarker(
             markets=markets,
             agents=[dummy_agent],
@@ -154,7 +176,9 @@ def test_benchmarker_cancelled_markets() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
-            created_time=datetime.datetime.now(),
+            category="...",
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.CANCEL,
         )
     ]
@@ -177,7 +201,9 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
-            created_time=datetime.datetime.now(),
+            category="...",
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.CANCEL,
         ).probable_resolution
     assert "Unknown resolution" in str(e)
@@ -188,7 +214,9 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
-            created_time=datetime.datetime.now(),
+            category="...",
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.YES,
         ).probable_resolution
         == MarketResolution.YES
@@ -200,7 +228,9 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
-            created_time=datetime.datetime.now(),
+            category="...",
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
             resolution=CancelableMarketResolution.NO,
         ).probable_resolution
         == MarketResolution.NO
@@ -212,7 +242,9 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
-            created_time=datetime.datetime.now(),
+            category="...",
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
         ).probable_resolution
         == MarketResolution.NO
     )
@@ -223,7 +255,9 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.8,
             volume=1,
-            created_time=datetime.datetime.now(),
+            category="...",
+            close_time=utcnow(),
+            created_time=utcnow() - timedelta(hours=48),
         ).probable_resolution
         == MarketResolution.YES
     )

@@ -2,7 +2,7 @@ from datetime import datetime
 
 import typer
 
-from prediction_market_agent_tooling.gtypes import PrivateKey, xdai_type
+from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -49,7 +49,7 @@ def main(
         category=category,
         language=language,
         from_address=verify_address(from_address),
-        from_private_key=PrivateKey(from_private_key),
+        from_private_key=private_key_type(from_private_key),
         outcomes=outcomes,
         auto_deposit=auto_deposit,
     )

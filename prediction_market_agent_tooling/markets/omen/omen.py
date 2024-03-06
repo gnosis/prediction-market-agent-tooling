@@ -8,7 +8,7 @@ from enum import Enum
 
 import requests
 from web3 import Web3
-from web3.types import TxParams, TxReceipt
+from web3.types import TxParams, TxReceipt, Wei
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -20,6 +20,7 @@ from prediction_market_agent_tooling.gtypes import (
     PrivateKey,
     Wei,
     xDai,
+    xdai_type,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -34,18 +35,15 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
 )
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
-    ONE_NONCE,
     WXDAI_ABI,
     WXDAI_CONTRACT_ADDRESS,
-    Nonce,
     add_fraction,
     call_function_on_contract,
     call_function_on_contract_tx,
     remove_fraction,
     xdai_to_wei,
-    xdai_type,
 )
 
 """
@@ -80,9 +78,9 @@ class OmenAgentMarket(AgentMarket):
         amount_xdai = xDai(amount.amount)
         keys = APIKeys()
         binary_omen_buy_outcome_tx(
-            amount=check_not_none(amount_xdai),
-            from_address=check_not_none(keys.bet_from_address),
-            from_private_key=check_not_none(keys.bet_from_private_key),
+            amount=amount_xdai,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
             market=self,
             binary_outcome=outcome,
             auto_deposit=omen_auto_deposit,
@@ -218,76 +216,75 @@ query getFixedProductMarketMaker($id: String!) {
     ) {
         id
         title
-        collateralVolume
-        usdVolume
-        collateralToken
-        outcomes
-        outcomeTokenAmounts
-        outcomeTokenMarginalPrices
-        fee
-    }
-}
-"""
-
-# Note: We are using `answerFinalizedTimestamp: null` to filter out closed markets
-# and `resolutionTimestamp_not: null` to filter out markets that are not resolved.
-# These are incompatible, so one line must be removed before using the query.
-_QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS = """
-query getFixedProductMarketMakers(
-    $first: Int!,
-    $outcomes: [String!],
-    $orderBy: String!,
-    $orderDirection: String!,
-    $creationTimestamp_gt: Int!,
-) {
-    fixedProductMarketMakers(
-        where: {
-            isPendingArbitration: false,
-            outcomes: $outcomes
-            creationTimestamp_gt: $creationTimestamp_gt
-            answerFinalizedTimestamp: null
-            resolutionTimestamp_not: null
-        },
-        orderBy: $orderBy,
-        orderDirection: $orderDirection,
-        first: $first
-    ) {
-        id
-        title
-        collateralVolume
-        usdVolume
-        collateralToken
-        outcomes
-        outcomeTokenAmounts
-        outcomeTokenMarginalPrices
-        fee
-        answerFinalizedTimestamp
-        resolutionTimestamp
-        currentAnswer
+        category
         creationTimestamp
+        collateralVolume
+        usdVolume
+        collateralToken
+        outcomes
+        outcomeTokenAmounts
+        outcomeTokenMarginalPrices
+        fee
     }
 }
 """
 
 
-def get_open_fpmm_query() -> str:
-    return _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS.replace(
-        "resolutionTimestamp_not: null", ""
-    )
+def construct_query_get_fixed_product_markets_makers(
+    include_creator: bool, filter_by: FilterBy
+) -> str:
+    query = """
+        query getFixedProductMarketMakers(
+            $first: Int!,
+            $outcomes: [String!],
+            $orderBy: String!,
+            $orderDirection: String!,
+            $creationTimestamp_gt: Int!,
+            $creator: Bytes = null,
+        ) {
+            fixedProductMarketMakers(
+                where: {
+                    isPendingArbitration: false,
+                    outcomes: $outcomes
+                    creationTimestamp_gt: $creationTimestamp_gt
+                    creator: $creator,
+                    answerFinalizedTimestamp: null
+                    resolutionTimestamp_not: null
+                },
+                orderBy: creationTimestamp,
+                orderDirection: desc,
+                first: $first
+            ) {
+                id
+                title
+                collateralVolume
+                usdVolume
+                collateralToken
+                outcomes
+                outcomeTokenAmounts
+                outcomeTokenMarginalPrices
+                fee
+                answerFinalizedTimestamp
+                resolutionTimestamp
+                currentAnswer
+                creationTimestamp
+                category
+            }
+        }
+    """
 
-
-def get_resolved_fpmm_query() -> str:
-    return _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKERS.replace(
-        "answerFinalizedTimestamp: null", ""
-    )
-
-
-def get_fpmm_query(filter_by: FilterBy) -> str:
     if filter_by == FilterBy.OPEN:
-        return get_open_fpmm_query()
+        query = query.replace("resolutionTimestamp_not: null", "")
     elif filter_by == FilterBy.RESOLVED:
-        return get_resolved_fpmm_query()
-    raise ValueError(f"Unknown filter_by: {filter_by}")
+        query = query.replace("answerFinalizedTimestamp: null", "")
+    else:
+        raise ValueError(f"Unknown filter_by: {filter_by}")
+
+    if not include_creator:
+        # If we aren't filtering by query, we need to remove it from where, otherwise "creator: null" will return 0 results.
+        query = query.replace("creator: $creator,", "")
+
+    return query
 
 
 def get_arbitrator_contract_address_and_abi(
@@ -318,12 +315,16 @@ def get_omen_markets(
     sort_by: SortBy,
     filter_by: FilterBy,
     created_after: t.Optional[datetime] = None,
+    creator: t.Optional[HexAddress] = None,
 ) -> list[OmenMarket]:
     order_by, order_direction = ordering_from_sort_by(sort_by)
     markets = requests.post(
         THEGRAPH_QUERY_URL,
         json={
-            "query": get_fpmm_query(filter_by),
+            "query": construct_query_get_fixed_product_markets_makers(
+                include_creator=creator is not None,
+                filter_by=filter_by,
+            ),
             "variables": {
                 "first": first,
                 "outcomes": outcomes,
@@ -332,6 +333,7 @@ def get_omen_markets(
                 "creationTimestamp_gt": to_int_timestamp(created_after)
                 if created_after
                 else 0,
+                "creator": creator,
             },
         },
         headers={"Content-Type": "application/json"},
@@ -345,6 +347,7 @@ def get_omen_binary_markets(
     sort_by: SortBy,
     filter_by: FilterBy,
     created_after: t.Optional[datetime] = None,
+    creator: t.Optional[HexAddress] = None,
 ) -> list[OmenMarket]:
     return get_omen_markets(
         first=limit,
@@ -352,6 +355,7 @@ def get_omen_binary_markets(
         sort_by=sort_by,
         created_after=created_after,
         filter_by=filter_by,
+        creator=creator,
     )
 
 
@@ -586,11 +590,6 @@ def omen_buy_outcome_tx(
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
 
-    # Get the current nonce for the given from_address.
-    # If making multiple transactions quickly after each other,
-    # it's better to increae it manually (otherwise we could get stale value from the network and error out).
-    nonce: Nonce = web3.eth.get_transaction_count(from_address_checksummed)
-
     # Calculate the amount of shares we will get for the given investment amount.
     expected_shares = omen_calculate_buy_amount(web3, market, amount_wei, outcome_index)
     # Allow 1% slippage.
@@ -603,9 +602,7 @@ def omen_buy_outcome_tx(
         amount_wei=amount_wei,
         from_address=from_address_checksummed,
         from_private_key=from_private_key,
-        tx_params={"nonce": nonce},
     )
-    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
     if auto_deposit:
@@ -615,9 +612,7 @@ def omen_buy_outcome_tx(
             amount_wei=amount_wei,
             from_address=from_address_checksummed,
             from_private_key=from_private_key,
-            tx_params={"nonce": nonce},
         )
-        nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
     # Buy shares using the deposited xDai in the collateral token.
     omen_buy_shares_tx(
         web3,
@@ -627,9 +622,7 @@ def omen_buy_outcome_tx(
         expected_shares,
         from_address_checksummed,
         from_private_key,
-        tx_params={"nonce": nonce},
     )
-    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
 
 
 def binary_omen_buy_outcome_tx(
@@ -668,11 +661,6 @@ def omen_sell_outcome_tx(
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
 
-    # Get the current nonce for the given from_address.
-    # If making multiple transactions quickly after each other,
-    # it's better to increae it manually (otherwise we could get stale value from the network and error out).
-    nonce: Nonce = web3.eth.get_transaction_count(from_address_checksummed)
-
     # Calculate the amount of shares we will sell for the given selling amount of xdai.
     max_outcome_tokens_to_sell = omen_calculate_sell_amount(
         web3, market, amount_wei, outcome_index
@@ -687,9 +675,7 @@ def omen_sell_outcome_tx(
         approve=True,
         from_address=from_address_checksummed,
         from_private_key=from_private_key,
-        tx_params={"nonce": nonce},
     )
-    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
     # Sell the shares.
     omen_sell_shares_tx(
         web3,
@@ -699,9 +685,7 @@ def omen_sell_outcome_tx(
         max_outcome_tokens_to_sell,
         from_address_checksummed,
         from_private_key,
-        tx_params={"nonce": nonce},
     )
-    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
     if auto_withdraw:
         # Optionally, withdraw from the collateral token back to the `from_address` wallet.
         omen_withdraw_collateral_token_tx(
@@ -710,9 +694,7 @@ def omen_sell_outcome_tx(
             amount_wei=amount_wei,
             from_address=from_address_checksummed,
             from_private_key=from_private_key,
-            tx_params={"nonce": nonce},
         )
-        nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
 
 
 def binary_omen_sell_outcome_tx(
@@ -789,6 +771,7 @@ query getFixedProductMarketMakerTrades(
             outcomeTokenAmounts
             outcomeTokenMarginalPrices
             fee
+            category
         }
     }
 }
@@ -805,7 +788,7 @@ def get_omen_bets(
     end_time: t.Optional[datetime],
 ) -> list[OmenBet]:
     if not end_time:
-        end_time = datetime.now()
+        end_time = utcnow()
 
     # Initialize id_gt for the first batch of bets to zero
     id_gt: str = "0"
@@ -961,6 +944,21 @@ def omen_prepare_condition_tx(
     )
 
 
+def omen_create_market_deposit_tx(
+    initial_funds: xDai,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+) -> TxReceipt:
+    web3 = Web3(Web3.HTTPProvider(GNOSIS_RPC_URL))
+    return omen_deposit_collateral_token_tx(
+        web3=web3,
+        collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
+        amount_wei=xdai_to_wei(initial_funds),
+        from_address=from_address,
+        from_private_key=from_private_key,
+    )
+
+
 def omen_create_market_tx(
     initial_funds: xDai,
     question: str,
@@ -977,7 +975,6 @@ def omen_create_market_tx(
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
     web3 = Web3(Web3.HTTPProvider(GNOSIS_RPC_URL))
-    from_address_checksummed = Web3.to_checksum_address(from_address)
 
     initial_funds_wei = xdai_to_wei(initial_funds)
     fee_wei = xdai_to_wei(
@@ -1012,35 +1009,20 @@ def omen_create_market_tx(
             "The oracle's conditional tokens address is not the same as we are using."
         )
 
-    # Get the current nonce for the given from_address.
-    # If making multiple transactions quickly after each other,
-    # it's better to increae it manually (otherwise we could get stale value from the network and error out).
-    nonce: Nonce = web3.eth.get_transaction_count(from_address_checksummed)
-
     # Approve the market maker to withdraw our collateral token.
     omen_approve_market_maker_to_spend_collateral_token_tx(
         web3=web3,
         market_maker_contract_address=OMEN_FPMM_FACTORY_CONTRACT_ADDRESS,
         collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
         amount_wei=initial_funds_wei,
-        from_address=from_address_checksummed,
+        from_address=from_address,
         from_private_key=from_private_key,
-        tx_params={"nonce": nonce},
     )
-    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
 
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
     if auto_deposit and initial_funds_wei > 0:
-        omen_deposit_collateral_token_tx(
-            web3=web3,
-            collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
-            amount_wei=initial_funds_wei,
-            from_address=from_address_checksummed,
-            from_private_key=from_private_key,
-            tx_params={"nonce": nonce},
-        )
-        nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
+        omen_create_market_deposit_tx(initial_funds, from_address, from_private_key)
 
     # Create the question on Realitio.
     question_id = omen_realitio_ask_question_tx(
@@ -1051,11 +1033,9 @@ def omen_create_market_tx(
         language=language,
         arbitrator=Arbitrator.KLEROS,
         opening=closing_time,  # The question is opened at the closing time of the market.
-        from_address=from_address_checksummed,
+        from_address=from_address,
         from_private_key=from_private_key,
-        tx_params={"nonce": nonce},
     )
-    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
 
     # Construct the condition id.
     condition_id = omen_construct_condition_id(
@@ -1070,11 +1050,9 @@ def omen_create_market_tx(
             question_id=question_id,
             oracle_address=OMEN_ORACLE_CONTRACT_ADDRESS,
             outcomes_slot_count=len(outcomes),
-            from_address=from_address_checksummed,
+            from_address=from_address,
             from_private_key=from_private_key,
-            tx_params={"nonce": nonce},
         )
-        nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
 
     # Create the market.
     create_market_receipt_tx = call_function_on_contract_tx(
@@ -1095,9 +1073,7 @@ def omen_create_market_tx(
             initialFunds=initial_funds_wei,
             distributionHint=[],
         ),
-        tx_params={"nonce": nonce},
     )
-    nonce = Nonce(nonce + ONE_NONCE)  # Increase after each tx.
 
     # Note: In the Omen's Typescript code, there is futher a creation of `stakingRewardsFactoryAddress`,
     # (https://github.com/protofire/omen-exchange/blob/763d9c9d05ebf9edacbc1dbaa561aa5d08813c0f/app/src/services/cpk/fns.ts#L979)

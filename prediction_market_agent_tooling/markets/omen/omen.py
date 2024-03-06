@@ -2,7 +2,6 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
-
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket

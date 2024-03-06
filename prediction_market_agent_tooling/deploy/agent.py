@@ -5,11 +5,8 @@ import time
 import typing as t
 from datetime import datetime
 
-import git
-
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
-    COMMIT_KEY,
     MARKET_TYPE_KEY,
     REPOSITORY_KEY,
 )
@@ -106,7 +103,6 @@ def {entrypoint_function_name}(request) -> str:
         }
         env_vars = (env_vars or {}) | {
             REPOSITORY_KEY: repository,
-            COMMIT_KEY: git.Repo(search_parent_directories=True).head.object.hexsha,
         }
         secrets = secrets or {}
 

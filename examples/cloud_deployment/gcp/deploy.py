@@ -3,7 +3,6 @@ import json
 from enum import Enum
 
 import typer
-from pydantic.types import SecretStr
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (

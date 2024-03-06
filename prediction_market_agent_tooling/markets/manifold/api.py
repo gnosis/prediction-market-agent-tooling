@@ -64,7 +64,10 @@ def get_manifold_binary_markets(
 
         for market in markets:
             if created_after and market.createdTime < created_after:
-                continue
+                if sort == "newest":
+                    break
+                else:
+                    continue
             all_markets.append(market)
 
         if len(all_markets) >= limit:

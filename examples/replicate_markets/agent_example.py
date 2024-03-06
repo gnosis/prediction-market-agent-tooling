@@ -11,6 +11,8 @@ from prediction_market_agent_tooling.deploy.agent import DeployableAgent, Market
 from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     omen_create_market_deposit_tx,
+)
+from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
 )
 

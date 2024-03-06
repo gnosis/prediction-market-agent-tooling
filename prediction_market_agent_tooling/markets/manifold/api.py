@@ -113,12 +113,7 @@ def get_authenticated_user(api_key: str) -> ManifoldUser:
         "Content-Type": "application/json",
     }
     response = requests.get(url, headers=headers)
-    try:
-        response.raise_for_status()
-    except requests.HTTPError as e:
-        raise ValueError(
-            f"Error: {e.response.status_code} {e.response.reason} {e.response.text}. API key: {api_key}"
-        )
+    response.raise_for_status()
     return ManifoldUser.model_validate(response.json())
 
 

@@ -34,6 +34,8 @@ def main(
         # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
         BET_FROM_PRIVATE_KEY=private_key_type(f"{from_private_key_secret_name}:latest"),
         OPENAI_API_KEY=SecretStr(f"{openai_api_key_secret_name}:latest"),
+        # Not needed for replication, won't be saved in the deployment.
+        MANIFOLD_API_KEY=None,
     )
 
     env_vars_parsed: dict[str, str] = (

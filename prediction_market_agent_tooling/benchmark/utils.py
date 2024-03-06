@@ -7,7 +7,8 @@ import requests
 from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.tools.utils import (
-    add_timezone_validator,
+    DatetimeWithTimezone,
+    add_utc_timezone_validator,
     should_not_happen,
 )
 
@@ -49,8 +50,8 @@ class Market(BaseModel):
     url: str
     p_yes: float
     volume: float
-    created_time: datetime
-    close_time: datetime
+    created_time: DatetimeWithTimezone
+    close_time: DatetimeWithTimezone
     resolution: CancelableMarketResolution | None = None
     outcomePrices: list[float] | None = None
 
@@ -63,10 +64,10 @@ class Market(BaseModel):
         return value
 
     _add_timezone_validator_created_time = field_validator("created_time")(
-        add_timezone_validator
+        add_utc_timezone_validator
     )
     _add_timezone_validator_close_time = field_validator("close_time")(
-        add_timezone_validator
+        add_utc_timezone_validator
     )
 
     @property
@@ -354,7 +355,9 @@ def get_polymarket_markets(
                     0
                 ],  # For binary markets on Polymarket, the first outcome is "Yes" and outcomePrices are equal to probabilities.
                 created_time=m_json["created_at"],
-                close_time=datetime.strptime(m_json["end_date_iso"], "%Y-%m-%d"),
+                close_time=add_utc_timezone_validator(
+                    datetime.strptime(m_json["end_date_iso"], "%Y-%m-%d")
+                ),
                 outcomePrices=m_json["outcomePrices"],
                 volume=m_json["volume"],
                 resolution=resolution,

@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 """
 Python API for Omen prediction market.
@@ -718,7 +719,7 @@ def get_omen_bets(
     end_time: t.Optional[datetime],
 ) -> list[OmenBet]:
     if not end_time:
-        end_time = datetime.now()
+        end_time = utcnow()
 
     # Initialize id_gt for the first batch of bets to zero
     id_gt: str = "0"

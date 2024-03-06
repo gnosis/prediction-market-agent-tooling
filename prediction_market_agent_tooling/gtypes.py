@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import NewType, Union
 
@@ -25,6 +26,7 @@ ABI = NewType("ABI", str)
 OmenOutcomeToken = NewType("OmenOutcomeToken", int)
 Probability = NewType("Probability", float)
 Mana = NewType("Mana", Decimal)  # Manifold's "currency"
+DatetimeWithTimezone = NewType("DatetimeWithTimezone", datetime)
 
 
 def usd_type(amount: Union[str, int, float, Decimal]) -> USD:

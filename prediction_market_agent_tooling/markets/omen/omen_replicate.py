@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.benchmark.utils import (
     get_markets,
 )
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -35,6 +36,8 @@ def omen_replicate_from_tx(
     already_created_markets = get_omen_binary_markets(
         limit=last_n_omen_markets_to_fetch,
         creator=from_address,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.NONE,
     )
     if len(already_created_markets) == last_n_omen_markets_to_fetch:
         raise ValueError(
@@ -73,6 +76,8 @@ def omen_replicate_from_tx(
         m.category
         for m in get_omen_binary_markets(
             limit=last_n_omen_markets_to_fetch,
+            sort_by=SortBy.NEWEST,
+            filter_by=FilterBy.NONE,
         )
     )
 

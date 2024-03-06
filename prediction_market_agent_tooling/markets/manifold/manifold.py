@@ -1,9 +1,14 @@
 import typing as t
+from datetime import datetime
 from decimal import Decimal
 from math import ceil
 
 from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.betting_strategies import (
     minimum_bet_to_win,
 )
@@ -44,12 +49,40 @@ class ManifoldAgentMarket(AgentMarket):
             id=model.id,
             question=model.question,
             outcomes=model.outcomes,
+            resolution=model.resolution,
+            created_time=model.createdTime,
             p_yes=Probability(model.probability),
         )
 
     @staticmethod
-    def get_binary_markets(limit: int) -> list[AgentMarket]:
+    def get_binary_markets(
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[datetime] = None,
+    ) -> list[AgentMarket]:
+        sort: t.Literal["newest", "close-date"]
+        if sort_by == SortBy.CLOSING_SOONEST:
+            sort = "close-date"
+        elif sort_by == SortBy.NEWEST:
+            sort = "newest"
+        else:
+            raise ValueError(f"Unknown sort_by: {sort_by}")
+
+        filter_: t.Literal["open", "resolved"]
+        if filter_by == FilterBy.OPEN:
+            filter_ = "open"
+        elif filter_by == FilterBy.RESOLVED:
+            filter_ = "resolved"
+        else:
+            raise ValueError(f"Unknown filter_by: {filter_by}")
+
         return [
             ManifoldAgentMarket.from_data_model(m)
-            for m in get_manifold_binary_markets(limit=limit, sort="close-date")
+            for m in get_manifold_binary_markets(
+                limit=limit,
+                sort=sort,
+                created_after=created_after,
+                filter_=filter_,
+            )
         ]

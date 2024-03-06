@@ -18,14 +18,13 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import (
-    MarketType,
-    get_binary_markets,
-)
+from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
 from prediction_market_agent_tooling.monitor.monitor_app import DEPLOYED_AGENT_TYPE_MAP
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
+
+MAX_AVAILABLE_MARKETS = 20
 
 
 class DeployableAgent:
@@ -154,7 +153,14 @@ def {entrypoint_function_name}(request) -> str:
         return market.get_tiny_bet_amount()
 
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
-        available_markets = get_binary_markets(market_type)
+        cls = MARKET_TYPE_MAP.get(market_type)
+        if not cls:
+            raise ValueError(f"Unknown market type: {market_type}")
+
+        # Fetch the soonest closing markets to choose from
+        available_markets = cls.get_binary_markets(
+            limit=MAX_AVAILABLE_MARKETS, sort_by=SortBy.CLOSING_SOONEST
+        )
         markets = self.pick_markets(available_markets)
         for market in markets:
             result = self.answer_binary_market(market)

@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
     ProfitAmount,
+    Resolution,
     ResolvedBet,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -24,6 +25,7 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
+INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
@@ -44,7 +46,6 @@ class OmenMarket(BaseModel):
     id: HexAddress
     title: str
     category: str
-    creationTimestamp: int
     collateralVolume: Wei
     usdVolume: USD
     collateralToken: HexAddress
@@ -52,6 +53,26 @@ class OmenMarket(BaseModel):
     outcomeTokenAmounts: list[OmenOutcomeToken]
     outcomeTokenMarginalPrices: t.Optional[list[xDai]]
     fee: t.Optional[Wei]
+    resolutionTimestamp: t.Optional[int] = None
+    answerFinalizedTimestamp: t.Optional[int] = None
+    currentAnswer: t.Optional[str] = None
+    creationTimestamp: t.Optional[int] = None
+
+    @property
+    def answer_index(self) -> t.Optional[int]:
+        return int(self.currentAnswer, 16) if self.currentAnswer else None
+
+    @property
+    def has_valid_answer(self) -> bool:
+        return self.answer_index is not None and self.answer_index != INVALID_ANSWER
+
+    @property
+    def is_open(self) -> bool:
+        return self.currentAnswer is None
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.answerFinalizedTimestamp is not None and self.has_valid_answer
 
     @property
     def question(self) -> str:
@@ -59,7 +80,7 @@ class OmenMarket(BaseModel):
 
     @property
     def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp)
+        return datetime.fromtimestamp(check_not_none(self.creationTimestamp))
 
     @property
     def market_maker_contract_address(self) -> HexAddress:
@@ -86,39 +107,41 @@ class OmenMarket(BaseModel):
         )
 
     @property
-    def p_yes(self) -> Probability:
-        return check_not_none(
-            self.outcomeTokenProbabilities,
-            "outcomeTokenProbabilities not available",
-        )[self.outcomes.index(OMEN_TRUE_OUTCOME)]
-
-    @property
     def p_no(self) -> Probability:
         return Probability(1 - self.p_yes)
 
+    @property
+    def p_yes(self) -> Probability:
+        """
+        Calculate the probability of the outcomes from the relative token amounts.
+
+        Note, not all markets reliably have outcomeTokenMarginalPrices, hence we
+        use the relative proportion of outcomeTokenAmounts to calculate the
+        probabilities.
+
+        The higher the proportion of available outcome tokens for a given outcome,
+        the the lower the price of that token, and therefore the lower the
+        probability of that outcome.
+        """
+        if self.outcomeTokenAmounts is None:
+            raise ValueError(
+                f"Market with title {self.title} has no outcomeTokenAmounts."
+            )
+        if len(self.outcomeTokenAmounts) != 2:
+            raise ValueError(
+                f"Market with title {self.title} has {len(self.outcomeTokenAmounts)} outcomes."
+            )
+        true_index = self.outcomes.index(OMEN_TRUE_OUTCOME)
+
+        if sum(self.outcomeTokenAmounts) == 0:
+            return Probability(0.5)
+
+        return Probability(
+            1 - self.outcomeTokenAmounts[true_index] / sum(self.outcomeTokenAmounts)
+        )
+
     def __repr__(self) -> str:
         return f"Omen's market: {self.title}"
-
-
-class OmenBetCreator(BaseModel):
-    id: HexAddress
-
-
-class OmenBetFPMM(BaseModel):
-    id: HexAddress
-    outcomes: list[str]
-    title: str
-    answerFinalizedTimestamp: t.Optional[int] = None
-    currentAnswer: t.Optional[str] = None
-    isPendingArbitration: bool
-    arbitrationOccurred: bool
-    openingTimestamp: int
-
-    @property
-    def is_resolved(self) -> bool:
-        return (
-            self.answerFinalizedTimestamp is not None and self.currentAnswer is not None
-        )
 
     @property
     def is_binary(self) -> bool:
@@ -133,8 +156,20 @@ class OmenBetFPMM(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        outcome: str = self.outcomes[int(check_not_none(self.currentAnswer), 16)]
+        outcome: str = self.outcomes[check_not_none(self.answer_index)]
         return get_boolean_outcome(outcome)
+
+    def get_resolution_enum(self) -> t.Optional[Resolution]:
+        if not self.is_resolved:
+            return None
+        if self.boolean_outcome:
+            return Resolution.YES
+        else:
+            return Resolution.NO
+
+
+class OmenBetCreator(BaseModel):
+    id: HexAddress
 
 
 class OmenBet(BaseModel):
@@ -152,7 +187,7 @@ class OmenBet(BaseModel):
     outcomeIndex: int
     outcomeTokensTraded: int
     transactionHash: HexAddress
-    fpmm: OmenBetFPMM
+    fpmm: OmenMarket
 
     @property
     def creation_datetime(self) -> datetime:
@@ -189,6 +224,8 @@ class OmenBet(BaseModel):
             created_time=self.creation_datetime,
             market_question=self.title,
             market_outcome=self.fpmm.boolean_outcome,
-            resolved_time=datetime.fromtimestamp(self.fpmm.answerFinalizedTimestamp),  # type: ignore # TODO Mypy doesn't understand that self.fpmm.is_resolved is True and therefore timestamp is known non-None
+            resolved_time=datetime.fromtimestamp(
+                check_not_none(self.fpmm.resolutionTimestamp)
+            ),
             profit=self.get_profit(),
         )

@@ -22,6 +22,7 @@ class MarketSource(str, Enum):
 class MarketFilter(str, Enum):
     open = "open"
     resolved = "resolved"
+    closing_this_month = "closing-this-month"
 
 
 class MarketSort(str, Enum):
@@ -44,10 +45,12 @@ class CancelableMarketResolution(str, Enum):
 class Market(BaseModel):
     source: MarketSource
     question: str
+    category: str | None = None
     url: str
     p_yes: float
     volume: float
     created_time: datetime
+    close_time: datetime
     resolution: CancelableMarketResolution | None = None
     outcomePrices: list[float] | None = None
 
@@ -59,7 +62,12 @@ class Market(BaseModel):
             raise ValueError("outcomePrices must have exactly 2 elements.")
         return value
 
-    _add_timezone_validator = field_validator("created_time")(add_timezone_validator)
+    _add_timezone_validator_created_time = field_validator("created_time")(
+        add_timezone_validator
+    )
+    _add_timezone_validator_close_time = field_validator("close_time")(
+        add_timezone_validator
+    )
 
     @property
     def is_resolved(self) -> bool:
@@ -203,7 +211,11 @@ def get_manifold_markets(
         m["source"] = MarketSource.MANIFOLD
 
     # Map JSON fields to Market fields
-    fields_map = {"probability": "p_yes", "createdTime": "created_time"}
+    fields_map = {
+        "probability": "p_yes",
+        "createdTime": "created_time",
+        "closeTime": "close_time",
+    }
     process_values = {
         "resolution": lambda v: v.lower() if v else None,
     }
@@ -325,20 +337,31 @@ def get_polymarket_markets(
             )
         )
 
+        # On Polymarket, there are markets that are actually a group of multiple Yes/No markets, for example https://polymarket.com/event/presidential-election-winner-2024.
+        # But API returns them individually, and then we receive questions such as "Will any other Republican Politician win the 2024 US Presidential Election?",
+        # which are naturally unpredictable without futher details.
+        # Also, URLs constructed for them with the logic below don't work.
+        # This is a heuristic to filter them out.
+        if len(m_json["events"]) > 1 or m_json["events"][0]["slug"] != m_json["slug"]:
+            continue
+
         markets.append(
             Market(
                 question=m_json["question"],
+                category=m_json["category"],
                 url=f"https://polymarket.com/event/{m_json['slug']}",
                 p_yes=m_json["outcomePrices"][
                     0
                 ],  # For binary markets on Polymarket, the first outcome is "Yes" and outcomePrices are equal to probabilities.
                 created_time=m_json["created_at"],
+                close_time=datetime.strptime(m_json["end_date_iso"], "%Y-%m-%d"),
                 outcomePrices=m_json["outcomePrices"],
                 volume=m_json["volume"],
                 resolution=resolution,
                 source=MarketSource.POLYMARKET,
             )
         )
+
     return markets
 
 
@@ -359,6 +382,8 @@ def get_markets(
     elif source == MarketSource.POLYMARKET:
         if sort is not None:
             raise ValueError(f"Polymarket doesn't support sorting.")
+        if filter_ == MarketFilter.closing_this_month:
+            raise ValueError(f"Polymarket doesn't support filtering by closing soon.")
         return get_polymarket_markets(
             limit=number,
             excluded_questions=excluded_questions,

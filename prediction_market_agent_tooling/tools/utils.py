@@ -3,6 +3,7 @@ import subprocess
 from datetime import datetime
 from typing import NoReturn, Optional, Type, TypeVar
 
+import git
 import pytz
 
 T = TypeVar("T")
@@ -69,3 +70,11 @@ def add_timezone_validator(value: datetime) -> datetime:
     if value.tzinfo is None:
         value = value.replace(tzinfo=pytz.UTC)
     return value
+
+
+def get_current_git_commit_sha() -> str:
+    return git.Repo(search_parent_directories=True).head.commit.hexsha
+
+
+def get_current_git_branch() -> str:
+    return git.Repo(search_parent_directories=True).active_branch.name

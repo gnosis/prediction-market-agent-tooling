@@ -10,7 +10,6 @@ from prediction_market_agent_tooling.benchmark.utils import (
     MarketResolution,
     MarketSource,
     OutcomePrediction,
-    get_markets,
 )
 
 
@@ -62,7 +61,18 @@ def test_benchmark_run(
     dummy_agent: DummyAgent, dummy_agent_no_prediction: DummyAgentNoPrediction
 ) -> None:
     benchmarker = bm.Benchmarker(
-        markets=get_markets(number=1, source=MarketSource.MANIFOLD),
+        markets=[
+            Market(
+                source=MarketSource.MANIFOLD,
+                question="Will GNO go up?",
+                url="...",
+                p_yes=0.1,
+                volume=1,
+                category="...",
+                close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
+                created_time=datetime.datetime.now(),
+            )
+        ],
         agents=[dummy_agent, dummy_agent_no_prediction],
     )
     benchmarker.run_agents()
@@ -93,7 +103,18 @@ def test_cache() -> None:
 def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         cache_path = f"{tmpdir}/cache.json"
-        markets = get_markets(number=1, source=MarketSource.MANIFOLD)
+        markets = [
+            Market(
+                source=MarketSource.MANIFOLD,
+                question="Will GNO go up?",
+                url="...",
+                p_yes=0.1,
+                volume=1,
+                category="...",
+                close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
+                created_time=datetime.datetime.now(),
+            )
+        ]
         benchmarker = bm.Benchmarker(
             markets=markets,
             agents=[dummy_agent],
@@ -154,6 +175,8 @@ def test_benchmarker_cancelled_markets() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.CANCEL,
         )
@@ -177,6 +200,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.CANCEL,
         ).probable_resolution
@@ -188,6 +213,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.YES,
         ).probable_resolution
@@ -200,6 +227,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
             resolution=CancelableMarketResolution.NO,
         ).probable_resolution
@@ -212,6 +241,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.1,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
         ).probable_resolution
         == MarketResolution.NO
@@ -223,6 +254,8 @@ def test_market_probable_resolution() -> None:
             url="...",
             p_yes=0.8,
             volume=1,
+            category="...",
+            close_time=datetime.datetime.now() + datetime.timedelta(hours=24),
             created_time=datetime.datetime.now(),
         ).probable_resolution
         == MarketResolution.YES

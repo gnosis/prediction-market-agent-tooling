@@ -1,6 +1,6 @@
 import typer
 
-from prediction_market_agent_tooling.gtypes import PrivateKey, xdai_type
+from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     get_market,
@@ -39,7 +39,7 @@ def buy(
     omen_buy_outcome_tx(
         amount=xdai_type(amount),
         from_address=verify_address(from_address),
-        from_private_key=PrivateKey(from_private_key),
+        from_private_key=private_key_type(from_private_key),
         market=market,
         outcome=outcome,
         auto_deposit=auto_deposit,
@@ -73,7 +73,7 @@ def sell(
     omen_sell_outcome_tx(
         amount=xdai_type(amount),
         from_address=verify_address(from_address),
-        from_private_key=PrivateKey(from_private_key),
+        from_private_key=private_key_type(from_private_key),
         market=market,
         outcome=outcome,
         auto_withdraw=auto_withdraw,

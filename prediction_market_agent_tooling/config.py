@@ -23,6 +23,10 @@ class APIKeys(BaseSettings):
     MANIFOLD_API_KEY: t.Optional[SecretStr] = None
     BET_FROM_ADDRESS: t.Optional[ChecksumAddress] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
+    OPENAI_API_KEY: t.Optional[SecretStr] = None
+
+    ENABLE_CACHE: bool = True
+    CACHE_DIR: str = "./.cache"
 
     @property
     def manifold_api_key(self) -> SecretStr:
@@ -46,16 +50,22 @@ class APIKeys(BaseSettings):
             "BET_FROM_PRIVATE_KEY missing in the environment.",
         )
 
+    @property
+    def openai_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."
+        )
+
     def model_dump_public(self) -> dict[str, t.Any]:
         return {
             k: v
             for k, v in self.model_dump().items()
-            if APIKeys.model_fields[k].annotation not in SECRET_TYPES
+            if APIKeys.model_fields[k].annotation not in SECRET_TYPES and v is not None
         }
 
     def model_dump_secrets(self) -> dict[str, t.Any]:
         return {
             k: v.get_secret_value() if isinstance(v, SecretStr) else v
             for k, v in self.model_dump().items()
-            if APIKeys.model_fields[k].annotation in SECRET_TYPES
+            if APIKeys.model_fields[k].annotation in SECRET_TYPES and v is not None
         }

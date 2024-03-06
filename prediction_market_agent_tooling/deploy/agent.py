@@ -5,11 +5,8 @@ import time
 import typing as t
 from datetime import datetime
 
-import git
-
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
-    COMMIT_KEY,
     MARKET_TYPE_KEY,
     REPOSITORY_KEY,
 )
@@ -82,6 +79,7 @@ class DeployableAgent:
         cron_schedule: str | None = None,
         gcp_fname: str | None = None,
         start_time: datetime | None = None,
+        timeout: int = 180,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
@@ -105,7 +103,6 @@ def {entrypoint_function_name}(request) -> str:
         }
         env_vars = (env_vars or {}) | {
             REPOSITORY_KEY: repository,
-            COMMIT_KEY: git.Repo(search_parent_directories=True).head.object.hexsha,
         }
         secrets = secrets or {}
 
@@ -134,6 +131,7 @@ def {entrypoint_function_name}(request) -> str:
                 secrets=secrets,
                 memory=memory,
                 entrypoint_function_name=entrypoint_function_name,
+                timeout=timeout,
             )
 
         # Check that the function is deployed

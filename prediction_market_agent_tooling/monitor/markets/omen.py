@@ -9,7 +9,7 @@ from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.markets.omen.omen import get_bets
+from prediction_market_agent_tooling.markets.omen.omen import get_resolved_omen_bets
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
@@ -20,12 +20,12 @@ class DeployedOmenAgent(DeployedAgent):
     omen_public_key: ChecksumAddress
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
-        bets = get_bets(
+        bets = get_resolved_omen_bets(
             better_address=self.omen_public_key,
             start_time=self.start_time,
             end_time=self.end_time,
         )
-        return [b.to_generic_resolved_bet() for b in bets if b.fpmm.is_resolved]
+        return [b.to_generic_resolved_bet() for b in bets]
 
     @staticmethod
     def from_api_keys(

@@ -46,7 +46,6 @@ class OmenMarket(BaseModel):
     id: HexAddress
     title: str
     category: str
-    creationTimestamp: int
     collateralVolume: Wei
     usdVolume: USD
     collateralToken: HexAddress
@@ -81,7 +80,7 @@ class OmenMarket(BaseModel):
 
     @property
     def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp)
+        return datetime.fromtimestamp(check_not_none(self.creationTimestamp))
 
     @property
     def market_maker_contract_address(self) -> HexAddress:

@@ -277,6 +277,9 @@ def construct_query_get_fixed_product_markets_makers(
         query = query.replace("resolutionTimestamp_not: null", "")
     elif filter_by == FilterBy.RESOLVED:
         query = query.replace("answerFinalizedTimestamp: null", "")
+    elif filter_by == FilterBy.NONE:
+        query = query.replace("answerFinalizedTimestamp: null", "")
+        query = query.replace("resolutionTimestamp_not: null", "")
     else:
         raise ValueError(f"Unknown filter_by: {filter_by}")
 

@@ -111,7 +111,7 @@ class OmenMarket(BaseModel):
         probabilities.
 
         The higher the proportion of available outcome tokens for a given outcome,
-        the the lower the proce of that token, and therefore the lower the
+        the the lower the price of that token, and therefore the lower the
         probability of that outcome.
         """
         if self.outcomeTokenAmounts is None:

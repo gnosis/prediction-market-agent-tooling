@@ -21,8 +21,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 """
 Python API for Omen prediction market.
@@ -227,39 +227,6 @@ query getFixedProductMarketMaker($id: String!) {
     }
 }
 """
-
-
-def construct_query_get_fixed_product_markets_makers(include_creator: bool) -> str:
-    query = """query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $creator: Bytes = null) {
-        fixedProductMarketMakers(
-            where: {
-                creator: $creator,
-                isPendingArbitration: false,
-                outcomes: $outcomes
-            },
-            orderBy: creationTimestamp,
-            orderDirection: desc,
-            first: $first
-        ) {
-            id
-            title
-            category
-            creationTimestamp
-            collateralVolume
-            usdVolume
-            collateralToken
-            outcomes
-            outcomeTokenAmounts
-            outcomeTokenMarginalPrices
-            fee
-        }
-    }"""
-
-    if not include_creator:
-        # If we aren't filtering by query, we need to remove it from where, otherwise "creator: null" will return 0 results.
-        query = query.replace("creator: $creator,", "")
-
-    return query
 
 
 def construct_query_get_fixed_product_markets_makers(include_creator: bool) -> str:

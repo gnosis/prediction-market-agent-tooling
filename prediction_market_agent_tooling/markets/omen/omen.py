@@ -359,6 +359,21 @@ def omen_approve_all_market_maker_to_move_conditionaltokens_tx(
     )
 
 
+def omen_get_balance_of_erc20_token(
+    web3: Web3,
+    contract_address: ChecksumAddress,
+    for_address: ChecksumAddress,
+) -> Wei:
+    balance: Wei = call_function_on_contract(
+        web3=web3,
+        contract_address=contract_address,
+        contract_abi=WXDAI_ABI,
+        function_name="balanceOf",
+        function_params=[for_address],
+    )
+    return balance
+
+
 def omen_deposit_collateral_token_tx(
     web3: Web3,
     collateral_token_contract_address: ChecksumAddress,
@@ -534,7 +549,12 @@ def omen_buy_outcome_tx(
     )
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
-    if auto_deposit:
+    collateral_token_balance = omen_get_balance_of_erc20_token(
+        web3=web3,
+        contract_address=market.collateral_token_contract_address_checksummed,
+        for_address=from_address_checksummed,
+    )
+    if auto_deposit and collateral_token_balance < amount_wei:
         omen_deposit_collateral_token_tx(
             web3=web3,
             collateral_token_contract_address=market.collateral_token_contract_address_checksummed,
@@ -869,15 +889,24 @@ def omen_create_market_deposit_tx(
     initial_funds: xDai,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-) -> TxReceipt:
+) -> TxReceipt | None:
     web3 = Web3(Web3.HTTPProvider(GNOSIS_RPC_URL))
-    return omen_deposit_collateral_token_tx(
+    amount_wei = xdai_to_wei(initial_funds)
+    balance = omen_get_balance_of_erc20_token(
         web3=web3,
-        collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
-        amount_wei=xdai_to_wei(initial_funds),
-        from_address=from_address,
-        from_private_key=from_private_key,
+        contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
+        for_address=from_address,
     )
+    if balance < amount_wei:
+        return omen_deposit_collateral_token_tx(
+            web3=web3,
+            collateral_token_contract_address=DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS,
+            amount_wei=amount_wei,
+            from_address=from_address,
+            from_private_key=from_private_key,
+        )
+    else:
+        return None
 
 
 def omen_create_market_tx(

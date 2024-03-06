@@ -147,10 +147,7 @@ class OmenMarket(BaseModel):
         if not self.is_resolved:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
-        try:
-            outcome: str = self.outcomes[check_not_none(self.answer_index)]
-        except IndexError:
-            breakpoint()
+        outcome: str = self.outcomes[check_not_none(self.answer_index)]
         return get_boolean_outcome(outcome)
 
     def get_resolution_enum(self) -> t.Optional[Resolution]:
@@ -164,44 +161,6 @@ class OmenMarket(BaseModel):
 
 class OmenBetCreator(BaseModel):
     id: HexAddress
-
-
-class OmenBetFPMM(BaseModel):  # TODO replace with OmenMarket
-    id: HexAddress
-    outcomes: list[str]
-    title: str
-    answerFinalizedTimestamp: t.Optional[int] = None
-    resolutionTimestamp: t.Optional[int] = None
-    currentAnswer: t.Optional[str] = None
-    isPendingArbitration: bool
-    arbitrationOccurred: bool
-    openingTimestamp: int
-
-    @property
-    def is_resolved(self) -> bool:
-        return (
-            self.answerFinalizedTimestamp is not None and self.currentAnswer is not None
-        )
-
-    @property
-    def is_binary(self) -> bool:
-        return len(self.outcomes) == 2
-
-    @property
-    def answer_index(self) -> t.Optional[int]:
-        return int(self.currentAnswer, 16) if self.currentAnswer else None
-
-    @property
-    def boolean_outcome(self) -> bool:
-        if not self.is_binary:
-            raise ValueError(
-                f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
-            )
-        if not self.is_resolved:
-            raise ValueError(f"Bet with title {self.title} is not resolved.")
-
-        outcome: str = self.outcomes[check_not_none(self.answer_index)]
-        return get_boolean_outcome(outcome)
 
 
 class OmenBet(BaseModel):
@@ -219,7 +178,7 @@ class OmenBet(BaseModel):
     outcomeIndex: int
     outcomeTokensTraded: int
     transactionHash: HexAddress
-    fpmm: OmenBetFPMM
+    fpmm: OmenMarket
 
     @property
     def creation_datetime(self) -> datetime:

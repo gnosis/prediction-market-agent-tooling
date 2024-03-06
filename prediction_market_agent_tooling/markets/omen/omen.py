@@ -783,6 +783,12 @@ query getFixedProductMarketMakerTrades(
             condition {
                 id
             }
+            collateralVolume
+            usdVolume
+            collateralToken
+            outcomeTokenAmounts
+            outcomeTokenMarginalPrices
+            fee
         }
     }
 }

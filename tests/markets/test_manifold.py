@@ -1,9 +1,10 @@
+import os
 from datetime import datetime, timedelta
 
 import pytest
 import pytz
+from dotenv import load_dotenv
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import mana_type
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
@@ -16,6 +17,8 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from tests.utils import RUN_PAID_TESTS
+
+load_dotenv()
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
@@ -34,7 +37,7 @@ def test_manifold_markets() -> None:
 
 
 def test_manifold_bets() -> None:
-    api_key = check_not_none(APIKeys().MANIFOLD_API_KEY).get_secret_value()
+    api_key = check_not_none(os.getenv("MANIFOLD_API_KEY"))
     start_time = datetime(2020, 2, 1, tzinfo=pytz.UTC)
     user_id = get_authenticated_user(api_key).id
     bets = get_manifold_bets(
@@ -46,7 +49,7 @@ def test_manifold_bets() -> None:
 
 
 def test_resolved_manifold_bets() -> None:
-    api_key = check_not_none(APIKeys().MANIFOLD_API_KEY).get_secret_value()
+    api_key = check_not_none(os.getenv("MANIFOLD_API_KEY"))
     start_time = datetime(2024, 2, 20, tzinfo=pytz.UTC)
     user_id = get_authenticated_user(api_key).id
     resolved_bets = get_resolved_manifold_bets(

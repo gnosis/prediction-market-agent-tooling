@@ -22,6 +22,11 @@ from prediction_market_agent_tooling.tools.utils import check_not_none
 from tests.utils import RUN_PAID_TESTS
 
 
+@pytest.fixture
+def a_bet_from_address() -> str:
+    return "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"
+
+
 def test_omen_pick_binary_market() -> None:
     market = pick_binary_market()
     assert market.outcomes == [
@@ -63,10 +68,10 @@ def test_omen_buy_and_sell_outcome() -> None:
     )
 
 
-def test_get_bets() -> None:
-    AN_ADDRESS = Web3.to_checksum_address("0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307")
+def test_get_bets(a_bet_from_address: str) -> None:
+    better_address = Web3.to_checksum_address(a_bet_from_address)
     bets = get_omen_bets(
-        better_address=AN_ADDRESS,
+        better_address=better_address,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 21),
     )
@@ -108,10 +113,10 @@ def test_filter_markets() -> None:
     assert len(markets) == limit
 
 
-def test_resolved_omen_bets() -> None:
-    AN_ADDRESS = Web3.to_checksum_address("0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307")
+def test_resolved_omen_bets(a_bet_from_address: str) -> None:
+    better_address = Web3.to_checksum_address(a_bet_from_address)
     resolved_bets = get_resolved_omen_bets(
-        better_address=AN_ADDRESS,
+        better_address=better_address,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 28),
     )

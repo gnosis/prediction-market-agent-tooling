@@ -11,7 +11,10 @@ from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
+from prediction_market_agent_tooling.deploy.gcp.utils import (
+    get_gcp_function,
+    list_gcp_functions,
+)
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.tools.utils import (
@@ -115,6 +118,10 @@ class DeployedAgent(BaseModel):
                 "raw_env_vars": dict(function.service_config.environment_variables),
             },
         )
+
+    @classmethod
+    def from_gcp_function_name(cls: t.Type[C], function_name: str) -> C:
+        return cls.from_gcp_function(get_gcp_function(function_name))
 
     @classmethod
     def from_all_gcp_functions(

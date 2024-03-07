@@ -1,8 +1,10 @@
 import os
 
 import requests
-from web3.types import Wei
 
+from prediction_market_agent_tooling.gtypes import ChainID, Wei
+
+GNOSIS_NETWORK_ID = ChainID(100)  # xDai network.
 GNOSIS_RPC_URL = os.getenv("GNOSIS_RPC_URL", "https://gnosis-rpc.publicnode.com")
 
 

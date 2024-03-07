@@ -9,12 +9,13 @@ from prediction_market_agent_tooling.benchmark.utils import MarketSource
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent, MarketType
 from prediction_market_agent_tooling.gtypes import xdai_type
-from prediction_market_agent_tooling.markets.omen.omen import (
-    omen_create_market_deposit_tx,
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenCollateralTokenContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
 )
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 class ReplicateSettings(BaseSettings):
@@ -40,11 +41,13 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         deposit_funds_per_replication = xdai_type(
             initial_funds_per_market * settings.N_TO_REPLICATE
         )
+        deposit_funds_per_replication_wei = xdai_to_wei(deposit_funds_per_replication)
+        collateral_token_contract = OmenCollateralTokenContract()
 
         print(f"Replicating from {MarketSource.MANIFOLD}.")
         # Deposit enough of xDai for all N markets to be replicated, so we don't re-deposit in case of re-tries.
-        omen_create_market_deposit_tx(
-            deposit_funds_per_replication,
+        collateral_token_contract.deposit(
+            deposit_funds_per_replication_wei,
             keys.bet_from_address,
             keys.bet_from_private_key,
         )
@@ -59,8 +62,8 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         )
         print(f"Replicating from {MarketSource.POLYMARKET}.")
         # Deposit enough of xDai for all N markets to be replicated, so we don't re-deposit in case of re-tries.
-        omen_create_market_deposit_tx(
-            deposit_funds_per_replication,
+        collateral_token_contract.deposit(
+            deposit_funds_per_replication_wei,
             keys.bet_from_address,
             keys.bet_from_private_key,
         )

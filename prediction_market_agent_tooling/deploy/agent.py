@@ -152,15 +152,21 @@ def {entrypoint_function_name}(request) -> str:
         """
         return market.get_tiny_bet_amount()
 
-    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+    def get_markets(
+        self,
+        market_type: MarketType,
+        limit: int = MAX_AVAILABLE_MARKETS,
+        sort_by: SortBy = SortBy.CLOSING_SOONEST,
+    ) -> list[AgentMarket]:
         cls = MARKET_TYPE_MAP.get(market_type)
         if not cls:
             raise ValueError(f"Unknown market type: {market_type}")
-
         # Fetch the soonest closing markets to choose from
-        available_markets = cls.get_binary_markets(
-            limit=MAX_AVAILABLE_MARKETS, sort_by=SortBy.CLOSING_SOONEST
-        )
+        available_markets = cls.get_binary_markets(limit=limit, sort_by=sort_by)
+        return available_markets
+
+    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+        available_markets = self.get_markets(market_type)
         markets = self.pick_markets(available_markets)
         for market in markets:
             result = self.answer_binary_market(market)

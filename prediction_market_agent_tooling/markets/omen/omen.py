@@ -1,18 +1,45 @@
 import typing as t
+from datetime import datetime
 from decimal import Decimal
 
 import requests
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    HexAddress,
+    PrivateKey,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
-from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+    OmenBet,
+    OmenMarket,
+)
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OMEN_DEFAULT_MARKET_FEE,
+    Arbitrator,
+    OmenCollateralTokenContract,
+    OmenConditionalTokenContract,
+    OmenFixedProductMarketMakerContract,
+    OmenFixedProductMarketMakerFactoryContract,
+    OmenOracleContract,
+    OmenRealitioContract,
+)
+from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.web3_utils import (
+    add_fraction,
+    remove_fraction,
+    xdai_to_wei,
+)
 
 """
 Python API for Omen prediction market.
@@ -23,6 +50,7 @@ but to not use our own credits, seems we can use their api deployment directly: 
 
 OMEN_QUERY_BATCH_SIZE = 1000
 OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
+THEGRAPH_QUERY_URL = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
 
 
 class OmenAgentMarket(AgentMarket):
@@ -87,44 +115,6 @@ class OmenAgentMarket(AgentMarket):
             )
         ]
 
-
-import typing as t
-from datetime import datetime
-
-import requests
-from web3 import Web3
-
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    HexAddress,
-    PrivateKey,
-    xDai,
-)
-from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_FALSE_OUTCOME,
-    OMEN_TRUE_OUTCOME,
-    OmenBet,
-    OmenMarket,
-)
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OMEN_DEFAULT_MARKET_FEE,
-    Arbitrator,
-    OmenCollateralTokenContract,
-    OmenConditionalTokenContract,
-    OmenFixedProductMarketMakerContract,
-    OmenFixedProductMarketMakerFactoryContract,
-    OmenOracleContract,
-    OmenRealitioContract,
-)
-from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import (
-    add_fraction,
-    remove_fraction,
-    xdai_to_wei,
-)
-
-OMEN_QUERY_BATCH_SIZE = 1000
-THEGRAPH_QUERY_URL = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
 
 _QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER = """
 query getFixedProductMarketMaker($id: String!) {

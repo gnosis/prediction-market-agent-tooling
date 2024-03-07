@@ -34,6 +34,8 @@ jobs:
       - uses: ./.github/actions/python_prepare
       - name: 'Google Cloud Auth'
         uses: ./.github/actions/gcp_prepare
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Run pytest
         run: poetry run pytest
 
@@ -48,6 +50,8 @@ jobs:
       - uses: ./.github/actions/python_prepare
       - name: 'Google Cloud Auth'
         uses: ./.github/actions/gcp_prepare
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Run pytest
         run: poetry run pytest
         env:

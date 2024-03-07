@@ -1,13 +1,15 @@
 import typing as t
 from datetime import date, datetime, timedelta
 
+import pytz
 import streamlit as st
 
-from prediction_market_agent_tooling.benchmark.utils import (
-    Market,
-    get_manifold_markets_dated,
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )
@@ -24,6 +26,8 @@ from prediction_market_agent_tooling.tools.utils import (
     check_not_none,
     utcnow,
 )
+
+MAX_MONITOR_MARKETS = 1000
 
 DEPLOYED_AGENT_TYPE_MAP: dict[MarketType, type[DeployedAgent]] = {
     MarketType.MANIFOLD: DeployedManifoldAgent,
@@ -55,30 +59,22 @@ def get_deployed_agents(
 def get_open_and_resolved_markets(
     start_time: datetime,
     market_type: MarketType,
-) -> tuple[list[Market], list[Market]]:
-    open_markets: list[Market]
-    resolved_markets: list[Market]
+) -> tuple[list[AgentMarket], list[AgentMarket]]:
+    cls = check_not_none(MARKET_TYPE_MAP.get(market_type))
 
-    if market_type == MarketType.MANIFOLD:
-        open_markets = get_manifold_markets_dated(
-            oldest_date=start_time, filter_="open"
-        )
-        resolved_markets = [
-            m
-            for m in get_manifold_markets_dated(
-                oldest_date=start_time, filter_="resolved"
-            )
-            if not m.has_unsuccessful_resolution
-        ]
-
-    elif market_type == MarketType.OMEN:
-        # TODO: Add Omen market support: https://github.com/gnosis/prediction-market-agent-tooling/issues/56
-        open_markets = []
-        resolved_markets = []
-
-    else:
-        raise ValueError(f"Unknown market type: {market_type}")
-
+    open_markets = cls.get_binary_markets(
+        limit=MAX_MONITOR_MARKETS,
+        sort_by=SortBy.NEWEST,
+        created_after=start_time,
+        filter_by=FilterBy.OPEN,
+    )
+    resolved_markets = cls.get_binary_markets(
+        limit=MAX_MONITOR_MARKETS,
+        sort_by=SortBy.NEWEST,
+        created_after=start_time,
+        filter_by=FilterBy.RESOLVED,
+    )
+    resolved_markets = [m for m in resolved_markets if m.has_successful_resolution()]
     return open_markets, resolved_markets
 
 
@@ -112,7 +108,11 @@ def monitor_app() -> None:
             start_time=start_time,
         )
 
-    oldest_start_time = min(agent.start_time for agent in agents)
+    oldest_start_time = (
+        min(agent.start_time for agent in agents)
+        if agents
+        else datetime(2020, 1, 1, tzinfo=pytz.UTC)
+    )
 
     st.subheader("Market resolution")
     with st.spinner("Loading markets"):

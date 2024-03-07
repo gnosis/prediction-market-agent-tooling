@@ -1,10 +1,27 @@
 import typing as t
+from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import Probability
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.markets.data_models import (
+    BetAmount,
+    Currency,
+    Resolution,
+)
+
+
+class SortBy(str, Enum):
+    CLOSING_SOONEST = "closing-soonest"
+    NEWEST = "newest"
+
+
+class FilterBy(str, Enum):
+    OPEN = "open"
+    RESOLVED = "resolved"
+    NONE = "none"
 
 
 class AgentMarket(BaseModel):
@@ -18,6 +35,8 @@ class AgentMarket(BaseModel):
     id: str
     question: str
     outcomes: list[str]
+    resolution: t.Optional[Resolution] = None
+    created_time: datetime
     p_yes: Probability
 
     @property
@@ -34,8 +53,19 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
-    def get_binary_markets(limit: int) -> list["AgentMarket"]:
+    def get_binary_markets(
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[datetime] = None,
+    ) -> list["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
+
+    def is_resolved(self) -> bool:
+        return self.resolution is not None
+
+    def has_successful_resolution(self) -> bool:
+        return self.resolution in [Resolution.YES, Resolution.NO]
 
     def get_outcome_str(self, outcome_index: int) -> str:
         try:

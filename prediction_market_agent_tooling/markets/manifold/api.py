@@ -8,7 +8,6 @@ from prediction_market_agent_tooling.gtypes import Mana
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
-    Resolution,
     ResolvedBet,
 )
 from prediction_market_agent_tooling.markets.manifold.data_models import (
@@ -26,30 +25,57 @@ https://docs.manifold.markets/api#get-v0search-markets
 Note: There is an existing wrapper here: https://github.com/vluzko/manifoldpy. Consider using that instead.
 """
 
+MARKETS_LIMIT = 1000  # Manifold will only return up to 1000 markets
+
 
 def get_manifold_binary_markets(
     limit: int,
     term: str = "",
     topic_slug: t.Optional[str] = None,
-    sort: str = "liquidity",
+    sort: t.Literal["liquidity", "score", "newest", "close-date"] = "liquidity",
+    filter_: t.Literal[
+        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
+    ] = "open",
+    created_after: t.Optional[datetime] = None,
 ) -> list[ManifoldMarket]:
+    all_markets: list[ManifoldMarket] = []
+
     url = "https://api.manifold.markets/v0/search-markets"
     params: dict[str, t.Union[str, int, float]] = {
         "term": term,
         "sort": sort,
-        "limit": limit,
-        "filter": "open",
+        "filter": filter_,
+        "limit": min(limit, MARKETS_LIMIT),
         "contractType": "BINARY",
     }
     if topic_slug:
         params["topicSlug"] = topic_slug
-    response = requests.get(url, params=params)
 
-    response.raise_for_status()
-    data = response.json()
+    offset = 0
+    while True:
+        params["offset"] = offset
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        markets = [ManifoldMarket.model_validate(x) for x in data]
 
-    markets = [ManifoldMarket.model_validate(x) for x in data]
-    return markets
+        if not markets:
+            break
+
+        for market in markets:
+            if created_after and market.createdTime < created_after:
+                if sort == "newest":
+                    break
+                else:
+                    continue
+            all_markets.append(market)
+
+        if len(all_markets) >= limit:
+            break
+
+        offset += len(markets)
+
+    return all_markets[:limit]
 
 
 def pick_binary_market() -> ManifoldMarket:
@@ -137,7 +163,7 @@ def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
     if not market.resolutionTime:
         raise ValueError(f"Market {market.id} has no resolution time.")
 
-    market_outcome = market.get_resolution_enum() == Resolution.YES
+    market_outcome = market.get_resolved_boolean_outcome()
     return ResolvedBet(
         amount=BetAmount(amount=bet.amount, currency=Currency.Mana),
         outcome=bet.get_resolved_boolean_outcome(),

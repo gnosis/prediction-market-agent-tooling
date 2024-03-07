@@ -1,20 +1,30 @@
 import time
 from datetime import datetime
 
+import numpy as np
 import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
     get_market,
     get_omen_bets,
+    get_omen_binary_markets,
+    get_resolved_omen_bets,
     pick_binary_market,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from tests.utils import RUN_PAID_TESTS
+
+
+@pytest.fixture
+def a_bet_from_address() -> str:
+    return "0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307"
 
 
 def test_omen_pick_binary_market() -> None:
@@ -58,10 +68,10 @@ def test_omen_buy_and_sell_outcome() -> None:
     )
 
 
-def test_get_bets() -> None:
-    AN_ADDRESS = Web3.to_checksum_address("0x3666DA333dAdD05083FEf9FF6dDEe588d26E4307")
+def test_get_bets(a_bet_from_address: str) -> None:
+    better_address = Web3.to_checksum_address(a_bet_from_address)
     bets = get_omen_bets(
-        better_address=AN_ADDRESS,
+        better_address=better_address,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 21),
     )
@@ -70,3 +80,51 @@ def test_get_bets() -> None:
         bets[0].id
         == "0x5b1457bb7525eed03d3c78a542ce6d89be6090e10x3666da333dadd05083fef9ff6ddee588d26e43070x1"
     )
+
+
+def test_p_yes() -> None:
+    # Find a market with outcomeTokenMarginalPrices and verify that p_yes is correct.
+    for m in get_omen_binary_markets(
+        limit=200,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.OPEN,
+    ):
+        if m.outcomeTokenProbabilities is not None:
+            market = m
+            break
+    assert market is not None, "No market found with outcomeTokenProbabilities."
+    assert np.isclose(market.p_yes, check_not_none(market.outcomeTokenProbabilities)[0])
+
+
+def test_filter_markets() -> None:
+    limit = 100
+    markets = get_omen_binary_markets(
+        limit=limit,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.OPEN,
+    )
+    assert len(markets) == limit
+
+    markets = get_omen_binary_markets(
+        limit=limit,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.RESOLVED,
+    )
+    assert len(markets) == limit
+
+
+def test_resolved_omen_bets(a_bet_from_address: str) -> None:
+    better_address = Web3.to_checksum_address(a_bet_from_address)
+    resolved_bets = get_resolved_omen_bets(
+        better_address=better_address,
+        start_time=datetime(2024, 2, 20),
+        end_time=datetime(2024, 2, 28),
+    )
+
+    # Verify that the bets are unique.
+    assert len(resolved_bets) > 1
+    assert len(set([bet.id for bet in resolved_bets])) == len(resolved_bets)
+
+    # Verify that all bets convert to generic resolved bets.
+    for bet in resolved_bets:
+        bet.to_generic_resolved_bet()

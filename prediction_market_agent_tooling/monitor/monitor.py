@@ -10,13 +10,10 @@ from google.cloud.functions_v2.types.functions import Function
 from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from prediction_market_agent_tooling.benchmark.utils import (
-    CancelableMarketResolution,
-    Market,
-)
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.utils import list_gcp_functions
-from prediction_market_agent_tooling.markets.data_models import ResolvedBet
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
     add_utc_timezone_validator,
@@ -191,7 +188,9 @@ def monitor_agent(agent: DeployedAgent) -> None:
     st.table(bets_df)
 
 
-def monitor_market(open_markets: list[Market], resolved_markets: list[Market]) -> None:
+def monitor_market(
+    open_markets: list[AgentMarket], resolved_markets: list[AgentMarket]
+) -> None:
     date_to_open_yes_proportion = {
         d: np.mean([int(m.p_yes > 0.5) for m in markets])
         for d, markets in groupby(open_markets, lambda x: x.created_time.date())
@@ -201,10 +200,10 @@ def monitor_market(open_markets: list[Market], resolved_markets: list[Market]) -
             [
                 (
                     1
-                    if m.resolution == CancelableMarketResolution.YES
+                    if m.resolution == Resolution.YES
                     else (
                         0
-                        if m.resolution == CancelableMarketResolution.NO
+                        if m.resolution == Resolution.NO
                         else should_not_happen(f"Unexpected resolution: {m.resolution}")
                     )
                 )
@@ -247,10 +246,10 @@ def monitor_market(open_markets: list[Market], resolved_markets: list[Market]) -
         [
             (
                 1
-                if m.resolution == CancelableMarketResolution.YES
+                if m.resolution == Resolution.YES
                 else (
                     0
-                    if m.resolution == CancelableMarketResolution.NO
+                    if m.resolution == Resolution.NO
                     else should_not_happen(f"Unexpected resolution: {m.resolution}")
                 )
             )

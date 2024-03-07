@@ -16,11 +16,3 @@ MARKET_TYPE_MAP: dict[MarketType, type[AgentMarket]] = {
     MarketType.MANIFOLD: ManifoldAgentMarket,
     MarketType.OMEN: OmenAgentMarket,
 }
-
-
-def get_binary_markets(market_type: MarketType, limit: int = 20) -> list[AgentMarket]:
-    cls = MARKET_TYPE_MAP.get(market_type)
-    if cls:
-        return cls.get_binary_markets(limit=limit)
-    else:
-        raise ValueError(f"Unknown market type: {market_type}")

@@ -1,5 +1,13 @@
+import json
+import os
+import random
 import typing as t
 from decimal import Decimal
+from enum import Enum
+
+import requests
+from web3 import Web3
+from web3.types import TxParams, TxReceipt, Wei
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
@@ -7,12 +15,17 @@ from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
 
+
 """
 Python API for Omen prediction market.
 
 Their API is available as graph on https://thegraph.com/explorer/subgraphs/9V1aHHwkK4uPWgBH6ZLzwqFEkoHTHPS7XHKyjZWe8tEf?view=Overview&chain=mainnet,
 but to not use our own credits, seems we can use their api deployment directly: https://api.thegraph.com/subgraphs/name/protofire/omen-xdai/graphql (link to the online playground)
 """
+
+OMEN_QUERY_BATCH_SIZE = 1000
+OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
+DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS = WXDAI_CONTRACT_ADDRESS
 
 
 class OmenAgentMarket(AgentMarket):
@@ -51,14 +64,28 @@ class OmenAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
+            resolution=model.get_resolution_enum() if model.is_resolved else None,
+            created_time=datetime.fromtimestamp(model.creationTimestamp)
+            if model.creationTimestamp
+            else datetime.min,
             p_yes=model.p_yes,
         )
 
     @staticmethod
-    def get_binary_markets(limit: int) -> list[AgentMarket]:
+    def get_binary_markets(
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[datetime] = None,
+    ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)
-            for m in get_omen_binary_markets(limit=limit)
+            for m in get_omen_binary_markets(
+                limit=limit,
+                sort_by=sort_by,
+                created_after=created_after,
+                filter_by=filter_by,
+            )
         ]
 
 
@@ -121,31 +148,58 @@ query getFixedProductMarketMaker($id: String!) {
 """
 
 
-def construct_query_get_fixed_product_markets_makers(include_creator: bool) -> str:
-    query = """query getFixedProductMarketMakers($first: Int!, $outcomes: [String!], $creator: Bytes = null) {
-        fixedProductMarketMakers(
-            where: {
-                creator: $creator,
-                isPendingArbitration: false,
-                outcomes: $outcomes
-            },
-            orderBy: creationTimestamp,
-            orderDirection: desc,
-            first: $first
+def construct_query_get_fixed_product_markets_makers(
+    include_creator: bool, filter_by: FilterBy
+) -> str:
+    query = """
+        query getFixedProductMarketMakers(
+            $first: Int!,
+            $outcomes: [String!],
+            $orderBy: String!,
+            $orderDirection: String!,
+            $creationTimestamp_gt: Int!,
+            $creator: Bytes = null,
         ) {
-            id
-            title
-            category
-            creationTimestamp
-            collateralVolume
-            usdVolume
-            collateralToken
-            outcomes
-            outcomeTokenAmounts
-            outcomeTokenMarginalPrices
-            fee
+            fixedProductMarketMakers(
+                where: {
+                    isPendingArbitration: false,
+                    outcomes: $outcomes
+                    creationTimestamp_gt: $creationTimestamp_gt
+                    creator: $creator,
+                    answerFinalizedTimestamp: null
+                    resolutionTimestamp_not: null
+                },
+                orderBy: creationTimestamp,
+                orderDirection: desc,
+                first: $first
+            ) {
+                id
+                title
+                collateralVolume
+                usdVolume
+                collateralToken
+                outcomes
+                outcomeTokenAmounts
+                outcomeTokenMarginalPrices
+                fee
+                answerFinalizedTimestamp
+                resolutionTimestamp
+                currentAnswer
+                creationTimestamp
+                category
+            }
         }
-    }"""
+    """
+
+    if filter_by == FilterBy.OPEN:
+        query = query.replace("resolutionTimestamp_not: null", "")
+    elif filter_by == FilterBy.RESOLVED:
+        query = query.replace("answerFinalizedTimestamp: null", "")
+    elif filter_by == FilterBy.NONE:
+        query = query.replace("answerFinalizedTimestamp: null", "")
+        query = query.replace("resolutionTimestamp_not: null", "")
+    else:
+        raise ValueError(f"Unknown filter_by: {filter_by}")
 
     if not include_creator:
         # If we aren't filtering by query, we need to remove it from where, otherwise "creator: null" will return 0 results.
@@ -154,36 +208,72 @@ def construct_query_get_fixed_product_markets_makers(include_creator: bool) -> s
     return query
 
 
+def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
+    """
+    Returns 'orderBy' and 'orderDirection' strings for the given SortBy.
+    """
+    if sort_by == SortBy.CLOSING_SOONEST:
+        return "creationTimestamp", "desc"  # TODO make more accurate
+    elif sort_by == SortBy.NEWEST:
+        return "creationTimestamp", "desc"
+    else:
+        raise ValueError(f"Unknown sort_by: {sort_by}")
+
+
 def get_omen_markets(
-    first: int, outcomes: list[str], creator: HexAddress | None = None
+    first: int,
+    outcomes: list[str],
+    sort_by: SortBy,
+    filter_by: FilterBy,
+    created_after: t.Optional[datetime] = None,
+    creator: t.Optional[HexAddress] = None,
 ) -> list[OmenMarket]:
+    order_by, order_direction = ordering_from_sort_by(sort_by)
     markets = requests.post(
         THEGRAPH_QUERY_URL,
         json={
             "query": construct_query_get_fixed_product_markets_makers(
-                include_creator=creator is not None
+                include_creator=creator is not None,
+                filter_by=filter_by,
             ),
             "variables": {
                 "first": first,
                 "outcomes": outcomes,
+                "orderBy": order_by,
+                "orderDirection": order_direction,
+                "creationTimestamp_gt": to_int_timestamp(created_after)
+                if created_after
+                else 0,
                 "creator": creator,
             },
         },
         headers={"Content-Type": "application/json"},
-    ).json()["data"]["fixedProductMarketMakers"]
+    ).json()
+    markets = markets["data"]["fixedProductMarketMakers"]
     return [OmenMarket.model_validate(market) for market in markets]
 
 
 def get_omen_binary_markets(
-    limit: int, creator: HexAddress | None = None
+    limit: int,
+    sort_by: SortBy,
+    filter_by: FilterBy,
+    created_after: t.Optional[datetime] = None,
+    creator: t.Optional[HexAddress] = None,
 ) -> list[OmenMarket]:
     return get_omen_markets(
-        limit, [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME], creator=creator
+        first=limit,
+        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        sort_by=sort_by,
+        created_after=created_after,
+        filter_by=filter_by,
+        creator=creator,
     )
 
 
-def pick_binary_market() -> OmenMarket:
-    return get_omen_binary_markets(limit=1)[0]
+def pick_binary_market(
+    sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
+) -> OmenMarket:
+    return get_omen_binary_markets(limit=1, sort_by=sort_by, filter_by=filter_by)[0]
 
 
 def get_market(market_id: str) -> OmenMarket:
@@ -233,7 +323,10 @@ def omen_buy_outcome_tx(
     )
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
-    if auto_deposit:
+    collateral_token_balance = collateral_token_contract.balanceOf(
+        for_address=from_address_checksummed,
+    )
+    if auto_deposit and collateral_token_balance < amount_wei:
         collateral_token_contract.deposit(
             amount_wei=amount_wei,
             from_address=from_address_checksummed,
@@ -391,6 +484,7 @@ query getFixedProductMarketMakerTrades(
             outcomes
             title
             answerFinalizedTimestamp
+            resolutionTimestamp
             currentAnswer
             isPendingArbitration
             arbitrationOccurred
@@ -398,6 +492,13 @@ query getFixedProductMarketMakerTrades(
             condition {
                 id
             }
+            collateralVolume
+            usdVolume
+            collateralToken
+            outcomeTokenAmounts
+            outcomeTokenMarginalPrices
+            fee
+            category
         }
     }
 }

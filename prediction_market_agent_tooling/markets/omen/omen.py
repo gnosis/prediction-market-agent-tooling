@@ -373,15 +373,9 @@ def omen_sell_outcome_tx(
     collateral_token = OmenCollateralTokenContract()
 
     # Verify, that markets uses conditional tokens that we expect.
-    markets_conditional_token_contract = OmenFixedProductMarketMakerContract(
-        address=market_contract.address
-    )
-    if (
-        markets_conditional_token_contract.conditionalTokens()
-        != conditional_token_contract.address
-    ):
+    if market_contract.conditionalTokens() != conditional_token_contract.address:
         raise ValueError(
-            f"Market {market.id} uses conditional token that we didn't expect, {markets_conditional_token_contract.conditionalTokens()} != {conditional_token_contract.address=}"
+            f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
         )
 
     # Get the index of the outcome we want to buy.

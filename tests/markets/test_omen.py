@@ -49,6 +49,7 @@ def test_omen_get_market() -> None:
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_omen_buy_and_sell_outcome() -> None:
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
+    # You can double check your address at https://gnosisscan.io/ afterwards.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     amount = xdai_type(0.001)
     keys = APIKeys()
@@ -73,6 +74,7 @@ def test_omen_buy_and_sell_outcome() -> None:
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_omen_create_market() -> None:
+    # You can double check on https://aiomen.eth.limo/#/newest afterwards.
     keys = APIKeys()
     omen_create_market_tx(
         initial_funds=xdai_type(0.001),

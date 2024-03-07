@@ -213,7 +213,7 @@ class OmenBet(BaseModel):
     def to_generic_resolved_bet(self) -> ResolvedBet:
         if not self.fpmm.is_resolved:
             raise ValueError(
-                f"Bet with title {self.title} is not resolved. It has no resolved time."
+                f"Bet with title {self.title} is not resolved. It has no resolution time."
             )
 
         return ResolvedBet(
@@ -225,7 +225,7 @@ class OmenBet(BaseModel):
             market_question=self.title,
             market_outcome=self.fpmm.boolean_outcome,
             resolved_time=datetime.fromtimestamp(
-                check_not_none(self.fpmm.resolutionTimestamp)
+                check_not_none(self.fpmm.answerFinalizedTimestamp)
             ),
             profit=self.get_profit(),
         )

@@ -12,6 +12,7 @@ env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   BET_FROM_ADDRESS: ${{ secrets.BET_FROM_ADDRESS }}
   BET_FROM_PRIVATE_KEY: ${{ secrets.BET_FROM_PRIVATE_KEY }}
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
 jobs:
   mypy:
@@ -31,6 +32,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/python_prepare
+      - name: 'Google Cloud Auth'
+        uses: ./.github/actions/gcp_prepare
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Run pytest
         run: poetry run pytest
 
@@ -43,6 +48,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/python_prepare
+      - name: 'Google Cloud Auth'
+        uses: ./.github/actions/gcp_prepare
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Run pytest
         run: poetry run pytest
         env:

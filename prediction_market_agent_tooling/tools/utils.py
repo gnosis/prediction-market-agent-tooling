@@ -76,7 +76,7 @@ def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
     if value.tzinfo is None:
         value = value.replace(tzinfo=pytz.UTC)
     if value.tzinfo != pytz.UTC:
-        raise ValueError(f"Invalid timezone: {value.tzinfo}")
+        value = value.astimezone(pytz.UTC)
     return cast(DatetimeWithTimezone, value)
 
 
@@ -90,3 +90,7 @@ def get_current_git_commit_sha() -> str:
 
 def get_current_git_branch() -> str:
     return git.Repo(search_parent_directories=True).active_branch.name
+
+
+def get_current_git_url() -> str:
+    return git.Repo(search_parent_directories=True).remotes.origin.url

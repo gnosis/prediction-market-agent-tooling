@@ -6,8 +6,8 @@ from prediction_market_agent_tooling.monitor.monitor_app import DEPLOYED_AGENT_T
 
 
 @pytest.mark.parametrize("market_type", list(MarketType))
-def test_monitor_market(market_type) -> None:
-    cls = DEPLOYED_AGENT_TYPE_MAP.get(market_type)
+def test_monitor_market(market_type: MarketType) -> None:
+    cls = DEPLOYED_AGENT_TYPE_MAP[market_type]
     agents = cls.from_all_gcp_functions()
     if len(agents) == 0:
         pytest.skip(f"No deployed agents found for {market_type}")

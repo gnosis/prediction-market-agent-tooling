@@ -51,7 +51,7 @@ def test_omen_buy_and_sell_outcome() -> None:
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
     # You can double check your address at https://gnosisscan.io/ afterwards.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
-    amount = xdai_type(0.001)
+    amount = xdai_type(0.00142)
     keys = APIKeys()
     binary_omen_buy_outcome_tx(
         amount=amount,

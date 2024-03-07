@@ -12,6 +12,7 @@ env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   BET_FROM_ADDRESS: ${{ secrets.BET_FROM_ADDRESS }}
   BET_FROM_PRIVATE_KEY: ${{ secrets.BET_FROM_PRIVATE_KEY }}
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
 jobs:
   mypy:

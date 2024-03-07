@@ -1,20 +1,18 @@
-import json
-import os
-import random
 import typing as t
 from decimal import Decimal
-from enum import Enum
 
 import requests
 from web3 import Web3
-from web3.types import TxParams, TxReceipt, Wei
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
-
 
 """
 Python API for Omen prediction market.
@@ -25,7 +23,6 @@ but to not use our own credits, seems we can use their api deployment directly: 
 
 OMEN_QUERY_BATCH_SIZE = 1000
 OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
-DEFAULT_COLLATERAL_TOKEN_CONTRACT_ADDRESS = WXDAI_CONTRACT_ADDRESS
 
 
 class OmenAgentMarket(AgentMarket):
@@ -65,9 +62,11 @@ class OmenAgentMarket(AgentMarket):
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
             resolution=model.get_resolution_enum() if model.is_resolved else None,
-            created_time=datetime.fromtimestamp(model.creationTimestamp)
-            if model.creationTimestamp
-            else datetime.min,
+            created_time=(
+                datetime.fromtimestamp(model.creationTimestamp)
+                if model.creationTimestamp
+                else datetime.min
+            ),
             p_yes=model.p_yes,
         )
 
@@ -241,9 +240,9 @@ def get_omen_markets(
                 "outcomes": outcomes,
                 "orderBy": order_by,
                 "orderDirection": order_direction,
-                "creationTimestamp_gt": to_int_timestamp(created_after)
-                if created_after
-                else 0,
+                "creationTimestamp_gt": (
+                    to_int_timestamp(created_after) if created_after else 0
+                ),
                 "creator": creator,
             },
         },
@@ -608,7 +607,14 @@ def omen_create_market_tx(
 
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
-    if auto_deposit and initial_funds_wei > 0:
+    collateral_token_balance = collateral_token_contract.balanceOf(
+        for_address=from_address,
+    )
+    if (
+        auto_deposit
+        and initial_funds_wei > 0
+        and collateral_token_balance < initial_funds_wei
+    ):
         collateral_token_contract.deposit(
             initial_funds_wei, from_address, from_private_key
         )

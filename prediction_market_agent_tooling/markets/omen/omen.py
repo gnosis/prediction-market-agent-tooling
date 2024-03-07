@@ -115,6 +115,11 @@ class OmenAgentMarket(AgentMarket):
             )
         ]
 
+    def get_contract(self) -> OmenFixedProductMarketMakerContract:
+        return OmenFixedProductMarketMakerContract(
+            address=self.market_maker_contract_address_checksummed
+        )
+
 
 _QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER = """
 query getFixedProductMarketMaker($id: String!) {
@@ -293,7 +298,7 @@ def omen_buy_outcome_tx(
     amount_wei = xdai_to_wei(amount)
     from_address_checksummed = Web3.to_checksum_address(from_address)
 
-    market_contract = OmenFixedProductMarketMakerContract.from_agent_market(market)
+    market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     collateral_token_contract = OmenCollateralTokenContract()
 
     # Get the index of the outcome we want to buy.
@@ -363,7 +368,7 @@ def omen_sell_outcome_tx(
     amount_wei = xdai_to_wei(amount)
     from_address_checksummed = Web3.to_checksum_address(from_address)
 
-    market_contract = OmenFixedProductMarketMakerContract.from_agent_market(market)
+    market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
     collateral_token = OmenCollateralTokenContract()
 

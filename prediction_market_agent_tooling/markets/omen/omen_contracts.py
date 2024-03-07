@@ -19,7 +19,6 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     xdai_type,
 )
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     ContractOnGnosisChain,
@@ -140,14 +139,6 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     # ! Note: This doesn't have a fixed contract address, as this is something created by the `OmenFixedProductMarketMakerFactory`.
     # Factory contract at https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0.
-
-    @staticmethod
-    def from_agent_market(
-        market: OmenAgentMarket,
-    ) -> "OmenFixedProductMarketMakerContract":
-        return OmenFixedProductMarketMakerContract(
-            address=market.market_maker_contract_address_checksummed
-        )
 
     def calcBuyAmount(
         self,

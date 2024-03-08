@@ -43,6 +43,14 @@ class AgentMarket(BaseModel):
     def p_no(self) -> float:
         return 1 - self.p_yes
 
+    @property
+    def boolean_outcome(self) -> bool:
+        if not self.has_successful_resolution():
+            raise ValueError(
+                "Market must have successful resolution to compute boolean outcome."
+            )
+        return self.resolution == Resolution.YES
+
     def get_bet_amount(self, amount: Decimal) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
 
@@ -80,3 +88,6 @@ class AgentMarket(BaseModel):
             return self.outcomes.index(outcome)
         except ValueError:
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
+
+    def get_squared_error(self) -> float:
+        return (self.p_yes - self.boolean_outcome) ** 2

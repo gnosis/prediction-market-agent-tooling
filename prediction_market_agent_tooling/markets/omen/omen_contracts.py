@@ -225,6 +225,9 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
+        """
+        Funding is added in Weis (xDai) and then converted to shares.
+        """
         # `addFunding` with `distribution_hint` can be used only during the market creation, so forcing empty here.
         distribution_hint: list[int] = []
         return self.send(
@@ -237,16 +240,19 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     def removeFunding(
         self,
-        remove_funding: Wei,
+        remove_funding_shares: int,
         from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
+        """
+        Remove funding is done in shares.
+        """
         return self.send(
             from_address=from_address,
             from_private_key=from_private_key,
             function_name="removeFunding",
-            function_params=[remove_funding],
+            function_params=[remove_funding_shares],
             tx_params=tx_params,
         )
 

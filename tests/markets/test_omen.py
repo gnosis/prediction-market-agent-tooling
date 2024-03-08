@@ -116,7 +116,7 @@ def test_omen_fund_and_remove_fund_market() -> None:
     time.sleep(10)  # Wait for the transaction to be mined.
     omen_remove_fund_market_tx(
         market=market,
-        funds=remove_fund,
+        shares=remove_fund,
         from_address=keys.bet_from_address,
         from_private_key=keys.bet_from_private_key,
         auto_withdraw=False,  # Switch to true after implemented.

@@ -690,16 +690,16 @@ def omen_fund_market_tx(
 
 def omen_remove_fund_market_tx(
     market: OmenAgentMarket,
-    funds: xDai,
+    shares: xDai,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     auto_withdraw: bool,
 ) -> None:
-    funds_wei = xdai_to_wei(funds)
+    shares_wei = xdai_to_wei(shares)
 
     market_contract = market.get_contract()
 
-    market_contract.removeFunding(funds_wei, from_address, from_private_key)
+    market_contract.removeFunding(shares_wei, from_address, from_private_key)
 
     # TODO: How to withdraw remove funding back to our wallet.
     if auto_withdraw:

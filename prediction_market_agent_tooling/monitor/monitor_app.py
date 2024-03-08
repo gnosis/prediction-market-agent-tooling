@@ -83,7 +83,6 @@ def monitor_app() -> None:
     market_type: MarketType = check_not_none(
         st.selectbox(label="Market type", options=list(MarketType), index=0)
     )
-    market_type = MarketType.OMEN
     start_time: DatetimeWithTimezone | None = (
         add_utc_timezone_validator(
             datetime.combine(

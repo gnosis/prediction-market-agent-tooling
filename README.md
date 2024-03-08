@@ -72,7 +72,7 @@ Monitor the performance of the agents deployed to GCP, as well as meta-metrics o
 This runs as a streamlit app on a localhost server, executed with:
 
 ```bash
-streamlit run examples/monitor/monitor.py
+PYTHONPATH=. streamlit run examples/monitor/monitor.py
 ```
 
 Which launches in the browser:

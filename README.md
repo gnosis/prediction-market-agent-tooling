@@ -14,6 +14,8 @@ python3.10 -m poetry shell
 
 Create a `.env` file in the root of the repo with the following variables:
 
+Deploying and monitoring agents using GCP requires that you set up the gcloud CLI (see [here](https://cloud.google.com/sdk/docs/install) for installation instructions, and use `gcloud auth login` to authorize.)
+
 ```bash
 MANIFOLD_API_KEY=...
 BET_FROM_ADDRESS=...

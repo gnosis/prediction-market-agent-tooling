@@ -653,3 +653,54 @@ def omen_create_market_tx(
         "address"
     ]  # The market address is available in the last emitted log, in the address field.
     return market_address
+
+
+def omen_fund_market_tx(
+    market: OmenAgentMarket,
+    funds: xDai,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    auto_deposit: bool,
+) -> None:
+    funds_wei = xdai_to_wei(funds)
+
+    market_contract = market.get_contract()
+    collateral_token_contract = OmenCollateralTokenContract()
+
+    # Deposit xDai to the collateral token,
+    # this can be skipped, if we know we already have enough collateral tokens.
+    if (
+        auto_deposit
+        and collateral_token_contract.balanceOf(
+            for_address=from_address,
+        )
+        < funds_wei
+    ):
+        collateral_token_contract.deposit(funds_wei, from_address, from_private_key)
+
+    collateral_token_contract.approve(
+        for_address=market_contract.address,
+        amount_wei=funds_wei,
+        from_address=from_address,
+        from_private_key=from_private_key,
+    )
+
+    market_contract.addFunding(funds_wei, from_address, from_private_key)
+
+
+def omen_remove_fund_market_tx(
+    market: OmenAgentMarket,
+    funds: xDai,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    auto_withdraw: bool,
+) -> None:
+    funds_wei = xdai_to_wei(funds)
+
+    market_contract = market.get_contract()
+
+    market_contract.removeFunding(funds_wei, from_address, from_private_key)
+
+    # TODO: How to withdraw remove funding back to our wallet.
+    if auto_withdraw:
+        raise NotImplementedError("TODO")

@@ -19,6 +19,8 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_omen_binary_markets,
     get_resolved_omen_bets,
     omen_create_market_tx,
+    omen_fund_market_tx,
+    omen_remove_fund_market_tx,
     pick_binary_market,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -89,6 +91,35 @@ def test_omen_create_market() -> None:
         from_private_key=keys.bet_from_private_key,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         auto_deposit=True,
+    )
+
+
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+def test_omen_fund_and_remove_fund_market() -> None:
+    # You can double check your address at https://gnosisscan.io/ afterwards or at the market's address.
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    print(
+        "Fund and remove funding market test address:",
+        market.market_maker_contract_address_checksummed,
+    )
+
+    funds = xdai_type(0.1)
+    remove_fund = xdai_type(0.01)
+    keys = APIKeys()
+    omen_fund_market_tx(
+        market=market,
+        funds=funds,
+        from_address=keys.bet_from_address,
+        from_private_key=keys.bet_from_private_key,
+        auto_deposit=True,
+    )
+    time.sleep(10)  # Wait for the transaction to be mined.
+    omen_remove_fund_market_tx(
+        market=market,
+        funds=remove_fund,
+        from_address=keys.bet_from_address,
+        from_private_key=keys.bet_from_private_key,
+        auto_withdraw=False,  # Switch to true after implemented.
     )
 
 

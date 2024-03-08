@@ -9,6 +9,8 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
@@ -16,6 +18,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_omen_bets,
     get_omen_binary_markets,
     get_resolved_omen_bets,
+    omen_create_market_tx,
     pick_binary_market,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -46,25 +49,46 @@ def test_omen_get_market() -> None:
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_omen_buy_and_sell_outcome() -> None:
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
+    # You can double check your address at https://gnosisscan.io/ afterwards.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
-    amount = xdai_type(0.001)
+    buy_amount = xdai_type(0.00142)
+    sell_amount = xdai_type(
+        buy_amount / 2
+    )  # There will be some fees, so this has to be lower.
     keys = APIKeys()
     binary_omen_buy_outcome_tx(
-        amount=amount,
+        amount=buy_amount,
         from_address=keys.bet_from_address,
         from_private_key=keys.bet_from_private_key,
         market=market,
         binary_outcome=True,
         auto_deposit=True,
     )
-    time.sleep(3.14)  # Wait for the transaction to be mined.
+    time.sleep(10)  # Wait for the transaction to be mined.
     binary_omen_sell_outcome_tx(
-        amount=amount,
+        amount=sell_amount,
         from_address=keys.bet_from_address,
         from_private_key=keys.bet_from_private_key,
         market=market,
         binary_outcome=True,
         auto_withdraw=True,
+    )
+
+
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+def test_omen_create_market() -> None:
+    # You can double check on https://aiomen.eth.limo/#/newest afterwards.
+    keys = APIKeys()
+    omen_create_market_tx(
+        initial_funds=xdai_type(0.001),
+        question="Will GNO hit $1000 by the end of the current year?",
+        closing_time=datetime(year=datetime.utcnow().year, day=24, month=12),
+        category="cryptocurrency",
+        language="en",
+        from_address=keys.bet_from_address,
+        from_private_key=keys.bet_from_private_key,
+        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        auto_deposit=True,
     )
 
 

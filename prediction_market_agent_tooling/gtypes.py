@@ -13,7 +13,11 @@ from hexbytes import (  # noqa: F401  # Import for the sake of easy importing wi
 )
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
-from web3.types import Wei
+from web3.types import (  # noqa: F401  # Import for the sake of easy importing with others from here.
+    TxParams,
+    TxReceipt,
+    Wei,
+)
 
 Wad = Wei  # Wei tends to be referred to as `wad` variable in contracts.
 USD = NewType(
@@ -27,6 +31,7 @@ OmenOutcomeToken = NewType("OmenOutcomeToken", int)
 Probability = NewType("Probability", float)
 Mana = NewType("Mana", Decimal)  # Manifold's "currency"
 DatetimeWithTimezone = NewType("DatetimeWithTimezone", datetime)
+ChainID = NewType("ChainID", int)
 
 
 def usd_type(amount: Union[str, int, float, Decimal]) -> USD:

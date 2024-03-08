@@ -1,4 +1,3 @@
-import os
 from decimal import Decimal
 from typing import Any, Optional, TypeVar
 
@@ -16,18 +15,8 @@ from prediction_market_agent_tooling.gtypes import (
     xdai_type,
 )
 
-GNOSIS_NETWORK_ID = 100  # xDai network.
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
-
-with open(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), "../abis/wxdai.abi.json")
-) as f:
-    # File content taken from https://gnosisscan.io/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d#code.
-    WXDAI_ABI = ABI(f.read())
-    WXDAI_CONTRACT_ADDRESS: ChecksumAddress = Web3.to_checksum_address(
-        "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
-    )
 
 
 def wei_to_xdai(wei: Wei) -> xDai:
@@ -107,7 +96,7 @@ def call_function_on_contract(
     retry=tenacity.retry_if_exception_message(match=".*wrong transaction nonce.*"),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
 )
-def call_function_on_contract_tx(
+def send_function_on_contract_tx(
     web3: Web3,
     *,
     contract_address: ChecksumAddress,

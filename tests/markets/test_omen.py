@@ -6,7 +6,8 @@ import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import xdai_type, omen_outcome_type
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
@@ -104,7 +105,7 @@ def test_omen_fund_and_remove_fund_market() -> None:
     )
 
     funds = xdai_type(0.1)
-    remove_fund = xdai_type(0.01)
+    remove_fund = omen_outcome_type(xdai_to_wei(xdai_type(0.01)))
     keys = APIKeys()
     omen_fund_market_tx(
         market=market,

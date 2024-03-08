@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     PrivateKey,
     xDai,
+    OmenOutcomeToken,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -690,16 +691,13 @@ def omen_fund_market_tx(
 
 def omen_remove_fund_market_tx(
     market: OmenAgentMarket,
-    shares: xDai,
+    shares: OmenOutcomeToken,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     auto_withdraw: bool,
 ) -> None:
-    shares_wei = xdai_to_wei(shares)
-
     market_contract = market.get_contract()
-
-    market_contract.removeFunding(shares_wei, from_address, from_private_key)
+    market_contract.removeFunding(shares, from_address, from_private_key)
 
     # TODO: How to withdraw remove funding back to our wallet.
     if auto_withdraw:

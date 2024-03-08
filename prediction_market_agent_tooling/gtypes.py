@@ -42,6 +42,10 @@ def wei_type(amount: Union[str, int]) -> Wei:
     return Wei(int(amount))
 
 
+def omen_outcome_type(amount: Union[str, int, Wei]) -> OmenOutcomeToken:
+    return OmenOutcomeToken(wei_type(amount))
+
+
 def xdai_type(amount: Union[str, int, float, Decimal]) -> xDai:
     return xDai(Decimal(amount))
 

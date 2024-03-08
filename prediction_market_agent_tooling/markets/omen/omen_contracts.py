@@ -240,7 +240,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     def removeFunding(
         self,
-        remove_funding_shares: int,
+        remove_funding: OmenOutcomeToken,
         from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
@@ -252,7 +252,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
             from_address=from_address,
             from_private_key=from_private_key,
             function_name="removeFunding",
-            function_params=[remove_funding_shares],
+            function_params=[remove_funding],
             tx_params=tx_params,
         )
 

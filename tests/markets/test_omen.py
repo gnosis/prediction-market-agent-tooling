@@ -6,8 +6,7 @@ import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type, omen_outcome_type
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
@@ -25,6 +24,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     pick_binary_market,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import RUN_PAID_TESTS
 
 

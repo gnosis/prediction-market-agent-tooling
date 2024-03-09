@@ -216,7 +216,7 @@ def monitor_brier_score(resolved_markets: list[AgentMarket]) -> None:
     - the overall brier score
     - the brier score for the last 30 markets
     """
-    st.subheader("Brier Score")
+    st.subheader("Brier Score (0-1, lower is better)")
 
     markets_to_squared_error = {
         m.created_time: m.get_squared_error() for m in resolved_markets
@@ -225,21 +225,21 @@ def monitor_brier_score(resolved_markets: list[AgentMarket]) -> None:
         markets_to_squared_error.items(), columns=["Date", "Squared Error"]
     ).sort_values(by="Date")
 
-    # Compute rolling mean squared error for last 10 markets
-    df["Rolling Mean Squared Error"] = df["Squared Error"].rolling(window=10).mean()
+    # Compute rolling mean squared error for last 30 markets
+    df["Rolling Mean Squared Error"] = df["Squared Error"].rolling(window=30).mean()
 
     col1, col2 = st.columns(2)
-    col1.metric(label="Overall", value=f"{df['Squared Error'].mean():.2f}")
+    col1.metric(label="Overall", value=f"{df['Squared Error'].mean():.3f}")
     col2.metric(
-        label="Last 30 markets", value=f"{df['Squared Error'].tail(30).mean():.2f}"
+        label="Last 30 markets", value=f"{df['Squared Error'].tail(30).mean():.3f}"
     )
 
     st.altair_chart(
         alt.Chart(df)
-        .mark_line()
+        .mark_line(interpolate="basis")
         .encode(
             x="Date:T",
-            y="Rolling Mean Squared Error:Q",
+            y=alt.Y("Rolling Mean Squared Error:Q", scale=alt.Scale(domain=[0, 1])),
         )
         .interactive(),
         use_container_width=True,

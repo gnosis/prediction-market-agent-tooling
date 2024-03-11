@@ -218,6 +218,44 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
             tx_params=tx_params,
         )
 
+    def addFunding(
+        self,
+        add_funding: Wei,
+        from_address: ChecksumAddress,
+        from_private_key: PrivateKey,
+        tx_params: t.Optional[TxParams] = None,
+    ) -> TxReceipt:
+        """
+        Funding is added in Weis (xDai) and then converted to shares.
+        """
+        # `addFunding` with `distribution_hint` can be used only during the market creation, so forcing empty here.
+        distribution_hint: list[int] = []
+        return self.send(
+            from_address=from_address,
+            from_private_key=from_private_key,
+            function_name="addFunding",
+            function_params=[add_funding, distribution_hint],
+            tx_params=tx_params,
+        )
+
+    def removeFunding(
+        self,
+        remove_funding: OmenOutcomeToken,
+        from_address: ChecksumAddress,
+        from_private_key: PrivateKey,
+        tx_params: t.Optional[TxParams] = None,
+    ) -> TxReceipt:
+        """
+        Remove funding is done in shares.
+        """
+        return self.send(
+            from_address=from_address,
+            from_private_key=from_private_key,
+            function_name="removeFunding",
+            function_params=[remove_funding],
+            tx_params=tx_params,
+        )
+
 
 class WrappedxDaiContract(ContractERC20OnGnosisChain):
     # File content taken from https://gnosisscan.io/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d#code.

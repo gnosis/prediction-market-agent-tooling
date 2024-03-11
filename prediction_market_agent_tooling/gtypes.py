@@ -14,6 +14,7 @@ from hexbytes import (  # noqa: F401  # Import for the sake of easy importing wi
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from web3.types import (  # noqa: F401  # Import for the sake of easy importing with others from here.
+    Nonce,
     TxParams,
     TxReceipt,
     Wei,
@@ -40,6 +41,10 @@ def usd_type(amount: Union[str, int, float, Decimal]) -> USD:
 
 def wei_type(amount: Union[str, int]) -> Wei:
     return Wei(int(amount))
+
+
+def omen_outcome_type(amount: Union[str, int, Wei]) -> OmenOutcomeToken:
+    return OmenOutcomeToken(wei_type(amount))
 
 
 def xdai_type(amount: Union[str, int, float, Decimal]) -> xDai:

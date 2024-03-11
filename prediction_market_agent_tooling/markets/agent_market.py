@@ -49,7 +49,7 @@ class AgentMarket(BaseModel):
             raise ValueError(
                 "Market must have successful resolution to compute boolean outcome."
             )
-        return self.resolution == Resolution.YES
+        return True if self.resolution == Resolution.YES else False if self.resolution == Resolution.NO else should_not_happen(f"Probably a bug in self.has_successful_resolution")
 
     def get_bet_amount(self, amount: Decimal) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)

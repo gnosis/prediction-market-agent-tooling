@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.markets.data_models import (
 class SortBy(str, Enum):
     CLOSING_SOONEST = "closing-soonest"
     NEWEST = "newest"
+    NONE = "none"
 
 
 class FilterBy(str, Enum):

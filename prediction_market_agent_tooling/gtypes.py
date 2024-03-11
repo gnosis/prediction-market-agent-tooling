@@ -30,6 +30,7 @@ ABI = NewType("ABI", str)
 OmenOutcomeToken = NewType("OmenOutcomeToken", int)
 Probability = NewType("Probability", float)
 Mana = NewType("Mana", Decimal)  # Manifold's "currency"
+USDC = NewType("USDC", Decimal)
 DatetimeWithTimezone = NewType("DatetimeWithTimezone", datetime)
 ChainID = NewType("ChainID", int)
 
@@ -48,6 +49,10 @@ def xdai_type(amount: Union[str, int, float, Decimal]) -> xDai:
 
 def mana_type(amount: Union[str, int, float, Decimal]) -> Mana:
     return Mana(Decimal(amount))
+
+
+def usdc_type(amount: Union[str, int, float, Decimal]) -> USDC:
+    return USDC(Decimal(amount))
 
 
 def private_key_type(k: str) -> PrivateKey:

@@ -6,7 +6,7 @@ from typing import NoReturn, Optional, Type, TypeVar, cast
 import git
 import pytz
 
-from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone
+from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, SecretStr
 
 T = TypeVar("T")
 
@@ -94,3 +94,8 @@ def get_current_git_branch() -> str:
 
 def get_current_git_url() -> str:
     return git.Repo(search_parent_directories=True).remotes.origin.url
+
+
+def secret_str_from_env(key: str) -> SecretStr | None:
+    value = os.getenv(key)
+    return SecretStr(value) if value else None

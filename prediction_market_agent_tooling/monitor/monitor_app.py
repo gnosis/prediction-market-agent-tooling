@@ -114,7 +114,7 @@ def monitor_app() -> None:
         else datetime(2020, 1, 1, tzinfo=pytz.UTC)
     )
 
-    st.subheader("Market resolution")
+    st.header("Market Info")
     with st.spinner("Loading markets"):
         open_markets, resolved_markets = get_open_and_resolved_markets(
             start_time=oldest_start_time, market_type=market_type
@@ -125,7 +125,7 @@ def monitor_app() -> None:
         else st.warning("No market data found.")
     )
 
-    st.subheader("Agent bets")
+    st.header("Agent Info")
     for agent in agents:
         with st.expander(f"Agent: '{agent.name}'"):
             monitor_agent(agent)

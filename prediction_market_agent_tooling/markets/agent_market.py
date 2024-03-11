@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     Resolution,
 )
+from prediction_market_agent_tooling.tools.utils import should_not_happen
 
 
 class SortBy(str, Enum):
@@ -42,6 +43,15 @@ class AgentMarket(BaseModel):
     @property
     def p_no(self) -> float:
         return 1 - self.p_yes
+
+    @property
+    def boolean_outcome(self) -> bool:
+        if self.resolution:
+            if self.resolution == Resolution.YES:
+                return True
+            elif self.resolution == Resolution.NO:
+                return False
+        should_not_happen(f"Market {self.id} does not have a successful resolution.")
 
     def get_bet_amount(self, amount: Decimal) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
@@ -80,3 +90,6 @@ class AgentMarket(BaseModel):
             return self.outcomes.index(outcome)
         except ValueError:
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
+
+    def get_squared_error(self) -> float:
+        return (self.p_yes - self.boolean_outcome) ** 2

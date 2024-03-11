@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 
 import numpy as np
@@ -23,6 +22,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_remove_fund_market_tx,
     pick_binary_market,
 )
+from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import RUN_PAID_TESTS
@@ -59,23 +59,24 @@ def test_omen_buy_and_sell_outcome() -> None:
         buy_amount / 2
     )  # There will be some fees, so this has to be lower.
     keys = APIKeys()
-    binary_omen_buy_outcome_tx(
-        amount=buy_amount,
-        from_address=keys.bet_from_address,
-        from_private_key=keys.bet_from_private_key,
-        market=market,
-        binary_outcome=True,
-        auto_deposit=True,
-    )
-    time.sleep(10)  # Wait for the transaction to be mined.
-    binary_omen_sell_outcome_tx(
-        amount=sell_amount,
-        from_address=keys.bet_from_address,
-        from_private_key=keys.bet_from_private_key,
-        market=market,
-        binary_outcome=True,
-        auto_withdraw=True,
-    )
+    with wait_until_nonce_changed(keys.bet_from_address):
+        binary_omen_buy_outcome_tx(
+            amount=buy_amount,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            market=market,
+            binary_outcome=True,
+            auto_deposit=True,
+        )
+    with wait_until_nonce_changed(keys.bet_from_address):
+        binary_omen_sell_outcome_tx(
+            amount=sell_amount,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            market=market,
+            binary_outcome=True,
+            auto_withdraw=True,
+        )
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
@@ -107,21 +108,22 @@ def test_omen_fund_and_remove_fund_market() -> None:
     funds = xdai_type(0.1)
     remove_fund = omen_outcome_type(xdai_to_wei(xdai_type(0.01)))
     keys = APIKeys()
-    omen_fund_market_tx(
-        market=market,
-        funds=funds,
-        from_address=keys.bet_from_address,
-        from_private_key=keys.bet_from_private_key,
-        auto_deposit=True,
-    )
-    time.sleep(10)  # Wait for the transaction to be mined.
-    omen_remove_fund_market_tx(
-        market=market,
-        shares=remove_fund,
-        from_address=keys.bet_from_address,
-        from_private_key=keys.bet_from_private_key,
-        auto_withdraw=False,  # Switch to true after implemented.
-    )
+    with wait_until_nonce_changed(keys.bet_from_address):
+        omen_fund_market_tx(
+            market=market,
+            funds=funds,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            auto_deposit=True,
+        )
+    with wait_until_nonce_changed(keys.bet_from_address):
+        omen_remove_fund_market_tx(
+            market=market,
+            shares=remove_fund,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            auto_withdraw=False,  # Switch to true after implemented.
+        )
 
 
 def test_get_bets(a_bet_from_address: str) -> None:

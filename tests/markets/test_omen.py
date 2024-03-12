@@ -186,3 +186,15 @@ def test_resolved_omen_bets(a_bet_from_address: str) -> None:
     # Verify that all bets convert to generic resolved bets.
     for bet in resolved_bets:
         bet.to_generic_resolved_bet()
+
+
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+def test_omen_buy_and_sell_outcome() -> None:
+    # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
+    # You can double check your address at https://gnosisscan.io/ afterwards.
+    """
+    ToDo once local chain can be started.
+        - Deposit into market (YES condition)
+        - Set market as finished (YES condition was true)
+        - Claim winnings
+    """

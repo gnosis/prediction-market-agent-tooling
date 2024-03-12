@@ -6,7 +6,6 @@ from prediction_market_agent_tooling.benchmark.utils import (
     MarketSource,
     get_markets,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
@@ -20,6 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_create_market_tx,
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 def omen_replicate_from_tx(

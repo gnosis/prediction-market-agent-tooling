@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
 
-import pytz
-
 from prediction_market_agent_tooling.benchmark.utils import (
     MarketFilter,
     MarketSort,
     MarketSource,
     get_markets,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
@@ -89,12 +88,12 @@ def omen_replicate_from_tx(
                 f"Skipping `{market.question}` because it seems to not be predictable."
             )
             continue
-        # Close a day sooner than the original market, because of timezone differences.
-        closing_time = market.close_time - timedelta(hours=24)
+        # It can happen that `closing_time` is after the true outcome will be known,
+        # but it's okay for us, we care more about not opening the realitio question too soon,
+        # and these two times can not be separated.
+        closing_time = market.close_time
         # Force at least 24 hours of open market.
-        soonest_allowed_closing_time = datetime.utcnow().replace(
-            tzinfo=pytz.UTC
-        ) + timedelta(hours=24)
+        soonest_allowed_closing_time = utcnow() + timedelta(hours=24)
         if closing_time <= soonest_allowed_closing_time:
             print(
                 f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_closing_time}."

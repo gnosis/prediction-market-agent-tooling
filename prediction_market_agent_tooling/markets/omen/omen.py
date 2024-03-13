@@ -24,12 +24,11 @@ from prediction_market_agent_tooling.markets.data_models import BetAmount, Curre
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
+    Condition,
     OmenBet,
     OmenMarket,
-    Condition,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
     OmenCollateralTokenContract,
     OmenConditionalTokenContract,

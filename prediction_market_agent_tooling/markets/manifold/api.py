@@ -62,13 +62,17 @@ def get_manifold_binary_markets(
         if not markets:
             break
 
+        found_all_new_markets = False
         for market in markets:
             if created_after and market.createdTime < created_after:
                 if sort == "newest":
+                    found_all_new_markets = True
                     break
                 else:
                     continue
             all_markets.append(market)
+        if found_all_new_markets:
+            break
 
         if len(all_markets) >= limit:
             break

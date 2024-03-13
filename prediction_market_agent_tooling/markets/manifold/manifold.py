@@ -58,8 +58,8 @@ class ManifoldAgentMarket(AgentMarket):
     def get_binary_markets(
         limit: int,
         sort_by: SortBy,
-        created_after: t.Optional[datetime] = None,
         filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[datetime] = None,
     ) -> list[AgentMarket]:
         sort: t.Literal["newest", "close-date"]
         if sort_by == SortBy.CLOSING_SOONEST:

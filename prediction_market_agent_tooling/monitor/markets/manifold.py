@@ -15,7 +15,6 @@ from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
 )
-from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone
 
 
@@ -23,13 +22,12 @@ class DeployedManifoldAgent(DeployedAgent):
     manifold_user_id: str
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
-        manifold_bets = get_resolved_manifold_bets(
+        bets, markets = get_resolved_manifold_bets(
             user_id=self.manifold_user_id,
             start_time=self.start_time,
             end_time=self.end_time,
         )
-
-        return par_map(manifold_bets, manifold_to_generic_resolved_bet)
+        return [manifold_to_generic_resolved_bet(b, m) for b, m in zip(bets, markets)]
 
     @staticmethod
     def from_api_keys(

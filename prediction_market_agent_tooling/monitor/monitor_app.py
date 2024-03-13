@@ -1,5 +1,7 @@
 import typing as t
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
+from functools import partial
 
 import pytz
 import streamlit as st
@@ -62,19 +64,27 @@ def get_open_and_resolved_markets(
 ) -> tuple[list[AgentMarket], list[AgentMarket]]:
     cls = check_not_none(MARKET_TYPE_MAP.get(market_type))
 
-    open_markets = cls.get_binary_markets(
-        limit=MAX_MONITOR_MARKETS,
-        sort_by=SortBy.NEWEST,
-        created_after=start_time,
-        filter_by=FilterBy.OPEN,
-    )
-    resolved_markets = cls.get_binary_markets(
-        limit=MAX_MONITOR_MARKETS,
-        sort_by=SortBy.NEWEST,
-        created_after=start_time,
-        filter_by=FilterBy.RESOLVED,
-    )
-    resolved_markets = [m for m in resolved_markets if m.has_successful_resolution()]
+    common_args = (MAX_MONITOR_MARKETS, SortBy.NEWEST, start_time)
+    with ThreadPoolExecutor() as executor:
+        get_open_markets = partial(
+            cls.get_binary_markets,
+            *common_args,
+            FilterBy.OPEN,
+        )
+        get_resolved_markets = partial(
+            cls.get_binary_markets,
+            *common_args,
+            FilterBy.RESOLVED,
+        )
+
+        future_open_markets = executor.submit(get_open_markets)
+        future_resolved_markets = executor.submit(get_resolved_markets)
+        open_markets = future_open_markets.result()
+        resolved_markets = future_resolved_markets.result()
+        resolved_markets = [
+            m for m in resolved_markets if m.has_successful_resolution()
+        ]
+
     return open_markets, resolved_markets
 
 

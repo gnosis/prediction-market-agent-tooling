@@ -103,8 +103,8 @@ class OmenAgentMarket(AgentMarket):
     def get_binary_markets(
         limit: int,
         sort_by: SortBy,
-        filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
+        filter_by: FilterBy = FilterBy.OPEN,
     ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)

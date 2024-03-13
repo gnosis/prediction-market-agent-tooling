@@ -86,54 +86,14 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
-    def redeemPositions(self):
-        market = OmenAgentMarket.from_data_model(get_market(market_id))
-        print(f"market {market} {market.is_resolved()}")
-
-        # ToDo - Check how much we can redeem
-        # rpc_url = "https://light-distinguished-isle.xdai.quiknode.pro/398333e0cb68ee18d38f5cda5deecd5676754923/"
-        # Using forked local Gnosis chain for testing
-        # rpc_url = "http://127.0.0.1:8545"
-        rpc_url = "https://rpc.tenderly.co/fork/000e6ff5-8ef3-4741-8aaa-022d39f81e08"
-        w3 = Web3(Web3.HTTPProvider(rpc_url))
-        print(w3.is_connected())
-        market_contract = market.get_contract()
-
-        market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
-        conditional_token_contract = OmenConditionalTokenContract()
-
-        # Verify, that markets uses conditional tokens that we expect.
-        if market_contract.conditionalTokens() != conditional_token_contract.address:
-            raise ValueError(
-                f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
-            )
-
-        # `redeemPositions` function params:
-        collateral_token_address = market.collateral_token_contract_address_checksummed
-        # ToDo - No condition
-        condition_id = market.condition.id
-        parent_collection_id = HASH_ZERO  # Taken from Olas
-        index_sets = market.condition.index_sets  # Taken from Olas
-
-        if not market.is_resolved():
-            raise RuntimeError("Cannot redeem winnings if market is not yet resolved")
-
-        # ToDo - Add types
-        w3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
-        keys = APIKeys()
-        result = conditional_token_contract.send(
-            from_address=keys.bet_from_address,
-            from_private_key=keys.bet_from_private_key,
-            function_name="redeemPositions",
-            function_params=[
-                collateral_token_address,
-                parent_collection_id,
-                condition_id,
-                index_sets,
-            ],
-            web3=w3,
+    def redeem_positions(
+        self, bet_from_address: ChecksumAddress, from_private_key: PrivateKey
+    ):
+        return omen_redeem_full_position_tx(
+            market=self,
+            from_address=bet_from_address,
+            from_private_key=from_private_key,
         )
-        print(result)
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -784,10 +744,6 @@ def omen_redeem_full_position_tx(
     from the ConditionalTokens contract to the agent contract, else no transfer occurs. In both cases, the
     transaction completes successfully.
     """
-    print("oi")
-    print(f"market {market} {market.is_resolved()}")
-
-    # rpc_url = "https://rpc.tenderly.co/fork/000e6ff5-8ef3-4741-8aaa-022d39f81e08"
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()

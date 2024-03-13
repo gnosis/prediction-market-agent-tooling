@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import requests
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -24,6 +25,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
     OmenBet,
     OmenMarket,
+    Condition,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
@@ -62,6 +64,7 @@ class OmenAgentMarket(AgentMarket):
     currency: t.ClassVar[Currency] = Currency.xDai
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
+    condition: Condition
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(0.00001), currency=self.currency)
@@ -97,6 +100,7 @@ class OmenAgentMarket(AgentMarket):
                 else datetime.min
             ),
             p_yes=model.p_yes,
+            condition=model.condition,
         )
 
     @staticmethod
@@ -142,6 +146,9 @@ query getFixedProductMarketMaker($id: String!) {
             id
             outcomeSlotCount
         }
+        answerFinalizedTimestamp
+        resolutionTimestamp
+        currentAnswer
     }
 }
 """
@@ -693,7 +700,13 @@ def omen_fund_market_tx(
     market_contract.addFunding(funds_wei, from_address, from_private_key)
 
 
-def omen_claim_winnings():
+def omen_claim_winnings(
+    market: OmenAgentMarket,
+    funds: xDai,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    auto_deposit: bool,
+):
     """
     See https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0#code -> `redeemPositions` function.
     Also see https://github.com/valory-xyz/trader/pull/59 for Olas implementation.

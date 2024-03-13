@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pytest
 from web3 import Web3
+from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type
@@ -196,9 +197,9 @@ def test_omen_redeem_positions() -> None:
     )  # Market on which agent previously betted on
     market = OmenAgentMarket.from_data_model(get_market(market_id))
     keys = APIKeys()
-    tx_receipt = omen_redeem_full_position_tx(
+    tx_receipt: TxReceipt = omen_redeem_full_position_tx(
         market=market,
         from_address=keys.bet_from_address,
         from_private_key=keys.bet_from_private_key,
     )
-    assert tx_receipt.transactionHash is not None
+    assert tx_receipt["transactionHash"] is not None

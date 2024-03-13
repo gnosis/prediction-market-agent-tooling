@@ -88,7 +88,7 @@ class OmenAgentMarket(AgentMarket):
 
     def redeem_positions(
         self, bet_from_address: ChecksumAddress, from_private_key: PrivateKey
-    ):
+    ) -> TxReceipt:
         return omen_redeem_full_position_tx(
             market=self,
             from_address=bet_from_address,
@@ -359,12 +359,12 @@ def omen_buy_outcome_tx(
 
 
 def omen_redeem_positions_tx(
-    from_address,
-    from_private_key,
-    collateral_token_address,
-    condition_id,
-    parent_collection_id,
-    index_sets,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    collateral_token_address: str,
+    condition_id: str,
+    parent_collection_id: str,
+    index_sets: t.List[int],
     web3: Web3 | None = None,
 ) -> TxReceipt:
     conditional_token_contract = OmenConditionalTokenContract()

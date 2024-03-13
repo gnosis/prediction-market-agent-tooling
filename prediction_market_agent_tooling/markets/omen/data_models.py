@@ -66,7 +66,7 @@ class OmenMarket(BaseModel):
     answerFinalizedTimestamp: t.Optional[int] = None
     currentAnswer: t.Optional[str] = None
     creationTimestamp: t.Optional[int] = None
-    condition: t.Optional[Condition] = None
+    condition: Condition
 
     @property
     def answer_index(self) -> t.Optional[int]:

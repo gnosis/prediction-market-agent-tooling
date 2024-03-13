@@ -21,6 +21,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_fund_market_tx,
     omen_remove_fund_market_tx,
     pick_binary_market,
+    omen_redeem_full_position_tx,
 )
 from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -189,12 +190,15 @@ def test_resolved_omen_bets(a_bet_from_address: str) -> None:
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
-def test_omen_buy_and_sell_outcome() -> None:
-    # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
-    # You can double check your address at https://gnosisscan.io/ afterwards.
-    """
-    ToDo once local chain can be started.
-        - Deposit into market (YES condition)
-        - Set market as finished (YES condition was true)
-        - Claim winnings
-    """
+def test_omen_redeem_positions() -> None:
+    market_id = (
+        "0xBA125828EC00267BBB70564D5558B891EABDAB9B".lower()
+    )  # Market on which agent previously betted on
+    market = OmenAgentMarket.from_data_model(get_market(market_id))
+    keys = APIKeys()
+    tx_receipt = omen_redeem_full_position_tx(
+        market=market,
+        from_address=keys.bet_from_address,
+        from_private_key=keys.bet_from_private_key,
+    )
+    assert tx_receipt.transactionHash is not None

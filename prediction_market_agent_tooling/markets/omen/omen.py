@@ -5,6 +5,7 @@ from decimal import Decimal
 import requests
 from web3 import Web3
 from web3.constants import HASH_ZERO
+from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -84,6 +85,55 @@ class OmenAgentMarket(AgentMarket):
             binary_outcome=outcome,
             auto_deposit=omen_auto_deposit,
         )
+
+    def redeemPositions(self):
+        market = OmenAgentMarket.from_data_model(get_market(market_id))
+        print(f"market {market} {market.is_resolved()}")
+
+        # ToDo - Check how much we can redeem
+        # rpc_url = "https://light-distinguished-isle.xdai.quiknode.pro/398333e0cb68ee18d38f5cda5deecd5676754923/"
+        # Using forked local Gnosis chain for testing
+        # rpc_url = "http://127.0.0.1:8545"
+        rpc_url = "https://rpc.tenderly.co/fork/000e6ff5-8ef3-4741-8aaa-022d39f81e08"
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
+        print(w3.is_connected())
+        market_contract = market.get_contract()
+
+        market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
+        conditional_token_contract = OmenConditionalTokenContract()
+
+        # Verify, that markets uses conditional tokens that we expect.
+        if market_contract.conditionalTokens() != conditional_token_contract.address:
+            raise ValueError(
+                f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
+            )
+
+        # `redeemPositions` function params:
+        collateral_token_address = market.collateral_token_contract_address_checksummed
+        # ToDo - No condition
+        condition_id = market.condition.id
+        parent_collection_id = HASH_ZERO  # Taken from Olas
+        index_sets = market.condition.index_sets  # Taken from Olas
+
+        if not market.is_resolved():
+            raise RuntimeError("Cannot redeem winnings if market is not yet resolved")
+
+        # ToDo - Add types
+        w3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
+        keys = APIKeys()
+        result = conditional_token_contract.send(
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            function_name="redeemPositions",
+            function_params=[
+                collateral_token_address,
+                parent_collection_id,
+                condition_id,
+                index_sets,
+            ],
+            web3=w3,
+        )
+        print(result)
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -345,6 +395,30 @@ def omen_buy_outcome_tx(
         min_outcome_tokens_to_buy=expected_shares,
         from_address=from_address_checksummed,
         from_private_key=from_private_key,
+    )
+
+
+def omen_redeem_positions_tx(
+    from_address,
+    from_private_key,
+    collateral_token_address,
+    condition_id,
+    parent_collection_id,
+    index_sets,
+    web3: Web3 | None = None,
+) -> TxReceipt:
+    conditional_token_contract = OmenConditionalTokenContract()
+    return conditional_token_contract.send(
+        from_address=from_address,
+        from_private_key=from_private_key,
+        function_name="redeemPositions",
+        function_params=[
+            collateral_token_address,
+            parent_collection_id,
+            condition_id,
+            index_sets,
+        ],
+        web3=web3,
     )
 
 
@@ -700,42 +774,47 @@ def omen_fund_market_tx(
     market_contract.addFunding(funds_wei, from_address, from_private_key)
 
 
-def omen_claim_winnings(
+def omen_redeem_full_position_tx(
     market: OmenAgentMarket,
-    funds: xDai,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-    auto_deposit: bool,
-):
+) -> TxReceipt:
     """
-    See https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0#code -> `redeemPositions` function.
-    Also see https://github.com/valory-xyz/trader/pull/59 for Olas implementation.
+    Redeems position from a given Omen market. If there is a position to be redeemed, wxDAI will be transferred
+    from the ConditionalTokens contract to the agent contract, else no transfer occurs. In both cases, the
+    transaction completes successfully.
     """
-    # Get the address of conditional token's of this market.
-    conditionaltokens_address = omen_get_market_maker_conditionaltokens_address(
-        web3, market
-    )
+    print("oi")
+    print(f"market {market} {market.is_resolved()}")
 
-    # `redeemPositions` function params:
-    collateral_token = market.collateral_token_contract_address_checksummed
-    condition_id = bytes.fromhex(market.condition.id[2:])
-    parent_collection_id = bytes.fromhex(HASH_ZERO[2:])  # Taken from Olas
+    # rpc_url = "https://rpc.tenderly.co/fork/000e6ff5-8ef3-4741-8aaa-022d39f81e08"
+
+    market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
+    conditional_token_contract = OmenConditionalTokenContract()
+
+    # Verify, that markets uses conditional tokens that we expect.
+    if market_contract.conditionalTokens() != conditional_token_contract.address:
+        raise ValueError(
+            f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
+        )
+
+    collateral_token_address = market.collateral_token_contract_address_checksummed
+    condition_id = market.condition.id
+    parent_collection_id = HASH_ZERO  # Taken from Olas
     index_sets = market.condition.index_sets  # Taken from Olas
 
-    return call_function_on_contract_tx(
-        web3=web3,
-        contract_address=conditionaltokens_address,
-        contract_abi=OMEN_FPMM_CONDITIONALTOKENS_ABI,
+    if not market.is_resolved():
+        raise RuntimeError("Cannot redeem winnings if market is not yet resolved")
+
+    # ToDo - Implement more complex checks (incl. checking for already claimed balances), following Olas pattern
+    # https://github.com/valory-xyz/trader/blob/main/packages/valory/skills/decision_maker_abci/behaviours/reedem.py#L753
+    return omen_redeem_positions_tx(
         from_address=from_address,
         from_private_key=from_private_key,
-        function_name="redeemPositions",
-        function_params=[
-            collateral_token,
-            parent_collection_id,
-            condition_id,
-            index_sets,
-        ],
-        tx_params=tx_params,
+        collateral_token_address=collateral_token_address,
+        condition_id=condition_id,
+        parent_collection_id=parent_collection_id,
+        index_sets=index_sets,
     )
 
 

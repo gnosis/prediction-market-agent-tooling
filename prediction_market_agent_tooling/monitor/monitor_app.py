@@ -73,10 +73,12 @@ def get_open_and_resolved_markets(
     return open_markets, resolved_markets
 
 
-def monitor_app() -> None:
+def monitor_app(
+    enabled_market_types: list[MarketType],
+) -> None:
     settings = MonitorSettings()
     market_type: MarketType = check_not_none(
-        st.selectbox(label="Market type", options=list(MarketType), index=0)
+        st.selectbox(label="Market type", options=enabled_market_types, index=0)
     )
     start_time: DatetimeWithTimezone | None = (
         add_utc_timezone_validator(

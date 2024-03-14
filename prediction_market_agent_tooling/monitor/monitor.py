@@ -20,6 +20,7 @@ from prediction_market_agent_tooling.markets.data_models import Resolution, Reso
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
     add_utc_timezone_validator,
+    check_not_none,
     should_not_happen,
 )
 
@@ -49,9 +50,9 @@ class DeployedAgent(BaseModel):
     deployableagent_class_name: str
 
     start_time: DatetimeWithTimezone
-    end_time: t.Optional[
-        DatetimeWithTimezone
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[DatetimeWithTimezone] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -200,7 +201,10 @@ def monitor_market(
 ) -> None:
     date_to_open_yes_proportion = {
         d: np.mean([int(m.p_yes > 0.5) for m in markets])
-        for d, markets in groupby(open_markets, lambda x: x.created_time.date())
+        for d, markets in groupby(
+            filter(lambda x: x.created_time is not None, open_markets),
+            lambda x: check_not_none(x.created_time).date(),
+        )
     }
     date_to_resolved_yes_proportion = {
         d: np.mean(
@@ -217,7 +221,10 @@ def monitor_market(
                 for m in markets
             ]
         )
-        for d, markets in groupby(resolved_markets, lambda x: x.created_time.date())
+        for d, markets in groupby(
+            filter(lambda x: x.created_time is not None, resolved_markets),
+            lambda x: check_not_none(x.created_time).date(),
+        )
     }
 
     df_open = pd.DataFrame(
@@ -243,10 +250,11 @@ def monitor_market(
         .encode(x="date:T", y="resolved_proportion:Q", color="resolved_label:N")
     )
 
-    st.altair_chart(
-        alt.layer(open_chart, resolved_chart).interactive(),  # type: ignore # Doesn't expect `LayerChart`, but `Chart`, yet it works.
-        use_container_width=True,
-    )
+    if len(df) > 0:
+        st.altair_chart(
+            alt.layer(open_chart, resolved_chart).interactive(),  # type: ignore # Doesn't expect `LayerChart`, but `Chart`, yet it works.
+            use_container_width=True,
+        )
 
     all_open_markets_yes_mean = np.mean([int(m.p_yes > 0.5) for m in open_markets])
     all_resolved_markets_yes_mean = np.mean(

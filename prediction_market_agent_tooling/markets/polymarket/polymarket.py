@@ -1,20 +1,18 @@
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import Currency
+from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarket_binary_markets,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketMarketWithPrices,
 )
-from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -54,6 +52,9 @@ class PolymarketAgentMarket(AgentMarket):
     ) -> list["AgentMarket"]:
         if sort_by != SortBy.NONE:
             raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")
+
+        if created_after is not None:
+            raise ValueError(f"Unsuported created_after for Polymarket.")
 
         closed: bool | None
         if filter_by == FilterBy.OPEN:

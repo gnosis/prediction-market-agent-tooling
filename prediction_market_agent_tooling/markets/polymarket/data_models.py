@@ -87,7 +87,7 @@ class PolymarketMarket(BaseModel):
                 f"Should not happen, invalid winner tokens: {winner_tokens}"
             )
 
-    def check_if_its_a_single_market(self) -> bool:
+    def check_if_its_a_main_market(self) -> bool:
         # On Polymarket, there are markets that are actually a group of multiple Yes/No markets, for example https://polymarket.com/event/presidential-election-winner-2024.
         # But API returns them individually, and then we receive questions such as "Will any other Republican Politician win the 2024 US Presidential Election?",
         # which are naturally unpredictable without futher details.

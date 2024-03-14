@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketMarketWithPrices,
 )
+from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 
@@ -32,6 +33,16 @@ class PolymarketAgentMarket(AgentMarket):
             resolution=model.resolution,
             p_yes=model.p_yes,
             created_time=None,
+        )
+
+    def get_tiny_bet_amount(self) -> BetAmount:
+        raise NotImplementedError(
+            "TODO: Not implemented as we aren't planning to bet on Polymarket any time soon."
+        )
+
+    def place_bet(self, outcome: bool, amount: BetAmount) -> None:
+        raise NotImplementedError(
+            "TODO: Not implemented as we aren't planning to bet on Polymarket any time soon."
         )
 
     @staticmethod

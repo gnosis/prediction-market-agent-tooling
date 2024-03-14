@@ -1,6 +1,8 @@
 import os
 import time
 
+import pytest
+
 from prediction_market_agent_tooling.deploy.agent_example import DeployableCoinFlipAgent
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,

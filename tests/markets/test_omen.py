@@ -3,7 +3,6 @@ from datetime import datetime
 import numpy as np
 import pytest
 from web3 import Web3
-from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type
@@ -196,9 +195,6 @@ def test_omen_redeem_positions() -> None:
         "0xBA125828EC00267BBB70564D5558B891EABDAB9B".lower()
     )  # Market on which agent previously betted on
     market = OmenAgentMarket.from_data_model(get_market(market_id))
-    # gnosis rpc forked from block 32915103
-    # rpc_url = "https://rpc.tenderly.co/fork/c271e209-944f-4574-90d8-a041bdce70ca"
-    # web3 = Web3(Web3.HTTPProvider(rpc_url))
     keys = APIKeys()
     omen_redeem_full_position_tx(
         market=market,

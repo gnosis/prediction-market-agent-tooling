@@ -250,7 +250,7 @@ def get_omen_markets(
 def get_omen_binary_markets(
     limit: int,
     sort_by: SortBy,
-    filter_by: FilterBy,
+    filter_by: FilterBy = FilterBy.OPEN,
     created_after: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
 ) -> list[OmenMarket]:

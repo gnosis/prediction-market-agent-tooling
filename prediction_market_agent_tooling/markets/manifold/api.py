@@ -10,13 +10,13 @@ from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     ResolvedBet,
 )
-from prediction_market_agent_tooling.tools.utils import response_list_to_model
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldBet,
     ManifoldContractMetric,
     ManifoldMarket,
     ManifoldUser,
 )
+from prediction_market_agent_tooling.tools.utils import response_list_to_model
 
 """
 Python API for Manifold Markets

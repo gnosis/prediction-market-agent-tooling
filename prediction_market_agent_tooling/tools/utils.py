@@ -1,11 +1,13 @@
 import os
 import subprocess
 from datetime import datetime
-from typing import NoReturn, Optional, Type, TypeVar, cast, Any
-import requests
+from typing import Any, NoReturn, Optional, Type, TypeVar, cast
+
 import git
 import pytz
+import requests
 from pydantic import BaseModel
+
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone
 
 T = TypeVar("T")

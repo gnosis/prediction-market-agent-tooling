@@ -1,15 +1,18 @@
 import typing as t
+from datetime import datetime
 
 import requests
-from datetime import datetime
+
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    POLYMARKET_FALSE_OUTCOME,
+    POLYMARKET_TRUE_OUTCOME,
     MarketsEndpointResponse,
-    PolymarketPriceResponse,
     PolymarketMarket,
+    PolymarketMarketWithPrices,
+    PolymarketPriceResponse,
     PolymarketTokenWithPrices,
     Prices,
 )
-import json
 from prediction_market_agent_tooling.tools.utils import response_to_model
 
 POLYMARKET_API_BASE_URL = "https://clob.polymarket.com/"
@@ -18,18 +21,18 @@ MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
 
 def get_polymarket_binary_markets(
     limit: int,
-    closed: bool | None = None,
+    closed: bool | None = False,
     created_after: t.Optional[datetime] = None,
     excluded_questions: set[str] | None = None,
     with_rewards: bool = False,
-) -> list[PolymarketMarket]:
+) -> list[PolymarketMarketWithPrices]:
     """
     See https://learn.polymarket.com/trading-rewards for information about rewards.
     """
     url = (
         f"{POLYMARKET_API_BASE_URL}/{'sampling-markets' if with_rewards else 'markets'}"
     )
-    all_markets: list[PolymarketMarket] = []
+    all_markets: list[PolymarketMarketWithPrices] = []
     params: dict[str, str | int | float | None] = {
         "limit": min(limit, MARKETS_LIMIT),
     }
@@ -54,14 +57,21 @@ def get_polymarket_binary_markets(
             if market.archived:
                 continue
 
-            if created_after and market.end_date and market.end_date < created_after:
+            if (
+                created_after
+                and market.end_date_iso
+                and market.end_date_iso < created_after
+            ):
                 continue
 
             if excluded_questions and market.question in excluded_questions:
                 continue
 
             # Atm we work with binary markets only.
-            if sorted(token.outcome for token in market.tokens) != ["No", "Yes"]:
+            if sorted(token.outcome for token in market.tokens) != [
+                POLYMARKET_FALSE_OUTCOME,
+                POLYMARKET_TRUE_OUTCOME,
+            ]:
                 continue
 
             # This is pretty slow to do here, but our safest option at the moment. So keep it as the last filter.
@@ -69,7 +79,12 @@ def get_polymarket_binary_markets(
             if not market.check_if_its_a_single_market():
                 continue
 
-            all_markets.append(market)
+            tokens_with_price = get_market_tokens_with_prices(market)
+            market_with_prices = PolymarketMarketWithPrices.model_validate(
+                {**market.model_dump(), "tokens": tokens_with_price}
+            )
+
+            all_markets.append(market_with_prices)
 
         if len(all_markets) >= limit:
             break
@@ -116,7 +131,3 @@ def get_market_tokens_with_prices(
         for token in market.tokens
     ]
     return tokens_with_prices
-
-
-for x in get_polymarket_binary_markets(10):
-    print(x.end_date)

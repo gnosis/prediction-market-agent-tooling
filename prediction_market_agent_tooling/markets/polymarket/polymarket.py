@@ -1,18 +1,19 @@
 import typing as t
+from datetime import datetime, timedelta
 
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
 )
-from datetime import datetime
 from prediction_market_agent_tooling.markets.data_models import Currency
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarket_binary_markets,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
-    PolymarketMarket,
+    PolymarketMarketWithPrices,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -23,14 +24,19 @@ class PolymarketAgentMarket(AgentMarket):
     currency: t.ClassVar[Currency] = Currency.USDC
 
     @staticmethod
-    def from_data_model(model: PolymarketMarket) -> "PolymarketAgentMarket":
+    def from_data_model(model: PolymarketMarketWithPrices) -> "PolymarketAgentMarket":
         return PolymarketAgentMarket(
             id=model.id,
             question=model.question,
             outcomes=[x.outcome for x in model.tokens],
             resolution=model.resolution,
-            created_time=model.createdTime,
-            p_yes=Probability(model.probability),
+            p_yes=model.p_yes,
+            # Polymarket's API doesn't give us this, so let's just estimate it.
+            created_time=(
+                model.end_date_iso - timedelta(weeks=1)
+                if model.end_date_iso is not None
+                else utcnow()
+            ),
         )
 
     @staticmethod
@@ -48,6 +54,8 @@ class PolymarketAgentMarket(AgentMarket):
             closed = False
         elif filter_by == FilterBy.RESOLVED:
             closed = True
+        elif filter_by == FilterBy.NONE:
+            closed = None
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
 

@@ -8,7 +8,7 @@ import pytz
 import requests
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone
+from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, SecretStr
 
 T = TypeVar("T")
 
@@ -119,3 +119,8 @@ def response_list_to_model(
 ) -> list[BaseModelT]:
     response_json = response_to_json(response)
     return [model.model_validate(x) for x in response_json]
+
+
+def secret_str_from_env(key: str) -> SecretStr | None:
+    value = os.getenv(key)
+    return SecretStr(value) if value else None

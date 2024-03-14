@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import functions_framework
-import pytz
 from flask import Request
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,6 +11,7 @@ from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class ReplicateSettings(BaseSettings):
@@ -30,9 +30,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
     ) -> None:
         keys = APIKeys()
         settings = ReplicateSettings()
-        close_time_before = (
-            datetime.utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
-        ).replace(tzinfo=pytz.UTC)
+        close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)
 
         print(f"Replicating from {MarketSource.MANIFOLD}.")
@@ -43,7 +41,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             close_time_before=close_time_before,
-            auto_deposit=False,
+            auto_deposit=True,
         )
         print(f"Replicating from {MarketSource.POLYMARKET}.")
         omen_replicate_from_tx(
@@ -53,7 +51,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             close_time_before=close_time_before,
-            auto_deposit=False,
+            auto_deposit=True,
         )
         print("Done.")
 

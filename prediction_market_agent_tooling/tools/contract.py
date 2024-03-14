@@ -1,5 +1,7 @@
 import json
+import time
 import typing as t
+from contextlib import contextmanager
 
 from pydantic import BaseModel, field_validator
 from web3 import Web3
@@ -8,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
     ChecksumAddress,
+    Nonce,
     PrivateKey,
     TxParams,
     TxReceipt,
@@ -33,6 +36,20 @@ def abi_field_validator(value: str) -> ABI:
         return ABI(value)
     except json.decoder.JSONDecodeError:
         raise ValueError(f"Invalid ABI: {value}")
+
+
+@contextmanager
+def wait_until_nonce_changed(
+    for_address: ChecksumAddress, timeout: int = 10, sleep_time: int = 1
+) -> t.Generator[None, None, None]:
+    current_nonce = ContractOnGnosisChain.get_transaction_count(for_address)
+    yield
+    start_monotonic = time.monotonic()
+    while (
+        time.monotonic() - start_monotonic < timeout
+        and current_nonce == ContractOnGnosisChain.get_transaction_count(for_address)
+    ):
+        time.sleep(sleep_time)
 
 
 class ContractBaseClass(BaseModel):
@@ -116,8 +133,13 @@ class ContractBaseClass(BaseModel):
             web3=web3,
         )
 
-    def get_web3(self) -> Web3:
-        return Web3(Web3.HTTPProvider(self.CHAIN_RPC_URL))
+    @classmethod
+    def get_transaction_count(cls, for_address: ChecksumAddress) -> Nonce:
+        return cls.get_web3().eth.get_transaction_count(for_address)
+
+    @classmethod
+    def get_web3(cls) -> Web3:
+        return Web3(Web3.HTTPProvider(cls.CHAIN_RPC_URL))
 
 
 class ContractERC20BaseClass(ContractBaseClass):

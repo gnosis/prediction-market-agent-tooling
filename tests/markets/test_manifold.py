@@ -47,7 +47,7 @@ def test_manifold_bets(a_user_id: str) -> None:
 
 def test_resolved_manifold_bets(a_user_id: str) -> None:
     start_time = datetime(2024, 2, 20, tzinfo=pytz.UTC)
-    resolved_bets = get_resolved_manifold_bets(
+    resolved_bets, markets = get_resolved_manifold_bets(
         user_id=a_user_id,
         start_time=start_time,
         end_time=start_time + timedelta(days=1),
@@ -56,5 +56,5 @@ def test_resolved_manifold_bets(a_user_id: str) -> None:
     assert len(set([bet.id for bet in resolved_bets])) == len(resolved_bets)
 
     # Verify that all bets convert to generic resolved bets.
-    for bet in resolved_bets:
-        manifold_to_generic_resolved_bet(bet)
+    for bet, market in zip(resolved_bets, markets):
+        manifold_to_generic_resolved_bet(bet, market)

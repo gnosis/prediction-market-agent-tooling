@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 
 import numpy as np
@@ -6,7 +5,7 @@ import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
@@ -19,9 +18,13 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_omen_binary_markets,
     get_resolved_omen_bets,
     omen_create_market_tx,
+    omen_fund_market_tx,
+    omen_remove_fund_market_tx,
     pick_binary_market,
 )
+from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -56,23 +59,24 @@ def test_omen_buy_and_sell_outcome() -> None:
         buy_amount / 2
     )  # There will be some fees, so this has to be lower.
     keys = APIKeys()
-    binary_omen_buy_outcome_tx(
-        amount=buy_amount,
-        from_address=keys.bet_from_address,
-        from_private_key=keys.bet_from_private_key,
-        market=market,
-        binary_outcome=True,
-        auto_deposit=True,
-    )
-    time.sleep(10)  # Wait for the transaction to be mined.
-    binary_omen_sell_outcome_tx(
-        amount=sell_amount,
-        from_address=keys.bet_from_address,
-        from_private_key=keys.bet_from_private_key,
-        market=market,
-        binary_outcome=True,
-        auto_withdraw=True,
-    )
+    with wait_until_nonce_changed(keys.bet_from_address):
+        binary_omen_buy_outcome_tx(
+            amount=buy_amount,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            market=market,
+            binary_outcome=True,
+            auto_deposit=True,
+        )
+    with wait_until_nonce_changed(keys.bet_from_address):
+        binary_omen_sell_outcome_tx(
+            amount=sell_amount,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            market=market,
+            binary_outcome=True,
+            auto_withdraw=True,
+        )
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
@@ -90,6 +94,36 @@ def test_omen_create_market() -> None:
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         auto_deposit=True,
     )
+
+
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+def test_omen_fund_and_remove_fund_market() -> None:
+    # You can double check your address at https://gnosisscan.io/ afterwards or at the market's address.
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    print(
+        "Fund and remove funding market test address:",
+        market.market_maker_contract_address_checksummed,
+    )
+
+    funds = xdai_type(0.1)
+    remove_fund = omen_outcome_type(xdai_to_wei(xdai_type(0.01)))
+    keys = APIKeys()
+    with wait_until_nonce_changed(keys.bet_from_address):
+        omen_fund_market_tx(
+            market=market,
+            funds=funds,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            auto_deposit=True,
+        )
+    with wait_until_nonce_changed(keys.bet_from_address):
+        omen_remove_fund_market_tx(
+            market=market,
+            shares=remove_fund,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            auto_withdraw=False,  # Switch to true after implemented.
+        )
 
 
 def test_get_bets(a_bet_from_address: str) -> None:

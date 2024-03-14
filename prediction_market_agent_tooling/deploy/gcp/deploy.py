@@ -100,5 +100,5 @@ def run_deployed_gcp_function(function_name: str) -> requests.Response:
 
 
 def remove_deployed_gcp_function(function_name: str) -> None:
-    subprocess.run(gcloud_delete_function_cmd(function_name), shell=True, check=True)
     subprocess.run(gcloud_delete_topic_cmd(function_name), shell=True, check=True)
+    subprocess.run(gcloud_delete_function_cmd(function_name), shell=True, check=True)

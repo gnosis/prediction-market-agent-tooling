@@ -39,26 +39,31 @@ def test_gcp_deployment() -> None:
     prefixed_env_vars = {
         f"{DeployedManifoldAgent.PREFIX}{k}": v for k, v in env_vars.items()
     }
-    deploy_to_gcp(
-        gcp_fname=gcp_fname,
-        requirements_file=None,
-        extra_deps=[
-            f"git+{get_current_git_url()}@{get_current_git_commit_sha()}",
-        ],
-        function_file=os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "gcp_cloud_function_example.py"
-        ),
-        memory=512,
-        entrypoint_function_name="main",
-        timeout=180,
-        labels=None,
-        env_vars=prefixed_env_vars,
-        secrets=None,
-    )
 
-    assert gcp_function_is_active(gcp_fname)
-    schedule_deployed_gcp_function(gcp_fname, cron_schedule="0 8 * * *")
+    try:
+        deploy_to_gcp(
+            gcp_fname=gcp_fname,
+            requirements_file=None,
+            extra_deps=[
+                f"git+{get_current_git_url()}@{get_current_git_commit_sha()}",
+            ],
+            function_file=os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gcp_cloud_function_example.py",
+            ),
+            memory=512,
+            entrypoint_function_name="main",
+            timeout=180,
+            labels=None,
+            env_vars=prefixed_env_vars,
+            secrets=None,
+        )
 
-    deployed_agent = DeployedManifoldAgent.from_gcp_function_name(gcp_fname)
-    monitor_agent(deployed_agent)
-    remove_deployed_gcp_function(gcp_fname)
+        assert gcp_function_is_active(gcp_fname)
+        schedule_deployed_gcp_function(gcp_fname, cron_schedule="0 8 * * *")
+
+        deployed_agent = DeployedManifoldAgent.from_gcp_function_name(gcp_fname)
+        monitor_agent(deployed_agent)
+
+    finally:
+        remove_deployed_gcp_function(gcp_fname)

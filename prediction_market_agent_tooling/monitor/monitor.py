@@ -199,6 +199,59 @@ def monitor_agent(agent: DeployedAgent) -> None:
 def monitor_market(
     open_markets: list[AgentMarket], resolved_markets: list[AgentMarket]
 ) -> None:
+    col1, col2 = st.columns(2)
+    col1.metric(label="Number open markets", value=f"{len(open_markets)}")
+    col2.metric(label="Number resolved markets", value=f"{len(resolved_markets)}")
+
+    monitor_brier_score(resolved_markets)
+    monitor_market_outcome_bias(open_markets, resolved_markets)
+
+
+def monitor_brier_score(resolved_markets: list[AgentMarket]) -> None:
+    """
+    https://en.wikipedia.org/wiki/Brier_score
+
+    Calculate the Brier score for the resolved markets. Display a chart of the
+    rolling mean squared error for, and stats for:
+
+    - the overall brier score
+    - the brier score for the last 30 markets
+    """
+    st.subheader("Brier Score (0-1, lower is better)")
+
+    markets_to_squared_error = {
+        m.created_time: m.get_squared_error() for m in resolved_markets
+    }
+    df = pd.DataFrame(
+        markets_to_squared_error.items(), columns=["Date", "Squared Error"]
+    ).sort_values(by="Date")
+
+    # Compute rolling mean squared error for last 30 markets
+    df["Rolling Mean Squared Error"] = df["Squared Error"].rolling(window=30).mean()
+
+    col1, col2 = st.columns(2)
+    col1.metric(label="Overall", value=f"{df['Squared Error'].mean():.3f}")
+    col2.metric(
+        label="Last 30 markets", value=f"{df['Squared Error'].tail(30).mean():.3f}"
+    )
+
+    st.altair_chart(
+        alt.Chart(df)
+        .mark_line(interpolate="basis")
+        .encode(
+            x="Date:T",
+            y=alt.Y("Rolling Mean Squared Error:Q", scale=alt.Scale(domain=[0, 1])),
+        )
+        .interactive(),
+        use_container_width=True,
+    )
+
+
+def monitor_market_outcome_bias(
+    open_markets: list[AgentMarket], resolved_markets: list[AgentMarket]
+) -> None:
+    st.subheader("Market Outcome Bias")
+
     date_to_open_yes_proportion = {
         d: np.mean([int(m.p_yes > 0.5) for m in markets])
         for d, markets in groupby(
@@ -272,8 +325,6 @@ def monitor_market(
         ]
     )
     st.markdown(
-        f"Total number of open markets {len(open_markets)} and resolved markets {len(resolved_markets)}"
-        "\n\n"
         f"Mean proportion of 'YES' in open markets: {all_open_markets_yes_mean:.2f}"
         "\n\n"
         f"Mean proportion of 'YES' in resolved markets: {all_resolved_markets_yes_mean:.2f}"

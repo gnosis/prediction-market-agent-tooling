@@ -10,14 +10,16 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.tools.mapping import MARKET_TYPE_TO_AGENT_MARKET
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
     monitor_agent,
     monitor_market,
 )
-from prediction_market_agent_tooling.tools.mapping import MARKET_TYPE_TO_DEPLOYED_AGENT
+from prediction_market_agent_tooling.tools.mapping import (
+    MARKET_TYPE_TO_AGENT_MARKET,
+    MARKET_TYPE_TO_DEPLOYED_AGENT,
+)
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
     add_utc_timezone_validator,

@@ -46,9 +46,10 @@ def test_gcp_deployment() -> None:
         deploy_to_gcp(
             gcp_fname=gcp_fname,
             requirements_file=None,
-            extra_deps=[
-                f"git+{get_current_git_url()}@{get_current_git_commit_sha()}",
-            ],
+            extra_deps=[],
+            #extra_deps=[
+            #    f"git+{get_current_git_url()}@{get_current_git_commit_sha()}",
+            #],
             function_file=os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 "gcp_cloud_function_example.py",

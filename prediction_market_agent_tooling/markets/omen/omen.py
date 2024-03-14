@@ -6,44 +6,29 @@ import requests
 from eth_typing import HexStr
 from web3 import Web3
 from web3.constants import HASH_ZERO
-from web3.types import TxReceipt, Wei
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    HexAddress,
-    OmenOutcomeToken,
-    PrivateKey,
-    xDai,
-)
-from prediction_market_agent_tooling.markets.agent_market import (
-    AgentMarket,
-    FilterBy,
-    SortBy,
-)
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.gtypes import (ChecksumAddress,
+                                                    HexAddress,
+                                                    OmenOutcomeToken,
+                                                    PrivateKey, TxReceipt, Wei,
+                                                    xDai)
+from prediction_market_agent_tooling.markets.agent_market import (AgentMarket,
+                                                                  FilterBy,
+                                                                  SortBy)
+from prediction_market_agent_tooling.markets.data_models import (BetAmount,
+                                                                 Currency)
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_FALSE_OUTCOME,
-    OMEN_TRUE_OUTCOME,
-    Condition,
-    OmenBet,
-    OmenMarket,
-)
+    OMEN_FALSE_OUTCOME, OMEN_TRUE_OUTCOME, Condition, OmenBet, OmenMarket)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    Arbitrator,
-    OmenCollateralTokenContract,
-    OmenConditionalTokenContract,
+    Arbitrator, OmenCollateralTokenContract, OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
-    OmenFixedProductMarketMakerFactoryContract,
-    OmenOracleContract,
-    OmenRealitioContract,
-)
+    OmenFixedProductMarketMakerFactoryContract, OmenOracleContract,
+    OmenRealitioContract)
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import (
-    add_fraction,
-    remove_fraction,
-    xdai_to_wei,
-)
+from prediction_market_agent_tooling.tools.web3_utils import (add_fraction,
+                                                              remove_fraction,
+                                                              xdai_to_wei)
 
 """
 Python API for Omen prediction market.
@@ -359,30 +344,6 @@ def omen_buy_outcome_tx(
         min_outcome_tokens_to_buy=expected_shares,
         from_address=from_address_checksummed,
         from_private_key=from_private_key,
-    )
-
-
-def omen_redeem_positions_tx(
-    from_address: ChecksumAddress,
-    from_private_key: PrivateKey,
-    collateral_token_address: str,
-    condition_id: str,
-    parent_collection_id: str,
-    index_sets: t.List[int],
-    web3: Web3 | None = None,
-) -> TxReceipt:
-    conditional_token_contract = OmenConditionalTokenContract()
-    return conditional_token_contract.send(
-        from_address=from_address,
-        from_private_key=from_private_key,
-        function_name="redeemPositions",
-        function_params=[
-            collateral_token_address,
-            parent_collection_id,
-            condition_id,
-            index_sets,
-        ],
-        web3=web3,
     )
 
 
@@ -774,7 +735,8 @@ def omen_redeem_full_position_tx(
         print("No balance to claim. Exiting.")
         return
 
-    omen_redeem_positions_tx(
+    conditional_token_contract = OmenConditionalTokenContract()
+    conditional_token_contract.redeemPositions(
         from_address=from_address,
         from_private_key=from_private_key,
         collateral_token_address=market.collateral_token_contract_address_checksummed,

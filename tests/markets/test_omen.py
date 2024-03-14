@@ -190,16 +190,18 @@ def test_resolved_omen_bets(a_bet_from_address: str) -> None:
         bet.to_generic_resolved_bet()
 
 
-@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+# @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_omen_redeem_positions() -> None:
     market_id = (
         "0xBA125828EC00267BBB70564D5558B891EABDAB9B".lower()
     )  # Market on which agent previously betted on
     market = OmenAgentMarket.from_data_model(get_market(market_id))
+    # gnosis rpc forked from block 32915103
+    # rpc_url = "https://rpc.tenderly.co/fork/c271e209-944f-4574-90d8-a041bdce70ca"
+    # web3 = Web3(Web3.HTTPProvider(rpc_url))
     keys = APIKeys()
-    tx_receipt: TxReceipt = omen_redeem_full_position_tx(
+    omen_redeem_full_position_tx(
         market=market,
         from_address=keys.bet_from_address,
         from_private_key=keys.bet_from_private_key,
     )
-    assert tx_receipt["transactionHash"] is not None

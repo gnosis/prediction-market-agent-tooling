@@ -1,3 +1,4 @@
+import sys
 import typing as t
 from datetime import datetime
 from decimal import Decimal
@@ -5,7 +6,7 @@ from decimal import Decimal
 import requests
 from web3 import Web3
 from web3.constants import HASH_ZERO
-from web3.types import TxReceipt
+from web3.types import TxReceipt, Wei
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -14,6 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
     OmenOutcomeToken,
     PrivateKey,
     xDai,
+    wei_type,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -36,6 +38,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenFixedProductMarketMakerFactoryContract,
     OmenOracleContract,
     OmenRealitioContract,
+    WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
@@ -733,15 +736,19 @@ def omen_fund_market_tx(
     market_contract.addFunding(funds_wei, from_address, from_private_key)
 
 
+def build_parent_collection_id():
+    return HASH_ZERO  # Taken from Olas
+
+
 def omen_redeem_full_position_tx(
     market: OmenAgentMarket,
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
-) -> TxReceipt:
+    web3: Web3 | None = None,
+    unwrap_collateral_after_redeeming_positions: bool = True,
+) -> None:
     """
-    Redeems position from a given Omen market. If there is a position to be redeemed, wxDAI will be transferred
-    from the ConditionalTokens contract to the agent contract, else no transfer occurs. In both cases, the
-    transaction completes successfully.
+    Redeems position from a given Omen market.
     """
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
@@ -753,23 +760,82 @@ def omen_redeem_full_position_tx(
             f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
         )
 
-    collateral_token_address = market.collateral_token_contract_address_checksummed
-    condition_id = market.condition.id
-    parent_collection_id = HASH_ZERO  # Taken from Olas
-    index_sets = market.condition.index_sets  # Taken from Olas
+    parent_collection_id = build_parent_collection_id()
 
     if not market.is_resolved():
-        raise RuntimeError("Cannot redeem winnings if market is not yet resolved")
+        print("Cannot redeem winnings if market is not yet resolved. Exiting.")
+        return
 
-    # ToDo - Implement more complex checks (incl. checking for already claimed balances), following Olas pattern
-    # https://github.com/valory-xyz/trader/blob/main/packages/valory/skills/decision_maker_abci/behaviours/reedem.py#L753
-    return omen_redeem_positions_tx(
+    amount_wei = get_conditional_tokens_balance_for_market(market, from_address, web3)
+    if amount_wei == 0:
+        print("No balance to claim. Exiting.")
+        return
+
+    omen_redeem_positions_tx(
         from_address=from_address,
         from_private_key=from_private_key,
-        collateral_token_address=collateral_token_address,
-        condition_id=condition_id,
+        collateral_token_address=market.collateral_token_contract_address_checksummed,
+        condition_id=market.condition.id,
         parent_collection_id=parent_collection_id,
-        index_sets=index_sets,
+        index_sets=market.condition.index_sets,
+        web3=web3,
+    )
+
+    if unwrap_collateral_after_redeeming_positions:
+        withdraw_collateral_token(
+            amount_wei=amount_wei,
+            from_address=from_address,
+            from_private_key=from_private_key,
+            web3=web3,
+        )
+
+
+def get_conditional_tokens_balance_for_market(
+    market: OmenAgentMarket,
+    from_address: ChecksumAddress,
+    web3: Web3 | None = None,
+) -> Wei:
+    """
+    We derive the withdrawable balance from the ConditionalTokens contract through CollectionId -> PositionId (which
+    also serves as tokenId) -> TokenBalances.
+    """
+    conditional_token_contract = OmenConditionalTokenContract()
+    parent_collection_id = build_parent_collection_id()
+    balance = Wei(0)
+
+    for index_set in market.condition.index_sets:
+        collection_id: bytes = conditional_token_contract.call(
+            "getCollectionId",
+            [parent_collection_id, market.condition.id, index_set],
+            web3=web3,
+        )
+        # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
+        position_id: int = conditional_token_contract.call(
+            "getPositionId",
+            [market.collateral_token_contract_address_checksummed, collection_id],
+            web3=web3,
+        )
+        balance_for_position: int = conditional_token_contract.call(
+            "balanceOf", [from_address, position_id], web3=web3
+        )
+        balance += Wei(balance_for_position)
+
+    return balance
+
+
+def withdraw_collateral_token(
+    amount_wei: Wei,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    web3: Web3 | None = None,
+):
+    collateral_token = OmenCollateralTokenContract()
+    from_address_checksummed = Web3.to_checksum_address(from_address)
+    return collateral_token.withdraw(
+        amount_wei=amount_wei,
+        from_address=from_address_checksummed,
+        from_private_key=from_private_key,
+        web3=web3,
     )
 
 

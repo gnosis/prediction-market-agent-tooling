@@ -11,10 +11,18 @@ from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
 )
+from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 
 
 class DeployedPolymarketAgent(DeployedAgent):
+    # Note: Public key seems like the right option to identify agent, but as we aren't implementing rest of the logic right now,
+    # it might not be the correct one and it's okay to change this (and related stuff) if needed.
     polymarket_public_key: ChecksumAddress
+
+    def get_resolved_bets(self) -> list[ResolvedBet]:
+        raise NotImplementedError(
+            "TODO: Not implemented as we aren't planning to bet on Polymarket any time soon."
+        )
 
     @staticmethod
     def from_api_keys(

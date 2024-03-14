@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldMarket,
     ManifoldUser,
 )
+from prediction_market_agent_tooling.tools.parallelism import par_map
 
 """
 Python API for Manifold Markets
@@ -62,13 +63,17 @@ def get_manifold_binary_markets(
         if not markets:
             break
 
+        found_all_new_markets = False
         for market in markets:
             if created_after and market.createdTime < created_after:
                 if sort == "newest":
+                    found_all_new_markets = True
                     break
                 else:
                     continue
             all_markets.append(market)
+        if found_all_new_markets:
+            break
 
         if len(all_markets) >= limit:
             break
@@ -148,16 +153,25 @@ def get_resolved_manifold_bets(
     user_id: str,
     start_time: datetime,
     end_time: t.Optional[datetime],
-) -> list[ManifoldBet]:
+) -> tuple[list[ManifoldBet], list[ManifoldMarket]]:
     bets = get_manifold_bets(user_id, start_time, end_time)
-    bets = [
-        b for b in bets if get_manifold_market(b.contractId).is_resolved_non_cancelled()
-    ]
-    return bets
+    markets: list[ManifoldMarket] = par_map(
+        items=bets,
+        func=lambda bet: get_manifold_market(bet.contractId),
+    )
+    resolved_markets, resolved_bets = [], []
+    for bet, market in zip(bets, markets):
+        if market.is_resolved_non_cancelled():
+            resolved_markets.append(market)
+            resolved_bets.append(bet)
+    return resolved_bets, resolved_markets
 
 
-def manifold_to_generic_resolved_bet(bet: ManifoldBet) -> ResolvedBet:
-    market = get_manifold_market(bet.contractId)
+def manifold_to_generic_resolved_bet(
+    bet: ManifoldBet, market: ManifoldMarket
+) -> ResolvedBet:
+    if market.id != bet.contractId:
+        raise ValueError(f"Bet {bet.contractId} and market {market.id} do not match.")
     if not market.is_resolved_non_cancelled():
         raise ValueError(f"Market {market.id} is not resolved.")
     if not market.resolutionTime:

@@ -8,27 +8,43 @@ from web3 import Web3
 from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import (ChecksumAddress,
-                                                    HexAddress,
-                                                    OmenOutcomeToken,
-                                                    PrivateKey, TxReceipt, Wei,
-                                                    xDai)
-from prediction_market_agent_tooling.markets.agent_market import (AgentMarket,
-                                                                  FilterBy,
-                                                                  SortBy)
-from prediction_market_agent_tooling.markets.data_models import (BetAmount,
-                                                                 Currency)
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    HexAddress,
+    OmenOutcomeToken,
+    PrivateKey,
+    TxReceipt,
+    Wei,
+    xDai,
+)
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
+from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_FALSE_OUTCOME, OMEN_TRUE_OUTCOME, Condition, OmenBet, OmenMarket)
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+    Condition,
+    OmenBet,
+    OmenMarket,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    Arbitrator, OmenCollateralTokenContract, OmenConditionalTokenContract,
+    Arbitrator,
+    OmenCollateralTokenContract,
+    OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
-    OmenFixedProductMarketMakerFactoryContract, OmenOracleContract,
-    OmenRealitioContract)
+    OmenFixedProductMarketMakerFactoryContract,
+    OmenOracleContract,
+    OmenRealitioContract,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import (add_fraction,
-                                                              remove_fraction,
-                                                              xdai_to_wei)
+from prediction_market_agent_tooling.tools.web3_utils import (
+    add_fraction,
+    remove_fraction,
+    xdai_to_wei,
+)
 
 """
 Python API for Omen prediction market.

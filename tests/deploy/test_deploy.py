@@ -1,8 +1,6 @@
 import os
 import time
 
-import pytest
-
 from prediction_market_agent_tooling.deploy.agent_example import DeployableCoinFlipAgent
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
@@ -15,10 +13,6 @@ from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )
 from prediction_market_agent_tooling.monitor.monitor import monitor_agent
-from prediction_market_agent_tooling.tools.utils import (
-    get_current_git_commit_sha,
-    get_current_git_url,
-)
 
 
 def test_local_deployment() -> None:
@@ -47,9 +41,9 @@ def test_gcp_deployment() -> None:
             gcp_fname=gcp_fname,
             requirements_file=None,
             extra_deps=[],
-            #extra_deps=[
+            # extra_deps=[
             #    f"git+{get_current_git_url()}@{get_current_git_commit_sha()}",
-            #],
+            # ],
             function_file=os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 "gcp_cloud_function_example.py",

@@ -31,12 +31,7 @@ class PolymarketAgentMarket(AgentMarket):
             outcomes=[x.outcome for x in model.tokens],
             resolution=model.resolution,
             p_yes=model.p_yes,
-            # Polymarket's API doesn't give us this, so let's just estimate it.
-            created_time=(
-                model.end_date_iso - timedelta(weeks=1)
-                if model.end_date_iso is not None
-                else utcnow()
-            ),
+            created_time=None,
         )
 
     @staticmethod

@@ -70,6 +70,5 @@ class PolymarketAgentMarket(AgentMarket):
             for m in get_polymarket_binary_markets(
                 limit=limit,
                 closed=closed,
-                created_after=created_after,
             )
         ]

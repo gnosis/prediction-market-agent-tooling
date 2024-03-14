@@ -22,7 +22,6 @@ MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
 def get_polymarket_binary_markets(
     limit: int,
     closed: bool | None = False,
-    created_after: t.Optional[datetime] = None,
     excluded_questions: set[str] | None = None,
     with_rewards: bool = False,
     main_markets_only: bool = True,
@@ -56,13 +55,6 @@ def get_polymarket_binary_markets(
             # Skip also those that were archived.
             # Again nothing about it in documentation and API doesn't seem to return them, but to be safe.
             if market.archived:
-                continue
-
-            if (
-                created_after
-                and market.end_date_iso
-                and market.end_date_iso < created_after
-            ):
                 continue
 
             if excluded_questions and market.question in excluded_questions:

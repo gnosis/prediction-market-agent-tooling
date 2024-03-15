@@ -188,7 +188,9 @@ def {entrypoint_function_name}(request) -> str:
             print(f"Redeeming position from market {market.id}")
             market.redeem_positions()
 
-    def withdraw_all_wxdai_as_xdai(self, web3: Web3 | None = None) -> TxReceipt:
+    def withdraw_all_wxdai_as_xdai(
+        self, web3: Web3 | None = None
+    ) -> t.Optional[TxReceipt]:
         """
         Unwraps complete balance of wxDAI that belongs to a user.
         """
@@ -196,13 +198,14 @@ def {entrypoint_function_name}(request) -> str:
         keys = APIKeys()
         # First, we query the balance of wxDAI the user is entitled to.
         amount_wei = collateral_token.balanceOf(keys.bet_from_address)
-        # Finally, we withdraw the entire balance.
-        return collateral_token.withdraw(
-            amount_wei=amount_wei,
-            from_address=keys.bet_from_address,
-            from_private_key=keys.bet_from_private_key,
-            web3=web3,
-        )
+        # Finally, we withdraw the entire balance if it's greater than 0.
+        if amount_wei > 0:
+            return collateral_token.withdraw(
+                amount_wei=amount_wei,
+                from_address=keys.bet_from_address,
+                from_private_key=keys.bet_from_private_key,
+                web3=web3,
+            )
 
     def pre_processing(self, market_type: MarketType) -> None:
         """

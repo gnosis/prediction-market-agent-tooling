@@ -4,6 +4,8 @@ import tempfile
 import time
 import typing as t
 from datetime import datetime
+from web3 import Web3
+from prediction_market_agent_tooling.gtypes import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
@@ -26,6 +28,9 @@ from prediction_market_agent_tooling.markets.agent_market import (
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenCollateralTokenContract,
+)
 from prediction_market_agent_tooling.monitor.monitor_app import DEPLOYED_AGENT_TYPE_MAP
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
 
@@ -183,11 +188,29 @@ def {entrypoint_function_name}(request) -> str:
             print(f"Redeeming position from market {market.id}")
             market.redeem_positions()
 
+    def withdraw_all_wxdai_as_xdai(self, web3: Web3 | None = None) -> TxReceipt:
+        """
+        Unwraps complete balance of wxDAI that belongs to a user.
+        """
+        collateral_token = OmenCollateralTokenContract()
+        keys = APIKeys()
+        # First, we query the balance of wxDAI the user is entitled to.
+        amount_wei = collateral_token.balanceOf(keys.bet_from_address)
+        # Finally, we withdraw the entire balance.
+        return collateral_token.withdraw(
+            amount_wei=amount_wei,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
+            web3=web3,
+        )
+
     def pre_processing(self, market_type: MarketType) -> None:
         """
         Executes actions that occur before bets are placed.
         """
         self.redeem_positions_from_markets(market_type)
+        # This is carried out only for wxDAI (which is the only collateral token on all Omen markets)
+        self.withdraw_all_wxdai_as_xdai()
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """

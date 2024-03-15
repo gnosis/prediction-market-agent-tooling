@@ -724,10 +724,11 @@ def omen_redeem_full_position_tx(
     from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     web3: Web3 | None = None,
-    unwrap_collateral_after_redeeming_positions: bool = True,
 ) -> None:
     """
     Redeems position from a given Omen market.
+    Note that we redeem positions for markets where we both placed correct- and incorrect bets, but
+    don't redeem on markets where we haven't placed bets.
     """
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
@@ -761,14 +762,6 @@ def omen_redeem_full_position_tx(
         web3=web3,
     )
 
-    if unwrap_collateral_after_redeeming_positions:
-        withdraw_collateral_token(
-            amount_wei=amount_wei,
-            from_address=from_address,
-            from_private_key=from_private_key,
-            web3=web3,
-        )
-
 
 def get_conditional_tokens_balance_for_market(
     market: OmenAgentMarket,
@@ -795,8 +788,8 @@ def get_conditional_tokens_balance_for_market(
             [market.collateral_token_contract_address_checksummed, collection_id],
             web3=web3,
         )
-        balance_for_position: int = conditional_token_contract.call(
-            "balanceOf", [from_address, position_id], web3=web3
+        balance_for_position: int = conditional_token_contract.balanceOf(
+            from_address=from_address, position_id=position_id, web3=web3
         )
         balance += balance_for_position
 

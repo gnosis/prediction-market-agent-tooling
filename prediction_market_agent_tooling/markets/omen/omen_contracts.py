@@ -72,6 +72,12 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         )
         return id_
 
+    def balanceOf(
+        self, from_address: ChecksumAddress, position_id: int, web3: Web3 | None = None
+    ) -> int:
+        balance: int = self.call("balanceOf", [from_address, position_id], web3=web3)
+        return balance
+
     def redeemPositions(
         self,
         from_address: ChecksumAddress,

@@ -1,9 +1,11 @@
 from decimal import Decimal
 from typing import Any, Optional, TypeVar
+from pydantic.types import SecretStr
 
 import tenacity
 from web3 import Web3
 from web3.types import Nonce, TxParams, TxReceipt, Wei
+from eth_account import Account
 
 from prediction_market_agent_tooling.gtypes import (
     ABI,
@@ -17,6 +19,11 @@ from prediction_market_agent_tooling.gtypes import (
 
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
+
+
+def private_key_to_public_key(private_key: SecretStr) -> ChecksumAddress:
+    account = Account.from_key(private_key.get_secret_value())
+    return verify_address(account.address)
 
 
 def wei_to_xdai(wei: Wei) -> xDai:

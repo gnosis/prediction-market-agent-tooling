@@ -3,9 +3,14 @@ import typing as t
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none
-from prediction_market_agent_tooling.tools.web3_utils import verify_address
+from prediction_market_agent_tooling.tools.web3_utils import (
+    private_key_to_public_key,
+)
 
 SECRET_TYPES = [
     SecretStr,
@@ -21,7 +26,6 @@ class APIKeys(BaseSettings):
     )
 
     MANIFOLD_API_KEY: t.Optional[SecretStr] = None
-    BET_FROM_ADDRESS: t.Optional[ChecksumAddress] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
 
@@ -36,12 +40,7 @@ class APIKeys(BaseSettings):
 
     @property
     def bet_from_address(self) -> ChecksumAddress:
-        return verify_address(
-            check_not_none(
-                self.BET_FROM_ADDRESS,
-                "BET_FROM_ADDRESS missing in the environment.",
-            )
-        )
+        return private_key_to_public_key(self.bet_from_private_key)
 
     @property
     def bet_from_private_key(self) -> PrivateKey:

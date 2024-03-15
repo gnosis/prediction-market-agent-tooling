@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.gtypes import SecretStr, private_key_type
 from prediction_market_agent_tooling.tools.utils import get_current_git_commit_sha
-from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 
 def main(
@@ -30,7 +29,6 @@ def main(
     More manual example for cases where the default behavior falls short.
     """
     api_keys = APIKeys(
-        BET_FROM_ADDRESS=verify_address(from_address),
         # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
         BET_FROM_PRIVATE_KEY=private_key_type(f"{from_private_key_secret_name}:latest"),
         OPENAI_API_KEY=SecretStr(f"{openai_api_key_secret_name}:latest"),

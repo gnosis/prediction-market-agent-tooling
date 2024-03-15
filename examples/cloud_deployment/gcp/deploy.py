@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.deploy.constants import OWNER_KEY
 from prediction_market_agent_tooling.gtypes import SecretStr, private_key_type
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.tools.utils import get_current_git_commit_sha
-from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 
 class AgentName(str, Enum):
@@ -53,9 +52,6 @@ def main(
         secrets=json.loads(secrets) if secrets else None,
         memory=512,
         api_keys=APIKeys(
-            BET_FROM_ADDRESS=(
-                verify_address(bet_from_address) if bet_from_address else None
-            ),
             # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
             MANIFOLD_API_KEY=(
                 SecretStr(manifold_api_key_secret_name)

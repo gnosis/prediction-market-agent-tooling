@@ -5,10 +5,6 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    PrivateKey,
-)
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,

@@ -196,8 +196,4 @@ def test_omen_redeem_positions() -> None:
     )  # Market on which agent previously betted on
     market = OmenAgentMarket.from_data_model(get_market(market_id))
     keys = APIKeys()
-    omen_redeem_full_position_tx(
-        market=market,
-        from_address=keys.bet_from_address,
-        from_private_key=keys.bet_from_private_key,
-    )
+    omen_redeem_full_position_tx(market=market)

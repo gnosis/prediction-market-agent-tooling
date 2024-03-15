@@ -19,7 +19,11 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    SortBy,
+    FilterBy,
+)
 from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
 from prediction_market_agent_tooling.monitor.monitor_app import DEPLOYED_AGENT_TYPE_MAP
@@ -158,15 +162,40 @@ def {entrypoint_function_name}(request) -> str:
         market_type: MarketType,
         limit: int = MAX_AVAILABLE_MARKETS,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
+        filter_by: FilterBy = FilterBy.OPEN,
     ) -> list[AgentMarket]:
+        cls = self.get_agent_class_from_market_type(market_type)
+        # Fetch the soonest closing markets to choose from
+        available_markets = cls.get_binary_markets(
+            limit=limit, sort_by=sort_by, filter_by=filter_by
+        )
+        return available_markets
+
+    def get_agent_class_from_market_type(self, market_type: MarketType) -> AgentMarket:
         cls = MARKET_TYPE_MAP.get(market_type)
         if not cls:
             raise ValueError(f"Unknown market type: {market_type}")
-        # Fetch the soonest closing markets to choose from
-        available_markets = cls.get_binary_markets(limit=limit, sort_by=sort_by)
-        return available_markets
+        return cls
 
-    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+    def redeem_positions_from_markets(
+        self,
+        market_type: MarketType,
+    ):
+        # We can only redeem positions from resolved markets.
+        resolved_markets = self.get_markets(market_type, filter_by=FilterBy.RESOLVED)
+        for market in resolved_markets:
+            market.redeem_positions()
+
+    def pre_processing(self, market_type: MarketType) -> None:
+        """
+        Executes actions that occur before bets are placed.
+        """
+        self.redeem_positions_from_markets(market_type)
+
+    def process_bets(self, market_type: MarketType, _place_bet: bool = True):
+        """
+        Processes bets placed by agents on a given market.
+        """
         available_markets = self.get_markets(market_type)
         markets = self.pick_markets(available_markets)
         for market in markets:
@@ -180,6 +209,17 @@ def {entrypoint_function_name}(request) -> str:
                     amount=amount,
                     outcome=result,
                 )
+
+    def post_processing(self):
+        pass
+
+    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+        # redeem phase
+        self.pre_processing(market_type)
+        # betting phase
+        self.process_bets(market_type, _place_bet)
+        # finish
+        self.post_processing()
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"

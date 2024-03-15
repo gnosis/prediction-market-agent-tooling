@@ -87,13 +87,12 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
-    def redeem_positions(
-        self, from_address: ChecksumAddress, from_private_key: PrivateKey
-    ) -> None:
+    def redeem_positions(self) -> None:
+        keys = APIKeys()
         return omen_redeem_full_position_tx(
             market=self,
-            from_address=from_address,
-            from_private_key=from_private_key,
+            from_address=keys.bet_from_address,
+            from_private_key=keys.bet_from_private_key,
         )
 
     @staticmethod

@@ -5,6 +5,10 @@ from enum import Enum
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+)
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
@@ -61,6 +65,12 @@ class AgentMarket(BaseModel):
 
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:
         raise NotImplementedError("Subclasses must implement this method")
+
+    def redeem_positions(self) -> None:
+        print(
+            "This should be implemented on each subclass. No positions are redeemed in this method."
+        )
+        return
 
     @staticmethod
     def get_binary_markets(

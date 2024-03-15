@@ -1,5 +1,6 @@
-from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 from pydantic.types import SecretStr
+
+from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
 
 def test_private_key_to_public_key() -> None:

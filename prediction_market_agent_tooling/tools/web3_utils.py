@@ -1,11 +1,11 @@
 from decimal import Decimal
 from typing import Any, Optional, TypeVar
-from pydantic.types import SecretStr
 
 import tenacity
+from eth_account import Account
+from pydantic.types import SecretStr
 from web3 import Web3
 from web3.types import Nonce, TxParams, TxReceipt, Wei
-from eth_account import Account
 
 from prediction_market_agent_tooling.gtypes import (
     ABI,

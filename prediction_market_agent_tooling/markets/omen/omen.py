@@ -3,7 +3,9 @@ from datetime import datetime
 from decimal import Decimal
 
 import requests
+from eth_typing import HexStr
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -11,6 +13,8 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     OmenOutcomeToken,
     PrivateKey,
+    TxReceipt,
+    Wei,
     xDai,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -22,11 +26,11 @@ from prediction_market_agent_tooling.markets.data_models import BetAmount, Curre
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
+    Condition,
     OmenBet,
     OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
     OmenCollateralTokenContract,
     OmenConditionalTokenContract,
@@ -62,6 +66,7 @@ class OmenAgentMarket(AgentMarket):
     currency: t.ClassVar[Currency] = Currency.xDai
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
+    condition: Condition
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(0.00001), currency=self.currency)
@@ -82,6 +87,15 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
+    def redeem_positions(
+        self, from_address: ChecksumAddress, from_private_key: PrivateKey
+    ) -> None:
+        return omen_redeem_full_position_tx(
+            market=self,
+            from_address=from_address,
+            from_private_key=from_private_key,
+        )
+
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
         return OmenAgentMarket(
@@ -97,6 +111,7 @@ class OmenAgentMarket(AgentMarket):
                 else datetime.min
             ),
             p_yes=model.p_yes,
+            condition=model.condition,
         )
 
     @staticmethod
@@ -138,6 +153,13 @@ query getFixedProductMarketMaker($id: String!) {
         outcomeTokenAmounts
         outcomeTokenMarginalPrices
         fee
+        condition {
+            id
+            outcomeSlotCount
+        }
+        answerFinalizedTimestamp
+        resolutionTimestamp
+        currentAnswer
     }
 }
 """
@@ -182,6 +204,10 @@ def construct_query_get_fixed_product_markets_makers(
                 currentAnswer
                 creationTimestamp
                 category
+                condition {
+                    id
+                    outcomeSlotCount
+                }
             }
         }
     """
@@ -480,6 +506,7 @@ query getFixedProductMarketMakerTrades(
             openingTimestamp
             condition {
                 id
+                outcomeSlotCount
             }
             collateralVolume
             usdVolume
@@ -687,6 +714,110 @@ def omen_fund_market_tx(
     )
 
     market_contract.addFunding(funds_wei, from_address, from_private_key)
+
+
+def build_parent_collection_id() -> HexStr:
+    return HASH_ZERO  # Taken from Olas
+
+
+def omen_redeem_full_position_tx(
+    market: OmenAgentMarket,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    web3: Web3 | None = None,
+    unwrap_collateral_after_redeeming_positions: bool = True,
+) -> None:
+    """
+    Redeems position from a given Omen market.
+    """
+
+    market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
+    conditional_token_contract = OmenConditionalTokenContract()
+
+    # Verify, that markets uses conditional tokens that we expect.
+    if market_contract.conditionalTokens() != conditional_token_contract.address:
+        raise ValueError(
+            f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
+        )
+
+    parent_collection_id = build_parent_collection_id()
+
+    if not market.is_resolved():
+        print("Cannot redeem winnings if market is not yet resolved. Exiting.")
+        return
+
+    amount_wei = get_conditional_tokens_balance_for_market(market, from_address, web3)
+    if amount_wei == 0:
+        print("No balance to claim. Exiting.")
+        return
+
+    conditional_token_contract = OmenConditionalTokenContract()
+    conditional_token_contract.redeemPositions(
+        from_address=from_address,
+        from_private_key=from_private_key,
+        collateral_token_address=market.collateral_token_contract_address_checksummed,
+        condition_id=market.condition.id,
+        parent_collection_id=parent_collection_id,
+        index_sets=market.condition.index_sets,
+        web3=web3,
+    )
+
+    if unwrap_collateral_after_redeeming_positions:
+        withdraw_collateral_token(
+            amount_wei=amount_wei,
+            from_address=from_address,
+            from_private_key=from_private_key,
+            web3=web3,
+        )
+
+
+def get_conditional_tokens_balance_for_market(
+    market: OmenAgentMarket,
+    from_address: ChecksumAddress,
+    web3: Web3 | None = None,
+) -> Wei:
+    """
+    We derive the withdrawable balance from the ConditionalTokens contract through CollectionId -> PositionId (which
+    also serves as tokenId) -> TokenBalances.
+    """
+    conditional_token_contract = OmenConditionalTokenContract()
+    parent_collection_id = build_parent_collection_id()
+    balance = 0
+
+    for index_set in market.condition.index_sets:
+        collection_id: bytes = conditional_token_contract.call(
+            "getCollectionId",
+            [parent_collection_id, market.condition.id, index_set],
+            web3=web3,
+        )
+        # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
+        position_id: int = conditional_token_contract.call(
+            "getPositionId",
+            [market.collateral_token_contract_address_checksummed, collection_id],
+            web3=web3,
+        )
+        balance_for_position: int = conditional_token_contract.call(
+            "balanceOf", [from_address, position_id], web3=web3
+        )
+        balance += balance_for_position
+
+    return Wei(balance)
+
+
+def withdraw_collateral_token(
+    amount_wei: Wei,
+    from_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    web3: Web3 | None = None,
+) -> TxReceipt:
+    collateral_token = OmenCollateralTokenContract()
+    from_address_checksummed = Web3.to_checksum_address(from_address)
+    return collateral_token.withdraw(
+        amount_wei=amount_wei,
+        from_address=from_address_checksummed,
+        from_private_key=from_private_key,
+        web3=web3,
+    )
 
 
 def omen_remove_fund_market_tx(

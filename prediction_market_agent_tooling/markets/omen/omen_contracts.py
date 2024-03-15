@@ -72,6 +72,29 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         )
         return id_
 
+    def redeemPositions(
+        self,
+        from_address: ChecksumAddress,
+        from_private_key: PrivateKey,
+        collateral_token_address: str,
+        condition_id: str,
+        parent_collection_id: str,
+        index_sets: t.List[int],
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            from_address=from_address,
+            from_private_key=from_private_key,
+            function_name="redeemPositions",
+            function_params=[
+                collateral_token_address,
+                parent_collection_id,
+                condition_id,
+                index_sets,
+            ],
+            web3=web3,
+        )
+
     def getOutcomeSlotCount(
         self,
         condition_id: HexBytes,

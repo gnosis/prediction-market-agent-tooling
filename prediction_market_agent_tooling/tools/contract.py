@@ -187,6 +187,7 @@ class ContractERC20BaseClass(ContractBaseClass):
         from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             from_address=from_address,
@@ -194,6 +195,7 @@ class ContractERC20BaseClass(ContractBaseClass):
             function_name="withdraw",
             function_params=[amount_wei],
             tx_params=tx_params,
+            web3=web3,
         )
 
     def balanceOf(self, for_address: ChecksumAddress) -> Wei:

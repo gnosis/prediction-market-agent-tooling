@@ -36,6 +36,15 @@ def get_boolean_outcome(outcome_str: str) -> bool:
     raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
 
 
+class Condition(BaseModel):
+    id: HexAddress
+    outcomeSlotCount: int
+
+    @property
+    def index_sets(self) -> t.List[int]:
+        return [i + 1 for i in range(self.outcomeSlotCount)]
+
+
 class OmenMarket(BaseModel):
     """
     https://aiomen.eth.limo
@@ -57,6 +66,7 @@ class OmenMarket(BaseModel):
     answerFinalizedTimestamp: t.Optional[int] = None
     currentAnswer: t.Optional[str] = None
     creationTimestamp: t.Optional[int] = None
+    condition: Condition
 
     @property
     def answer_index(self) -> t.Optional[int]:

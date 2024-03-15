@@ -4,8 +4,8 @@ import tempfile
 import time
 import typing as t
 from datetime import datetime
+
 from web3 import Web3
-from prediction_market_agent_tooling.gtypes import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
@@ -21,6 +21,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
+from prediction_market_agent_tooling.gtypes import TxReceipt
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -187,6 +188,7 @@ def {entrypoint_function_name}(request) -> str:
         for market in resolved_markets:
             print(f"Redeeming position from market {market.id}")
             market.redeem_positions()
+        return None
 
     def withdraw_all_wxdai_as_xdai(
         self, web3: Web3 | None = None
@@ -206,6 +208,7 @@ def {entrypoint_function_name}(request) -> str:
                 from_private_key=keys.bet_from_private_key,
                 web3=web3,
             )
+        return None
 
     def pre_processing(self, market_type: MarketType) -> None:
         """

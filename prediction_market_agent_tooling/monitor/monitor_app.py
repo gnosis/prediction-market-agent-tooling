@@ -9,16 +9,22 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.markets import (
+    MARKET_TYPE_TO_AGENT_MARKET,
+    MarketType,
+)
+from prediction_market_agent_tooling.monitor.markets.manifold import (
+    DeployedManifoldAgent,
+)
+from prediction_market_agent_tooling.monitor.markets.omen import DeployedOmenAgent
+from prediction_market_agent_tooling.monitor.markets.polymarket import (
+    DeployedPolymarketAgent,
+)
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
     monitor_agent,
     monitor_market,
-)
-from prediction_market_agent_tooling.tools.mapping import (
-    MARKET_TYPE_TO_AGENT_MARKET,
-    MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
@@ -28,6 +34,12 @@ from prediction_market_agent_tooling.tools.utils import (
 )
 
 MAX_MONITOR_MARKETS = 1000
+
+MARKET_TYPE_TO_DEPLOYED_AGENT: dict[MarketType, type[DeployedAgent]] = {
+    MarketType.MANIFOLD: DeployedManifoldAgent,
+    MarketType.OMEN: DeployedOmenAgent,
+    MarketType.POLYMARKET: DeployedPolymarketAgent,
+}
 
 
 def get_deployed_agents(

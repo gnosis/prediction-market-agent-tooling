@@ -21,9 +21,11 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.tools.mapping import (
+from prediction_market_agent_tooling.markets.markets import (
     MARKET_TYPE_TO_AGENT_MARKET,
+    MarketType,
+)
+from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow

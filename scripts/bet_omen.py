@@ -38,7 +38,6 @@ def buy(
     market = OmenAgentMarket.from_data_model(get_market(market_id))
     omen_buy_outcome_tx(
         amount=xdai_type(amount),
-        from_address=verify_address(from_address),
         from_private_key=private_key_type(from_private_key),
         market=market,
         outcome=outcome,

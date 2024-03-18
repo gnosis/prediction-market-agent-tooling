@@ -7,9 +7,9 @@ from prediction_market_agent_tooling.gtypes import mana_type
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_bets,
     get_manifold_binary_markets,
+    get_one_manifold_binary_market,
     get_resolved_manifold_bets,
     manifold_to_generic_resolved_bet,
-    pick_binary_market,
     place_bet,
 )
 from tests.utils import RUN_PAID_TESTS
@@ -22,7 +22,7 @@ def a_user_id() -> str:
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_manifold() -> None:
-    market = pick_binary_market()
+    market = get_one_manifold_binary_market()
     print("Placing bet on market:", market.question)
     place_bet(mana_type(1), market.id, True)
 

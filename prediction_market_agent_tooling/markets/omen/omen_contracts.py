@@ -80,7 +80,6 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
 
     def redeemPositions(
         self,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         collateral_token_address: str,
         condition_id: str,
@@ -89,7 +88,6 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="redeemPositions",
             function_params=[
@@ -121,12 +119,10 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         self,
         for_address: ChecksumAddress,
         approve: bool,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="setApprovalForAll",
             function_params=[
@@ -141,12 +137,10 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         oracle_address: ChecksumAddress,
         question_id: HexBytes,
         outcomes_slot_count: int,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="prepareCondition",
             function_params=[
@@ -210,12 +204,10 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         amount_wei: Wei,
         outcome_index: int,
         min_outcome_tokens_to_buy: OmenOutcomeToken,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="buy",
             function_params=[
@@ -231,12 +223,10 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         amount_wei: Wei,
         outcome_index: int,
         max_outcome_tokens_to_sell: OmenOutcomeToken,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="sell",
             function_params=[
@@ -250,7 +240,6 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
     def addFunding(
         self,
         add_funding: Wei,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
@@ -260,7 +249,6 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         # `addFunding` with `distribution_hint` can be used only during the market creation, so forcing empty here.
         distribution_hint: list[int] = []
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="addFunding",
             function_params=[add_funding, distribution_hint],
@@ -270,7 +258,6 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
     def removeFunding(
         self,
         remove_funding: OmenOutcomeToken,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
     ) -> TxReceipt:
@@ -278,7 +265,6 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         Remove funding is done in shares.
         """
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="removeFunding",
             function_params=[remove_funding],
@@ -320,7 +306,6 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
         self,
         condition_id: HexBytes,
         initial_funds_wei: Wei,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         fee: float = OMEN_DEFAULT_MARKET_FEE,
         tx_params: t.Optional[TxParams] = None,
@@ -329,7 +314,6 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
             xdai_type(fee)
         )  # We need to convert this to the wei units, but in reality it's % fee as stated in the `OMEN_DEFAULT_MARKET_FEE` variable.
         return self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="create2FixedProductMarketMaker",
             function_params=dict(
@@ -408,7 +392,6 @@ class OmenRealitioContract(ContractOnGnosisChain):
         language: str,
         arbitrator: Arbitrator,
         opening: datetime,
-        from_address: ChecksumAddress,
         from_private_key: PrivateKey,
         nonce: int | None = None,
         tx_params: t.Optional[TxParams] = None,
@@ -429,7 +412,6 @@ class OmenRealitioContract(ContractOnGnosisChain):
             ]
         )
         receipt_tx = self.send(
-            from_address=from_address,
             from_private_key=from_private_key,
             function_name="askQuestion",
             function_params=dict(

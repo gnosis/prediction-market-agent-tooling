@@ -28,11 +28,16 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import MARKET_TYPE_MAP, MarketType
+from prediction_market_agent_tooling.markets.markets import (
+    MARKET_TYPE_TO_AGENT_MARKET,
+    MarketType,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenCollateralTokenContract,
 )
-from prediction_market_agent_tooling.monitor.monitor_app import DEPLOYED_AGENT_TYPE_MAP
+from prediction_market_agent_tooling.monitor.monitor_app import (
+    MARKET_TYPE_TO_DEPLOYED_AGENT,
+)
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
 
 MAX_AVAILABLE_MARKETS = 20
@@ -119,7 +124,7 @@ def {entrypoint_function_name}(request) -> str:
         env_vars |= api_keys.model_dump_public()
         secrets |= api_keys.model_dump_secrets()
 
-        monitor_agent = DEPLOYED_AGENT_TYPE_MAP[market_type].from_api_keys(
+        monitor_agent = MARKET_TYPE_TO_DEPLOYED_AGENT[market_type].from_api_keys(
             name=gcp_fname,
             deployableagent_class_name=self.__class__.__name__,
             start_time=start_time or utcnow(),
@@ -170,7 +175,7 @@ def {entrypoint_function_name}(request) -> str:
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
         filter_by: FilterBy = FilterBy.OPEN,
     ) -> list[AgentMarket]:
-        cls = MARKET_TYPE_MAP.get(market_type)
+        cls = MARKET_TYPE_TO_AGENT_MARKET.get(market_type)
         if not cls:
             raise ValueError(f"Unknown market type: {market_type}")
         # Fetch the soonest closing markets to choose from

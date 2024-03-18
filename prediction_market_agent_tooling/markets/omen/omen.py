@@ -63,8 +63,8 @@ class OmenAgentMarket(AgentMarket):
     market_maker_contract_address_checksummed: ChecksumAddress
     condition: Condition
 
-    INVALID_MARKET_ANSWER: HexStr = (
-        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+    INVALID_MARKET_ANSWER: HexStr = HexStr(
+        "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     )
 
     def get_tiny_bet_amount(self) -> BetAmount:
@@ -94,22 +94,23 @@ class OmenAgentMarket(AgentMarket):
         resolved_bets_for_market = [
             bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
         ]
-        # We iterate through bets since agent could have placed bets on multiple outcomes
+        # We iterate through bets since agent could have placed bets on multiple outcomes.
+        # If one of the bets was correct, we return true since there is a redeemable amount to be retrieved.
         for bet in resolved_bets_for_market:
             # We only handle markets that are already finalized AND have a final answer
             if (
                 bet.fpmm.question.answerFinalizedTimestamp is None
                 or bet.fpmm.question.currentAnswer is None
             ):
-                return False
+                continue
 
             # Like Olas, we assert correctness by matching index OR invalid market answer
             if bet.outcomeIndex == int(
                 bet.fpmm.question.currentAnswer, 16
-            ) or bet.outcomeIndex == int(self.INVALID_MARKET_ANSWER):
+            ) or bet.outcomeIndex == int(self.INVALID_MARKET_ANSWER, 16):
                 return True
 
-            return False
+        return False
 
     def check_if_position_was_already_redeemed(self) -> bool:
         """

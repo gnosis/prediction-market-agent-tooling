@@ -117,6 +117,11 @@ query getFixedProductMarketMaker($id: String!) {
         answerFinalizedTimestamp
         resolutionTimestamp
         currentAnswer
+        question {
+            id
+            answerFinalizedTimestamp
+            currentAnswer 
+        }
     }
 }
 """
@@ -158,10 +163,10 @@ def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
 
 def get_user_positions(
     better_address: ChecksumAddress,
-) -> list[any]:
+) -> t.List[OmenUserPosition]:
     # Initialize id_gt for the first batch of bets to zero
     id_gt: str = "0"
-    all_user_positions: list[any] = []
+    all_user_positions: t.List[OmenUserPosition] = []
     while True:
         query = USER_POSITIONS_QUERY
         result = requests.post(

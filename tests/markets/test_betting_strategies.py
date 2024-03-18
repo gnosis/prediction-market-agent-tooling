@@ -23,6 +23,7 @@ from prediction_market_agent_tooling.markets.manifold.manifold import (
 from prediction_market_agent_tooling.markets.omen.data_models import (
     Condition,
     OmenMarket,
+    Question,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -58,6 +59,7 @@ def omen_market() -> OmenMarket:
         fee=wei_type(20000000000000000),
         category="foo",
         condition=Condition(id=HexAddress(HexStr("0x123")), outcomeSlotCount=2),
+        question=Question(id=HexAddress(HexStr("0x123"))),
     )
 
 

@@ -69,6 +69,18 @@ class AgentMarket(BaseModel):
         )
         return
 
+    def before_process_bets(self) -> None:
+        print(
+            "This should be implemented on each subclass. No positions are redeemed in this method."
+        )
+        return
+
+    def after_process_bets(self) -> None:
+        print(
+            "This should be implemented on each subclass. No positions are redeemed in this method."
+        )
+        return
+
     @staticmethod
     def get_binary_markets(
         limit: int,

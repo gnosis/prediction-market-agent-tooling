@@ -195,33 +195,12 @@ def {entrypoint_function_name}(request) -> str:
             market.redeem_positions()
         return None
 
-    def withdraw_all_wxdai_as_xdai(
-        self, web3: Web3 | None = None
-    ) -> t.Optional[TxReceipt]:
-        """
-        Unwraps complete balance of wxDAI that belongs to a user.
-        """
-        collateral_token = OmenCollateralTokenContract()
-        keys = APIKeys()
-        # First, we query the balance of wxDAI the user is entitled to.
-        amount_wei = collateral_token.balanceOf(keys.bet_from_address)
-        # Finally, we withdraw the entire balance if it's greater than 0.
-        if amount_wei > 0:
-            return collateral_token.withdraw(
-                amount_wei=amount_wei,
-                from_address=keys.bet_from_address,
-                from_private_key=keys.bet_from_private_key,
-                web3=web3,
-            )
-        return None
-
-    def pre_processing(self, market_type: MarketType) -> None:
+    def before_process_bets(self, market_type: MarketType) -> None:
         """
         Executes actions that occur before bets are placed.
         """
-        self.redeem_positions_from_markets(market_type)
-        # This is carried out only for wxDAI (which is the only collateral token on all Omen markets)
-        self.withdraw_all_wxdai_as_xdai()
+        cls = MARKET_TYPE_TO_AGENT_MARKET.get(market_type)
+        cls().before_process_bets()
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """
@@ -241,13 +220,14 @@ def {entrypoint_function_name}(request) -> str:
                     outcome=result,
                 )
 
-    def post_processing(self) -> None:
-        pass
+    def after_process_bets(self, market_type: MarketType) -> None:
+        cls = MARKET_TYPE_TO_AGENT_MARKET.get(market_type)
+        cls().after_process_bets()
 
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
-        self.pre_processing(market_type)
+        self.before_process_bets(market_type)
         self.process_bets(market_type, _place_bet)
-        self.post_processing()
+        self.after_process_bets()
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"

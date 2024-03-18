@@ -8,6 +8,7 @@ from web3 import Web3
 from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.agent import MAX_AVAILABLE_MARKETS
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
@@ -23,6 +24,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -91,9 +93,23 @@ class OmenAgentMarket(AgentMarket):
         keys = APIKeys()
         return omen_redeem_full_position_tx(
             market=self,
-            from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
         )
+
+    def before_process_bets(self) -> None:
+        # We can only redeem positions from resolved markets.
+        resolved_markets = self.get_binary_markets(
+            filter_by=FilterBy.RESOLVED,
+            limit=MAX_AVAILABLE_MARKETS,
+            sort_by=SortBy.CLOSING_SOONEST,
+        )
+        for market in resolved_markets:
+            print(f"Redeeming position from market {market.id}")
+            market.redeem_positions()
+        return None
+
+    def after_process_bets(self) -> None:
+        pass
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -713,6 +729,7 @@ def omen_redeem_full_position_tx(
     Note that we redeem positions for markets where we both placed correct- and incorrect bets, but
     don't redeem on markets where we haven't placed bets.
     """
+    # ToDo - Only redeem position if there is a user position to be redeemed (check subgraph guess index)
     from_address = private_key_to_public_key(from_private_key)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()

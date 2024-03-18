@@ -54,12 +54,10 @@ class Question(BaseModel):
 class OmenPosition(BaseModel):
     id: HexAddress
     conditionIds: t.List[HexAddress]
-    lifetimeValue: int
 
 
 class OmenUserPosition(BaseModel):
     id: HexAddress
-    balance: int
     position: OmenPosition
 
 

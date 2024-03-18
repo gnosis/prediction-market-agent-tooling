@@ -5,8 +5,6 @@ import time
 import typing as t
 from datetime import datetime
 
-from web3 import Web3
-
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -21,7 +19,6 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import TxReceipt
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -31,9 +28,6 @@ from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import (
     MARKET_TYPE_TO_AGENT_MARKET,
     MarketType,
-)
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OmenCollateralTokenContract,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,

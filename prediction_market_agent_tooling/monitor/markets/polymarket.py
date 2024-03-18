@@ -20,9 +20,7 @@ class DeployedPolymarketAgent(DeployedAgent):
     polymarket_public_key: ChecksumAddress
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
-        raise NotImplementedError(
-            "TODO: Not implemented as we aren't planning to bet on Polymarket any time soon."
-        )
+        raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     @staticmethod
     def from_api_keys(

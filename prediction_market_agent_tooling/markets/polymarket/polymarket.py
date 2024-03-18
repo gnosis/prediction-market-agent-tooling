@@ -34,14 +34,10 @@ class PolymarketAgentMarket(AgentMarket):
         )
 
     def get_tiny_bet_amount(self) -> BetAmount:
-        raise NotImplementedError(
-            "TODO: Not implemented as we aren't planning to bet on Polymarket any time soon."
-        )
+        raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:
-        raise NotImplementedError(
-            "TODO: Not implemented as we aren't planning to bet on Polymarket any time soon."
-        )
+        raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     @staticmethod
     def get_binary_markets(

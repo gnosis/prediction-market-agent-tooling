@@ -2,7 +2,6 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
-import requests
 from eth_typing import HexStr
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -33,6 +32,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
     OmenCollateralTokenContract,
     OmenConditionalTokenContract,
@@ -40,13 +40,11 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenFixedProductMarketMakerFactoryContract,
     OmenOracleContract,
     OmenRealitioContract,
-    OMEN_DEFAULT_MARKET_FEE,
 )
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
-    get_omen_markets,
     get_omen_bets,
+    get_omen_markets,
 )
-
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -507,11 +505,10 @@ def omen_redeem_full_position_tx(
     web3: Web3 | None = None,
 ) -> None:
     """
-    Redeems position from a given Omen market.
-    Note that we redeem positions for markets where we both placed correct- and incorrect bets, but
-    don't redeem on markets where we haven't placed bets.
+    Redeems position from a given Omen market. Note that we check if there is a balance
+    to be redeemed before sending the transaction.
     """
-    # ToDo - Only redeem position if there is a user position to be redeemed (check subgraph guess index)
+
     from_address = private_key_to_public_key(from_private_key)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()

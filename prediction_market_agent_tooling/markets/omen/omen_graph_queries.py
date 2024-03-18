@@ -3,14 +3,14 @@ from datetime import datetime
 
 import requests
 from eth_typing import ChecksumAddress, HexAddress
-from prediction_market_agent_tooling.tools.utils import utcnow
+
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OmenUserPosition,
-    OmenMarket,
     OmenBet,
+    OmenMarket,
+    OmenUserPosition,
 )
-
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 """
 Python API for Omen prediction market.

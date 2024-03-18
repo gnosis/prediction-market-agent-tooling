@@ -90,10 +90,6 @@ def get_polymarket_binary_markets(
     return all_markets[:limit]
 
 
-def get_one_polymarket_binary_market() -> PolymarketMarket:
-    return get_polymarket_binary_markets(1)[0]
-
-
 def get_polymarket_market(condition_id: str) -> PolymarketMarket:
     url = f"{POLYMARKET_API_BASE_URL}/markets/{condition_id}"
     return response_to_model(requests.get(url), PolymarketMarket)

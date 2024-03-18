@@ -63,7 +63,6 @@ def test_omen_buy_and_sell_outcome() -> None:
     with wait_until_nonce_changed(keys.bet_from_address):
         binary_omen_buy_outcome_tx(
             amount=buy_amount,
-            from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             market=market,
             binary_outcome=True,
@@ -121,7 +120,6 @@ def test_omen_fund_and_remove_fund_market() -> None:
         omen_remove_fund_market_tx(
             market=market,
             shares=remove_fund,
-            from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             auto_withdraw=False,  # Switch to true after implemented.
         )
@@ -198,6 +196,5 @@ def test_omen_redeem_positions() -> None:
     keys = APIKeys()
     omen_redeem_full_position_tx(
         market=market,
-        from_address=keys.bet_from_address,
         from_private_key=keys.bet_from_private_key,
     )

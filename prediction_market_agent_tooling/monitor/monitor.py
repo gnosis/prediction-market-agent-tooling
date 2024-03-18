@@ -20,6 +20,7 @@ from prediction_market_agent_tooling.markets.data_models import Resolution, Reso
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
     add_utc_timezone_validator,
+    check_not_none,
     should_not_happen,
 )
 
@@ -32,11 +33,16 @@ class MonitorSettings(BaseSettings):
     LOAD_FROM_GCP: bool = False
     MANIFOLD_API_KEYS: list[str] = []
     OMEN_PUBLIC_KEYS: list[str] = []
+    POLYMARKET_PUBLIC_KEYS: list[str] = []
     PAST_N_WEEKS: int = 1
 
     @property
     def has_manual_agents(self) -> bool:
-        return bool(self.MANIFOLD_API_KEYS or self.OMEN_PUBLIC_KEYS)
+        return bool(
+            self.MANIFOLD_API_KEYS
+            or self.OMEN_PUBLIC_KEYS
+            or self.POLYMARKET_PUBLIC_KEYS
+        )
 
 
 C = t.TypeVar("C", bound="DeployedAgent")
@@ -253,7 +259,10 @@ def monitor_market_outcome_bias(
 
     date_to_open_yes_proportion = {
         d: np.mean([int(m.p_yes > 0.5) for m in markets])
-        for d, markets in groupby(open_markets, lambda x: x.created_time.date())
+        for d, markets in groupby(
+            open_markets,
+            lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
+        )
     }
     date_to_resolved_yes_proportion = {
         d: np.mean(
@@ -270,7 +279,10 @@ def monitor_market_outcome_bias(
                 for m in markets
             ]
         )
-        for d, markets in groupby(resolved_markets, lambda x: x.created_time.date())
+        for d, markets in groupby(
+            resolved_markets,
+            lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
+        )
     }
 
     df_open = pd.DataFrame(
@@ -296,10 +308,11 @@ def monitor_market_outcome_bias(
         .encode(x="date:T", y="resolved_proportion:Q", color="resolved_label:N")
     )
 
-    st.altair_chart(
-        alt.layer(open_chart, resolved_chart).interactive(),  # type: ignore # Doesn't expect `LayerChart`, but `Chart`, yet it works.
-        use_container_width=True,
-    )
+    if len(df) > 0:
+        st.altair_chart(
+            alt.layer(open_chart, resolved_chart).interactive(),  # type: ignore # Doesn't expect `LayerChart`, but `Chart`, yet it works.
+            use_container_width=True,
+        )
 
     all_open_markets_yes_mean = np.mean([int(m.p_yes > 0.5) for m in open_markets])
     all_resolved_markets_yes_mean = np.mean(

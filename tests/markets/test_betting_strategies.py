@@ -42,6 +42,7 @@ def test_minimum_bet_to_win(
                 "0xf3318C420e5e30C12786C4001D600e9EE1A7eBb1"
             ),
             created_time=datetime.now(),
+            resolution=None,
             condition=Condition(id=HexAddress(HexStr("0x123")), outcomeSlotCount=2),
         ),
     )
@@ -70,5 +71,6 @@ def test_minimum_bet_to_win_manifold(
         outcomes=["Yes", "No"],
         p_yes=market_p_yes,
         created_time=datetime.now(),
+        resolution=None,
     ).get_minimum_bet_to_win(outcome, amount_to_win)
     assert min_bet == expected_min_bet, f"Expected {expected_min_bet}, got {min_bet}."

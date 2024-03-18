@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import Probability
@@ -10,6 +11,7 @@ from prediction_market_agent_tooling.markets.betting_strategies import (
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )
+from prediction_market_agent_tooling.markets.omen.data_models import Condition
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenCollateralTokenContract,
@@ -41,6 +43,7 @@ def test_minimum_bet_to_win(
             ),
             created_time=datetime.now(),
             resolution=None,
+            condition=Condition(id=HexAddress(HexStr("0x123")), outcomeSlotCount=2),
         ),
     )
     assert (

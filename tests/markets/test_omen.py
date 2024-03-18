@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_resolved_omen_bets,
     omen_create_market_tx,
     omen_fund_market_tx,
+    omen_redeem_full_position_tx,
     omen_remove_fund_market_tx,
     pick_binary_market,
 )
@@ -186,3 +187,17 @@ def test_resolved_omen_bets(a_bet_from_address: str) -> None:
     # Verify that all bets convert to generic resolved bets.
     for bet in resolved_bets:
         bet.to_generic_resolved_bet()
+
+
+# @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+def test_omen_redeem_positions() -> None:
+    market_id = (
+        "0xBA125828EC00267BBB70564D5558B891EABDAB9B".lower()
+    )  # Market on which agent previously betted on
+    market = OmenAgentMarket.from_data_model(get_market(market_id))
+    keys = APIKeys()
+    omen_redeem_full_position_tx(
+        market=market,
+        from_address=keys.bet_from_address,
+        from_private_key=keys.bet_from_private_key,
+    )

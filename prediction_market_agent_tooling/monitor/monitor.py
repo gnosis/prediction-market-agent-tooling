@@ -260,8 +260,8 @@ def monitor_market_outcome_bias(
     date_to_open_yes_proportion = {
         d: np.mean([int(m.p_yes > 0.5) for m in markets])
         for d, markets in groupby(
-            filter(lambda x: x.created_time is not None, open_markets),
-            lambda x: check_not_none(x.created_time).date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
+            open_markets,
+            lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
         )
     }
     date_to_resolved_yes_proportion = {
@@ -280,8 +280,8 @@ def monitor_market_outcome_bias(
             ]
         )
         for d, markets in groupby(
-            filter(lambda x: x.created_time is not None, resolved_markets),
-            lambda x: check_not_none(x.created_time).date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
+            resolved_markets,
+            lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
         )
     }
 

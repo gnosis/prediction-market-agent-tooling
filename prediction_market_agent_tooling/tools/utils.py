@@ -1,10 +1,12 @@
 import os
 import subprocess
 from datetime import datetime
-from typing import NoReturn, Optional, Type, TypeVar, cast
+from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
 import git
 import pytz
+import requests
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, SecretStr
 
@@ -94,6 +96,29 @@ def get_current_git_branch() -> str:
 
 def get_current_git_url() -> str:
     return git.Repo(search_parent_directories=True).remotes.origin.url
+
+
+def response_to_json(response: requests.models.Response) -> dict[str, Any]:
+    response.raise_for_status()
+    response_json: dict[str, Any] = response.json()
+    return response_json
+
+
+BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
+
+
+def response_to_model(
+    response: requests.models.Response, model: Type[BaseModelT]
+) -> BaseModelT:
+    response_json = response_to_json(response)
+    return model.model_validate(response_json)
+
+
+def response_list_to_model(
+    response: requests.models.Response, model: Type[BaseModelT]
+) -> list[BaseModelT]:
+    response_json = response_to_json(response)
+    return [model.model_validate(x) for x in response_json]
 
 
 def secret_str_from_env(key: str) -> SecretStr | None:

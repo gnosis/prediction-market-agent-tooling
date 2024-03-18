@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldUser,
 )
 from prediction_market_agent_tooling.tools.parallelism import par_map
+from prediction_market_agent_tooling.tools.utils import response_list_to_model
 
 """
 Python API for Manifold Markets
@@ -26,6 +27,7 @@ https://docs.manifold.markets/api#get-v0search-markets
 Note: There is an existing wrapper here: https://github.com/vluzko/manifoldpy. Consider using that instead.
 """
 
+MANIFOLD_API_BASE_URL = "https://api.manifold.markets"
 MARKETS_LIMIT = 1000  # Manifold will only return up to 1000 markets
 
 
@@ -41,7 +43,7 @@ def get_manifold_binary_markets(
 ) -> list[ManifoldMarket]:
     all_markets: list[ManifoldMarket] = []
 
-    url = "https://api.manifold.markets/v0/search-markets"
+    url = f"{MANIFOLD_API_BASE_URL}/v0/search-markets"
     params: dict[str, t.Union[str, int, float]] = {
         "term": term,
         "sort": sort,
@@ -83,13 +85,13 @@ def get_manifold_binary_markets(
     return all_markets[:limit]
 
 
-def pick_binary_market() -> ManifoldMarket:
+def get_one_manifold_binary_market() -> ManifoldMarket:
     return get_manifold_binary_markets(1)[0]
 
 
 def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
     outcome_str = "YES" if outcome else "NO"
-    url = "https://api.manifold.markets/v0/bet"
+    url = f"{MANIFOLD_API_BASE_URL}/v0/bet"
     params = {
         "amount": float(amount),  # Convert to float to avoid serialization issues.
         "contractId": market_id,
@@ -115,7 +117,7 @@ def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
 
 
 def get_authenticated_user(api_key: str) -> ManifoldUser:
-    url = "https://api.manifold.markets/v0/me"
+    url = f"{MANIFOLD_API_BASE_URL}/v0/me"
     headers = {
         "Authorization": f"Key {api_key}",
         "Content-Type": "application/json",
@@ -126,7 +128,7 @@ def get_authenticated_user(api_key: str) -> ManifoldUser:
 
 
 def get_manifold_market(market_id: str) -> ManifoldMarket:
-    url = f"https://api.manifold.markets/v0/market/{market_id}"
+    url = f"{MANIFOLD_API_BASE_URL}/v0/market/{market_id}"
     response = requests.get(url)
     response.raise_for_status()
     return ManifoldMarket.model_validate(response.json())
@@ -137,12 +139,10 @@ def get_manifold_bets(
     start_time: datetime,
     end_time: t.Optional[datetime],
 ) -> list[ManifoldBet]:
-    url = "https://api.manifold.markets/v0/bets"
+    url = f"{MANIFOLD_API_BASE_URL}/v0/bets"
 
     params: dict[str, str] = {"userId": user_id}
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    bets = [ManifoldBet.model_validate(x) for x in response.json()]
+    bets = response_list_to_model(requests.get(url, params=params), ManifoldBet)
     bets = [b for b in bets if b.createdTime >= start_time]
     if end_time:
         bets = [b for b in bets if b.createdTime < end_time]
@@ -190,7 +190,7 @@ def manifold_to_generic_resolved_bet(
 
 
 def get_market_positions(market_id: str, user_id: str) -> list[ManifoldContractMetric]:
-    url = f"https://api.manifold.markets/v0/market/{market_id}/positions"
+    url = f"{MANIFOLD_API_BASE_URL}/v0/market/{market_id}/positions"
     params = {"userId": user_id}
     response = requests.get(url, params=params)
     response.raise_for_status()

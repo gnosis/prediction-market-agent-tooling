@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.tools.utils import should_not_happen
 class SortBy(str, Enum):
     CLOSING_SOONEST = "closing-soonest"
     NEWEST = "newest"
+    NONE = "none"
 
 
 class FilterBy(str, Enum):
@@ -36,8 +37,8 @@ class AgentMarket(BaseModel):
     id: str
     question: str
     outcomes: list[str]
-    resolution: t.Optional[Resolution] = None
-    created_time: datetime
+    resolution: Resolution | None
+    created_time: datetime | None
     p_yes: Probability
 
     @property

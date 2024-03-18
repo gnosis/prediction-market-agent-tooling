@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class Currency(str, Enum):
     xDai = "xDai"
     Mana = "Mana"
+    USDC = "USDC"
 
 
 class Resolution(str, Enum):

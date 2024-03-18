@@ -52,7 +52,7 @@ def omen_replicate_from_tx(
             else MarketFilter.open
         ),
         sort=MarketSort.newest if market_source == MarketSource.MANIFOLD else None,
-        excluded_questions=set(m.question for m in already_created_markets),
+        excluded_questions=set(m.question_title for m in already_created_markets),
     )
     markets_sorted = sorted(
         markets,

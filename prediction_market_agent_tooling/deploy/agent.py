@@ -199,8 +199,9 @@ def {entrypoint_function_name}(request) -> str:
         """
         Executes actions that occur before bets are placed.
         """
-        cls = MARKET_TYPE_TO_AGENT_MARKET.get(market_type)
-        cls().before_process_bets()
+        resolved_markets = self.get_markets(market_type, filter_by=FilterBy.RESOLVED)
+        for market in resolved_markets:
+            market.before_process_bets()
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """
@@ -221,13 +222,14 @@ def {entrypoint_function_name}(request) -> str:
                 )
 
     def after_process_bets(self, market_type: MarketType) -> None:
-        cls = MARKET_TYPE_TO_AGENT_MARKET.get(market_type)
-        cls().after_process_bets()
+        resolved_markets = self.get_markets(market_type, filter_by=FilterBy.RESOLVED)
+        for market in resolved_markets:
+            market.after_process_bets()
 
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
         self.before_process_bets(market_type)
         self.process_bets(market_type, _place_bet)
-        self.after_process_bets()
+        self.after_process_bets(market_type)
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"

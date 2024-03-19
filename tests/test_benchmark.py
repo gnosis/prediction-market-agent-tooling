@@ -71,8 +71,8 @@ def test_benchmark_run(
                 question="Will GNO go up?",
                 p_yes=Probability(0.1),
                 outcomes=["Yes", "No"],
-                close_time=utcnow(),
-                resolution=Resolution.NO,
+                close_time=utcnow() + timedelta(hours=48),
+                resolution=None,
                 created_time=utcnow() - timedelta(hours=48),
             )
         ],

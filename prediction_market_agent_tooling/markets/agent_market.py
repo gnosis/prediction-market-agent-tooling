@@ -126,6 +126,9 @@ class AgentMarket(BaseModel):
     def has_successful_resolution(self) -> bool:
         return self.resolution in [Resolution.YES, Resolution.NO]
 
+    def has_unsuccessful_resolution(self) -> bool:
+        return self.resolution in [Resolution.CANCEL, Resolution.MKT]
+
     def get_outcome_str(self, outcome_index: int) -> str:
         try:
             return self.outcomes[outcome_index]

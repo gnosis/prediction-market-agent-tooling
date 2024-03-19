@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcloud_schedule_cmd,
     get_gcloud_function_uri,
     get_gcloud_id_token,
+    get_gcloud_topics,
 )
 from prediction_market_agent_tooling.tools.utils import export_requirements_from_toml
 
@@ -100,5 +101,6 @@ def run_deployed_gcp_function(function_name: str) -> requests.Response:
 
 
 def remove_deployed_gcp_function(function_name: str) -> None:
-    subprocess.run(gcloud_delete_topic_cmd(function_name), shell=True, check=True)
+    if function_name in get_gcloud_topics():
+        subprocess.run(gcloud_delete_topic_cmd(function_name), shell=True, check=True)
     subprocess.run(gcloud_delete_function_cmd(function_name), shell=True, check=True)

@@ -92,9 +92,7 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
-    def redeem_positions(
-        self, from_address: ChecksumAddress, from_private_key: PrivateKey
-    ) -> None:
+    def redeem_positions(self, from_private_key: PrivateKey) -> None:
         return omen_redeem_full_position_tx(
             market=self,
             from_private_key=from_private_key,
@@ -391,7 +389,6 @@ def binary_omen_buy_outcome_tx(
 
 def omen_sell_outcome_tx(
     amount: xDai,
-    from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     market: OmenAgentMarket,
     outcome: str,
@@ -401,7 +398,6 @@ def omen_sell_outcome_tx(
     Sells the given amount of shares for the given outcome in the given market.
     """
     amount_wei = xdai_to_wei(amount)
-    Web3.to_checksum_address(from_address)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
@@ -446,7 +442,6 @@ def omen_sell_outcome_tx(
 
 def binary_omen_sell_outcome_tx(
     amount: xDai,
-    from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     market: OmenAgentMarket,
     binary_outcome: bool,
@@ -454,7 +449,6 @@ def binary_omen_sell_outcome_tx(
 ) -> None:
     omen_sell_outcome_tx(
         amount=amount,
-        from_address=from_address,
         from_private_key=from_private_key,
         market=market,
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
@@ -590,7 +584,6 @@ def omen_create_market_tx(
     closing_time: datetime,
     category: str,
     language: str,
-    from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     outcomes: list[str],
     auto_deposit: bool,
@@ -599,6 +592,7 @@ def omen_create_market_tx(
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
+    from_address = private_key_to_public_key(from_private_key)
     initial_funds_wei = xdai_to_wei(initial_funds)
 
     realitio_contract = OmenRealitioContract()
@@ -685,12 +679,11 @@ def omen_create_market_tx(
 def omen_fund_market_tx(
     market: OmenAgentMarket,
     funds: xDai,
-    from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     auto_deposit: bool,
 ) -> None:
     funds_wei = xdai_to_wei(funds)
-
+    from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
     collateral_token_contract = OmenCollateralTokenContract()
 

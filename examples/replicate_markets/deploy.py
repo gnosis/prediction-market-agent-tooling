@@ -19,7 +19,6 @@ from prediction_market_agent_tooling.tools.utils import get_current_git_commit_s
 def main(
     fname: str = "replicate-markets-to-omen",
     github_repo_url: str = "https://github.com/gnosis/prediction-market-agent-tooling",
-    from_address: str = typer.Option(),
     from_private_key_secret_name: str = typer.Option(),
     openai_api_key_secret_name: str = typer.Option(),
     env_vars: str | None = None,

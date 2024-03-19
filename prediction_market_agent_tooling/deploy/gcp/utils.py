@@ -66,6 +66,24 @@ def gcloud_delete_function_cmd(fname: str) -> str:
     return f"gcloud functions delete {fname} --region={get_gcloud_region()} --quiet"
 
 
+def gcloud_get_topics_cmd() -> str:
+    return "gcloud pubsub topics list --format='value(name)' | awk -F'/' '{print $NF}'"
+
+
+def get_gcloud_topics() -> list[str]:
+    return (
+        subprocess.run(
+            gcloud_get_topics_cmd(),
+            shell=True,
+            capture_output=True,
+            check=True,
+        )
+        .stdout.decode()
+        .strip()
+        .split("\n")
+    )
+
+
 def gcloud_create_topic_cmd(topic_name: str) -> str:
     return f"gcloud pubsub topics create {topic_name}"
 

@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 
 from prediction_market_agent_tooling.deploy.agent_example import DeployableCoinFlipAgent
@@ -64,6 +65,9 @@ def test_gcp_deployment() -> None:
 
         deployed_agent = DeployedManifoldAgent.from_gcp_function_name(gcp_fname)
         monitor_agent(deployed_agent)
-
+    except Exception as e:
+        # Wait for the failed gcp function to have been created, so it can be removed.
+        time.sleep(10)
+        raise e
     finally:
         remove_deployed_gcp_function(gcp_fname)

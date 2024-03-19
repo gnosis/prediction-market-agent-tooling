@@ -7,6 +7,7 @@ from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.betting_strategies import (
@@ -18,7 +19,6 @@ from prediction_market_agent_tooling.markets.manifold.api import (
     place_bet,
 )
 from prediction_market_agent_tooling.markets.manifold.data_models import ManifoldMarket
-from prediction_market_agent_tooling.markets.markets import MarketType
 
 
 class ManifoldAgentMarket(AgentMarket):

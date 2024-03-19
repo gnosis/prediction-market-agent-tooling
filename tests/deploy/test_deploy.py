@@ -8,7 +8,7 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
     schedule_deployed_gcp_function,
 )
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.agent_market import MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )

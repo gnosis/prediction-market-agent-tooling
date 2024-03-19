@@ -4,10 +4,10 @@ from datetime import datetime
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
-from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarket_binary_markets,
 )

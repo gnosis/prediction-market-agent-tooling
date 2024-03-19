@@ -20,10 +20,10 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
-from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,

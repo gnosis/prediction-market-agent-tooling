@@ -64,5 +64,6 @@ def test_gcp_deployment() -> None:
 
         deployed_agent = DeployedManifoldAgent.from_gcp_function_name(gcp_fname)
         monitor_agent(deployed_agent)
+
     finally:
         remove_deployed_gcp_function(gcp_fname)

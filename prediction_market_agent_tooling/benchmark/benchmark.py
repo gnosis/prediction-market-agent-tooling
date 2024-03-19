@@ -43,7 +43,7 @@ class Benchmarker:
             raise ValueError("Agents must have unique names")
         if not all(m.has_successful_resolution() for m in markets):
             raise ValueError(
-                "Unsuccessfull markets shouldn't be used in the benchmark, please filter them out."
+                "Unsuccessful markets shouldn't be used in the benchmark, please filter them out."
             )
 
         # Predictions

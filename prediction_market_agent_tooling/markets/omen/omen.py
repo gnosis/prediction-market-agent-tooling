@@ -108,10 +108,8 @@ class OmenAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
-            resolution=model.get_resolution_enum() if model.is_resolved else None,
-            created_time=(
-                model.creation_datetime if model.creation_datetime else datetime.min
-            ),
+            resolution=model.get_resolution_enum(),
+            created_time=model.creation_datetime,
             close_time=model.finalized_datetime,
             p_yes=model.p_yes,
             condition=model.condition,

@@ -28,13 +28,13 @@ from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenCollateralTokenContract,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_criterion_bet,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
     get_market_moving_bet,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 @pytest.fixture

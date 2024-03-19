@@ -2,7 +2,7 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.benchmark.utils import should_not_happen
 from prediction_market_agent_tooling.gtypes import Mana, Probability
@@ -73,7 +73,7 @@ class ManifoldMarket(BaseModel):
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
 
-    @validator("closeTime", pre=True)
+    @field_validator("closeTime", mode="before")
     def clip_timestamp(cls, value: int) -> datetime:
         """
         Clip the timestamp to the maximum valid timestamp.

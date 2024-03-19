@@ -43,7 +43,8 @@ def omen_replicate_from_tx(
         )
 
     markets = get_binary_markets(
-        100,
+        # Polymarket is slow to get, so take only 10 candidates for him.
+        10 if market_type == MarketType.POLYMARKET else 100,
         market_type,
         filter_by=FilterBy.OPEN,
         sort_by=(

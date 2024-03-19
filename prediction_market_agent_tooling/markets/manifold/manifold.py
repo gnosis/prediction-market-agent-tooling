@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.markets.manifold.api import (
     place_bet,
 )
 from prediction_market_agent_tooling.markets.manifold.data_models import ManifoldMarket
+from prediction_market_agent_tooling.markets.markets import MarketType
 
 
 class ManifoldAgentMarket(AgentMarket):
@@ -26,6 +27,7 @@ class ManifoldAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.Mana
+    type: t.ClassVar[MarketType] = MarketType.MANIFOLD
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(1), currency=self.currency)
@@ -51,7 +53,10 @@ class ManifoldAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             resolution=model.resolution,
             created_time=model.createdTime,
+            close_time=model.resolutionTime,
             p_yes=Probability(model.probability),
+            url=model.url,
+            volume=model.volume,
         )
 
     @staticmethod
@@ -60,6 +65,7 @@ class ManifoldAgentMarket(AgentMarket):
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
+        excluded_questions: set[str] | None = None,
     ) -> list[AgentMarket]:
         sort: t.Literal["newest", "close-date"]
         if sort_by == SortBy.CLOSING_SOONEST:
@@ -84,5 +90,6 @@ class ManifoldAgentMarket(AgentMarket):
                 sort=sort,
                 created_after=created_after,
                 filter_=filter_,
+                excluded_questions=excluded_questions,
             )
         ]

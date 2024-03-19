@@ -40,6 +40,7 @@ def get_manifold_binary_markets(
         "open", "closed", "resolved", "closing-this-month", "closing-next-month"
     ] = "open",
     created_after: t.Optional[datetime] = None,
+    excluded_questions: set[str] | None = None,
 ) -> list[ManifoldMarket]:
     all_markets: list[ManifoldMarket] = []
 
@@ -73,7 +74,12 @@ def get_manifold_binary_markets(
                     break
                 else:
                     continue
+
+            if excluded_questions and market.question in excluded_questions:
+                continue
+
             all_markets.append(market)
+
         if found_all_new_markets:
             break
 

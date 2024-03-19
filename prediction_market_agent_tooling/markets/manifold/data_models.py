@@ -4,13 +4,13 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.benchmark.utils import should_not_happen
 from prediction_market_agent_tooling.gtypes import Mana, Probability
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     ProfitAmount,
     Resolution,
 )
+from prediction_market_agent_tooling.tools.utils import should_not_happen
 
 
 class ManifoldPool(BaseModel):

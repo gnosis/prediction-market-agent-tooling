@@ -11,7 +11,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     omen_create_market_tx,
 )
-from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 
 def main(
@@ -19,7 +18,6 @@ def main(
     closing_time: datetime = typer.Option(),
     category: str = typer.Option(),
     initial_funds: str = typer.Option(),
-    from_address: str = typer.Option(),
     from_private_key: str = typer.Option(),
     fee: float = typer.Option(OMEN_DEFAULT_MARKET_FEE),
     language: str = typer.Option("en"),
@@ -48,7 +46,6 @@ def main(
         closing_time=closing_time,
         category=category,
         language=language,
-        from_address=verify_address(from_address),
         from_private_key=private_key_type(from_private_key),
         outcomes=outcomes,
         auto_deposit=auto_deposit,

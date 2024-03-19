@@ -20,18 +20,20 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable
 from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
 
 def omen_replicate_from_tx(
     market_source: MarketSource,
     n_to_replicate: int,
     initial_funds: xDai,
-    from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     last_n_omen_markets_to_fetch: int = 1000,
     close_time_before: datetime | None = None,
     auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
+    from_address = private_key_to_public_key(from_private_key)
+
     already_created_markets = get_omen_binary_markets(
         limit=last_n_omen_markets_to_fetch,
         creator=from_address,
@@ -106,7 +108,6 @@ def omen_replicate_from_tx(
             closing_time=safe_closing_time,
             category=category,
             language="en",
-            from_address=from_address,
             from_private_key=from_private_key,
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
             auto_deposit=auto_deposit,

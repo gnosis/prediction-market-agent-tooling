@@ -29,7 +29,6 @@ def main(
     market_type: MarketType = MarketType.MANIFOLD,
     manifold_api_key_secret_name: str | None = None,
     openai_api_key_secret_name: str | None = None,
-    bet_from_address: str | None = None,
     bet_from_private_key_secret_name: str | None = None,
     env_vars: str | None = None,
     secrets: str | None = None,

@@ -15,7 +15,6 @@ app = typer.Typer()
 @app.command()
 def buy(
     amount: str = typer.Option(),
-    from_address: str = typer.Option(),
     from_private_key: str = typer.Option(),
     market_id: str = typer.Option(),
     outcome: str = typer.Option(),
@@ -27,7 +26,6 @@ def buy(
     ```bash
     python scripts/bet_omen.py buy \
         --amount 0.01 \
-        --from-address your-address \
         --from-private-key your-private-key \
         --market-id some-market-id \
         --outcome one-of-the-outcomes
@@ -48,7 +46,6 @@ def buy(
 @app.command()
 def sell(
     amount: str = typer.Option(),
-    from_address: str = typer.Option(),
     from_private_key: str = typer.Option(),
     market_id: str = typer.Option(),
     outcome: str = typer.Option(),
@@ -60,7 +57,6 @@ def sell(
     ```bash
     python scripts/bet_omen.py sell \
         --amount 0.01 \
-        --from-address your-address \
         --from-private-key your-private-key \
         --market-id some-market-id \
         --outcome one-of-the-outcomes
@@ -71,7 +67,6 @@ def sell(
     market = OmenAgentMarket.from_data_model(get_market(market_id))
     omen_sell_outcome_tx(
         amount=xdai_type(amount),
-        from_address=verify_address(from_address),
         from_private_key=private_key_type(from_private_key),
         market=market,
         outcome=outcome,

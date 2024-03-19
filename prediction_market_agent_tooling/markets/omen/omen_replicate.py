@@ -20,18 +20,20 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable
 from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
 
 def omen_replicate_from_tx(
     market_source: MarketSource,
     n_to_replicate: int,
     initial_funds: xDai,
-    from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     last_n_omen_markets_to_fetch: int = 1000,
     close_time_before: datetime | None = None,
     auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
+    from_address = private_key_to_public_key(from_private_key)
+
     already_created_markets = get_omen_binary_markets(
         limit=last_n_omen_markets_to_fetch,
         creator=from_address,
@@ -88,15 +90,14 @@ def omen_replicate_from_tx(
                 f"Skipping `{market.question}` because it seems to not be predictable."
             )
             continue
-        # It can happen that `closing_time` is after the true outcome will be known,
-        # but it's okay for us, we care more about not opening the realitio question too soon,
-        # and these two times can not be separated.
-        closing_time = market.close_time
-        # Force at least 24 hours of open market.
-        soonest_allowed_closing_time = utcnow() + timedelta(hours=24)
-        if closing_time <= soonest_allowed_closing_time:
+        # According to Omen's recommendation, closing time of the market should be at least 6 days after the outcome is known.
+        # That is because at the closing time, the question will open on Realitio, and we don't want it to be resolved as unknown/invalid.
+        safe_closing_time = market.close_time + timedelta(days=6)
+        # Force at least 48 hours of time where the resolution is unknown.
+        soonest_allowed_resolution_known_time = utcnow() + timedelta(hours=48)
+        if market.close_time <= soonest_allowed_resolution_known_time:
             print(
-                f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_closing_time}."
+                f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_resolution_known_time}."
             )
             continue
         category = infer_category(market.question, existing_categories)
@@ -104,10 +105,9 @@ def omen_replicate_from_tx(
             initial_funds=initial_funds,
             fee=OMEN_DEFAULT_MARKET_FEE,
             question=market.question,
-            closing_time=closing_time,
+            closing_time=safe_closing_time,
             category=category,
             language="en",
-            from_address=from_address,
             from_private_key=from_private_key,
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
             auto_deposit=auto_deposit,

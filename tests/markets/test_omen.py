@@ -71,7 +71,6 @@ def test_omen_buy_and_sell_outcome() -> None:
     with wait_until_nonce_changed(keys.bet_from_address):
         binary_omen_sell_outcome_tx(
             amount=sell_amount,
-            from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             market=market,
             binary_outcome=True,
@@ -89,7 +88,6 @@ def test_omen_create_market() -> None:
         closing_time=datetime(year=datetime.utcnow().year, day=24, month=12),
         category="cryptocurrency",
         language="en",
-        from_address=keys.bet_from_address,
         from_private_key=keys.bet_from_private_key,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         auto_deposit=True,
@@ -112,7 +110,6 @@ def test_omen_fund_and_remove_fund_market() -> None:
         omen_fund_market_tx(
             market=market,
             funds=funds,
-            from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
             auto_deposit=True,
         )

@@ -11,11 +11,16 @@ from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     Resolution,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.tools.utils import (
     add_utc_timezone_validator,
     should_not_happen,
 )
+
+
+class MarketType(str, Enum):
+    MANIFOLD = "manifold"
+    OMEN = "omen"
+    POLYMARKET = "polymarket"
 
 
 class SortBy(str, Enum):

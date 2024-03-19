@@ -12,12 +12,12 @@ from tqdm import tqdm
 
 from prediction_market_agent_tooling.benchmark.agents import AbstractBenchmarkedAgent
 from prediction_market_agent_tooling.benchmark.utils import (
-    AgentMarket,
     Prediction,
     PredictionsCache,
     Resolution,
     get_llm_api_call_cost,
 )
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.tools.utils import (
     check_not_none,
     should_not_happen,

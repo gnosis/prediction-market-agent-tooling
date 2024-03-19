@@ -81,7 +81,9 @@ class AgentMarket(BaseModel):
         return (
             self.resolution
             if self.resolution is not None
-            else Resolution.YES if self.p_yes > 0.5 else Resolution.NO
+            else Resolution.YES
+            if self.p_yes > 0.5
+            else Resolution.NO
         )
 
     @property

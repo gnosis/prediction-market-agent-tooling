@@ -53,7 +53,7 @@ class ManifoldAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             resolution=model.resolution,
             created_time=model.createdTime,
-            close_time=model.resolutionTime,
+            close_time=model.closeTime,
             p_yes=Probability(model.probability),
             url=model.url,
             volume=model.volume,

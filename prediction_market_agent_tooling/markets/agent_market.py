@@ -47,7 +47,7 @@ class AgentMarket(BaseModel):
     close_time: datetime | None
     p_yes: Probability
     url: str
-    volume: Decimal | None
+    volume: Decimal | None  # Should be in currency of `currency` above.
 
     _add_timezone_validator_created_time = field_validator("created_time")(
         add_utc_timezone_validator
@@ -81,9 +81,7 @@ class AgentMarket(BaseModel):
         return (
             self.resolution
             if self.resolution is not None
-            else Resolution.YES
-            if self.p_yes > 0.5
-            else Resolution.NO
+            else Resolution.YES if self.p_yes > 0.5 else Resolution.NO
         )
 
     @property

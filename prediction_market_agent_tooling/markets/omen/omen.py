@@ -46,6 +46,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
     remove_fraction,
+    wei_to_xdai,
     xdai_to_wei,
 )
 
@@ -115,7 +116,7 @@ class OmenAgentMarket(AgentMarket):
             p_yes=model.p_yes,
             condition=model.condition,
             url=model.url,
-            volume=Decimal(model.collateralVolume),
+            volume=wei_to_xdai(model.collateralVolume),
         )
 
     @staticmethod

@@ -83,13 +83,13 @@ class AgentMarket(BaseModel):
 
     @property
     def probable_resolution(self) -> Resolution:
-        return (
-            self.resolution
-            if self.resolution is not None
-            else Resolution.YES
-            if self.p_yes > 0.5
-            else Resolution.NO
-        )
+        if self.is_resolved():
+            if self.has_successful_resolution():
+                return self.resolution
+            else:
+                raise ValueError(f"Unknown resolution: {self.resolution}")
+        else:
+            return Resolution.YES if self.p_yes > 0.5 else Resolution.NO
 
     @property
     def boolean_outcome(self) -> bool:

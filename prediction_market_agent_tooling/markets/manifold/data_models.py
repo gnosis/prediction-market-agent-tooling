@@ -74,15 +74,14 @@ class ManifoldMarket(BaseModel):
         return f"Manifold's market: {self.question}"
 
     @validator("closeTime", pre=True)
-    def clip_timestamp(cls, value):
+    def clip_timestamp(cls, value: int) -> datetime:
         """
         Clip the timestamp to the maximum valid timestamp.
         """
         # Check value is timestamp in milliseconds
         max_timestamp = datetime.max.timestamp() - 0.0001
-        value = min(value / 1000, max_timestamp)
-        value = datetime.fromtimestamp(value)
-        return value
+        value = int(min(value / 1000, max_timestamp))
+        return datetime.fromtimestamp(value)
 
 
 class ProfitCached(BaseModel):

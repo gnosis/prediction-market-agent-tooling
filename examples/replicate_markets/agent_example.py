@@ -50,7 +50,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             initial_funds=initial_funds_per_market,
             from_address=keys.bet_from_address,
             from_private_key=keys.bet_from_private_key,
-            close_time_before=None,  # Not available in Polymarket.
+            close_time_before=close_time_before,
             auto_deposit=True,
         )
         print("Done.")

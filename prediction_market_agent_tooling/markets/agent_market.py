@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.tools.utils import (
     add_utc_timezone_validator,
+    check_not_none,
     should_not_happen,
 )
 
@@ -85,7 +86,7 @@ class AgentMarket(BaseModel):
     def probable_resolution(self) -> Resolution:
         if self.is_resolved():
             if self.has_successful_resolution():
-                return self.resolution
+                return check_not_none(self.resolution)
             else:
                 raise ValueError(f"Unknown resolution: {self.resolution}")
         else:

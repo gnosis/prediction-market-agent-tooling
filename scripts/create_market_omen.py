@@ -11,7 +11,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     omen_create_market_tx,
 )
-from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 
 def main(

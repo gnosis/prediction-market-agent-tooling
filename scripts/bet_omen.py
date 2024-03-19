@@ -7,7 +7,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_buy_outcome_tx,
     omen_sell_outcome_tx,
 )
-from prediction_market_agent_tooling.tools.web3_utils import verify_address
 
 app = typer.Typer()
 

@@ -78,7 +78,6 @@ class ManifoldMarket(BaseModel):
         """
         Clip the timestamp to the maximum valid timestamp.
         """
-        # Check value is timestamp in milliseconds
         max_timestamp = datetime.max.timestamp() - 0.0001
         value = int(min(value / 1000, max_timestamp))
         return datetime.fromtimestamp(value)

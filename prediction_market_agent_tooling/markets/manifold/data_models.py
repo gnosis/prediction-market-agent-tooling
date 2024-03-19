@@ -2,7 +2,7 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import Mana, Probability
 from prediction_market_agent_tooling.markets.data_models import (
@@ -72,6 +72,15 @@ class ManifoldMarket(BaseModel):
 
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
+
+    @field_validator("closeTime", mode="before")
+    def clip_timestamp(cls, value: int) -> datetime:
+        """
+        Clip the timestamp to the maximum valid timestamp.
+        """
+        max_timestamp = datetime.max.timestamp() - 0.0001
+        value = int(min(value / 1000, max_timestamp))
+        return datetime.fromtimestamp(value)
 
 
 class ProfitCached(BaseModel):

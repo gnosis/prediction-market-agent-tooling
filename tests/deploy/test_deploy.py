@@ -13,6 +13,10 @@ from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )
 from prediction_market_agent_tooling.monitor.monitor import monitor_agent
+from prediction_market_agent_tooling.tools.utils import (
+    get_current_git_commit_sha,
+    get_current_git_url,
+)
 
 
 def test_local_deployment() -> None:
@@ -41,7 +45,7 @@ def test_gcp_deployment() -> None:
             gcp_fname=gcp_fname,
             requirements_file=None,
             extra_deps=[
-                # f"git+{get_current_git_url()}@{get_current_git_commit_sha()}",
+                f"git+{get_current_git_url()}@{get_current_git_commit_sha()}",
             ],
             function_file=os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),

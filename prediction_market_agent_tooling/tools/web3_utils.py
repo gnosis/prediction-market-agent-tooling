@@ -2,6 +2,8 @@ from decimal import Decimal
 from typing import Any, Optional, TypeVar
 
 import tenacity
+from eth_account import Account
+from pydantic.types import SecretStr
 from web3 import Web3
 from web3.types import Nonce, TxParams, TxReceipt, Wei
 
@@ -17,6 +19,11 @@ from prediction_market_agent_tooling.gtypes import (
 
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
+
+
+def private_key_to_public_key(private_key: SecretStr) -> ChecksumAddress:
+    account = Account.from_key(private_key.get_secret_value())
+    return verify_address(account.address)
 
 
 def wei_to_xdai(wei: Wei) -> xDai:
@@ -101,7 +108,6 @@ def send_function_on_contract_tx(
     *,
     contract_address: ChecksumAddress,
     contract_abi: ABI,
-    from_address: ChecksumAddress,
     from_private_key: PrivateKey,
     function_name: str,
     function_params: Optional[list[Any] | dict[str, Any]] = None,
@@ -109,6 +115,8 @@ def send_function_on_contract_tx(
     timeout: int = 180,
 ) -> TxReceipt:
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+    from_address = private_key_to_public_key(from_private_key)
 
     # Fill in required defaults, if not provided.
     tx_params = tx_params or {}

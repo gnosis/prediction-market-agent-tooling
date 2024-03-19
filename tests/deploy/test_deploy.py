@@ -1,5 +1,5 @@
 import os
-import time
+from datetime import datetime
 
 from prediction_market_agent_tooling.deploy.agent_example import DeployableCoinFlipAgent
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
@@ -29,7 +29,7 @@ def test_local_deployment() -> None:
 
 
 def test_gcp_deployment() -> None:
-    gcp_fname = f"coin-flip-{int(time.time())}"
+    gcp_fname = f"coin-flip-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"
     env_vars = {
         "name": "coin-flip",
         "deployableagent_class_name": "DeployableCoinFlipAgent",

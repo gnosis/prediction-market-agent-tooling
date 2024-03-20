@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
@@ -78,7 +78,7 @@ class ManifoldMarket(BaseModel):
         """
         Clip the timestamp to the maximum valid timestamp.
         """
-        max_timestamp = datetime.max.timestamp() - 0.0001
+        max_timestamp = (datetime.max - timedelta(hours=1)).timestamp()
         value = int(min(value / 1000, max_timestamp))
         return datetime.fromtimestamp(value)
 

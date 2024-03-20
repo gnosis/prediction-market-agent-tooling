@@ -33,10 +33,10 @@ For example:
 
 ```python
 import prediction_market_agent_tooling.benchmark.benchmark as bm
-from prediction_market_agent_tooling.benchmark.utils import get_manifold_markets
+from prediction_market_agent_tooling.markets.markets import MarketType, get_binary_markets
 
 benchmarker = bm.Benchmarker(
-    markets=get_manifold_markets(number=10),
+    markets=get_binary_markets(limit=10, market_type=MarketType.MANIFOLD),
     agents=[...],
 )
 benchmarker.run_agents()

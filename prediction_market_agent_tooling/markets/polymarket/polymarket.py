@@ -31,6 +31,9 @@ class PolymarketAgentMarket(AgentMarket):
             resolution=model.resolution,
             p_yes=model.p_yes,
             created_time=None,
+            close_time=model.end_date_iso,
+            url=model.url,
+            volume=None,
         )
 
     def get_tiny_bet_amount(self) -> BetAmount:
@@ -45,6 +48,7 @@ class PolymarketAgentMarket(AgentMarket):
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
+        excluded_questions: set[str] | None = None,
     ) -> list["AgentMarket"]:
         if sort_by != SortBy.NONE:
             raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")
@@ -67,5 +71,6 @@ class PolymarketAgentMarket(AgentMarket):
             for m in get_polymarket_binary_markets(
                 limit=limit,
                 closed=closed,
+                excluded_questions=excluded_questions,
             )
         ]

@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta
 
-from prediction_market_agent_tooling.benchmark.utils import (
-    MarketFilter,
-    MarketSort,
-    MarketSource,
-    get_markets,
-)
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
+from prediction_market_agent_tooling.markets.markets import (
+    MarketType,
+    get_binary_markets,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -24,7 +22,7 @@ from prediction_market_agent_tooling.tools.web3_utils import private_key_to_publ
 
 
 def omen_replicate_from_tx(
-    market_source: MarketSource,
+    market_type: MarketType,
     n_to_replicate: int,
     initial_funds: xDai,
     from_private_key: PrivateKey,
@@ -45,29 +43,31 @@ def omen_replicate_from_tx(
             "TODO: Switch to paged version (once available) to fetch all markets, we don't know if we aren't creating duplicates now."
         )
 
-    markets = get_markets(
-        100,
-        market_source,
-        filter_=(
-            MarketFilter.closing_this_month
-            if market_source == MarketSource.MANIFOLD
-            else MarketFilter.open
+    markets = get_binary_markets(
+        # Polymarket is slow to get, so take only 10 candidates for him.
+        10 if market_type == MarketType.POLYMARKET else 100,
+        market_type,
+        filter_by=FilterBy.OPEN,
+        sort_by=(
+            SortBy.CLOSING_SOONEST
+            if market_type == MarketType.MANIFOLD
+            else SortBy.NONE
         ),
-        sort=MarketSort.newest if market_source == MarketSource.MANIFOLD else None,
         excluded_questions=set(m.question_title for m in already_created_markets),
     )
     markets_sorted = sorted(
         markets,
-        key=lambda m: m.volume,
+        key=lambda m: m.volume or 0,
         reverse=True,
     )
     markets_to_replicate = [
         m
         for m in markets_sorted
-        if close_time_before is None or m.close_time <= close_time_before
+        if close_time_before is None
+        or (m.close_time is not None and m.close_time <= close_time_before)
     ]
     if not markets_to_replicate:
-        print(f"No markets found for {market_source}")
+        print(f"No markets found for {market_type}")
         return []
 
     print(f"Found {len(markets_to_replicate)} markets to replicate.")
@@ -85,11 +85,17 @@ def omen_replicate_from_tx(
     created_addresses: list[ChecksumAddress] = []
 
     for market in markets_to_replicate:
+        if market.close_time is None:
+            print(
+                f"Skipping `{market.question}` because it's missing the closing time."
+            )
+            continue
         if not is_predictable(market.question):
             print(
                 f"Skipping `{market.question}` because it seems to not be predictable."
             )
             continue
+
         # According to Omen's recommendation, closing time of the market should be at least 6 days after the outcome is known.
         # That is because at the closing time, the question will open on Realitio, and we don't want it to be resolved as unknown/invalid.
         safe_closing_time = market.close_time + timedelta(days=6)
@@ -118,9 +124,7 @@ def omen_replicate_from_tx(
         )
 
         if len(created_addresses) >= n_to_replicate:
-            print(
-                f"Replicated {len(created_addresses)} from {market_source}, breaking."
-            )
+            print(f"Replicated {len(created_addresses)} from {market_type}, breaking.")
             break
 
     return created_addresses

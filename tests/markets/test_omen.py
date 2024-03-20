@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
@@ -24,7 +24,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import get_market
 from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import RUN_PAID_TESTS
 
@@ -84,8 +84,8 @@ def test_omen_create_market() -> None:
     keys = APIKeys()
     omen_create_market_tx(
         initial_funds=xdai_type(0.001),
-        question="Will GNO hit $1000 by the end of the current year?",
-        closing_time=datetime(year=datetime.utcnow().year, day=24, month=12),
+        question="Will GNO hit $1000 in 2 minutes from creation of this market?",
+        closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
         language="en",
         from_private_key=keys.bet_from_private_key,

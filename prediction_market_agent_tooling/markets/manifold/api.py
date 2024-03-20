@@ -35,22 +35,28 @@ def get_manifold_binary_markets(
     limit: int,
     term: str = "",
     topic_slug: t.Optional[str] = None,
-    sort: t.Literal["liquidity", "score", "newest", "close-date"] = "liquidity",
-    filter_: t.Literal[
-        "open", "closed", "resolved", "closing-this-month", "closing-next-month"
-    ] = "open",
+    sort: t.Literal["liquidity", "score", "newest", "close-date"] | None = "liquidity",
+    filter_: (
+        t.Literal[
+            "open", "closed", "resolved", "closing-this-month", "closing-next-month"
+        ]
+        | None
+    ) = "open",
     created_after: t.Optional[datetime] = None,
+    excluded_questions: set[str] | None = None,
 ) -> list[ManifoldMarket]:
     all_markets: list[ManifoldMarket] = []
 
     url = f"{MANIFOLD_API_BASE_URL}/v0/search-markets"
     params: dict[str, t.Union[str, int, float]] = {
         "term": term,
-        "sort": sort,
-        "filter": filter_,
         "limit": min(limit, MARKETS_LIMIT),
         "contractType": "BINARY",
     }
+    if sort:
+        params["sort"] = sort
+    if filter_:
+        params["filter"] = filter_
     if topic_slug:
         params["topicSlug"] = topic_slug
 
@@ -73,7 +79,12 @@ def get_manifold_binary_markets(
                     break
                 else:
                     continue
+
+            if excluded_questions and market.question in excluded_questions:
+                continue
+
             all_markets.append(market)
+
         if found_all_new_markets:
             break
 

@@ -1,5 +1,6 @@
 import os
 import subprocess
+import typing as t
 from datetime import datetime
 from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
@@ -70,11 +71,23 @@ def export_requirements_from_toml(output_dir: str) -> None:
     print(f"Saved requirements to {output_dir}/requirements.txt")
 
 
+@t.overload
 def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
+    ...
+
+
+@t.overload
+def add_utc_timezone_validator(value: None) -> None:
+    ...
+
+
+def add_utc_timezone_validator(value: datetime | None) -> DatetimeWithTimezone | None:
     """
     If datetime doesn't come with a timezone, we assume it to be UTC.
     Note: Not great, but at least the error will be constant.
     """
+    if value is None:
+        return None
     if value.tzinfo is None:
         value = value.replace(tzinfo=pytz.UTC)
     if value.tzinfo != pytz.UTC:

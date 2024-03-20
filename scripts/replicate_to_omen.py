@@ -1,14 +1,14 @@
 import typer
 
-from prediction_market_agent_tooling.benchmark.utils import MarketSource
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
 )
 
 
 def main(
-    market_source: MarketSource = typer.Option(),
+    market_type: MarketType = typer.Option(),
     n: int = typer.Option(),
     initial_funds: str = typer.Option(),
     from_private_key: str = typer.Option(),
@@ -27,7 +27,7 @@ def main(
     ```
     """
     omen_replicate_from_tx(
-        market_source=market_source,
+        market_type=market_type,
         n_to_replicate=n,
         initial_funds=xdai_type(initial_funds),
         from_private_key=private_key_type(from_private_key),

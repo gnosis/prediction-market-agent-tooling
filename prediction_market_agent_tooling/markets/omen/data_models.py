@@ -8,7 +8,6 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
-    HexBytes,
     OmenOutcomeToken,
     Probability,
     Wei,

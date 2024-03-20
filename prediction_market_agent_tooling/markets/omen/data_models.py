@@ -256,3 +256,11 @@ class OmenBet(BaseModel):
             ),
             profit=self.get_profit(),
         )
+
+
+class FixedProductMarketMakersData(BaseModel):
+    fixedProductMarketMakers: list[OmenMarket]
+
+
+class FixedProductMarketMakersResponse(BaseModel):
+    data: FixedProductMarketMakersData

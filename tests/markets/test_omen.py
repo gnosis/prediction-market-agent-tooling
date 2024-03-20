@@ -151,15 +151,11 @@ def test_p_yes() -> None:
 
 
 def test_filter_markets() -> None:
-    limit = 10
-    agent1_address = Web3.to_checksum_address(
-        "0x034c4ad84f7ac6638bf19300d5bbe7d9b981e736"
-    )
+    limit = 100
     markets = get_omen_binary_markets(
         limit=limit,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
-        creator=agent1_address,
     )
     assert len(markets) == limit
 
@@ -167,7 +163,6 @@ def test_filter_markets() -> None:
         limit=limit,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.RESOLVED,
-        creator=agent1_address,
     )
     assert len(markets) == limit
 

@@ -195,18 +195,21 @@ class OmenAgentMarket(AgentMarket):
 
 
 def get_omen_binary_markets(
+    limit: int,
     sort_by: SortBy,
     filter_by: FilterBy = FilterBy.OPEN,
     created_after: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
-    limit: t.Optional[int] = None,
+    excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     return get_omen_markets(
+        first=limit,
+        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         sort_by=sort_by,
         created_after=created_after,
         filter_by=filter_by,
         creator=creator,
-        limit=limit,
+        excluded_questions=excluded_questions,
     )
 
 

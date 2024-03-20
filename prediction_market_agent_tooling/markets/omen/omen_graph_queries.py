@@ -11,8 +11,9 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
     OmenUserPosition,
+    FixedProductMarketMakersResponse,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import utcnow, response_to_model
 
 """
 Python API for Omen prediction market.
@@ -284,52 +285,49 @@ def construct_query_get_fixed_product_markets_makers(
 
 
 def get_omen_markets(
+    first: int,
+    outcomes: list[str],
     sort_by: SortBy,
     filter_by: FilterBy,
-    creator: t.Optional[HexAddress] = None,
     created_after: t.Optional[datetime] = None,
-    limit: t.Optional[int] = None,
+    creator: t.Optional[HexAddress] = None,
+    excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     """
-    Instead of querying markets directly (currently it only returns 20), an easier way is to fetch
-    all bets from the creator, and aggregate the bets by market, and finally return all unique markets.
+    We return the first 1000 markets, since we don't have pagination in place (yet).
     """
     # ToDo
     #  One could use subgrounds for direct querying FixedProductMarketMakers.
     #  See https://github.com/gnosis/prediction-market-agent-tooling/issues/115
-    resolved_bets = get_resolved_omen_bets(
-        start_time=BET_START_TIME,
-        end_time=created_after,
-        better_address=Web3.to_checksum_address(creator) if creator else None,
+    order_by, order_direction = ordering_from_sort_by(sort_by)
+    markets = response_to_model(
+        requests.post(
+            OMEN_TRADES_SUBGRAPH,
+            json={
+                "query": construct_query_get_fixed_product_markets_makers(
+                    include_creator=creator is not None,
+                    filter_by=filter_by,
+                ),
+                "variables": {
+                    "first": first,
+                    "outcomes": outcomes,
+                    "orderBy": order_by,
+                    "orderDirection": order_direction,
+                    "creationTimestamp_gt": (
+                        to_int_timestamp(created_after) if created_after else 0
+                    ),
+                    "creator": creator,
+                },
+            },
+            headers={"Content-Type": "application/json"},
+        ),
+        FixedProductMarketMakersResponse,
     )
-
-    markets = []
-    # We want only unique markets
-    seen_unique_ids = set()
-    for bet in resolved_bets:
-        if bet.fpmm.id not in seen_unique_ids and bet.fpmm.is_binary:
-            market = OmenMarket.model_validate(bet.fpmm)
-            market_valid = validate_market_for_filter_condition(market, filter_by)
-            if market_valid:
-                markets.append(market)
-            seen_unique_ids.add(bet.fpmm.id)
-
-    # We always sort by creation_datetime - but reverse the order under
-    # conditions below.
-    sort_direction_reversed = False
-    match sort_by:
-        case SortBy.NEWEST:
-            sort_direction_reversed = True
-        case _:
-            pass
-
-    # We sort here since the Bets subgraph is sorted by ID due to its pagination logic.
-    markets.sort(key=lambda x: x.creation_datetime, reverse=sort_direction_reversed)
-
-    # We limit here after sorting has been done.
-    if limit:
-        return markets[:limit]
-    return markets
+    return [
+        m
+        for m in markets.data.fixedProductMarketMakers
+        if not excluded_questions or m.question not in excluded_questions
+    ]
 
 
 def validate_market_for_filter_condition(

@@ -54,7 +54,9 @@ class Question(BaseModel):
 
 class OmenPosition(BaseModel):
     id: HexAddress
-    conditionIds: t.List[HexBytes]
+    # Using HexBytes instead of bytes causes a Pydantic error.
+    # Unable to generate pydantic-core schema for <class 'hexbytes.main.HexBytes'>
+    conditionIds: t.List[bytes]
 
 
 class OmenUserPosition(BaseModel):

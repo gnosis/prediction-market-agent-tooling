@@ -26,7 +26,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     Condition,
-    OmenBet,
     OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -40,7 +39,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
-    get_omen_bets,
     get_omen_markets,
     get_resolved_omen_bets,
 )
@@ -50,6 +48,8 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     remove_fraction,
     xdai_to_wei,
 )
+
+MAX_NUMBER_OF_MARKETS_FOR_SUBGRAPH_RETRIEVAL = 1000
 
 
 class OmenAgentMarket(AgentMarket):
@@ -142,6 +142,7 @@ class OmenAgentMarket(AgentMarket):
         # We can only redeem positions from resolved markets.
         # We fetch all markets without limit.
         resolved_markets = self.get_binary_markets(
+            limit=MAX_NUMBER_OF_MARKETS_FOR_SUBGRAPH_RETRIEVAL,
             filter_by=FilterBy.RESOLVED,
             sort_by=SortBy.CLOSING_SOONEST,
         )
@@ -173,10 +174,10 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_binary_markets(
+        limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
-        limit: t.Optional[int] = None,
     ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)

@@ -41,10 +41,10 @@ class PolymarketAgentMarket(AgentMarket):
 
     @staticmethod
     def get_binary_markets(
+        limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
-        limit: t.Optional[int] = None,
     ) -> list["AgentMarket"]:
         if sort_by != SortBy.NONE:
             raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")

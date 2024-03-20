@@ -83,10 +83,10 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_binary_markets(
+        limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
-        limit: t.Optional[int] = None,
     ) -> list["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 

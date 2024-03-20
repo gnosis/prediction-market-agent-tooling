@@ -3,17 +3,15 @@ from datetime import datetime
 
 import requests
 from eth_typing import ChecksumAddress, HexAddress
-from web3 import Web3
-from typing import Callable
 
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
+    FixedProductMarketMakersResponse,
     OmenBet,
     OmenMarket,
     OmenUserPosition,
-    FixedProductMarketMakersResponse,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow, response_to_model
+from prediction_market_agent_tooling.tools.utils import response_to_model, utcnow
 
 """
 Python API for Omen prediction market.
@@ -285,10 +283,10 @@ def construct_query_get_fixed_product_markets_makers(
 
 
 def get_omen_markets(
-    first: int,
     outcomes: list[str],
     sort_by: SortBy,
     filter_by: FilterBy,
+    first: int = 1000,  # max limit for markets
     created_after: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
@@ -351,9 +349,9 @@ def sort_markets_newest(market: OmenMarket) -> datetime:
 
 
 def get_omen_bets(
+    better_address: ChecksumAddress,
     start_time: datetime,
     end_time: t.Optional[datetime],
-    better_address: t.Optional[ChecksumAddress] = None,
 ) -> list[OmenBet]:
     if not end_time:
         end_time = utcnow()
@@ -363,17 +361,13 @@ def get_omen_bets(
     all_bets: list[OmenBet] = []
     query = _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKER_TRADES
 
-    # We filter by better_address if provided
-    if better_address is None:
-        query = query.replace("creator: $creator,", "")
-
     while True:
         bets = requests.post(
             OMEN_TRADES_SUBGRAPH,
             json={
                 "query": query,
                 "variables": {
-                    "creator": better_address.lower() if better_address else "",
+                    "creator": better_address.lower(),
                     "creationTimestamp_gte": to_int_timestamp(start_time),
                     "creationTimestamp_lte": to_int_timestamp(end_time),
                     "id_gt": id_gt,
@@ -391,17 +385,7 @@ def get_omen_bets(
         # Increment id_gt for the next batch of bets
         id_gt = bets[-1]["id"]
 
-        for i, bet in enumerate(bets):
-            try:
-                for i, bet in enumerate(bets):
-                    # We neglect non-binary markets, for ex fpmmId = 0x09ba10798a54f8830e3568a000e55981c493f043
-                    if not bet["fpmm"]["outcomes"]:
-                        continue
-                    all_bets.append(OmenBet.model_validate(bet))
-            except Exception as e:
-                print(f"exception {e}")
-
-        # all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
+        all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
 
     return all_bets
 
@@ -409,7 +393,7 @@ def get_omen_bets(
 def get_resolved_omen_bets(
     start_time: datetime,
     end_time: t.Optional[datetime],
-    better_address: t.Optional[ChecksumAddress] = None,
+    better_address: ChecksumAddress,
 ) -> list[OmenBet]:
     bets = get_omen_bets(
         start_time=start_time,

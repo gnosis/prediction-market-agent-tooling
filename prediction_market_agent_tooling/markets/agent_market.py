@@ -18,12 +18,6 @@ from prediction_market_agent_tooling.tools.utils import (
 )
 
 
-class MarketType(str, Enum):
-    MANIFOLD = "manifold"
-    OMEN = "omen"
-    POLYMARKET = "polymarket"
-
-
 class SortBy(str, Enum):
     CLOSING_SOONEST = "closing-soonest"
     NEWEST = "newest"
@@ -43,7 +37,6 @@ class AgentMarket(BaseModel):
     """
 
     currency: t.ClassVar[Currency]
-    type: t.ClassVar[MarketType]
 
     id: str
     question: str

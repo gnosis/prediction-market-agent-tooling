@@ -7,7 +7,6 @@ from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    MarketType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.betting_strategies import (
@@ -27,7 +26,6 @@ class ManifoldAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.Mana
-    type: t.ClassVar[MarketType] = MarketType.MANIFOLD
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(1), currency=self.currency)

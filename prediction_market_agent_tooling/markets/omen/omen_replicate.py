@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
-from prediction_market_agent_tooling.markets.agent_market import (
-    FilterBy,
-    MarketType,
-    SortBy,
-)
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
-from prediction_market_agent_tooling.markets.markets import get_binary_markets
+from prediction_market_agent_tooling.markets.markets import (
+    MarketType,
+    get_binary_markets,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,

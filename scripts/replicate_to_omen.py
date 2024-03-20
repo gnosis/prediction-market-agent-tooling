@@ -1,7 +1,7 @@
 import typer
 
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
-from prediction_market_agent_tooling.markets.agent_market import MarketType
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
 )

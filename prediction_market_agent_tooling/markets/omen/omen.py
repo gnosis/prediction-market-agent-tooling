@@ -20,7 +20,6 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    MarketType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
@@ -68,7 +67,6 @@ class OmenAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.xDai
-    type: t.ClassVar[MarketType] = MarketType.OMEN
 
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress

@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
+    HexStr,
     OmenOutcomeToken,
     PrivateKey,
     TxParams,
@@ -76,6 +77,33 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     ) -> int:
         balance: int = self.call("balanceOf", [from_address, position_id], web3=web3)
         return balance
+
+    def getCollectionId(
+        self,
+        parent_collection_id: HexStr,
+        condition_id: HexAddress,
+        index_set: int,
+        web3: Web3 | None = None,
+    ) -> bytes:
+        collection_id: bytes = self.call(
+            "getCollectionId",
+            [parent_collection_id, condition_id, index_set],
+            web3=web3,
+        )
+        return collection_id
+
+    def getPositionId(
+        self,
+        collateral_token_address: ChecksumAddress,
+        collection_id: bytes,
+        web3: Web3 | None = None,
+    ) -> int:
+        position_id: int = self.call(
+            "getPositionId",
+            [collateral_token_address, collection_id],
+            web3=web3,
+        )
+        return position_id
 
     def redeemPositions(
         self,

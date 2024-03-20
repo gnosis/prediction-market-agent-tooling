@@ -8,4 +8,4 @@ def test_get_user_positions() -> None:
     keys = APIKeys()
     user_positions = get_user_positions(keys.bet_from_address)
     # We assume that the agent has at least 1 historical position
-    assert user_positions is not None
+    assert len(user_positions) > 1

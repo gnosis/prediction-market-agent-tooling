@@ -142,12 +142,12 @@ class OmenAgentMarket(AgentMarket):
 
     def before_process_bets(self) -> None:
         # We can only redeem positions from resolved markets.
-        # We fetch all markets without limit.
         resolved_markets = self.get_binary_markets(
             limit=MAX_NUMBER_OF_MARKETS_FOR_SUBGRAPH_RETRIEVAL,
             filter_by=FilterBy.RESOLVED,
             sort_by=SortBy.CLOSING_SOONEST,
         )
+        # We redeem positions from all resolved Omen markets.
         for market in resolved_markets:
             print(f"Redeeming position from market {market.id}")
             market.redeem_positions()
@@ -180,7 +180,7 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list[AgentMarket]:
+    ) -> list["AgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)
             for m in get_omen_binary_markets(
@@ -650,15 +650,13 @@ def get_conditional_tokens_balance_for_market(
     balance = 0
 
     for index_set in market.condition.index_sets:
-        collection_id: bytes = conditional_token_contract.call(
-            "getCollectionId",
-            [parent_collection_id, market.condition.id, index_set],
-            web3=web3,
+        collection_id: bytes = conditional_token_contract.getCollectionId(
+            parent_collection_id, market.condition.id, index_set, web3=web3
         )
         # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
-        position_id: int = conditional_token_contract.call(
-            "getPositionId",
-            [market.collateral_token_contract_address_checksummed, collection_id],
+        position_id: int = conditional_token_contract.getPositionId(
+            market.collateral_token_contract_address_checksummed,
+            collection_id,
             web3=web3,
         )
         balance_for_position: int = conditional_token_contract.balanceOf(

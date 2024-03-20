@@ -8,6 +8,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    HexBytes,
     OmenOutcomeToken,
     Probability,
     Wei,
@@ -47,13 +48,13 @@ class Condition(BaseModel):
 
 class Question(BaseModel):
     id: HexAddress
-    answerFinalizedTimestamp: t.Optional[int] = None
+    answerFinalizedTimestamp: t.Optional[datetime] = None
     currentAnswer: t.Optional[str] = None
 
 
 class OmenPosition(BaseModel):
     id: HexAddress
-    conditionIds: t.List[HexAddress]
+    conditionIds: t.List[HexBytes]
 
 
 class OmenUserPosition(BaseModel):

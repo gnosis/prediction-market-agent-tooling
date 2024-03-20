@@ -183,6 +183,8 @@ def get_user_positions(
             headers={"Content-Type": "application/json"},
         ).json()
 
+        # ToDo - Add response to model
+        # response_to_model(result, )
         user_positions = result.get("data", {}).get("userPositions", [])
         print(f"fetched {len(user_positions)} items id_gt {id_gt}")
         if not user_positions:
@@ -326,18 +328,6 @@ def get_omen_markets(
         for m in markets.data.fixedProductMarketMakers
         if not excluded_questions or m.question not in excluded_questions
     ]
-
-
-def validate_market_for_filter_condition(
-    market: OmenMarket, filterBy: FilterBy
-) -> bool:
-    match filterBy:
-        case FilterBy.OPEN:
-            return market.is_open
-        case FilterBy.RESOLVED:
-            return market.is_resolved
-        case _:
-            return True
 
 
 def get_omen_bets(

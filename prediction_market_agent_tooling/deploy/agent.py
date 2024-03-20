@@ -185,6 +185,7 @@ def {entrypoint_function_name}(request) -> str:
                     amount=amount,
                     outcome=result,
                 )
+                # test
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"

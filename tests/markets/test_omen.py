@@ -163,7 +163,7 @@ def test_filter_markets() -> None:
 
     markets = get_omen_binary_markets(
         limit=limit,
-        sort_by=SortBy.NEWEST,
+        sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.RESOLVED,
     )
     assert len(markets) == limit

@@ -4,7 +4,6 @@ from datetime import datetime
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    MarketType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
@@ -22,7 +21,6 @@ class PolymarketAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.USDC
-    type: t.ClassVar[MarketType] = MarketType.POLYMARKET
 
     @staticmethod
     def from_data_model(model: PolymarketMarketWithPrices) -> "PolymarketAgentMarket":

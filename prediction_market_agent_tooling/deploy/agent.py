@@ -92,7 +92,7 @@ class DeployableAgent:
         entrypoint_template = f"""
 from {path_to_agent_file.replace("/", ".").replace(".py", "")} import *
 import functions_framework
-from prediction_market_agent_tooling.markets.agent_market import MarketType
+from prediction_market_agent_tooling.markets.markets import MarketType
 
 @functions_framework.http
 def {entrypoint_function_name}(request) -> str:

@@ -4,13 +4,13 @@ from google.cloud.functions_v2.types.functions import Function
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
-from prediction_market_agent_tooling.markets.agent_market import MarketType
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
     get_resolved_manifold_bets,
     manifold_to_generic_resolved_bet,
 )
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,

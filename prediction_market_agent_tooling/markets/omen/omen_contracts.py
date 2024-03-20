@@ -1,4 +1,3 @@
-import json
 import os
 import random
 import typing as t
@@ -400,7 +399,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         realitio_question = "␟".join(
             [
                 question,
-                json.dumps(outcomes),
+                ",".join(f'"{o}"' for o in outcomes),
                 category,
                 language,
             ]

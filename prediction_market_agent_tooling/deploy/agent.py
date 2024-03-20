@@ -178,17 +178,6 @@ def {entrypoint_function_name}(request) -> str:
         )
         return available_markets
 
-    def redeem_positions_from_markets(
-        self,
-        market_type: MarketType,
-    ) -> None:
-        # We can only redeem positions from resolved markets.
-        resolved_markets = self.get_markets(market_type, filter_by=FilterBy.RESOLVED)
-        for market in resolved_markets:
-            print(f"Redeeming position from market {market.id}")
-            market.redeem_positions()
-        return None
-
     def before_process_bets(self, market_type: MarketType) -> None:
         """
         Executes actions that occur before bets are placed.

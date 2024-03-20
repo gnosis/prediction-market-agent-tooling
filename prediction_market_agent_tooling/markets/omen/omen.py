@@ -42,6 +42,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
     get_omen_bets,
     get_omen_markets,
+    get_resolved_omen_bets,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -87,7 +88,9 @@ class OmenAgentMarket(AgentMarket):
         keys = APIKeys()
         # We fetch all bets irrespective of market
         resolved_omen_bets = get_resolved_omen_bets(
-            keys.bet_from_address, start_time=datetime(2024, 1, 1), end_time=None
+            start_time=datetime(2024, 1, 1),
+            end_time=None,
+            better_address=keys.bet_from_address,
         )
         resolved_bets_for_market = [
             bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
@@ -137,9 +140,9 @@ class OmenAgentMarket(AgentMarket):
 
     def before_process_bets(self) -> None:
         # We can only redeem positions from resolved markets.
+        # We fetch all markets without limit.
         resolved_markets = self.get_binary_markets(
             filter_by=FilterBy.RESOLVED,
-            limit=20,  # MAX_AVAILABLE_MARKETS,
             sort_by=SortBy.CLOSING_SOONEST,
         )
         for market in resolved_markets:
@@ -170,10 +173,10 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_binary_markets(
-        limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
+        limit: t.Optional[int] = None,
     ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)
@@ -192,19 +195,18 @@ class OmenAgentMarket(AgentMarket):
 
 
 def get_omen_binary_markets(
-    limit: int,
     sort_by: SortBy,
     filter_by: FilterBy = FilterBy.OPEN,
     created_after: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
+    limit: t.Optional[int] = None,
 ) -> list[OmenMarket]:
     return get_omen_markets(
-        first=limit,
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         sort_by=sort_by,
         created_after=created_after,
         filter_by=filter_by,
         creator=creator,
+        limit=limit,
     )
 
 
@@ -345,19 +347,6 @@ def binary_omen_sell_outcome_tx(
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
         auto_withdraw=auto_withdraw,
     )
-
-
-def get_resolved_omen_bets(
-    better_address: ChecksumAddress,
-    start_time: datetime,
-    end_time: t.Optional[datetime],
-) -> list[OmenBet]:
-    bets = get_omen_bets(
-        better_address=better_address,
-        start_time=start_time,
-        end_time=end_time,
-    )
-    return [b for b in bets if b.fpmm.is_resolved]
 
 
 def omen_create_market_tx(

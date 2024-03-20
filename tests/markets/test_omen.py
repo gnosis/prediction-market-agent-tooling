@@ -125,9 +125,9 @@ def test_omen_fund_and_remove_fund_market() -> None:
 def test_get_bets(a_bet_from_address: str) -> None:
     better_address = Web3.to_checksum_address(a_bet_from_address)
     bets = get_omen_bets(
-        better_address=better_address,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 21),
+        better_address=better_address,
     )
     assert len(bets) == 1
     assert (
@@ -151,11 +151,15 @@ def test_p_yes() -> None:
 
 
 def test_filter_markets() -> None:
-    limit = 100
+    limit = 10
+    agent1_address = Web3.to_checksum_address(
+        "0x034c4ad84f7ac6638bf19300d5bbe7d9b981e736"
+    )
     markets = get_omen_binary_markets(
         limit=limit,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
+        creator=agent1_address,
     )
     assert len(markets) == limit
 
@@ -163,6 +167,7 @@ def test_filter_markets() -> None:
         limit=limit,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.RESOLVED,
+        creator=agent1_address,
     )
     assert len(markets) == limit
 
@@ -170,9 +175,9 @@ def test_filter_markets() -> None:
 def test_resolved_omen_bets(a_bet_from_address: str) -> None:
     better_address = Web3.to_checksum_address(a_bet_from_address)
     resolved_bets = get_resolved_omen_bets(
-        better_address=better_address,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 28),
+        better_address=better_address,
     )
 
     # Verify that the bets are unique.

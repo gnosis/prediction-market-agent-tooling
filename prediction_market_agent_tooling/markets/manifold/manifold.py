@@ -67,23 +67,19 @@ class ManifoldAgentMarket(AgentMarket):
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
     ) -> list[AgentMarket]:
-        sort: t.Literal["newest", "close-date"] | None
+        sort: t.Literal["newest", "close-date"]
         if sort_by == SortBy.CLOSING_SOONEST:
             sort = "close-date"
         elif sort_by == SortBy.NEWEST:
             sort = "newest"
-        elif sort_by == SortBy.NONE:
-            sort = None
         else:
             raise ValueError(f"Unknown sort_by: {sort_by}")
 
-        filter_: t.Literal["open", "resolved"] | None
+        filter_: t.Literal["open", "resolved"]
         if filter_by == FilterBy.OPEN:
             filter_ = "open"
         elif filter_by == FilterBy.RESOLVED:
             filter_ = "resolved"
-        elif filter_by == FilterBy.NONE:
-            filter_ = None
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
 

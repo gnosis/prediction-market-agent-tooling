@@ -340,14 +340,6 @@ def validate_market_for_filter_condition(
             return True
 
 
-def sort_markets_closing_soonest(market: OmenMarket) -> datetime:
-    return market.creation_datetime
-
-
-def sort_markets_newest(market: OmenMarket) -> datetime:
-    return market.creation_datetime
-
-
 def get_omen_bets(
     better_address: ChecksumAddress,
     start_time: datetime,

@@ -26,8 +26,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     Condition,
-    FixedProductMarketMakersResponse,
-    OmenBet,
     OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -44,7 +42,6 @@ from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
     get_omen_markets,
     get_resolved_omen_bets,
 )
-from prediction_market_agent_tooling.tools.utils import response_to_model, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -305,46 +302,6 @@ def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
         raise ValueError(f"Unknown sort_by: {sort_by}")
 
 
-def get_omen_markets(
-    first: int,
-    outcomes: list[str],
-    sort_by: SortBy,
-    filter_by: FilterBy,
-    created_after: t.Optional[datetime] = None,
-    creator: t.Optional[HexAddress] = None,
-    excluded_questions: set[str] | None = None,
-) -> list[OmenMarket]:
-    order_by, order_direction = ordering_from_sort_by(sort_by)
-    markets = response_to_model(
-        requests.post(
-            THEGRAPH_QUERY_URL,
-            json={
-                "query": construct_query_get_fixed_product_markets_makers(
-                    include_creator=creator is not None,
-                    filter_by=filter_by,
-                ),
-                "variables": {
-                    "first": first,
-                    "outcomes": outcomes,
-                    "orderBy": order_by,
-                    "orderDirection": order_direction,
-                    "creationTimestamp_gt": (
-                        to_int_timestamp(created_after) if created_after else 0
-                    ),
-                    "creator": creator,
-                },
-            },
-            headers={"Content-Type": "application/json"},
-        ),
-        FixedProductMarketMakersResponse,
-    )
-    return [
-        m
-        for m in markets.data.fixedProductMarketMakers
-        if not excluded_questions or m.question not in excluded_questions
-    ]
-
-
 def get_omen_binary_markets(
     limit: int,
     sort_by: SortBy,
@@ -360,6 +317,7 @@ def get_omen_binary_markets(
         created_after=created_after,
         filter_by=filter_by,
         creator=creator,
+        excluded_questions=excluded_questions,
     )
 
 

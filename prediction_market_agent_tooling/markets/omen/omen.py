@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     Condition,
+    FixedProductMarketMakersResponse,
     OmenBet,
     OmenMarket,
 )
@@ -39,11 +40,12 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import response_to_model, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
     remove_fraction,
+    wei_to_xdai,
     xdai_to_wei,
 )
 
@@ -65,6 +67,7 @@ class OmenAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.xDai
+
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
     condition: Condition
@@ -101,14 +104,13 @@ class OmenAgentMarket(AgentMarket):
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
-            resolution=model.get_resolution_enum() if model.is_resolved else None,
-            created_time=(
-                datetime.fromtimestamp(model.creationTimestamp)
-                if model.creationTimestamp
-                else datetime.min
-            ),
+            resolution=model.get_resolution_enum(),
+            created_time=model.creation_datetime,
+            close_time=model.finalized_datetime,
             p_yes=model.p_yes,
             condition=model.condition,
+            url=model.url,
+            volume=wei_to_xdai(model.collateralVolume),
         )
 
     @staticmethod
@@ -117,6 +119,7 @@ class OmenAgentMarket(AgentMarket):
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
+        excluded_questions: set[str] | None = None,
     ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)
@@ -125,6 +128,7 @@ class OmenAgentMarket(AgentMarket):
                 sort_by=sort_by,
                 created_after=created_after,
                 filter_by=filter_by,
+                excluded_questions=excluded_questions,
             )
         ]
 
@@ -245,30 +249,37 @@ def get_omen_markets(
     filter_by: FilterBy,
     created_after: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
+    excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     order_by, order_direction = ordering_from_sort_by(sort_by)
-    markets = requests.post(
-        THEGRAPH_QUERY_URL,
-        json={
-            "query": construct_query_get_fixed_product_markets_makers(
-                include_creator=creator is not None,
-                filter_by=filter_by,
-            ),
-            "variables": {
-                "first": first,
-                "outcomes": outcomes,
-                "orderBy": order_by,
-                "orderDirection": order_direction,
-                "creationTimestamp_gt": (
-                    to_int_timestamp(created_after) if created_after else 0
+    markets = response_to_model(
+        requests.post(
+            THEGRAPH_QUERY_URL,
+            json={
+                "query": construct_query_get_fixed_product_markets_makers(
+                    include_creator=creator is not None,
+                    filter_by=filter_by,
                 ),
-                "creator": creator,
+                "variables": {
+                    "first": first,
+                    "outcomes": outcomes,
+                    "orderBy": order_by,
+                    "orderDirection": order_direction,
+                    "creationTimestamp_gt": (
+                        to_int_timestamp(created_after) if created_after else 0
+                    ),
+                    "creator": creator,
+                },
             },
-        },
-        headers={"Content-Type": "application/json"},
-    ).json()
-    markets = markets["data"]["fixedProductMarketMakers"]
-    return [OmenMarket.model_validate(market) for market in markets]
+            headers={"Content-Type": "application/json"},
+        ),
+        FixedProductMarketMakersResponse,
+    )
+    return [
+        m
+        for m in markets.data.fixedProductMarketMakers
+        if not excluded_questions or m.question not in excluded_questions
+    ]
 
 
 def get_omen_binary_markets(
@@ -277,6 +288,7 @@ def get_omen_binary_markets(
     filter_by: FilterBy = FilterBy.OPEN,
     created_after: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
+    excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     return get_omen_markets(
         first=limit,
@@ -285,6 +297,7 @@ def get_omen_binary_markets(
         created_after=created_after,
         filter_by=filter_by,
         creator=creator,
+        excluded_questions=excluded_questions,
     )
 
 

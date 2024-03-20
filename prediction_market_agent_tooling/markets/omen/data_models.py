@@ -89,8 +89,20 @@ class OmenMarket(BaseModel):
         return self.title
 
     @property
-    def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(check_not_none(self.creationTimestamp))
+    def creation_datetime(self) -> datetime | None:
+        return (
+            datetime.fromtimestamp(self.creationTimestamp)
+            if self.creationTimestamp is not None
+            else None
+        )
+
+    @property
+    def finalized_datetime(self) -> datetime | None:
+        return (
+            datetime.fromtimestamp(self.answerFinalizedTimestamp)
+            if self.answerFinalizedTimestamp is not None
+            else None
+        )
 
     @property
     def market_maker_contract_address(self) -> HexAddress:
@@ -177,6 +189,10 @@ class OmenMarket(BaseModel):
         else:
             return Resolution.NO
 
+    @property
+    def url(self) -> str:
+        return f"https://aiomen.eth.limo/#/{self.id}"
+
 
 class OmenBetCreator(BaseModel):
     id: HexAddress
@@ -239,3 +255,11 @@ class OmenBet(BaseModel):
             ),
             profit=self.get_profit(),
         )
+
+
+class FixedProductMarketMakersData(BaseModel):
+    fixedProductMarketMakers: list[OmenMarket]
+
+
+class FixedProductMarketMakersResponse(BaseModel):
+    data: FixedProductMarketMakersData

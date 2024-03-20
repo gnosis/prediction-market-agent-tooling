@@ -5,11 +5,12 @@ import pytest
 
 import prediction_market_agent_tooling.benchmark.benchmark as bm
 from prediction_market_agent_tooling.benchmark.utils import (
-    CancelableMarketResolution,
-    Market,
-    MarketResolution,
-    MarketSource,
     OutcomePrediction,
+    Resolution,
+)
+from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.markets.polymarket.polymarket import (
+    PolymarketAgentMarket,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 
@@ -63,14 +64,15 @@ def test_benchmark_run(
 ) -> None:
     benchmarker = bm.Benchmarker(
         markets=[
-            Market(
-                source=MarketSource.MANIFOLD,
+            PolymarketAgentMarket(
+                id="1",
+                volume=None,
+                url="url",
                 question="Will GNO go up?",
-                url="...",
-                p_yes=0.1,
-                volume=1,
-                category="...",
-                close_time=utcnow(),
+                p_yes=Probability(0.1),
+                outcomes=["Yes", "No"],
+                close_time=utcnow() + timedelta(hours=48),
+                resolution=None,
                 created_time=utcnow() - timedelta(hours=48),
             )
         ],
@@ -105,14 +107,15 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         cache_path = f"{tmpdir}/cache.json"
         markets = [
-            Market(
-                source=MarketSource.MANIFOLD,
+            PolymarketAgentMarket(
+                id="1",
+                volume=None,
+                url="url",
                 question="Will GNO go up?",
-                url="...",
-                p_yes=0.1,
-                volume=1,
-                category="...",
+                p_yes=Probability(0.1),
+                outcomes=["Yes", "No"],
                 close_time=utcnow(),
+                resolution=Resolution.NO,
                 created_time=utcnow() - timedelta(hours=48),
             )
         ]
@@ -170,16 +173,16 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
 
 def test_benchmarker_cancelled_markets() -> None:
     markets = [
-        Market(
-            source=MarketSource.MANIFOLD,
+        PolymarketAgentMarket(
+            id="1",
+            volume=None,
+            url="url",
             question="Will GNO go up?",
-            url="...",
-            p_yes=0.1,
-            volume=1,
-            category="...",
+            p_yes=Probability(0.1),
+            outcomes=["Yes", "No"],
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
-            resolution=CancelableMarketResolution.CANCEL,
+            resolution=Resolution.CANCEL,
         )
     ]
     with pytest.raises(ValueError) as e:
@@ -188,76 +191,78 @@ def test_benchmarker_cancelled_markets() -> None:
             agents=[],
         )
     assert (
-        "Cancelled markets shouldn't be used in the benchmark, please filter them out."
+        "Unsuccessful markets shouldn't be used in the benchmark, please filter them out."
         in str(e)
     )
 
 
 def test_market_probable_resolution() -> None:
     with pytest.raises(ValueError) as e:
-        Market(
-            source=MarketSource.MANIFOLD,
+        PolymarketAgentMarket(
+            id="1",
+            volume=None,
+            url="url",
             question="Will GNO go up?",
-            url="...",
-            p_yes=0.1,
-            volume=1,
-            category="...",
+            p_yes=Probability(0.1),
+            outcomes=["Yes", "No"],
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
-            resolution=CancelableMarketResolution.CANCEL,
+            resolution=Resolution.CANCEL,
         ).probable_resolution
     assert "Unknown resolution" in str(e)
     assert (
-        Market(
-            source=MarketSource.MANIFOLD,
+        PolymarketAgentMarket(
+            id="1",
+            volume=None,
+            url="url",
             question="Will GNO go up?",
-            url="...",
-            p_yes=0.1,
-            volume=1,
-            category="...",
+            p_yes=Probability(0.8),
+            outcomes=["Yes", "No"],
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
-            resolution=CancelableMarketResolution.YES,
+            resolution=Resolution.YES,
         ).probable_resolution
-        == MarketResolution.YES
+        == Resolution.YES
     )
     assert (
-        Market(
-            source=MarketSource.MANIFOLD,
+        PolymarketAgentMarket(
+            id="1",
+            volume=None,
+            url="url",
             question="Will GNO go up?",
-            url="...",
-            p_yes=0.1,
-            volume=1,
-            category="...",
+            p_yes=Probability(0.1),
+            outcomes=["Yes", "No"],
             close_time=utcnow(),
+            resolution=Resolution.NO,
             created_time=utcnow() - timedelta(hours=48),
-            resolution=CancelableMarketResolution.NO,
         ).probable_resolution
-        == MarketResolution.NO
+        == Resolution.NO
     )
     assert (
-        Market(
-            source=MarketSource.MANIFOLD,
+        PolymarketAgentMarket(
+            id="1",
+            volume=None,
+            url="url",
             question="Will GNO go up?",
-            url="...",
-            p_yes=0.1,
-            volume=1,
-            category="...",
+            p_yes=Probability(0.1),
+            outcomes=["Yes", "No"],
             close_time=utcnow(),
+            resolution=Resolution.NO,
             created_time=utcnow() - timedelta(hours=48),
         ).probable_resolution
-        == MarketResolution.NO
+        == Resolution.NO
     )
     assert (
-        Market(
-            source=MarketSource.MANIFOLD,
+        PolymarketAgentMarket(
+            id="1",
+            volume=None,
+            url="url",
             question="Will GNO go up?",
-            url="...",
-            p_yes=0.8,
-            volume=1,
-            category="...",
+            p_yes=Probability(0.8),
+            outcomes=["Yes", "No"],
             close_time=utcnow(),
+            resolution=Resolution.YES,
             created_time=utcnow() - timedelta(hours=48),
         ).probable_resolution
-        == MarketResolution.YES
+        == Resolution.YES
     )

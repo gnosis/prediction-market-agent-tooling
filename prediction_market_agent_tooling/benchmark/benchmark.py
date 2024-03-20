@@ -12,23 +12,26 @@ from tqdm import tqdm
 
 from prediction_market_agent_tooling.benchmark.agents import AbstractBenchmarkedAgent
 from prediction_market_agent_tooling.benchmark.utils import (
-    Market,
-    MarketResolution,
     Prediction,
     PredictionsCache,
+    Resolution,
     get_llm_api_call_cost,
+)
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
     should_not_happen,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class Benchmarker:
     def __init__(
         self,
-        markets: t.List[Market],
+        markets: t.Sequence[AgentMarket],
         agents: t.List[AbstractBenchmarkedAgent],
         metric_fns: t.Dict[
-            str, t.Callable[[list[Prediction], list[Market]], str | float | None]
+            str,
+            t.Callable[[list[Prediction], t.Sequence[AgentMarket]], str | float | None],
         ] = {},
         cache_path: t.Optional[str] = None,
         only_cached: bool = False,
@@ -38,9 +41,9 @@ class Benchmarker:
             self.registered_agents
         ):
             raise ValueError("Agents must have unique names")
-        if any(m.has_unsuccessful_resolution for m in markets):
+        if any(m.has_unsuccessful_resolution() for m in markets):
             raise ValueError(
-                "Cancelled markets shouldn't be used in the benchmark, please filter them out."
+                "Unsuccessful markets shouldn't be used in the benchmark, please filter them out."
             )
 
         # Predictions
@@ -51,7 +54,7 @@ class Benchmarker:
             self.predictions = PredictionsCache(predictions={})
 
         self.only_cached = only_cached
-        self.markets: list[Market] = (
+        self.markets: t.Sequence[AgentMarket] = (
             [
                 m
                 for m in markets
@@ -136,12 +139,14 @@ class Benchmarker:
                 )
             ]
 
-            def get_prediction_result(market: Market) -> tuple[str, Prediction]:
+            def get_prediction_result(
+                market: AgentMarket,
+            ) -> tuple[str, Prediction]:
                 with get_openai_callback() as cb:
                     start = time.time()
                     prediction = (
                         agent.check_and_predict(market_question=market.question)
-                        if not market.is_resolved
+                        if not market.is_resolved()
                         else agent.check_and_predict_restricted(
                             market_question=market.question,
                             time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
@@ -184,8 +189,8 @@ class Benchmarker:
 
     @staticmethod
     def filter_predictions_for_answered(
-        predictions: list[Prediction], markets: list[Market]
-    ) -> t.Tuple[list[Prediction], list[Market]]:
+        predictions: list[Prediction], markets: t.Sequence[AgentMarket]
+    ) -> t.Tuple[list[Prediction], list[AgentMarket]]:
         filtered_predictions, filtered_markets = [], []
         for p, m in zip(predictions, markets):
             if p.is_answered:
@@ -194,7 +199,7 @@ class Benchmarker:
         return filtered_predictions, filtered_markets
 
     def _compute_mse(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -210,7 +215,7 @@ class Benchmarker:
         return mse
 
     def _compute_mean_confidence(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -223,7 +228,7 @@ class Benchmarker:
         return mean_confidence
 
     def _compute_mean_info_utility(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -246,7 +251,7 @@ class Benchmarker:
     def _compute_percentage_within_range(
         self,
         predictions: t.List[Prediction],
-        markets: t.List[Market],
+        markets: t.Sequence[AgentMarket],
         tolerance: float = 0.05,
     ) -> float | None:
         predictions, markets = self.filter_predictions_for_answered(
@@ -263,7 +268,7 @@ class Benchmarker:
         return (100 * within_range_count) / len(predictions)
 
     def _compute_correct_outcome_percentage(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -282,7 +287,10 @@ class Benchmarker:
         return (100 * correct_outcome_count) / len(predictions)
 
     def _compute_precision_and_recall_percentages(
-        self, predictions: t.List[Prediction], markets: t.List[Market], pos_label: int
+        self,
+        predictions: t.List[Prediction],
+        markets: t.Sequence[AgentMarket],
+        pos_label: int,
     ) -> tuple[float | None, float | None]:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -291,13 +299,13 @@ class Benchmarker:
             return None, None
 
         ground_truth = [
-            (1 if m.probable_resolution == MarketResolution.YES else 0) for m in markets
+            (1 if m.probable_resolution == Resolution.YES else 0) for m in markets
         ]
         y_pred = [
             (
                 1
                 if check_not_none(p.outcome_prediction).probable_resolution
-                == MarketResolution.YES
+                == Resolution.YES
                 else 0
             )
             for p in predictions
@@ -313,7 +321,7 @@ class Benchmarker:
         return precision * 100, recall * 100
 
     def _compute_confidence_p_yes_error_correlation(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -331,7 +339,7 @@ class Benchmarker:
         return float(np.corrcoef(confidences, p_yes_errors)[0, 1])
 
     def _compute_mean_cost(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
         # Note: costs are optional
         costs = [p.cost for p in predictions if p.cost]
@@ -341,7 +349,7 @@ class Benchmarker:
             return None
 
     def _compute_mean_time(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
         # Note: times are optional
         times = [p.time for p in predictions if p.time]
@@ -351,12 +359,12 @@ class Benchmarker:
             return None
 
     def _compute_ratio_evaluated_as_answerable(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float:
         return sum(1 for p in predictions if p.is_predictable) / len(predictions)
 
     def _compute_ratio_answered(
-        self, predictions: t.List[Prediction], markets: t.List[Market]
+        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float:
         return sum(1 for p in predictions if p.is_answered) / len(predictions)
 
@@ -420,28 +428,20 @@ class Benchmarker:
         return {
             "Number of markets": [len(self.markets)],
             "Proportion resolved": [
-                sum(1 for m in self.markets if m.is_resolved) / len(self.markets)
+                sum(1 for m in self.markets if m.is_resolved()) / len(self.markets)
             ],
             "Proportion YES": [
-                sum(
-                    1
-                    for m in self.markets
-                    if m.probable_resolution == MarketResolution.YES
-                )
+                sum(1 for m in self.markets if m.probable_resolution == Resolution.YES)
                 / len(self.markets)
             ],
             "Proportion NO": [
-                sum(
-                    1
-                    for m in self.markets
-                    if m.probable_resolution == MarketResolution.NO
-                )
+                sum(1 for m in self.markets if m.probable_resolution == Resolution.NO)
                 / len(self.markets)
             ],
         }
 
     def calculate_expected_returns(
-        self, prediction: Prediction, market: Market
+        self, prediction: Prediction, market: AgentMarket
     ) -> float | None:
         """
         The expected value if betting on a binary market in its initialized state of 50:50 'yes' and 'no' shares, with the assumption that the correct `p_yes` is that of the market.
@@ -459,13 +459,13 @@ class Benchmarker:
         # as it's the same as the probability.
         yes_shares = (
             bet_units / 0.5  # market.yes_outcome_price
-            if prediction.outcome_prediction.probable_resolution == MarketResolution.YES
+            if prediction.outcome_prediction.probable_resolution == Resolution.YES
             and market.yes_outcome_price > 0
             else 0
         )
         no_shares = (
             bet_units / 0.5  # market.no_outcome_price
-            if prediction.outcome_prediction.probable_resolution == MarketResolution.NO
+            if prediction.outcome_prediction.probable_resolution == Resolution.NO
             and market.no_outcome_price > 0
             else 0
         )

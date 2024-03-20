@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
@@ -11,7 +11,11 @@ from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     Resolution,
 )
-from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.utils import (
+    add_utc_timezone_validator,
+    check_not_none,
+    should_not_happen,
+)
 
 
 class SortBy(str, Enum):
@@ -39,11 +43,47 @@ class AgentMarket(BaseModel):
     outcomes: list[str]
     resolution: Resolution | None
     created_time: datetime | None
+    close_time: datetime | None
     p_yes: Probability
+    url: str
+    volume: Decimal | None  # Should be in currency of `currency` above.
+
+    _add_timezone_validator_created_time = field_validator("created_time")(
+        add_utc_timezone_validator
+    )
+    _add_timezone_validator_close_time = field_validator("close_time")(
+        add_utc_timezone_validator
+    )
 
     @property
-    def p_no(self) -> float:
-        return 1 - self.p_yes
+    def p_no(self) -> Probability:
+        return Probability(1 - self.p_yes)
+
+    @property
+    def yes_outcome_price(self) -> Decimal:
+        """
+        Price at prediction market is equal to the probability of given outcome.
+        Keep as an extra property, in case it wouldn't be true for some prediction market platform.
+        """
+        return Decimal(self.p_yes)
+
+    @property
+    def no_outcome_price(self) -> Decimal:
+        """
+        Price at prediction market is equal to the probability of given outcome.
+        Keep as an extra property, in case it wouldn't be true for some prediction market platform.
+        """
+        return Decimal(self.p_no)
+
+    @property
+    def probable_resolution(self) -> Resolution:
+        if self.is_resolved():
+            if self.has_successful_resolution():
+                return check_not_none(self.resolution)
+            else:
+                raise ValueError(f"Unknown resolution: {self.resolution}")
+        else:
+            return Resolution.YES if self.p_yes > 0.5 else Resolution.NO
 
     @property
     def boolean_outcome(self) -> bool:
@@ -69,6 +109,7 @@ class AgentMarket(BaseModel):
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
+        excluded_questions: set[str] | None = None,
     ) -> list["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -77,6 +118,9 @@ class AgentMarket(BaseModel):
 
     def has_successful_resolution(self) -> bool:
         return self.resolution in [Resolution.YES, Resolution.NO]
+
+    def has_unsuccessful_resolution(self) -> bool:
+        return self.resolution in [Resolution.CANCEL, Resolution.MKT]
 
     def get_outcome_str(self, outcome_index: int) -> str:
         try:

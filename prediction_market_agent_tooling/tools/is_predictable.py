@@ -24,7 +24,7 @@ Then, write down what is the future event of the question, what it refers to and
 
 Then, explain why do you think it is or isn't fully qualified.
 
-Finally, write your final decision, write `decision: ` followed by either "yes it is fully qualified" or "no it isn't fully qualified" about the question. Don't write anything else after that.
+Finally, write your final decision, write `decision: ` followed by either "yes it is fully qualified" or "no it isn't fully qualified" about the question. Don't write anything else after that. You must include "yes" or "no".
 """
 
 

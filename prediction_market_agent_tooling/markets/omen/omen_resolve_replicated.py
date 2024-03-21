@@ -42,6 +42,7 @@ def omen_resolve_all_markets_based_on_others_tx(
         resolution = find_resolution_on_other_markets(market)
         if resolution is not None:
             omen_resolve_market_tx(from_private_key, market, resolution)
+            resolved_addressses.append(resolved_addressses)
 
     return resolved_addressses
 

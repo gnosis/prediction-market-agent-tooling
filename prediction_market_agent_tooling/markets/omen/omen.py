@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
     Condition,
     OmenMarket,
+    OmenBet,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
@@ -39,9 +40,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
-    get_market,
     get_omen_markets,
-    get_resolved_omen_bets,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -87,14 +86,7 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
-    def was_bet_outcome_correct(self) -> bool:
-        keys = APIKeys()
-        # We fetch all bets irrespective of market
-        resolved_omen_bets = get_resolved_omen_bets(
-            start_time=datetime(2024, 1, 1),
-            end_time=None,
-            better_address=keys.bet_from_address,
-        )
+    def was_bet_outcome_correct(self, resolved_omen_bets: t.List[OmenBet]) -> bool:
         resolved_bets_for_market = [
             bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
         ]
@@ -124,10 +116,10 @@ class OmenAgentMarket(AgentMarket):
         """
         return False
 
-    def redeem_positions(self) -> None:
+    def redeem_positions(self, bets_on_market: t.List[OmenBet]) -> None:
         keys = APIKeys()
 
-        bet_was_correct = self.was_bet_outcome_correct()
+        bet_was_correct = self.was_bet_outcome_correct(bets_on_market)
         if not bet_was_correct:
             print(f"Bet placed on market {self.id} was incorrect.")
             return None
@@ -140,18 +132,6 @@ class OmenAgentMarket(AgentMarket):
         return omen_redeem_full_position_tx(
             market=self, from_private_key=keys.bet_from_private_key
         )
-
-    def before_process_bets(self) -> None:
-        # We can only redeem positions from resolved markets.
-        market = OmenAgentMarket.from_data_model(get_market(self.id))
-        if not market.is_resolved():
-            return
-
-        market.redeem_positions()
-        return None
-
-    def after_process_bets(self) -> None:
-        pass
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -177,7 +157,7 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list["AgentMarket"]:
+    ) -> list["OmenAgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)
             for m in get_omen_binary_markets(

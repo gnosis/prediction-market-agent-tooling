@@ -49,7 +49,7 @@ class PolymarketAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list["AgentMarket"]:
+    ) -> list["PolymarketAgentMarket"]:
         if sort_by != SortBy.NONE:
             raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")
 

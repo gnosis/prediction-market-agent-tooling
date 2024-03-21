@@ -103,14 +103,6 @@ class AgentMarket(BaseModel):
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def before_process_bets(self) -> None:
-        print("This should be implemented on each subclass.")
-        return
-
-    def after_process_bets(self) -> None:
-        print("This should be implemented on each subclass.")
-        return
-
     @staticmethod
     def get_binary_markets(
         limit: int,

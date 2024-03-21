@@ -39,9 +39,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
+    get_market,
     get_omen_markets,
     get_resolved_omen_bets,
-    get_market,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -144,7 +144,7 @@ class OmenAgentMarket(AgentMarket):
     def before_process_bets(self) -> None:
         # We can only redeem positions from resolved markets.
         market = OmenAgentMarket.from_data_model(get_market(self.id))
-        if not market.is_resolved:
+        if not market.is_resolved():
             return
 
         market.redeem_positions()

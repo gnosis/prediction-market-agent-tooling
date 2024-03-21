@@ -1,4 +1,4 @@
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
+from prediction_market_agent_tooling.gtypes import HexAddress, PrivateKey
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.manifold.utils import (
@@ -17,7 +17,7 @@ from prediction_market_agent_tooling.tools.web3_utils import private_key_to_publ
 def omen_resolve_all_markets_based_on_others_tx(
     from_private_key: PrivateKey,
     last_n_omen_markets_to_fetch: int = 1000,
-) -> list[ChecksumAddress]:
+) -> list[HexAddress]:
     # Fetch markets created by us that are already open for the final outcome.
     created_already_opened_markets = get_omen_binary_markets(
         limit=last_n_omen_markets_to_fetch,
@@ -36,13 +36,13 @@ def omen_resolve_all_markets_based_on_others_tx(
         m for m in created_already_opened_markets if not m.has_bonded_outcome
     ]
 
-    resolved_addressses: list[ChecksumAddress] = []
+    resolved_addressses: list[HexAddress] = []
 
     for market in created_already_opened_without_set_outcome:
         resolution = find_resolution_on_other_markets(market)
         if resolution is not None:
             omen_resolve_market_tx(from_private_key, market, resolution)
-            resolved_addressses.append(resolved_addressses)
+            resolved_addressses.append(market.id)
 
     return resolved_addressses
 

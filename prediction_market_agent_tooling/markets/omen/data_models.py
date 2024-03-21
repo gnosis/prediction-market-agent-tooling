@@ -26,6 +26,7 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+OMEN_BASE_URL = "https://aiomen.eth.limo"
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
@@ -103,6 +104,10 @@ class OmenMarket(BaseModel):
             if self.answerFinalizedTimestamp is not None
             else None
         )
+
+    @property
+    def has_bonded_outcome(self) -> bool:
+        return self.finalized_datetime is not None
 
     @property
     def market_maker_contract_address(self) -> HexAddress:
@@ -191,7 +196,7 @@ class OmenMarket(BaseModel):
 
     @property
     def url(self) -> str:
-        return f"https://aiomen.eth.limo/#/{self.id}"
+        return f"{OMEN_BASE_URL}/#/{self.id}"
 
 
 class OmenBetCreator(BaseModel):

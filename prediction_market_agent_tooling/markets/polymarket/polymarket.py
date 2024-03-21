@@ -13,6 +13,9 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketMarketWithPrices,
 )
+from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
+    POLYMARKET_BASE_URL,
+)
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -21,6 +24,7 @@ class PolymarketAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.USDC
+    base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
 
     @staticmethod
     def from_data_model(model: PolymarketMarketWithPrices) -> "PolymarketAgentMarket":

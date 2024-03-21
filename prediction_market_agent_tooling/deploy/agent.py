@@ -21,10 +21,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import (
-    MARKET_TYPE_TO_AGENT_MARKET,
-    MarketType,
-)
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
@@ -164,9 +161,7 @@ def {entrypoint_function_name}(request) -> str:
         limit: int = MAX_AVAILABLE_MARKETS,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
     ) -> list[AgentMarket]:
-        cls = MARKET_TYPE_TO_AGENT_MARKET.get(market_type)
-        if not cls:
-            raise ValueError(f"Unknown market type: {market_type}")
+        cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(limit=limit, sort_by=sort_by)
         return available_markets

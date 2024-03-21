@@ -1,13 +1,15 @@
 from datetime import datetime
 
-import requests
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import USDC, Probability, usdc_type
 from prediction_market_agent_tooling.markets.data_models import Resolution
-
-POLYMARKET_TRUE_OUTCOME = "Yes"
-POLYMARKET_FALSE_OUTCOME = "No"
+from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
+    POLYMARKET_FALSE_OUTCOME,
+    POLYMARKET_TRUE_OUTCOME,
+    PolymarketFullMarket,
+    construct_polymarket_url,
+)
 
 
 class PolymarketRewards(BaseModel):
@@ -62,10 +64,7 @@ class PolymarketMarket(BaseModel):
 
     @property
     def url(self) -> str:
-        """
-        Note: This works only if it's a single main market, not sub-market of some more general question.
-        """
-        return f"https://polymarket.com/event/{self.market_slug}"
+        return construct_polymarket_url(self.market_slug)
 
     @property
     def resolution(self) -> Resolution | None:
@@ -87,15 +86,17 @@ class PolymarketMarket(BaseModel):
                 f"Should not happen, invalid winner tokens: {winner_tokens}"
             )
 
-    def check_if_its_a_main_market(self) -> bool:
+    def fetch_full_market(self) -> PolymarketFullMarket | None:
+        return PolymarketFullMarket.fetch_from_url(self.url)
+
+    def fetch_if_its_a_main_market(self) -> bool:
         # On Polymarket, there are markets that are actually a group of multiple Yes/No markets, for example https://polymarket.com/event/presidential-election-winner-2024.
         # But API returns them individually, and then we receive questions such as "Will any other Republican Politician win the 2024 US Presidential Election?",
         # which are naturally unpredictable without futher details.
         # This is a heuristic to filter them out.
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        }
-        return self.question in requests.get(self.url, headers=headers).text
+        # Warning: This is a very slow operation, as it requires fetching the website. Use it only when necessary.
+        full_market = self.fetch_full_market()
+        return full_market is not None and full_market.is_main_market
 
 
 class MarketsEndpointResponse(BaseModel):

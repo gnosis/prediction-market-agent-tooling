@@ -12,6 +12,8 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
+MANIFOLD_BASE_URL = "https://manifold.markets"
+
 
 class ManifoldPool(BaseModel):
     NO: float

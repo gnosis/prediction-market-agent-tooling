@@ -337,8 +337,8 @@ def get_omen_markets(
 def get_omen_bets(
     better_address: ChecksumAddress,
     start_time: datetime,
-    end_time: t.Optional[datetime],
-    market_id: t.Optional[str],
+    end_time: t.Optional[datetime] = None,
+    market_id: t.Optional[str] = None,
     filter_by_answer_finalized_not_null: bool = False,
 ) -> list[OmenBet]:
     if not end_time:

@@ -5,7 +5,9 @@ import time
 import typing as t
 from collections import defaultdict
 from datetime import datetime
-from eth_typing import HexAddress, HexStr
+
+from eth_typing import HexAddress
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -231,9 +233,7 @@ def {entrypoint_function_name}(request) -> str:
                 )
 
     def after(self, market_type: MarketType) -> None:
-        resolved_markets = self.get_markets(market_type, filter_by=FilterBy.RESOLVED)
-        for market in resolved_markets:
-            market.after_process_bets()
+        pass
 
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
         self.before(market_type)

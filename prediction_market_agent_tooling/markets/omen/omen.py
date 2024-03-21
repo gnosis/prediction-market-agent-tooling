@@ -26,8 +26,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     Condition,
-    OmenMarket,
     OmenBet,
+    OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
@@ -157,7 +157,7 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list["OmenAgentMarket"]:
+    ) -> list[AgentMarket]:
         return [
             OmenAgentMarket.from_data_model(m)
             for m in get_omen_binary_markets(

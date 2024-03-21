@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
     get_omen_binary_markets,
-    get_resolved_omen_bets,
     omen_create_market_tx,
     omen_fund_market_tx,
     omen_redeem_full_position_tx,
@@ -24,6 +23,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
     get_market,
     get_omen_bets,
+    get_resolved_omen_bets,
 )
 from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow

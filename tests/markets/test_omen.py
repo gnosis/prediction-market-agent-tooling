@@ -153,7 +153,7 @@ def test_p_yes() -> None:
 
 
 def test_filter_markets() -> None:
-    limit = 100
+    limit = 10000000
     markets = get_omen_binary_markets(
         limit=limit,
         sort_by=SortBy.NEWEST,

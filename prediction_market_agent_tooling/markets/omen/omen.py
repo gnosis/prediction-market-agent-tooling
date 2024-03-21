@@ -42,6 +42,9 @@ from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
     get_omen_markets,
     get_resolved_omen_bets,
 )
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -310,6 +313,16 @@ def get_omen_binary_markets(
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
+    subgraph_handler: OmenSubgraphHandler = OmenSubgraphHandler()
+    return subgraph_handler.get_omen_markets(
+        first=limit,
+        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        sort_by=sort_by,
+        created_after=created_after,
+        filter_by=filter_by,
+        creator=creator,
+        excluded_questions=excluded_questions,
+    )
     return get_omen_markets(
         first=limit,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],

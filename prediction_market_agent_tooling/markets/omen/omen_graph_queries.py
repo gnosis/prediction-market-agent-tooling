@@ -11,7 +11,14 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     OmenUserPosition,
 )
-from prediction_market_agent_tooling.tools.utils import response_to_model, utcnow
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
+from prediction_market_agent_tooling.tools.utils import (
+    response_to_model,
+    utcnow,
+    to_int_timestamp,
+)
 
 """
 Python API for Omen prediction market.
@@ -144,10 +151,6 @@ query($creator:String!, $id_gt: String!,  $first: Int!) {
   }
 }
 """
-
-
-def to_int_timestamp(dt: datetime) -> int:
-    return int(dt.timestamp())
 
 
 def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
@@ -299,35 +302,47 @@ def get_omen_markets(
     # ToDo
     #  One could use subgrounds for direct querying FixedProductMarketMakers.
     #  See https://github.com/gnosis/prediction-market-agent-tooling/issues/115
-    order_by, order_direction = ordering_from_sort_by(sort_by)
-    markets = response_to_model(
-        requests.post(
-            OMEN_TRADES_SUBGRAPH,
-            json={
-                "query": construct_query_get_fixed_product_markets_makers(
-                    include_creator=creator is not None,
-                    filter_by=filter_by,
-                ),
-                "variables": {
-                    "first": first,
-                    "outcomes": outcomes,
-                    "orderBy": order_by,
-                    "orderDirection": order_direction,
-                    "creationTimestamp_gt": (
-                        to_int_timestamp(created_after) if created_after else 0
-                    ),
-                    "creator": creator,
-                },
-            },
-            headers={"Content-Type": "application/json"},
-        ),
-        FixedProductMarketMakersResponse,
+
+    subgraph_handler = OmenSubgraphHandler()
+    return subgraph_handler.get_omen_markets(
+        first=first,
+        sort_by=sort_by,
+        filter_by=filter_by,
+        created_after=created_after,
+        creator=creator,
+        excluded_questions=excluded_questions,
+        outcomes=outcomes,
     )
-    return [
-        m
-        for m in markets.data.fixedProductMarketMakers
-        if not excluded_questions or m.question not in excluded_questions
-    ]
+
+    # order_by, order_direction = ordering_from_sort_by(sort_by)
+    # markets = response_to_model(
+    #     requests.post(
+    #         OMEN_TRADES_SUBGRAPH,
+    #         json={
+    #             "query": construct_query_get_fixed_product_markets_makers(
+    #                 include_creator=creator is not None,
+    #                 filter_by=filter_by,
+    #             ),
+    #             "variables": {
+    #                 "first": first,
+    #                 "outcomes": outcomes,
+    #                 "orderBy": order_by,
+    #                 "orderDirection": order_direction,
+    #                 "creationTimestamp_gt": (
+    #                     to_int_timestamp(created_after) if created_after else 0
+    #                 ),
+    #                 "creator": creator,
+    #             },
+    #         },
+    #         headers={"Content-Type": "application/json"},
+    #     ),
+    #     FixedProductMarketMakersResponse,
+    # )
+    # return [
+    #     m
+    #     for m in markets.data.fixedProductMarketMakers
+    #     if not excluded_questions or m.question not in excluded_questions
+    # ]
 
 
 def get_omen_bets(

@@ -12,7 +12,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     OmenOutcomeToken,
     PrivateKey,
-    TxReceipt,
     Wei,
     xDai,
 )
@@ -121,7 +120,7 @@ class OmenAgentMarket(AgentMarket):
 
         bet_was_correct = self.was_bet_outcome_correct(bets_on_market)
         if not bet_was_correct:
-            print(f"Bet placed on market {self.id} was incorrect.")
+            # print(f"Bet placed on market {self.id} was incorrect.")
             return None
 
         position_already_redeemed = self.check_if_position_was_already_redeemed()
@@ -575,6 +574,17 @@ def omen_redeem_full_position_tx(
         return
 
     conditional_token_contract = OmenConditionalTokenContract()
+
+    # check if condition has already been resolved by oracle
+    payout_for_condition = conditional_token_contract.payoutDenominator(
+        market.condition.id
+    )
+    if not payout_for_condition > 0:
+        # from ConditionalTokens.redeemPositions:
+        # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
+        print("Market not yet resolved, not possible to claim")
+        return
+
     conditional_token_contract.redeemPositions(
         from_private_key=from_private_key,
         collateral_token_address=market.collateral_token_contract_address_checksummed,

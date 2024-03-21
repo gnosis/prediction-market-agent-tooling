@@ -142,6 +142,13 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     ) -> bool:
         return self.getOutcomeSlotCount(condition_id) > 0
 
+    def payoutDenominator(self, condition_id: HexAddress) -> int:
+        payoutForCondition: int = self.call(
+            "payoutDenominator",
+            [condition_id],
+        )
+        return payoutForCondition
+
     def setApprovalForAll(
         self,
         for_address: ChecksumAddress,

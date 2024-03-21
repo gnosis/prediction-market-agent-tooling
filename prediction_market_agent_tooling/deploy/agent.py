@@ -3,7 +3,10 @@ import os
 import tempfile
 import time
 import typing as t
+from collections import defaultdict
 from datetime import datetime
+
+from eth_typing import HexAddress
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
@@ -28,6 +31,11 @@ from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import (
     MARKET_TYPE_TO_AGENT_MARKET,
     MarketType,
+)
+from prediction_market_agent_tooling.markets.omen.data_models import OmenBet, OmenMarket
+from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
+    get_resolved_omen_bets,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
@@ -178,13 +186,33 @@ def {entrypoint_function_name}(request) -> str:
         )
         return available_markets
 
-    def before_process_bets(self, market_type: MarketType) -> None:
+    def before(self, market_type: MarketType) -> None:
         """
         Executes actions that occur before bets are placed.
         """
-        resolved_markets = self.get_markets(market_type, filter_by=FilterBy.RESOLVED)
-        for market in resolved_markets:
-            market.before_process_bets()
+
+        if market_type == MarketType.OMEN:
+            keys = APIKeys()
+            resolved_omen_bets = get_resolved_omen_bets(
+                start_time=datetime(2020, 1, 1),
+                end_time=None,
+                better_address=keys.bet_from_address,
+            )
+            bets_per_market_id: t.Dict[HexAddress, t.List[OmenBet]] = defaultdict(list)
+            market_id_to_market: t.Dict[HexAddress, OmenMarket] = {}
+
+            for bet in resolved_omen_bets:
+                bets_per_market_id[bet.fpmm.id].append(bet)
+                # We keep track of the unique markets
+                if bet.fpmm.id not in market_id_to_market:
+                    market_id_to_market[bet.fpmm.id] = bet.fpmm
+
+            # We redeem positions for each unique resolved market where the
+            # agent has placed bets.
+            for market_id, omen_bets in bets_per_market_id.items():
+                market_data_model = market_id_to_market[market_id]
+                market = OmenAgentMarket.from_data_model(market_data_model)
+                market.redeem_positions(omen_bets)
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """
@@ -204,15 +232,13 @@ def {entrypoint_function_name}(request) -> str:
                     outcome=result,
                 )
 
-    def after_process_bets(self, market_type: MarketType) -> None:
-        resolved_markets = self.get_markets(market_type, filter_by=FilterBy.RESOLVED)
-        for market in resolved_markets:
-            market.after_process_bets()
+    def after(self, market_type: MarketType) -> None:
+        pass
 
     def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
-        self.before_process_bets(market_type)
+        self.before(market_type)
         self.process_bets(market_type, _place_bet)
-        self.after_process_bets(market_type)
+        self.after(market_type)
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"

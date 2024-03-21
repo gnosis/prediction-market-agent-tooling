@@ -41,6 +41,7 @@ query getFixedProductMarketMakerTrades(
     $creationTimestamp_gte: Int!,
     $creationTimestamp_lte: Int!,
     $first: Int!,
+    $market_id: String!
 ) {
     fpmmTrades(
         where: {
@@ -49,6 +50,9 @@ query getFixedProductMarketMakerTrades(
             creationTimestamp_gte: $creationTimestamp_gte,
             creationTimestamp_lte: $creationTimestamp_lte,
             id_gt: $id_gt,
+            fpmm_: {answerFinalizedTimestamp_not: null},
+            fpmm: $market_id
+            
         }
         first: $first
         orderBy: id
@@ -348,15 +352,22 @@ def get_omen_markets(
 def get_omen_bets(
     better_address: ChecksumAddress,
     start_time: datetime,
-    end_time: t.Optional[datetime],
+    end_time: t.Optional[datetime] = None,
+    market_id: t.Optional[str] = None,
+    filter_by_answer_finalized_not_null: bool = False,
 ) -> list[OmenBet]:
     if not end_time:
         end_time = utcnow()
-
     # Initialize id_gt for the first batch of bets to zero
     id_gt: str = "0"
     all_bets: list[OmenBet] = []
     query = _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKER_TRADES
+
+    if not market_id:
+        query = query.replace("fpmm: $market_id", "")
+
+    if not filter_by_answer_finalized_not_null:
+        query = query.replace("fpmm_: {answerFinalizedTimestamp_not: null},", "")
 
     while True:
         bets = requests.post(
@@ -369,6 +380,7 @@ def get_omen_bets(
                     "creationTimestamp_lte": to_int_timestamp(end_time),
                     "id_gt": id_gt,
                     "first": OMEN_QUERY_BATCH_SIZE,
+                    "market_id": market_id if market_id else "",
                 },
             },
             headers={"Content-Type": "application/json"},
@@ -392,9 +404,12 @@ def get_resolved_omen_bets(
     end_time: t.Optional[datetime],
     better_address: ChecksumAddress,
 ) -> list[OmenBet]:
+    # We filter by answer_finalized is not None on a subgraph level (for faster fetch times),
+    # however further assertions are performed on a data model level.
     bets = get_omen_bets(
         start_time=start_time,
         end_time=end_time,
         better_address=better_address,
+        filter_by_answer_finalized_not_null=True,
     )
     return [b for b in bets if b.fpmm.is_resolved]

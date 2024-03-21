@@ -6,6 +6,7 @@ from prediction_market_agent_tooling.markets.polymarket.utils import (
     find_resolution_on_polymarket,
     find_url_to_polymarket,
 )
+from tests.utils import RUN_PAID_TESTS
 
 
 @pytest.mark.parametrize(
@@ -17,6 +18,7 @@ from prediction_market_agent_tooling.markets.polymarket.utils import (
         )
     ],
 )
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_find_url_to_polymarket(question: str, expected: str) -> None:
     assert find_url_to_polymarket(question) == expected
 
@@ -34,6 +36,7 @@ def test_find_url_to_polymarket(question: str, expected: str) -> None:
         ),
     ],
 )
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_polymarket_is_main(url: str, expected: bool) -> None:
     full_market = PolymarketFullMarket.fetch_from_url(url)
     assert full_market is not None
@@ -54,5 +57,6 @@ def test_polymarket_is_main(url: str, expected: bool) -> None:
         ),
     ],
 )
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_polymarket_find_resolution(question: str, expected: Resolution | None) -> None:
     assert find_resolution_on_polymarket(question) == expected

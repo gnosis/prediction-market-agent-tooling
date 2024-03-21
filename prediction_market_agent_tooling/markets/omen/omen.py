@@ -616,19 +616,6 @@ def get_conditional_tokens_balance_for_market(
     return Wei(balance)
 
 
-def withdraw_collateral_token(
-    amount_wei: Wei,
-    from_private_key: PrivateKey,
-    web3: Web3 | None = None,
-) -> TxReceipt:
-    collateral_token = OmenCollateralTokenContract()
-    return collateral_token.withdraw(
-        amount_wei=amount_wei,
-        from_private_key=from_private_key,
-        web3=web3,
-    )
-
-
 def omen_remove_fund_market_tx(
     market: OmenAgentMarket,
     shares: OmenOutcomeToken,

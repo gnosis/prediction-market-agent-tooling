@@ -390,7 +390,7 @@ def get_resolved_omen_bets(
     better_address: ChecksumAddress,
 ) -> list[OmenBet]:
     # We filter by answer_finalized is not None on a subgraph level (for faster fetch times),
-    # however further assertions are performed on a data model level.
+    # however further assertions are performed on a data model level
     bets = get_omen_bets(
         start_time=start_time,
         end_time=end_time,

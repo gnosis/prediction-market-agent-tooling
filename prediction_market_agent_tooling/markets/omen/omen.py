@@ -41,6 +41,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
     get_omen_markets,
     get_resolved_omen_bets,
+    get_market,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -142,15 +143,11 @@ class OmenAgentMarket(AgentMarket):
 
     def before_process_bets(self) -> None:
         # We can only redeem positions from resolved markets.
-        resolved_markets = self.get_binary_markets(
-            limit=MAX_NUMBER_OF_MARKETS_FOR_SUBGRAPH_RETRIEVAL,
-            filter_by=FilterBy.RESOLVED,
-            sort_by=SortBy.CLOSING_SOONEST,
-        )
-        # We redeem positions from all resolved Omen markets.
-        for market in resolved_markets:
-            print(f"Redeeming position from market {market.id}")
-            market.redeem_positions()
+        market = OmenAgentMarket.from_data_model(get_market(self.id))
+        if not market.is_resolved:
+            return
+
+        market.redeem_positions()
         return None
 
     def after_process_bets(self) -> None:
@@ -196,34 +193,6 @@ class OmenAgentMarket(AgentMarket):
         return OmenFixedProductMarketMakerContract(
             address=self.market_maker_contract_address_checksummed
         )
-
-
-_QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER = """
-query getFixedProductMarketMaker($id: String!) {
-    fixedProductMarketMaker(
-        id: $id
-    ) {
-        id
-        title
-        category
-        creationTimestamp
-        collateralVolume
-        usdVolume
-        collateralToken
-        outcomes
-        outcomeTokenAmounts
-        outcomeTokenMarginalPrices
-        fee
-        condition {
-            id
-            outcomeSlotCount
-        }
-        answerFinalizedTimestamp
-        resolutionTimestamp
-        currentAnswer
-    }
-}
-"""
 
 
 def construct_query_get_fixed_product_markets_makers(

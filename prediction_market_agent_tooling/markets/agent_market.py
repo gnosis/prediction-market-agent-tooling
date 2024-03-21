@@ -111,11 +111,6 @@ class AgentMarket(BaseModel):
         print("This should be implemented on each subclass.")
         return
 
-    def redeem_positions(self) -> None:
-        """
-        The logic for redeeming positions should be implemented in the subclass (see OmenAgentMarket).
-        """
-
     @staticmethod
     def get_binary_markets(
         limit: int,

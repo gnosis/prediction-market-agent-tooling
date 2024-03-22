@@ -3,10 +3,10 @@ import typer
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
-    get_market,
     omen_buy_outcome_tx,
     omen_sell_outcome_tx,
 )
+from prediction_market_agent_tooling.markets.omen.omen_graph_queries import get_market
 
 app = typer.Typer()
 

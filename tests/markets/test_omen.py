@@ -13,15 +13,17 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
-    get_market,
-    get_omen_bets,
     get_omen_binary_markets,
-    get_resolved_omen_bets,
     omen_create_market_tx,
     omen_fund_market_tx,
     omen_redeem_full_position_tx,
     omen_remove_fund_market_tx,
     pick_binary_market,
+)
+from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
+    get_market,
+    get_omen_bets,
+    get_resolved_omen_bets,
 )
 from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
@@ -125,9 +127,9 @@ def test_omen_fund_and_remove_fund_market() -> None:
 def test_get_bets(a_bet_from_address: str) -> None:
     better_address = Web3.to_checksum_address(a_bet_from_address)
     bets = get_omen_bets(
-        better_address=better_address,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 21),
+        better_address=better_address,
     )
     assert len(bets) == 1
     assert (
@@ -161,7 +163,7 @@ def test_filter_markets() -> None:
 
     markets = get_omen_binary_markets(
         limit=limit,
-        sort_by=SortBy.NEWEST,
+        sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.RESOLVED,
     )
     assert len(markets) == limit
@@ -170,9 +172,9 @@ def test_filter_markets() -> None:
 def test_resolved_omen_bets(a_bet_from_address: str) -> None:
     better_address = Web3.to_checksum_address(a_bet_from_address)
     resolved_bets = get_resolved_omen_bets(
-        better_address=better_address,
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 28),
+        better_address=better_address,
     )
 
     # Verify that the bets are unique.
@@ -184,10 +186,10 @@ def test_resolved_omen_bets(a_bet_from_address: str) -> None:
         bet.to_generic_resolved_bet()
 
 
-# @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_omen_redeem_positions() -> None:
     market_id = (
-        "0xBA125828EC00267BBB70564D5558B891EABDAB9B".lower()
+        "0x6469da5478e5b2ddf9f6b7fba365e5670b7880f4".lower()
     )  # Market on which agent previously betted on
     market = OmenAgentMarket.from_data_model(get_market(market_id))
     keys = APIKeys()

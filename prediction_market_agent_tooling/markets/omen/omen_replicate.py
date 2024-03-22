@@ -48,11 +48,7 @@ def omen_replicate_from_tx(
         10 if market_type == MarketType.POLYMARKET else 100,
         market_type,
         filter_by=FilterBy.OPEN,
-        sort_by=(
-            SortBy.CLOSING_SOONEST
-            if market_type == MarketType.MANIFOLD
-            else SortBy.NONE
-        ),
+        sort_by=SortBy.NONE,
         excluded_questions=set(m.question for m in already_created_markets),
     )
     markets_sorted = sorted(
@@ -102,9 +98,7 @@ def omen_replicate_from_tx(
             )
             continue
 
-        latest_allowed_resolution_known_time = datetime(
-            year=utcnow().year, month=12, day=31
-        )
+        latest_allowed_resolution_known_time = utcnow() + timedelta(days=365)
         if market.close_time > latest_allowed_resolution_known_time:
             print(
                 f"Skipping `{market.question}` because it closes later than {latest_allowed_resolution_known_time}."

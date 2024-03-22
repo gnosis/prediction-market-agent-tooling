@@ -10,7 +10,6 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
-    HexBytes,
     HexStr,
     OmenOutcomeToken,
     PrivateKey,
@@ -586,7 +585,7 @@ def omen_redeem_full_position_tx(
 
     # check if condition has already been resolved by oracle
     payout_for_condition = conditional_token_contract.payoutDenominator(
-        HexBytes(market.condition.id)
+        market.condition.id
     )
     if not payout_for_condition > 0:
         # from ConditionalTokens.redeemPositions:
@@ -597,7 +596,7 @@ def omen_redeem_full_position_tx(
     conditional_token_contract.redeemPositions(
         from_private_key=from_private_key,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
-        condition_id=HexBytes(market.condition.id),
+        condition_id=market.condition.id,
         parent_collection_id=parent_collection_id,
         index_sets=market.condition.index_sets,
         web3=web3,

@@ -66,9 +66,11 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         oracle_address: ChecksumAddress,
         outcomes_slot_count: int,
     ) -> HexBytes:
-        id_: HexBytes = self.call(
-            "getConditionId",
-            [oracle_address, question_id, outcomes_slot_count],
+        id_ = HexBytes(
+            self.call(
+                "getConditionId",
+                [oracle_address, question_id, outcomes_slot_count],
+            )
         )
         return id_
 
@@ -81,7 +83,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     def getCollectionId(
         self,
         parent_collection_id: HexStr,
-        condition_id: HexAddress,
+        condition_id: HexBytes,
         index_set: int,
         web3: Web3 | None = None,
     ) -> bytes:
@@ -460,7 +462,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
             ),
             tx_params=tx_params,
         )
-        question_id: HexBytes = receipt_tx["logs"][0]["topics"][
-            1
-        ]  # The question id is available in the first emitted log, in the second topic.
+        question_id = HexBytes(
+            receipt_tx["logs"][0]["topics"][1]
+        )  # The question id is available in the first emitted log, in the second topic.
         return question_id

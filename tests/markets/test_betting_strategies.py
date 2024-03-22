@@ -6,6 +6,7 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
+    HexBytes,
     OmenOutcomeToken,
     Probability,
     Wei,
@@ -59,7 +60,7 @@ def omen_market() -> OmenMarket:
         ],
         fee=wei_type(20000000000000000),
         category="foo",
-        condition=Condition(id=HexAddress(HexStr("0x123")), outcomeSlotCount=2),
+        condition=Condition(id=HexBytes("0x123"), outcomeSlotCount=2),
         question=Question(id=HexAddress(HexStr("0x123"))),
     )
 
@@ -90,7 +91,7 @@ def test_minimum_bet_to_win(
             created_time=utcnow() - timedelta(days=1),
             close_time=utcnow(),
             resolution=None,
-            condition=Condition(id=HexAddress(HexStr("0x123")), outcomeSlotCount=2),
+            condition=Condition(id=HexBytes("0x123"), outcomeSlotCount=2),
             url="url",
             volume=None,
         ),

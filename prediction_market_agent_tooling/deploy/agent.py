@@ -52,7 +52,7 @@ class DeployableAgent:
         """
         return markets[:1]
 
-    def answer_binary_market(self, market: AgentMarket) -> bool:
+    def answer_binary_market(self, market: AgentMarket) -> bool | None:
         """
         Answer the binary market. This method must be implemented by the subclass.
         """
@@ -176,6 +176,9 @@ def {entrypoint_function_name}(request) -> str:
         markets = self.pick_markets(available_markets)
         for market in markets:
             result = self.answer_binary_market(market)
+            if result is None:
+                print(f"Skipping market {market} as no answer was provided")
+                continue
             if _place_bet:
                 amount = self.calculate_bet_amount(result, market)
                 print(

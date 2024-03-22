@@ -297,9 +297,6 @@ def get_omen_markets(
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
-    """
-    We return the first 1000 markets, since we don't have pagination in place (yet).
-    """
     # ToDo
     #  One could use subgrounds for direct querying FixedProductMarketMakers.
     #  See https://github.com/gnosis/prediction-market-agent-tooling/issues/115

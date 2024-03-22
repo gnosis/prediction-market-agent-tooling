@@ -92,6 +92,12 @@ class OmenAgentMarket(AgentMarket):
         resolved_bets_for_market = [
             bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
         ]
+
+        # If there were no bets for this market, we conservatively say that
+        # this method was called incorrectly, hence we raise an Error.
+        if not resolved_bets_for_market:
+            raise ValueError(f"No resolved bets provided for market {self.id}")
+
         # We iterate through bets since agent could have placed bets on multiple outcomes.
         # If one of the bets was correct, we return true since there is a redeemable amount to be retrieved.
         for bet in resolved_bets_for_market:

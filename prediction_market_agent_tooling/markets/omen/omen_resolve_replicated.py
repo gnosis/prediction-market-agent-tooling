@@ -60,20 +60,21 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
     resolution: Resolution | None = None
 
     for market_type in MarketType:
-        # We are going to resolve it on Omen, so we can't find the answer there.
-        if market_type == MarketType.OMEN:
-            continue
+        match market_type:
+            case MarketType.OMEN:
+                # We are going to resolve it on Omen, so we can't find the answer there.
+                continue
 
-        elif market_type == MarketType.MANIFOLD:
-            resolution = find_resolution_on_manifold(market.question)
+            case MarketType.MANIFOLD:
+                resolution = find_resolution_on_manifold(market.question)
 
-        elif market_type == MarketType.POLYMARKET:
-            resolution = find_resolution_on_polymarket(market.question)
+            case MarketType.POLYMARKET:
+                resolution = find_resolution_on_polymarket(market.question)
 
-        else:
-            raise ValueError(
-                f"Unknown market type {market_type} in replication resolving."
-            )
+            case _:
+                raise ValueError(
+                    f"Unknown market type {market_type} in replication resolving."
+                )
 
         if resolution is not None:
             return resolution

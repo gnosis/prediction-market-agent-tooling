@@ -45,6 +45,24 @@ class Condition(BaseModel):
         return [i + 1 for i in range(self.outcomeSlotCount)]
 
 
+class Question(BaseModel):
+    id: HexAddress
+    answerFinalizedTimestamp: t.Optional[datetime] = None
+    currentAnswer: t.Optional[str] = None
+
+
+class OmenPosition(BaseModel):
+    id: HexAddress
+    # Using HexBytes instead of bytes causes a Pydantic error.
+    # Unable to generate pydantic-core schema for <class 'hexbytes.main.HexBytes'>
+    conditionIds: t.List[bytes]
+
+
+class OmenUserPosition(BaseModel):
+    id: HexAddress
+    position: OmenPosition
+
+
 class OmenMarket(BaseModel):
     """
     https://aiomen.eth.limo
@@ -67,6 +85,7 @@ class OmenMarket(BaseModel):
     currentAnswer: t.Optional[str] = None
     creationTimestamp: t.Optional[int] = None
     condition: Condition
+    question: Question
 
     @property
     def answer_index(self) -> t.Optional[int]:
@@ -85,7 +104,7 @@ class OmenMarket(BaseModel):
         return self.answerFinalizedTimestamp is not None and self.has_valid_answer
 
     @property
-    def question(self) -> str:
+    def question_title(self) -> str:
         return self.title
 
     @property

@@ -1,9 +1,8 @@
 import typing as t
+from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 
-import requests
-from eth_typing import HexStr
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
@@ -11,9 +10,10 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
+    HexBytes,
+    HexStr,
     OmenOutcomeToken,
     PrivateKey,
-    TxReceipt,
     Wei,
     xDai,
 )
@@ -27,11 +27,11 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     Condition,
-    FixedProductMarketMakersResponse,
     OmenBet,
     OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
     OmenCollateralTokenContract,
     OmenConditionalTokenContract,
@@ -40,7 +40,10 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
 )
-from prediction_market_agent_tooling.tools.utils import response_to_model, utcnow
+from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
+    get_omen_markets,
+    get_resolved_omen_bets,
+)
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -49,16 +52,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     xdai_to_wei,
 )
 
-"""
-Python API for Omen prediction market.
-
-Their API is available as graph on https://thegraph.com/explorer/subgraphs/9V1aHHwkK4uPWgBH6ZLzwqFEkoHTHPS7XHKyjZWe8tEf?view=Overview&chain=mainnet,
-but to not use our own credits, seems we can use their api deployment directly: https://api.thegraph.com/subgraphs/name/protofire/omen-xdai/graphql (link to the online playground)
-"""
-
-OMEN_QUERY_BATCH_SIZE = 1000
-OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
-THEGRAPH_QUERY_URL = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
+MAX_NUMBER_OF_MARKETS_FOR_SUBGRAPH_RETRIEVAL = 1000
 
 
 class OmenAgentMarket(AgentMarket):
@@ -71,6 +65,10 @@ class OmenAgentMarket(AgentMarket):
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
     condition: Condition
+
+    INVALID_MARKET_ANSWER: HexStr = HexStr(
+        "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    )
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(0.00001), currency=self.currency)
@@ -90,10 +88,57 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
-    def redeem_positions(self, from_private_key: PrivateKey) -> None:
+    def was_bet_outcome_correct(self, resolved_omen_bets: t.List[OmenBet]) -> bool:
+        resolved_bets_for_market = [
+            bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
+        ]
+
+        # If there were no bets for this market, we conservatively say that
+        # this method was called incorrectly, hence we raise an Error.
+        if not resolved_bets_for_market:
+            raise ValueError(f"No resolved bets provided for market {self.id}")
+
+        # We iterate through bets since agent could have placed bets on multiple outcomes.
+        # If one of the bets was correct, we return true since there is a redeemable amount to be retrieved.
+        for bet in resolved_bets_for_market:
+            # We only handle markets that are already finalized AND have a final answer
+            if (
+                bet.fpmm.question.answerFinalizedTimestamp is None
+                or bet.fpmm.question.currentAnswer is None
+            ):
+                continue
+
+            # Like Olas, we assert correctness by matching index OR invalid market answer
+            if bet.outcomeIndex == int(
+                bet.fpmm.question.currentAnswer, 16
+            ) or bet.outcomeIndex == int(self.INVALID_MARKET_ANSWER, 16):
+                return True
+
+        return False
+
+    def check_if_position_was_already_redeemed(self) -> bool:
+        """
+        Olas solves this problem (see https://github.com/valory-xyz/trader/blob/033ad88998fe0dc16457cd312b32f9e3b2d9a25f/packages/valory/skills/decision_maker_abci/behaviours/reedem.py#L487) by keeping state of the conditionIDs that were already claimed.
+        Since we currently use stateless functions to redeem positions, it's not possible to query state. Hence we proceed by not tracking the positions already redeemed.
+        Note that this has no major consequences from a gas perspective, it only incurs extra subgraph queries and RPC reads, no writes hence no gas costs.
+        """
+        return False
+
+    def redeem_positions(self, bets_on_market: t.List[OmenBet]) -> None:
+        keys = APIKeys()
+
+        bet_was_correct = self.was_bet_outcome_correct(bets_on_market)
+        if not bet_was_correct:
+            # print(f"Bet placed on market {self.id} was incorrect.")
+            return None
+
+        position_already_redeemed = self.check_if_position_was_already_redeemed()
+        if position_already_redeemed:
+            print(f"Position on market {self.id} was already redeemed.")
+            return None
+
         return omen_redeem_full_position_tx(
-            market=self,
-            from_private_key=from_private_key,
+            market=self, from_private_key=keys.bet_from_private_key
         )
 
     @staticmethod
@@ -136,34 +181,6 @@ class OmenAgentMarket(AgentMarket):
         return OmenFixedProductMarketMakerContract(
             address=self.market_maker_contract_address_checksummed
         )
-
-
-_QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER = """
-query getFixedProductMarketMaker($id: String!) {
-    fixedProductMarketMaker(
-        id: $id
-    ) {
-        id
-        title
-        category
-        creationTimestamp
-        collateralVolume
-        usdVolume
-        collateralToken
-        outcomes
-        outcomeTokenAmounts
-        outcomeTokenMarginalPrices
-        fee
-        condition {
-            id
-            outcomeSlotCount
-        }
-        answerFinalizedTimestamp
-        resolutionTimestamp
-        currentAnswer
-    }
-}
-"""
 
 
 def construct_query_get_fixed_product_markets_makers(
@@ -242,46 +259,6 @@ def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
         raise ValueError(f"Unknown sort_by: {sort_by}")
 
 
-def get_omen_markets(
-    first: int,
-    outcomes: list[str],
-    sort_by: SortBy,
-    filter_by: FilterBy,
-    created_after: t.Optional[datetime] = None,
-    creator: t.Optional[HexAddress] = None,
-    excluded_questions: set[str] | None = None,
-) -> list[OmenMarket]:
-    order_by, order_direction = ordering_from_sort_by(sort_by)
-    markets = response_to_model(
-        requests.post(
-            THEGRAPH_QUERY_URL,
-            json={
-                "query": construct_query_get_fixed_product_markets_makers(
-                    include_creator=creator is not None,
-                    filter_by=filter_by,
-                ),
-                "variables": {
-                    "first": first,
-                    "outcomes": outcomes,
-                    "orderBy": order_by,
-                    "orderDirection": order_direction,
-                    "creationTimestamp_gt": (
-                        to_int_timestamp(created_after) if created_after else 0
-                    ),
-                    "creator": creator,
-                },
-            },
-            headers={"Content-Type": "application/json"},
-        ),
-        FixedProductMarketMakersResponse,
-    )
-    return [
-        m
-        for m in markets.data.fixedProductMarketMakers
-        if not excluded_questions or m.question not in excluded_questions
-    ]
-
-
 def get_omen_binary_markets(
     limit: int,
     sort_by: SortBy,
@@ -305,20 +282,6 @@ def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
 ) -> OmenMarket:
     return get_omen_binary_markets(limit=1, sort_by=sort_by, filter_by=filter_by)[0]
-
-
-def get_market(market_id: str) -> OmenMarket:
-    market = requests.post(
-        THEGRAPH_QUERY_URL,
-        json={
-            "query": _QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER,
-            "variables": {
-                "id": market_id,
-            },
-        },
-        headers={"Content-Type": "application/json"},
-    ).json()["data"]["fixedProductMarketMaker"]
-    return OmenMarket.model_validate(market)
 
 
 def omen_buy_outcome_tx(
@@ -452,128 +415,6 @@ def binary_omen_sell_outcome_tx(
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
         auto_withdraw=auto_withdraw,
     )
-
-
-# Order by id, so we can use id_gt for pagination.
-_QUERY_GET_FIXED_PRODUCT_MARKETS_MAKER_TRADES = """
-query getFixedProductMarketMakerTrades(
-    $id_gt: String!,
-    $creator: String!,
-    $creationTimestamp_gte: Int!,
-    $creationTimestamp_lte: Int!,
-    $first: Int!,
-) {
-    fpmmTrades(
-        where: {
-            type: Buy,
-            creator: $creator,
-            creationTimestamp_gte: $creationTimestamp_gte,
-            creationTimestamp_lte: $creationTimestamp_lte,
-            id_gt: $id_gt,
-        }
-        first: $first
-        orderBy: id
-        orderDirection: asc
-    ) {
-        id
-        title
-        collateralToken
-        outcomeTokenMarginalPrice
-        oldOutcomeTokenMarginalPrice
-        type
-        creator {
-            id
-        }
-        creationTimestamp
-        collateralAmount
-        collateralAmountUSD
-        feeAmount
-        outcomeIndex
-        outcomeTokensTraded
-        transactionHash
-        fpmm {
-            id
-            outcomes
-            title
-            answerFinalizedTimestamp
-            resolutionTimestamp
-            currentAnswer
-            isPendingArbitration
-            arbitrationOccurred
-            openingTimestamp
-            condition {
-                id
-                outcomeSlotCount
-            }
-            collateralVolume
-            usdVolume
-            collateralToken
-            outcomeTokenAmounts
-            outcomeTokenMarginalPrices
-            fee
-            category
-        }
-    }
-}
-"""
-
-
-def to_int_timestamp(dt: datetime) -> int:
-    return int(dt.timestamp())
-
-
-def get_omen_bets(
-    better_address: ChecksumAddress,
-    start_time: datetime,
-    end_time: t.Optional[datetime],
-) -> list[OmenBet]:
-    if not end_time:
-        end_time = utcnow()
-
-    # Initialize id_gt for the first batch of bets to zero
-    id_gt: str = "0"
-    all_bets: list[OmenBet] = []
-    while True:
-        query = _QUERY_GET_FIXED_PRODUCT_MARKETS_MAKER_TRADES
-        bets = requests.post(
-            THEGRAPH_QUERY_URL,
-            json={
-                "query": query,
-                "variables": {
-                    "creator": better_address.lower(),
-                    "creationTimestamp_gte": to_int_timestamp(start_time),
-                    "creationTimestamp_lte": to_int_timestamp(end_time),
-                    "id_gt": id_gt,
-                    "first": OMEN_QUERY_BATCH_SIZE,
-                },
-            },
-            headers={"Content-Type": "application/json"},
-        ).json()
-
-        bets = bets.get("data", {}).get("fpmmTrades", [])
-
-        if not bets:
-            break
-
-        # Increment id_gt for the next batch of bets
-        id_gt = bets[-1]["id"]
-
-        all_bets.extend(OmenBet.model_validate(bet) for bet in bets)
-
-    return all_bets
-
-
-def get_resolved_omen_bets(
-    better_address: ChecksumAddress,
-    start_time: datetime,
-    end_time: t.Optional[datetime],
-) -> list[OmenBet]:
-    bets = get_omen_bets(
-        better_address=better_address,
-        start_time=start_time,
-        end_time=end_time,
-    )
-    return [b for b in bets if b.fpmm.is_resolved]
 
 
 def omen_create_market_tx(
@@ -713,11 +554,12 @@ def omen_redeem_full_position_tx(
     market: OmenAgentMarket,
     from_private_key: PrivateKey,
     web3: Web3 | None = None,
-    unwrap_collateral_after_redeeming_positions: bool = True,
 ) -> None:
     """
-    Redeems position from a given Omen market.
+    Redeems position from a given Omen market. Note that we check if there is a balance
+    to be redeemed before sending the transaction.
     """
+
     from_address = private_key_to_public_key(from_private_key)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
@@ -741,21 +583,25 @@ def omen_redeem_full_position_tx(
         return
 
     conditional_token_contract = OmenConditionalTokenContract()
+
+    # check if condition has already been resolved by oracle
+    payout_for_condition = conditional_token_contract.payoutDenominator(
+        HexBytes(market.condition.id)
+    )
+    if not payout_for_condition > 0:
+        # from ConditionalTokens.redeemPositions:
+        # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
+        print("Market not yet resolved, not possible to claim")
+        return
+
     conditional_token_contract.redeemPositions(
         from_private_key=from_private_key,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
-        condition_id=market.condition.id,
+        condition_id=HexBytes(market.condition.id),
         parent_collection_id=parent_collection_id,
         index_sets=market.condition.index_sets,
         web3=web3,
     )
-
-    if unwrap_collateral_after_redeeming_positions:
-        withdraw_collateral_token(
-            amount_wei=amount_wei,
-            from_private_key=from_private_key,
-            web3=web3,
-        )
 
 
 def get_conditional_tokens_balance_for_market(
@@ -772,36 +618,21 @@ def get_conditional_tokens_balance_for_market(
     balance = 0
 
     for index_set in market.condition.index_sets:
-        collection_id: bytes = conditional_token_contract.call(
-            "getCollectionId",
-            [parent_collection_id, market.condition.id, index_set],
-            web3=web3,
+        collection_id: bytes = conditional_token_contract.getCollectionId(
+            parent_collection_id, market.condition.id, index_set, web3=web3
         )
         # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
-        position_id: int = conditional_token_contract.call(
-            "getPositionId",
-            [market.collateral_token_contract_address_checksummed, collection_id],
+        position_id: int = conditional_token_contract.getPositionId(
+            market.collateral_token_contract_address_checksummed,
+            collection_id,
             web3=web3,
         )
-        balance_for_position: int = conditional_token_contract.call(
-            "balanceOf", [from_address, position_id], web3=web3
+        balance_for_position: int = conditional_token_contract.balanceOf(
+            from_address=from_address, position_id=position_id, web3=web3
         )
         balance += balance_for_position
 
     return Wei(balance)
-
-
-def withdraw_collateral_token(
-    amount_wei: Wei,
-    from_private_key: PrivateKey,
-    web3: Web3 | None = None,
-) -> TxReceipt:
-    collateral_token = OmenCollateralTokenContract()
-    return collateral_token.withdraw(
-        amount_wei=amount_wei,
-        from_private_key=from_private_key,
-        web3=web3,
-    )
 
 
 def omen_remove_fund_market_tx(
@@ -816,3 +647,30 @@ def omen_remove_fund_market_tx(
     # TODO: How to withdraw remove funding back to our wallet.
     if auto_withdraw:
         raise NotImplementedError("TODO")
+
+
+def redeem_positions_from_all_omen_markets() -> None:
+    """
+    Redeems positions from all resolved Omen markets.
+    """
+    keys = APIKeys()
+    resolved_omen_bets = get_resolved_omen_bets(
+        start_time=datetime(2020, 1, 1),
+        end_time=None,
+        better_address=keys.bet_from_address,
+    )
+    bets_per_market_id: t.Dict[HexAddress, t.List[OmenBet]] = defaultdict(list)
+    market_id_to_market: t.Dict[HexAddress, OmenMarket] = {}
+
+    for bet in resolved_omen_bets:
+        bets_per_market_id[bet.fpmm.id].append(bet)
+        # We keep track of the unique markets
+        if bet.fpmm.id not in market_id_to_market:
+            market_id_to_market[bet.fpmm.id] = bet.fpmm
+
+    # We redeem positions for each unique resolved market where the
+    # agent has placed bets.
+    for market_id, omen_bets in bets_per_market_id.items():
+        market_data_model = market_id_to_market[market_id]
+        market = OmenAgentMarket.from_data_model(market_data_model)
+        market.redeem_positions(omen_bets)

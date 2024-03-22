@@ -22,7 +22,7 @@ from prediction_market_agent_tooling.tools.utils import (
 def test_local_deployment() -> None:
     DeployableCoinFlipAgent().deploy_local(
         sleep_time=0.001,
-        market_type=MarketType.MANIFOLD,
+        market_type=MarketType.OMEN,
         timeout=0.01,
         place_bet=False,
     )

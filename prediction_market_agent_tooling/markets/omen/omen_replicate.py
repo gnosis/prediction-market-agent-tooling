@@ -98,6 +98,7 @@ def omen_replicate_from_tx(
             )
             continue
 
+        # Don't replicate markets that are too much into the future.
         latest_allowed_resolution_known_time = utcnow() + timedelta(days=365)
         if market.close_time > latest_allowed_resolution_known_time:
             print(

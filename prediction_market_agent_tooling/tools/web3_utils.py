@@ -100,7 +100,9 @@ def call_function_on_contract(
 @tenacity.retry(
     # Retry only for the transaction nonce errors (as it can get correct one next time),
     # add other retrieable errors gradually to be safe.
-    retry=tenacity.retry_if_exception_message(match=".*wrong transaction nonce.*"),
+    retry=tenacity.retry_if_exception_message(
+        match="(.*wrong transaction nonce.*)|(.*Invalid.*)"
+    ),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
 )
 def send_function_on_contract_tx(

@@ -1,8 +1,8 @@
 import typing as t
+from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 
-from eth_typing import HexStr
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
@@ -10,6 +10,8 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
+    HexBytes,
+    HexStr,
     OmenOutcomeToken,
     PrivateKey,
     Wei,
@@ -40,6 +42,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 )
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
     get_omen_markets,
+    get_resolved_omen_bets,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -577,7 +580,7 @@ def omen_redeem_full_position_tx(
 
     # check if condition has already been resolved by oracle
     payout_for_condition = conditional_token_contract.payoutDenominator(
-        market.condition.id
+        HexBytes(market.condition.id)
     )
     if not payout_for_condition > 0:
         # from ConditionalTokens.redeemPositions:
@@ -588,7 +591,7 @@ def omen_redeem_full_position_tx(
     conditional_token_contract.redeemPositions(
         from_private_key=from_private_key,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
-        condition_id=market.condition.id,
+        condition_id=HexBytes(market.condition.id),
         parent_collection_id=parent_collection_id,
         index_sets=market.condition.index_sets,
         web3=web3,
@@ -638,3 +641,30 @@ def omen_remove_fund_market_tx(
     # TODO: How to withdraw remove funding back to our wallet.
     if auto_withdraw:
         raise NotImplementedError("TODO")
+
+
+def redeem_positions_from_all_omen_markets() -> None:
+    """
+    Redeems positions from all resolved Omen markets.
+    """
+    keys = APIKeys()
+    resolved_omen_bets = get_resolved_omen_bets(
+        start_time=datetime(2020, 1, 1),
+        end_time=None,
+        better_address=keys.bet_from_address,
+    )
+    bets_per_market_id: t.Dict[HexAddress, t.List[OmenBet]] = defaultdict(list)
+    market_id_to_market: t.Dict[HexAddress, OmenMarket] = {}
+
+    for bet in resolved_omen_bets:
+        bets_per_market_id[bet.fpmm.id].append(bet)
+        # We keep track of the unique markets
+        if bet.fpmm.id not in market_id_to_market:
+            market_id_to_market[bet.fpmm.id] = bet.fpmm
+
+    # We redeem positions for each unique resolved market where the
+    # agent has placed bets.
+    for market_id, omen_bets in bets_per_market_id.items():
+        market_data_model = market_id_to_market[market_id]
+        market = OmenAgentMarket.from_data_model(market_data_model)
+        market.redeem_positions(omen_bets)

@@ -289,10 +289,10 @@ def construct_query_get_fixed_product_markets_makers(
 
 
 def get_omen_markets(
+    first: int,
     outcomes: list[str],
     sort_by: SortBy,
     filter_by: FilterBy,
-    first: int = 1000,  # max limit for markets
     created_after: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,

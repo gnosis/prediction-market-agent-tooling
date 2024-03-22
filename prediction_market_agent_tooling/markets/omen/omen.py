@@ -263,7 +263,7 @@ def get_omen_binary_markets(
 ) -> list[OmenMarket]:
     subgraph_handler: OmenSubgraphHandler = OmenSubgraphHandler()
     return subgraph_handler.get_omen_markets(
-        first=limit,
+        limit=limit,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         sort_by=sort_by,
         created_after=created_after,

@@ -2,7 +2,7 @@ import typing as t
 from datetime import datetime
 
 import requests
-from eth_typing import ChecksumAddress, HexAddress
+from eth_typing import ChecksumAddress, HexAddress, HexStr
 
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -106,38 +106,6 @@ query getFixedProductMarketMakerTrades(
 """
 
 
-_QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER = """
-query getFixedProductMarketMaker($id: String!) {
-    fixedProductMarketMaker(
-        id: $id
-    ) {
-        id
-        title
-        category
-        creationTimestamp
-        collateralVolume
-        usdVolume
-        collateralToken
-        outcomes
-        outcomeTokenAmounts
-        outcomeTokenMarginalPrices
-        fee
-        condition {
-            id
-            outcomeSlotCount
-        }
-        answerFinalizedTimestamp
-        resolutionTimestamp
-        currentAnswer
-        question {
-            id
-            answerFinalizedTimestamp
-            currentAnswer 
-        }
-    }
-}
-"""
-
 USER_POSITIONS_QUERY = """
 query($creator:String!, $id_gt: String!,  $first: Int!) {
   userPositions(where: {
@@ -209,17 +177,8 @@ def get_user_positions(
 
 
 def get_market(market_id: str) -> OmenMarket:
-    market = requests.post(
-        OMEN_TRADES_SUBGRAPH,
-        json={
-            "query": _QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER,
-            "variables": {
-                "id": market_id,
-            },
-        },
-        headers={"Content-Type": "application/json"},
-    ).json()["data"]["fixedProductMarketMaker"]
-    return OmenMarket.model_validate(market)
+    subgraph_handler = OmenSubgraphHandler()
+    return subgraph_handler.get_omen_market(market_id=HexAddress(HexStr(market_id)))
 
 
 def construct_query_get_fixed_product_markets_makers(
@@ -300,16 +259,9 @@ def get_omen_markets(
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
-    """
-    We return the first 1000 markets, since we don't have pagination in place (yet).
-    """
-    # ToDo
-    #  One could use subgrounds for direct querying FixedProductMarketMakers.
-    #  See https://github.com/gnosis/prediction-market-agent-tooling/issues/115
-
     subgraph_handler = OmenSubgraphHandler()
     return subgraph_handler.get_omen_markets(
-        first=first,
+        limit=first,
         sort_by=sort_by,
         filter_by=filter_by,
         created_after=created_after,
@@ -317,36 +269,6 @@ def get_omen_markets(
         excluded_questions=excluded_questions,
         outcomes=outcomes,
     )
-
-    # order_by, order_direction = ordering_from_sort_by(sort_by)
-    # markets = response_to_model(
-    #     requests.post(
-    #         OMEN_TRADES_SUBGRAPH,
-    #         json={
-    #             "query": construct_query_get_fixed_product_markets_makers(
-    #                 include_creator=creator is not None,
-    #                 filter_by=filter_by,
-    #             ),
-    #             "variables": {
-    #                 "first": first,
-    #                 "outcomes": outcomes,
-    #                 "orderBy": order_by,
-    #                 "orderDirection": order_direction,
-    #                 "creationTimestamp_gt": (
-    #                     to_int_timestamp(created_after) if created_after else 0
-    #                 ),
-    #                 "creator": creator,
-    #             },
-    #         },
-    #         headers={"Content-Type": "application/json"},
-    #     ),
-    #     FixedProductMarketMakersResponse,
-    # )
-    # return [
-    #     m
-    #     for m in markets.data.fixedProductMarketMakers
-    #     if not excluded_questions or m.question not in excluded_questions
-    # ]
 
 
 def get_omen_bets(

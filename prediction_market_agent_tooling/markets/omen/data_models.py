@@ -5,6 +5,12 @@ from decimal import Decimal
 from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel
 from web3 import Web3
+from typing import Any, List
+
+from typing_extensions import Annotated
+
+from pydantic import BaseModel, ValidationError
+from pydantic.functional_validators import AfterValidator, BeforeValidator
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -63,6 +69,17 @@ class OmenUserPosition(BaseModel):
     position: OmenPosition
 
 
+def convert_none_to_empty_list(v: None | list[str]) -> list[str]:
+    if v is None:
+        return []
+    return v
+
+
+Possibly_Empty_List_of_Strings = Annotated[
+    list[str], BeforeValidator(convert_none_to_empty_list)
+]
+
+
 class OmenMarket(BaseModel):
     """
     https://aiomen.eth.limo
@@ -76,7 +93,7 @@ class OmenMarket(BaseModel):
     collateralVolume: Wei
     usdVolume: USD
     collateralToken: HexAddress
-    outcomes: list[str]
+    outcomes: Possibly_Empty_List_of_Strings
     outcomeTokenAmounts: list[OmenOutcomeToken]
     outcomeTokenMarginalPrices: t.Optional[list[xDai]]
     fee: t.Optional[Wei]

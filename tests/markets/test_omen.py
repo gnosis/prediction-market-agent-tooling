@@ -153,7 +153,9 @@ def test_p_yes() -> None:
 
 
 def test_filter_markets() -> None:
-    limit = 100000000
+    # ToDo
+    limit = 100
+    start = datetime.now()
     markets = get_omen_binary_markets(
         limit=limit,
         sort_by=SortBy.NEWEST,
@@ -167,6 +169,7 @@ def test_filter_markets() -> None:
         filter_by=FilterBy.RESOLVED,
     )
     assert len(markets) == limit
+    print(f"elapsed {(datetime.now() - start).total_seconds()}")
 
 
 def test_resolved_omen_bets(a_bet_from_address: str) -> None:

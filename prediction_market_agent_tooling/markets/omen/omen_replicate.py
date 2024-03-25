@@ -106,6 +106,12 @@ def omen_replicate_from_tx(
             continue
 
         category = infer_category(market.question, existing_categories)
+        if category not in existing_categories:
+            print(
+                f"Error: LLM went rouge. Skipping `{market.question}` because the category `{category}` is not in the existing categories {existing_categories}."
+            )
+            continue
+
         market_address = omen_create_market_tx(
             initial_funds=initial_funds,
             fee=OMEN_DEFAULT_MARKET_FEE,

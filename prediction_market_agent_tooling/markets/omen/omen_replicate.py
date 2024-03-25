@@ -98,14 +98,6 @@ def omen_replicate_from_tx(
             )
             continue
 
-        # Don't replicate markets that are too much into the future.
-        latest_allowed_resolution_known_time = utcnow() + timedelta(days=365)
-        if market.close_time > latest_allowed_resolution_known_time:
-            print(
-                f"Skipping `{market.question}` because it closes later than {latest_allowed_resolution_known_time}."
-            )
-            continue
-
         # Do as the last step, becuase it calls OpenAI (costly & slow).
         if not is_predictable(market.question):
             print(

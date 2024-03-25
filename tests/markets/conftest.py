@@ -1,5 +1,4 @@
 import pytest
-from eth_typing import HexAddress, HexStr
 
 
 @pytest.fixture(scope="module")

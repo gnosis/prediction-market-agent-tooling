@@ -2,7 +2,7 @@ from datetime import timedelta
 
 import numpy as np
 import pytest
-from eth_typing import HexStr, HexAddress
+from eth_typing import HexAddress, HexStr
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type

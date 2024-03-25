@@ -4,14 +4,14 @@ import pytest
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.markets.agent_market import SortBy, FilterBy
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 
 
 @pytest.fixture()
-def omen_subgraph_handler():
+def omen_subgraph_handler() -> OmenSubgraphHandler:
     return OmenSubgraphHandler()
 
 

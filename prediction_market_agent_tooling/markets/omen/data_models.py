@@ -3,13 +3,9 @@ from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
-from web3 import Web3
-from typing import Any, List
-
+from pydantic.functional_validators import BeforeValidator
 from typing_extensions import Annotated
-
-from pydantic import BaseModel, ValidationError
-from pydantic.functional_validators import AfterValidator, BeforeValidator
+from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,

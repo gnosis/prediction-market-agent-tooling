@@ -294,9 +294,9 @@ class FixedProductMarketMakersResponse(BaseModel):
 class RealityQuestion(BaseModel):
     id: str
     user: str
-    historyHash: bytes
+    historyHash: HexBytes
     updatedTimestamp: datetime
-    questionId: bytes
+    questionId: HexBytes
 
 
 class RealityAnswer(BaseModel):

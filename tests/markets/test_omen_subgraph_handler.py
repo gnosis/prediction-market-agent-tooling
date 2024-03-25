@@ -1,6 +1,5 @@
 from datetime import datetime
 
-import pytest
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
@@ -8,11 +7,7 @@ from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortB
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-
-
-@pytest.fixture()
-def omen_subgraph_handler() -> OmenSubgraphHandler:
-    return OmenSubgraphHandler()
+from prediction_market_agent_tooling.tools.hexbytes import HexBytes
 
 
 def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:
@@ -93,3 +88,15 @@ def test_get_user_positions(
     user_positions = omen_subgraph_handler.get_user_positions(better_address)
     # We assume that the agent has at least 1 historical position
     assert len(user_positions) > 1
+
+
+def test_get_answers(omen_subgraph_handler: OmenSubgraphHandler) -> None:
+    question_id = HexBytes.fromhex(
+        HexStr("0xdcb2691a9ec05e25a6e595a9972b482ea65b789d978b27c0c06ff97345fce919")
+    )
+    answers = omen_subgraph_handler.get_answers(question_id)
+    assert len(answers) == 1
+    answer = answers[0]
+    assert answer.question.user == HexAddress(
+        HexStr("0xdaa72a1944191a15e92218d9f00c375a8607a568")
+    )

@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
     OmenUserPosition,
+    RealityAnswer,
 )
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 
@@ -27,6 +28,9 @@ class OmenSubgraphHandler:
     OMEN_TRADES_SUBGRAPH = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
     CONDITIONAL_TOKENS_SUBGRAPH = (
         "https://api.thegraph.com/subgraphs/name/gnosis/conditional-tokens-gc"
+    )
+    REALITYETH_GRAPH_URL = (
+        "https://api.thegraph.com/subgraphs/name/realityeth/realityeth-gnosis"
     )
 
     # We define here as str for easier filtering.
@@ -41,6 +45,7 @@ class OmenSubgraphHandler:
         self.conditional_tokens_subgraph = self.sg.load_subgraph(
             self.CONDITIONAL_TOKENS_SUBGRAPH
         )
+        self.realityeth_subgraph = self.sg.load_subgraph(self.REALITYETH_GRAPH_URL)
 
     def _get_fields_for_bets(self, bets_field: t.Any) -> list[FieldPath]:
         markets = bets_field.fpmm
@@ -63,6 +68,19 @@ class OmenSubgraphHandler:
             bets_field.transactionHash,
         ]
         return fields_for_bets + fields_for_markets
+
+    def _get_fields_for_answers(self, answers_field: t.Any) -> list[FieldPath]:
+        return [
+            answers_field.answer,
+            answers_field.question.historyHash,
+            answers_field.question.id,
+            answers_field.question.user,
+            answers_field.question.updatedTimestamp,
+            answers_field.question.questionId,
+            answers_field.bondAggregate,
+            answers_field.lastBond,
+            answers_field.timestamp,
+        ]
 
     def _get_fields_for_markets(self, markets_field: t.Any) -> list[FieldPath]:
         # In theory it's possible to store the subgraph schema locally (see https://github.com/0xPlaygrounds/subgrounds/issues/41).
@@ -274,3 +292,16 @@ class OmenSubgraphHandler:
             filter_by_answer_finalized_not_null=True,
         )
         return [b for b in omen_bets if b.fpmm.is_resolved]
+
+    def get_answers(self, question_id: HexBytes) -> list[RealityAnswer]:
+        answer = self.realityeth_subgraph.Answer
+        # subgrounds complains if bytes is passed, hence we convert it to HexStr
+        where_stms = [
+            answer.question.questionId == question_id.hex(),
+        ]
+
+        answers = self.realityeth_subgraph.Query.answers(where=where_stms)
+        fields = self._get_fields_for_answers(answers)
+        result: t.Any = self.sg.query_json(fields)
+        items = self._parse_items_from_json(result)
+        return [RealityAnswer.model_validate(i) for i in items]

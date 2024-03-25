@@ -306,7 +306,7 @@ class FixedProductMarketMakersResponse(BaseModel):
 
 class RealityQuestion(BaseModel):
     id: str
-    user: str
+    user: HexAddress
     historyHash: HexBytes
     updatedTimestamp: datetime
     questionId: HexBytes

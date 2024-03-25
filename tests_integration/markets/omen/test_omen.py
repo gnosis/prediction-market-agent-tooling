@@ -19,8 +19,8 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_graph_queries import get_market
-from prediction_market_agent_tooling.markets.omen.reality_subgraph import (
-    reality_get_answers,
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -29,7 +29,9 @@ from tests.utils import RUN_PAID_TESTS
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
-def test_create_bet_withdraw_resolve_market() -> None:
+def test_create_bet_withdraw_resolve_market(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
     wait_time = 60
     keys = APIKeys()
 
@@ -82,7 +84,8 @@ def test_create_bet_withdraw_resolve_market() -> None:
             bond=xdai_to_wei(0.001),
             from_private_key=APIKeys().bet_from_private_key,
         )
-    answers = reality_get_answers(market.question.id)
+
+    answers = omen_subgraph_handler.get_answers(market.question.id)
     assert len(answers) == 1, answers
     assert answers[0].answer == OMEN_FALSE_OUTCOME, answers[0]
 

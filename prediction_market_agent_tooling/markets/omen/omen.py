@@ -10,11 +10,11 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
-    HexBytes,
     HexStr,
     OmenOutcomeToken,
     PrivateKey,
     Wei,
+    wei_type,
     xDai,
     xdai_type,
 )
@@ -185,85 +185,6 @@ class OmenAgentMarket(AgentMarket):
         return OmenFixedProductMarketMakerContract(
             address=self.market_maker_contract_address_checksummed
         )
-
-
-def construct_query_get_fixed_product_markets_makers(
-    include_creator: bool,
-    include_opening_timestamp: bool,
-    filter_by: FilterBy,
-) -> str:
-    query = """
-        query getFixedProductMarketMakers(
-            $first: Int!,
-            $outcomes: [String!],
-            $orderBy: String!,
-            $orderDirection: String!,
-            $creationTimestamp_gt: Int!,
-            $openingTimestamp_lt: Int,
-            $creator: Bytes = null,
-        ) {
-            fixedProductMarketMakers(
-                where: {
-                    isPendingArbitration: false,
-                    outcomes: $outcomes
-                    creationTimestamp_gt: $creationTimestamp_gt
-                    openingTimestamp_lt: $openingTimestamp_lt
-                    creator: $creator,
-                    answerFinalizedTimestamp: null
-                    resolutionTimestamp_not: null
-                },
-                orderBy: creationTimestamp,
-                orderDirection: desc,
-                first: $first
-            ) {
-                id
-                title
-                collateralVolume
-                usdVolume
-                collateralToken
-                outcomes
-                outcomeTokenAmounts
-                outcomeTokenMarginalPrices
-                fee
-                answerFinalizedTimestamp
-                resolutionTimestamp
-                currentAnswer
-                creationTimestamp
-                category
-                condition {
-                    id
-                    outcomeSlotCount
-                }
-                question {
-                    title
-                    id
-                    outcomes
-                    answerFinalizedTimestamp
-                }
-            }
-        }
-    """
-
-    if filter_by == FilterBy.OPEN:
-        query = query.replace("resolutionTimestamp_not: null", "")
-    elif filter_by == FilterBy.RESOLVED:
-        query = query.replace("answerFinalizedTimestamp: null", "")
-    elif filter_by == FilterBy.NONE:
-        query = query.replace("answerFinalizedTimestamp: null", "")
-        query = query.replace("resolutionTimestamp_not: null", "")
-    else:
-        raise ValueError(f"Unknown filter_by: {filter_by}")
-
-    if not include_creator:
-        # If we aren't filtering by query, we need to remove it from where, otherwise "creator: null" will return 0 results.
-        query = query.replace("creator: $creator,", "")
-
-    if not include_opening_timestamp:
-        # If we aren't filtering by opening timestamp, be need to remove it, because `null` or `biggest possible timestamp` won't work.
-        # (as opposite to `creationTimestamp_gt` where `0` works just fine)
-        query = query.replace("openingTimestamp_lt: $openingTimestamp_lt", "")
-
-    return query
 
 
 def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
@@ -603,11 +524,9 @@ def omen_redeem_full_position_tx(
         print("No balance to claim. Exiting.")
         return
 
-    conditional_token_contract = OmenConditionalTokenContract()
-
     # check if condition has already been resolved by oracle
     payout_for_condition = conditional_token_contract.payoutDenominator(
-        HexBytes(market.condition.id)
+        market.condition.id
     )
     if not payout_for_condition > 0:
         # from ConditionalTokens.redeemPositions:
@@ -618,7 +537,7 @@ def omen_redeem_full_position_tx(
     conditional_token_contract.redeemPositions(
         from_private_key=from_private_key,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
-        condition_id=HexBytes(market.condition.id),
+        condition_id=market.condition.id,
         parent_collection_id=parent_collection_id,
         index_sets=market.condition.index_sets,
         web3=web3,
@@ -636,10 +555,10 @@ def get_conditional_tokens_balance_for_market(
     """
     conditional_token_contract = OmenConditionalTokenContract()
     parent_collection_id = build_parent_collection_id()
-    balance = 0
+    balance = wei_type(0)
 
     for index_set in market.condition.index_sets:
-        collection_id: bytes = conditional_token_contract.getCollectionId(
+        collection_id = conditional_token_contract.getCollectionId(
             parent_collection_id, market.condition.id, index_set, web3=web3
         )
         # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
@@ -648,12 +567,12 @@ def get_conditional_tokens_balance_for_market(
             collection_id,
             web3=web3,
         )
-        balance_for_position: int = conditional_token_contract.balanceOf(
+        balance_for_position = conditional_token_contract.balanceOf(
             from_address=from_address, position_id=position_id, web3=web3
         )
-        balance += balance_for_position
+        balance = wei_type(balance + balance_for_position)
 
-    return Wei(balance)
+    return balance
 
 
 def omen_remove_fund_market_tx(

@@ -222,7 +222,9 @@ def get_market(market_id: str) -> OmenMarket:
 
 
 def construct_query_get_fixed_product_markets_makers(
-    include_creator: bool, filter_by: FilterBy
+    include_creator: bool,
+    include_opening_timestamp: bool,
+    filter_by: FilterBy,
 ) -> str:
     query = """
         query getFixedProductMarketMakers(
@@ -231,6 +233,7 @@ def construct_query_get_fixed_product_markets_makers(
             $orderBy: String!,
             $orderDirection: String!,
             $creationTimestamp_gt: Int!,
+            $openingTimestamp_lt: Int,
             $creator: Bytes = null,
         ) {
             fixedProductMarketMakers(
@@ -238,6 +241,7 @@ def construct_query_get_fixed_product_markets_makers(
                     isPendingArbitration: false,
                     outcomes: $outcomes
                     creationTimestamp_gt: $creationTimestamp_gt
+                    openingTimestamp_lt: $openingTimestamp_lt
                     creator: $creator,
                     answerFinalizedTimestamp: null
                     resolutionTimestamp_not: null
@@ -264,6 +268,7 @@ def construct_query_get_fixed_product_markets_makers(
                     title
                     id
                     outcomes
+                    title
                     answerFinalizedTimestamp
                 }
                 condition {
@@ -287,6 +292,11 @@ def construct_query_get_fixed_product_markets_makers(
     if not include_creator:
         # If we aren't filtering by query, we need to remove it from where, otherwise "creator: null" will return 0 results.
         query = query.replace("creator: $creator,", "")
+
+    if not include_opening_timestamp:
+        # If we aren't filtering by opening timestamp, be need to remove it, because `null` or `biggest possible timestamp` won't work.
+        # (as opposite to `creationTimestamp_gt` where `0` works just fine)
+        query = query.replace("openingTimestamp_lt: $openingTimestamp_lt", "")
 
     return query
 

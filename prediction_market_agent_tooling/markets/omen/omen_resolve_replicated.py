@@ -54,6 +54,9 @@ def omen_resolve_all_markets_based_on_others_tx(
     print(
         f"Filtered down to {len(created_already_opened_without_set_outcome)} markets that don't have any resolution yet."
     )
+    created_already_opened_without_set_outcome = [
+        m for m in created_already_opened_markets if not m.has_bonded_outcome
+    ]
 
     resolved_addressses: list[HexAddress] = []
 
@@ -106,6 +109,7 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
 
             case MarketType.POLYMARKET:
                 print(f"Looing on Polymarket for {market.question_title=}")
+
                 resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:

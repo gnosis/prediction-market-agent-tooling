@@ -8,8 +8,8 @@ from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, DatetimeWithTimezone
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
-    get_resolved_omen_bets,
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
@@ -21,7 +21,8 @@ class DeployedOmenAgent(DeployedAgent):
     omen_public_key: ChecksumAddress
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
-        bets = get_resolved_omen_bets(
+        subgraph_handler = OmenSubgraphHandler()
+        bets = subgraph_handler.get_resolved_bets(
             better_address=self.omen_public_key,
             start_time=self.start_time,
             end_time=self.end_time,

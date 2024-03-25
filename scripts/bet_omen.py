@@ -1,4 +1,5 @@
 import typer
+from eth_typing import HexAddress, HexStr
 
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
@@ -6,7 +7,9 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_buy_outcome_tx,
     omen_sell_outcome_tx,
 )
-from prediction_market_agent_tooling.markets.omen.omen_graph_queries import get_market
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
 
 app = typer.Typer()
 
@@ -32,7 +35,7 @@ def buy(
 
     Market ID can be found easily in the URL: https://aiomen.eth.limo/#/0x86376012a5185f484ec33429cadfa00a8052d9d4
     """
-    market = OmenAgentMarket.from_data_model(get_market(market_id))
+    market = build_omen_agent_market(market_id)
     omen_buy_outcome_tx(
         amount=xdai_type(amount),
         from_private_key=private_key_type(from_private_key),
@@ -63,7 +66,7 @@ def sell(
 
     Market ID can be found easily in the URL: https://aiomen.eth.limo/#/0x86376012a5185f484ec33429cadfa00a8052d9d4
     """
-    market = OmenAgentMarket.from_data_model(get_market(market_id))
+    market = build_omen_agent_market(market_id)
     omen_sell_outcome_tx(
         amount=xdai_type(amount),
         from_private_key=private_key_type(from_private_key),
@@ -71,6 +74,13 @@ def sell(
         outcome=outcome,
         auto_withdraw=auto_withdraw,
     )
+
+
+def build_omen_agent_market(market_id: str) -> OmenAgentMarket:
+    subgraph_handler = OmenSubgraphHandler()
+    market_data_model = subgraph_handler.get_omen_market(HexAddress(HexStr(market_id)))
+    market = OmenAgentMarket.from_data_model(market_data_model)
+    return market
 
 
 if __name__ == "__main__":

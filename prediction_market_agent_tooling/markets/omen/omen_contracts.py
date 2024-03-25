@@ -109,7 +109,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         self,
         from_private_key: PrivateKey,
         collateral_token_address: str,
-        condition_id: str,
+        condition_id: HexBytes,
         parent_collection_id: str,
         index_sets: t.List[int],
         web3: Web3 | None = None,
@@ -142,7 +142,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     ) -> bool:
         return self.getOutcomeSlotCount(condition_id) > 0
 
-    def payoutDenominator(self, condition_id: HexAddress) -> int:
+    def payoutDenominator(self, condition_id: HexBytes) -> int:
         payoutForCondition: int = self.call(
             "payoutDenominator",
             [condition_id],

@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
+    wei_type,
     xdai_type,
 )
 from prediction_market_agent_tooling.tools.contract import (
@@ -66,36 +67,42 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         oracle_address: ChecksumAddress,
         outcomes_slot_count: int,
     ) -> HexBytes:
-        id_: HexBytes = self.call(
-            "getConditionId",
-            [oracle_address, question_id, outcomes_slot_count],
+        id_ = HexBytes(
+            self.call(
+                "getConditionId",
+                [oracle_address, question_id, outcomes_slot_count],
+            )
         )
         return id_
 
     def balanceOf(
         self, from_address: ChecksumAddress, position_id: int, web3: Web3 | None = None
-    ) -> int:
-        balance: int = self.call("balanceOf", [from_address, position_id], web3=web3)
+    ) -> Wei:
+        balance = wei_type(
+            self.call("balanceOf", [from_address, position_id], web3=web3)
+        )
         return balance
 
     def getCollectionId(
         self,
         parent_collection_id: HexStr,
-        condition_id: HexAddress,
+        condition_id: HexBytes,
         index_set: int,
         web3: Web3 | None = None,
-    ) -> bytes:
-        collection_id: bytes = self.call(
-            "getCollectionId",
-            [parent_collection_id, condition_id, index_set],
-            web3=web3,
+    ) -> HexBytes:
+        collection_id = HexBytes(
+            self.call(
+                "getCollectionId",
+                [parent_collection_id, condition_id, index_set],
+                web3=web3,
+            )
         )
         return collection_id
 
     def getPositionId(
         self,
         collateral_token_address: ChecksumAddress,
-        collection_id: bytes,
+        collection_id: HexBytes,
         web3: Web3 | None = None,
     ) -> int:
         position_id: int = self.call(
@@ -108,9 +115,9 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     def redeemPositions(
         self,
         from_private_key: PrivateKey,
-        collateral_token_address: str,
+        collateral_token_address: HexAddress,
         condition_id: HexBytes,
-        parent_collection_id: str,
+        parent_collection_id: HexStr,
         index_sets: t.List[int],
         web3: Web3 | None = None,
     ) -> TxReceipt:
@@ -460,7 +467,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
             ),
             tx_params=tx_params,
         )
-        question_id: HexBytes = receipt_tx["logs"][0]["topics"][
-            1
-        ]  # The question id is available in the first emitted log, in the second topic.
+        question_id = HexBytes(
+            receipt_tx["logs"][0]["topics"][1]
+        )  # The question id is available in the first emitted log, in the second topic.
         return question_id

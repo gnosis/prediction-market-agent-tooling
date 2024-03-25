@@ -8,6 +8,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    HexBytes,
     OmenOutcomeToken,
     Probability,
     Wei,
@@ -37,7 +38,7 @@ def get_boolean_outcome(outcome_str: str) -> bool:
 
 
 class Condition(BaseModel):
-    id: HexAddress
+    id: HexBytes
     outcomeSlotCount: int
 
     @property
@@ -52,14 +53,12 @@ class Question(BaseModel):
 
 
 class OmenPosition(BaseModel):
-    id: HexAddress
-    # Using HexBytes instead of bytes causes a Pydantic error.
-    # Unable to generate pydantic-core schema for <class 'hexbytes.main.HexBytes'>
-    conditionIds: t.List[bytes]
+    id: HexBytes
+    conditionIds: t.List[HexBytes]
 
 
 class OmenUserPosition(BaseModel):
-    id: HexAddress
+    id: HexBytes
     position: OmenPosition
 
 

@@ -19,9 +19,19 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.markets import (
+    MARKET_TYPE_TO_AGENT_MARKET,
+    MarketType,
+)
+from prediction_market_agent_tooling.markets.omen.omen import (
+    redeem_positions_from_all_omen_markets,
+)
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
@@ -160,13 +170,27 @@ def {entrypoint_function_name}(request) -> str:
         market_type: MarketType,
         limit: int = MAX_AVAILABLE_MARKETS,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
+        filter_by: FilterBy = FilterBy.OPEN,
     ) -> list[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
-        available_markets = cls.get_binary_markets(limit=limit, sort_by=sort_by)
+        available_markets = cls.get_binary_markets(
+            limit=limit, sort_by=sort_by, filter_by=filter_by
+        )
         return available_markets
 
-    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+    def before(self, market_type: MarketType) -> None:
+        """
+        Executes actions that occur before bets are placed.
+        """
+
+        if market_type == MarketType.OMEN:
+            redeem_positions_from_all_omen_markets()
+
+    def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
+        """
+        Processes bets placed by agents on a given market.
+        """
         available_markets = self.get_markets(market_type)
         markets = self.pick_markets(available_markets)
         for market in markets:
@@ -180,6 +204,14 @@ def {entrypoint_function_name}(request) -> str:
                     amount=amount,
                     outcome=result,
                 )
+
+    def after(self, market_type: MarketType) -> None:
+        pass
+
+    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+        self.before(market_type)
+        self.process_bets(market_type, _place_bet)
+        self.after(market_type)
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"

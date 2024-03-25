@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
+    HexStr,
     OmenOutcomeToken,
     PrivateKey,
     TxParams,
@@ -72,11 +73,44 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         )
         return id_
 
+    def balanceOf(
+        self, from_address: ChecksumAddress, position_id: int, web3: Web3 | None = None
+    ) -> int:
+        balance: int = self.call("balanceOf", [from_address, position_id], web3=web3)
+        return balance
+
+    def getCollectionId(
+        self,
+        parent_collection_id: HexStr,
+        condition_id: HexAddress,
+        index_set: int,
+        web3: Web3 | None = None,
+    ) -> bytes:
+        collection_id: bytes = self.call(
+            "getCollectionId",
+            [parent_collection_id, condition_id, index_set],
+            web3=web3,
+        )
+        return collection_id
+
+    def getPositionId(
+        self,
+        collateral_token_address: ChecksumAddress,
+        collection_id: bytes,
+        web3: Web3 | None = None,
+    ) -> int:
+        position_id: int = self.call(
+            "getPositionId",
+            [collateral_token_address, collection_id],
+            web3=web3,
+        )
+        return position_id
+
     def redeemPositions(
         self,
         from_private_key: PrivateKey,
         collateral_token_address: str,
-        condition_id: str,
+        condition_id: HexBytes,
         parent_collection_id: str,
         index_sets: t.List[int],
         web3: Web3 | None = None,
@@ -108,6 +142,13 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         condition_id: HexBytes,
     ) -> bool:
         return self.getOutcomeSlotCount(condition_id) > 0
+
+    def payoutDenominator(self, condition_id: HexBytes) -> int:
+        payoutForCondition: int = self.call(
+            "payoutDenominator",
+            [condition_id],
+        )
+        return payoutForCondition
 
     def setApprovalForAll(
         self,

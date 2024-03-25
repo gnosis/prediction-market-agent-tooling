@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
     Wei,
     xDai,
+    HexBytes,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
@@ -39,7 +40,7 @@ def get_boolean_outcome(outcome_str: str) -> bool:
 
 
 class Condition(BaseModel):
-    id: HexAddress
+    id: HexBytes
     outcomeSlotCount: int
 
     @property
@@ -48,10 +49,20 @@ class Condition(BaseModel):
 
 
 class Question(BaseModel):
-    id: str
+    id: HexBytes
     title: str
-    outcomes: list[str]
-    answerFinalizedTimestamp: datetime | None
+    answerFinalizedTimestamp: t.Optional[datetime] = None
+    currentAnswer: t.Optional[str] = None
+
+
+class OmenPosition(BaseModel):
+    id: HexBytes
+    conditionIds: t.List[HexBytes]
+
+
+class OmenUserPosition(BaseModel):
+    id: HexBytes
+    position: OmenPosition
 
 
 class OmenMarket(BaseModel):

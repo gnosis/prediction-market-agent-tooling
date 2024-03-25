@@ -66,13 +66,11 @@ def private_key_type(k: str) -> PrivateKey:
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1:
-    ...
+def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1: ...
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: None) -> None:
-    ...
+def secretstr_to_v1_secretstr(s: None) -> None: ...
 
 
 def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:
@@ -81,4 +79,5 @@ def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:
 
 
 def int_to_hexbytes(v: int) -> HexBytes:
+    # Example: 1 -> HexBytes("0x0000000000000000000000000000000000000000000000000000000000000001").
     return HexBytes.fromhex(format(v, "064x"))

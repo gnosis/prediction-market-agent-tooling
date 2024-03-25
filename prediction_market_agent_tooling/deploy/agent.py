@@ -25,10 +25,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import (
-    MARKET_TYPE_TO_AGENT_MARKET,
-    MarketType,
-)
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
     redeem_positions_from_all_omen_markets,
 )

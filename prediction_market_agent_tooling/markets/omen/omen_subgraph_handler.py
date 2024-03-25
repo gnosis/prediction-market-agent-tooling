@@ -86,6 +86,8 @@ class OmenSubgraphHandler:
             markets.creationTimestamp,
             markets.category,
             markets.question.id,
+            markets.question.title,
+            markets.question.outcomes,
             markets.question.answerFinalizedTimestamp,
             markets.question.currentAnswer,
             markets.condition.id,
@@ -98,6 +100,7 @@ class OmenSubgraphHandler:
         creator: t.Optional[HexAddress] = None,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         created_after: t.Optional[datetime] = None,
+        opened_before: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
     ) -> list[subgrounds.subgraph.Filter]:
         fpmm = self.trades_subgraph.FixedProductMarketMaker  # type: ignore
@@ -112,6 +115,9 @@ class OmenSubgraphHandler:
 
         if created_after:
             where_stms.append(fpmm.creationTimestamp > to_int_timestamp(created_after))
+
+        if opened_before:
+            where_stms.append(fpmm.openingTimestamp > to_int_timestamp(opened_before))
 
         if filter_by == FilterBy.RESOLVED:
             where_stms.append(fpmm.answerFinalizedTimestamp != None)
@@ -148,6 +154,7 @@ class OmenSubgraphHandler:
         sort_by: SortBy,
         filter_by: FilterBy,
         created_after: t.Optional[datetime] = None,
+        opened_before: t.Optional[datetime] = None,
         creator: t.Optional[HexAddress] = None,
         excluded_questions: set[str] | None = None,  # question titles
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
@@ -161,6 +168,7 @@ class OmenSubgraphHandler:
             creator=creator,
             outcomes=outcomes,
             created_after=created_after,
+            opened_before=opened_before,
             excluded_questions=excluded_questions,
         )
 
@@ -226,8 +234,8 @@ class OmenSubgraphHandler:
         self,
         better_address: ChecksumAddress,
         start_time: datetime,
-        end_time: datetime | None = None,
-        market_id: str | None = None,
+        end_time: t.Optional[datetime] = None,
+        market_id: t.Optional[str] = None,
         filter_by_answer_finalized_not_null: bool = False,
     ):
         if not end_time:
@@ -258,8 +266,8 @@ class OmenSubgraphHandler:
         self,
         better_address: ChecksumAddress,
         start_time: datetime,
-        end_time: datetime | None = None,
-        market_id: str | None = None,
+        end_time: t.Optional[datetime] = None,
+        market_id: t.Optional[str] = None,
     ):
         omen_bets = self.get_bets(
             better_address=better_address,

@@ -9,11 +9,11 @@ from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
     HexAddress,
+    HexBytes,
     OmenOutcomeToken,
     Probability,
     Wei,
     xDai,
-    HexBytes,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,

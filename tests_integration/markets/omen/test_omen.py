@@ -13,13 +13,12 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
-    get_market,
     omen_create_market_tx,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    HexBytes,
     OmenRealitioContract,
 )
+from prediction_market_agent_tooling.markets.omen.omen_graph_queries import get_market
 from prediction_market_agent_tooling.markets.omen.reality_subgraph import (
     reality_get_answers,
 )
@@ -77,15 +76,13 @@ def test_create_bet_withdraw_resolve_market() -> None:
     print(f"Submitting the answer to {market.question.id=}.")
     with wait_until_nonce_changed(for_address=keys.bet_from_address):
         OmenRealitioContract().submitAnswer(
-            question_id=HexBytes(market.question.id),  # TODO: Remove HexBytes.
+            question_id=market.question.id,
             answer=OMEN_FALSE_OUTCOME,
             outcomes=market.question.outcomes,
             bond=xdai_to_wei(0.001),
             from_private_key=APIKeys().bet_from_private_key,
         )
-    answers = reality_get_answers(
-        HexBytes(market.question.id)
-    )  # TODO: Remove HexBytes.
+    answers = reality_get_answers(market.question.id)
     assert len(answers) == 1, answers
     assert answers[0].answer == OMEN_FALSE_OUTCOME, answers[0]
 

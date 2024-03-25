@@ -1,9 +1,4 @@
-from prediction_market_agent_tooling.gtypes import (
-    HexAddress,
-    HexBytes,
-    PrivateKey,
-    xDai,
-)
+from prediction_market_agent_tooling.gtypes import HexAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.manifold.utils import (
@@ -86,7 +81,7 @@ def omen_resolve_market_tx(
     realitio_contract = OmenRealitioContract()
 
     realitio_contract.submitAnswer(
-        question_id=HexBytes(market.question.id),  # TODO: Remove HexBytes.
+        question_id=market.question.id,
         answer=resolution.value,
         outcomes=market.question.outcomes,
         bond=xdai_to_wei(bond),

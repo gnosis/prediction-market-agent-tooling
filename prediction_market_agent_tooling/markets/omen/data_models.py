@@ -7,13 +7,12 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    ChecksumAddress,
+    HexAddress,
     OmenOutcomeToken,
     Probability,
     Wei,
     xDai,
-    ChecksumAddress,
-    HexAddress,
-    HexBytes,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
@@ -48,6 +47,13 @@ class Condition(BaseModel):
         return [i + 1 for i in range(self.outcomeSlotCount)]
 
 
+class Question(BaseModel):
+    id: str
+    title: str
+    outcomes: list[str]
+    answerFinalizedTimestamp: datetime | None
+
+
 class OmenMarket(BaseModel):
     """
     https://aiomen.eth.limo
@@ -70,6 +76,7 @@ class OmenMarket(BaseModel):
     currentAnswer: t.Optional[str] = None
     creationTimestamp: t.Optional[int] = None
     condition: Condition
+    question: Question
 
     @property
     def answer_index(self) -> t.Optional[int]:
@@ -88,7 +95,7 @@ class OmenMarket(BaseModel):
         return self.answerFinalizedTimestamp is not None and self.has_valid_answer
 
     @property
-    def question(self) -> str:
+    def question_title(self) -> str:
         return self.title
 
     @property

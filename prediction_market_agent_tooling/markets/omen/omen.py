@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     TxReceipt,
     Wei,
     xDai,
+    xdai_type,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -59,6 +60,7 @@ but to not use our own credits, seems we can use their api deployment directly: 
 
 OMEN_QUERY_BATCH_SIZE = 1000
 OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
+OMEN_DEFAULT_REALITIO_BOND_VALUE = xdai_type(0.01)
 THEGRAPH_QUERY_URL = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
 
 
@@ -163,6 +165,12 @@ query getFixedProductMarketMaker($id: String!) {
         answerFinalizedTimestamp
         resolutionTimestamp
         currentAnswer
+        question {
+            title
+            id
+            outcomes
+            answerFinalizedTimestamp
+        }
     }
 }
 """
@@ -214,6 +222,12 @@ def construct_query_get_fixed_product_markets_makers(
                 condition {
                     id
                     outcomeSlotCount
+                }
+                question {
+                    title
+                    id
+                    outcomes
+                    answerFinalizedTimestamp
                 }
             }
         }
@@ -294,7 +308,7 @@ def get_omen_markets(
     return [
         m
         for m in markets.data.fixedProductMarketMakers
-        if not excluded_questions or m.question not in excluded_questions
+        if not excluded_questions or m.question_title not in excluded_questions
     ]
 
 
@@ -331,7 +345,7 @@ def get_market(market_id: str) -> OmenMarket:
         json={
             "query": _QUERY_GET_SINGLE_FIXED_PRODUCT_MARKET_MAKER,
             "variables": {
-                "id": market_id,
+                "id": market_id.lower(),  # The graph won't find the market if the id is not lowercased.
             },
         },
         headers={"Content-Type": "application/json"},
@@ -530,6 +544,12 @@ query getFixedProductMarketMakerTrades(
             outcomeTokenMarginalPrices
             fee
             category
+            question {
+                title
+                id
+                outcomes
+                answerFinalizedTimestamp
+            }
         }
     }
 }
@@ -832,5 +852,6 @@ def omen_remove_fund_market_tx(
     market_contract.removeFunding(shares, from_private_key)
 
     # TODO: How to withdraw remove funding back to our wallet.
+    # Then also add to the test in tests_integration/markets/omen/test_omen.py.
     if auto_withdraw:
         raise NotImplementedError("TODO")

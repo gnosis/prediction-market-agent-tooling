@@ -78,3 +78,7 @@ def secretstr_to_v1_secretstr(s: None) -> None:
 def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:
     # Another library can be typed with v1, and then we need this ugly conversion.
     return SecretStrV1(s.get_secret_value()) if s is not None else None
+
+
+def int_to_hexbytes(v: int) -> HexBytes:
+    return HexBytes.fromhex(format(v, "064x"))

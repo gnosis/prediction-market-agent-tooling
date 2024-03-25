@@ -1,12 +1,14 @@
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OmenRealitioContract,
-    Arbitrator,
-)
-from prediction_market_agent_tooling.config import APIKeys
 from datetime import timedelta
+
 import pytest
-from tests.utils import RUN_PAID_TESTS
+
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    Arbitrator,
+    OmenRealitioContract,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
+from tests.utils import RUN_PAID_TESTS
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")

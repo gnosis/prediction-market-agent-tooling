@@ -36,8 +36,10 @@ jobs:
         uses: ./.github/actions/gcp_prepare
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      - name: Run pytest
-        run: poetry run pytest
+      - name: Run pytest unit tests
+        run: poetry run pytest tests/
+      - name: Run pytest integration tests
+        run: poetry run pytest tests_integration/
 
   pytest-paid:
     runs-on: ubuntu-latest
@@ -52,8 +54,12 @@ jobs:
         uses: ./.github/actions/gcp_prepare
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      - name: Run pytest
-        run: poetry run pytest
+      - name: Run pytest unit tests
+        run: poetry run pytest tests/
+        env:
+          RUN_PAID_TESTS: '1'
+      - name: Run pytest integration tests
+        run: poetry run pytest tests_integration/
         env:
           RUN_PAID_TESTS: '1'
     if: github.event_name == 'workflow_dispatch'

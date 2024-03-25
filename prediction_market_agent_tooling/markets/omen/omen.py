@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     OmenOutcomeToken,
     PrivateKey,
     Wei,
+    wei_type,
     xDai,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -581,8 +582,6 @@ def omen_redeem_full_position_tx(
         print("No balance to claim. Exiting.")
         return
 
-    conditional_token_contract = OmenConditionalTokenContract()
-
     # check if condition has already been resolved by oracle
     payout_for_condition = conditional_token_contract.payoutDenominator(
         market.condition.id
@@ -614,10 +613,10 @@ def get_conditional_tokens_balance_for_market(
     """
     conditional_token_contract = OmenConditionalTokenContract()
     parent_collection_id = build_parent_collection_id()
-    balance = 0
+    balance = wei_type(0)
 
     for index_set in market.condition.index_sets:
-        collection_id: bytes = conditional_token_contract.getCollectionId(
+        collection_id = conditional_token_contract.getCollectionId(
             parent_collection_id, market.condition.id, index_set, web3=web3
         )
         # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
@@ -626,12 +625,12 @@ def get_conditional_tokens_balance_for_market(
             collection_id,
             web3=web3,
         )
-        balance_for_position: int = conditional_token_contract.balanceOf(
+        balance_for_position = conditional_token_contract.balanceOf(
             from_address=from_address, position_id=position_id, web3=web3
         )
-        balance += balance_for_position
+        balance = wei_type(balance + balance_for_position)
 
-    return Wei(balance)
+    return balance
 
 
 def omen_remove_fund_market_tx(

@@ -17,7 +17,10 @@ from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_binary_markets,
     place_bet,
 )
-from prediction_market_agent_tooling.markets.manifold.data_models import ManifoldMarket
+from prediction_market_agent_tooling.markets.manifold.data_models import (
+    MANIFOLD_BASE_URL,
+    ManifoldMarket,
+)
 
 
 class ManifoldAgentMarket(AgentMarket):
@@ -26,6 +29,7 @@ class ManifoldAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.Mana
+    base_url: t.ClassVar[str] = MANIFOLD_BASE_URL
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(1), currency=self.currency)

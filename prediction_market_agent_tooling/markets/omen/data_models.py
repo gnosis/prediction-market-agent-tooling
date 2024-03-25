@@ -2,7 +2,6 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
-from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel
 from web3 import Web3
 from typing import Any, List
@@ -14,6 +13,9 @@ from pydantic.functional_validators import AfterValidator, BeforeValidator
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    ChecksumAddress,
+    HexAddress,
+    HexBytes,
     OmenOutcomeToken,
     Probability,
     Wei,
@@ -32,6 +34,7 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+OMEN_BASE_URL = "https://aiomen.eth.limo"
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
@@ -43,7 +46,7 @@ def get_boolean_outcome(outcome_str: str) -> bool:
 
 
 class Condition(BaseModel):
-    id: HexAddress
+    id: HexBytes
     outcomeSlotCount: int
 
     @property
@@ -52,20 +55,20 @@ class Condition(BaseModel):
 
 
 class Question(BaseModel):
-    id: HexAddress
+    id: HexBytes
+    title: str
+    outcomes: list[str]
     answerFinalizedTimestamp: t.Optional[datetime] = None
     currentAnswer: t.Optional[str] = None
 
 
 class OmenPosition(BaseModel):
-    id: HexAddress
-    # Using HexBytes instead of bytes causes a Pydantic error.
-    # Unable to generate pydantic-core schema for <class 'hexbytes.main.HexBytes'>
-    conditionIds: t.List[bytes]
+    id: HexBytes
+    conditionIds: t.List[HexBytes]
 
 
 class OmenUserPosition(BaseModel):
-    id: HexAddress
+    id: HexBytes
     position: OmenPosition
 
 
@@ -139,6 +142,10 @@ class OmenMarket(BaseModel):
             if self.answerFinalizedTimestamp is not None
             else None
         )
+
+    @property
+    def has_bonded_outcome(self) -> bool:
+        return self.finalized_datetime is not None
 
     @property
     def market_maker_contract_address(self) -> HexAddress:
@@ -227,7 +234,7 @@ class OmenMarket(BaseModel):
 
     @property
     def url(self) -> str:
-        return f"https://aiomen.eth.limo/#/{self.id}"
+        return f"{OMEN_BASE_URL}/#/{self.id}"
 
 
 class OmenBetCreator(BaseModel):
@@ -299,3 +306,27 @@ class FixedProductMarketMakersData(BaseModel):
 
 class FixedProductMarketMakersResponse(BaseModel):
     data: FixedProductMarketMakersData
+
+
+class RealityQuestion(BaseModel):
+    id: str
+    user: str
+    historyHash: HexBytes
+    updatedTimestamp: datetime
+    questionId: HexBytes
+
+
+class RealityAnswer(BaseModel):
+    answer: str
+    bondAggregate: Wei
+    lastBond: Wei
+    timestamp: datetime
+    question: RealityQuestion
+
+
+class RealityAnswers(BaseModel):
+    answers: list[RealityAnswer]
+
+
+class RealityAnswersResponse(BaseModel):
+    data: RealityAnswers

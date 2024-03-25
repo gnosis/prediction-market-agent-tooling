@@ -31,4 +31,6 @@ Write only the category itself, nothing else.
         {"question": question, "categories": sorted(categories)}
     )
 
-    return response
+    formatted = response.strip().strip("'").strip('"').strip()
+
+    return formatted

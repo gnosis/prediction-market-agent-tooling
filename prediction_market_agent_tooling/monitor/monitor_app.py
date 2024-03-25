@@ -9,10 +9,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.markets import (
-    MARKET_TYPE_TO_AGENT_MARKET,
-    MarketType,
-)
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.markets.manifold import (
     DeployedManifoldAgent,
 )
@@ -67,8 +64,7 @@ def get_open_and_resolved_markets(
     start_time: datetime,
     market_type: MarketType,
 ) -> tuple[list[AgentMarket], list[AgentMarket]]:
-    cls = check_not_none(MARKET_TYPE_TO_AGENT_MARKET.get(market_type))
-
+    cls = market_type.market_class
     open_markets = cls.get_binary_markets(
         limit=MAX_MONITOR_MARKETS,
         sort_by=SortBy.NEWEST,

@@ -68,7 +68,7 @@ def get_polymarket_binary_markets(
 
             # This is pretty slow to do here, but our safest option at the moment. So keep it as the last filter.
             # TODO: Add support for `description` for `AgentMarket` and if it isn't None, use it in addition to the question in all agents. Then this can be removed.
-            if main_markets_only and not market.check_if_its_a_main_market():
+            if main_markets_only and not market.fetch_if_its_a_main_market():
                 continue
 
             tokens_with_price = get_market_tokens_with_prices(market)

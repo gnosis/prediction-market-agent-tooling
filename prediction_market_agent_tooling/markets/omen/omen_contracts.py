@@ -17,6 +17,8 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
+    int_to_hexbytes,
+    wei_type,
     xdai_type,
 )
 from prediction_market_agent_tooling.tools.contract import (
@@ -66,36 +68,42 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         oracle_address: ChecksumAddress,
         outcomes_slot_count: int,
     ) -> HexBytes:
-        id_: HexBytes = self.call(
-            "getConditionId",
-            [oracle_address, question_id, outcomes_slot_count],
+        id_ = HexBytes(
+            self.call(
+                "getConditionId",
+                [oracle_address, question_id, outcomes_slot_count],
+            )
         )
         return id_
 
     def balanceOf(
         self, from_address: ChecksumAddress, position_id: int, web3: Web3 | None = None
-    ) -> int:
-        balance: int = self.call("balanceOf", [from_address, position_id], web3=web3)
+    ) -> Wei:
+        balance = wei_type(
+            self.call("balanceOf", [from_address, position_id], web3=web3)
+        )
         return balance
 
     def getCollectionId(
         self,
         parent_collection_id: HexStr,
-        condition_id: HexAddress,
+        condition_id: HexBytes,
         index_set: int,
         web3: Web3 | None = None,
-    ) -> bytes:
-        collection_id: bytes = self.call(
-            "getCollectionId",
-            [parent_collection_id, condition_id, index_set],
-            web3=web3,
+    ) -> HexBytes:
+        collection_id = HexBytes(
+            self.call(
+                "getCollectionId",
+                [parent_collection_id, condition_id, index_set],
+                web3=web3,
+            )
         )
         return collection_id
 
     def getPositionId(
         self,
         collateral_token_address: ChecksumAddress,
-        collection_id: bytes,
+        collection_id: HexBytes,
         web3: Web3 | None = None,
     ) -> int:
         position_id: int = self.call(
@@ -108,9 +116,9 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     def redeemPositions(
         self,
         from_private_key: PrivateKey,
-        collateral_token_address: str,
+        collateral_token_address: HexAddress,
         condition_id: HexBytes,
-        parent_collection_id: str,
+        parent_collection_id: HexStr,
         index_sets: t.List[int],
         web3: Web3 | None = None,
     ) -> TxReceipt:
@@ -460,7 +468,38 @@ class OmenRealitioContract(ContractOnGnosisChain):
             ),
             tx_params=tx_params,
         )
-        question_id: HexBytes = receipt_tx["logs"][0]["topics"][
-            1
-        ]  # The question id is available in the first emitted log, in the second topic.
+        question_id = HexBytes(
+            receipt_tx["logs"][0]["topics"][1]
+        )  # The question id is available in the first emitted log, in the second topic.
         return question_id
+
+    def submitAnswer(
+        self,
+        question_id: HexBytes,
+        answer: str,
+        outcomes: list[str],
+        bond: Wei,
+        from_private_key: PrivateKey,
+        max_previous: Wei | None = None,
+    ) -> TxReceipt:
+        if max_previous is None:
+            # If not provided, defaults to 0, which means no checking,
+            # same as on Omen website: https://github.com/protofire/omen-exchange/blob/763d9c9d05ebf9edacbc1dbaa561aa5d08813c0f/app/src/services/realitio.ts#L363.
+            max_previous = Wei(0)
+
+        # Normalise the answer to lowercase, to match Enum values as [YES, NO] against outcomes as ["Yes", "No"].
+        answer = answer.lower()
+        outcomes = [o.lower() for o in outcomes]
+
+        return self.send_with_value(
+            from_private_key=from_private_key,
+            function_name="submitAnswer",
+            function_params=dict(
+                question_id=question_id,
+                answer=int_to_hexbytes(
+                    outcomes.index(answer)
+                ),  # Contract's method expects answer index in bytes.
+                max_previous=max_previous,
+            ),
+            amount_wei=bond,
+        )

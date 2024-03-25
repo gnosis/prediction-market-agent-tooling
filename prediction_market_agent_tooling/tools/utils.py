@@ -7,7 +7,7 @@ from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 import git
 import pytz
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, SecretStr
 
@@ -128,14 +128,20 @@ def response_to_model(
     response: requests.models.Response, model: Type[BaseModelT]
 ) -> BaseModelT:
     response_json = response_to_json(response)
-    return model.model_validate(response_json)
+    try:
+        return model.model_validate(response_json)
+    except ValidationError as e:
+        raise ValueError(f"Unable to validate: `{response_json}`") from e
 
 
 def response_list_to_model(
     response: requests.models.Response, model: Type[BaseModelT]
 ) -> list[BaseModelT]:
     response_json = response_to_json(response)
-    return [model.model_validate(x) for x in response_json]
+    try:
+        return [model.model_validate(x) for x in response_json]
+    except ValidationError as e:
+        raise ValueError(f"Unable to validate: `{response_json}`") from e
 
 
 def secret_str_from_env(key: str) -> SecretStr | None:

@@ -51,6 +51,7 @@ class Condition(BaseModel):
 class Question(BaseModel):
     id: HexBytes
     title: str
+    outcomes: list[str]
     answerFinalizedTimestamp: t.Optional[datetime] = None
     currentAnswer: t.Optional[str] = None
 

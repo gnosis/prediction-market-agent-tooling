@@ -172,6 +172,7 @@ class Market(BaseModel):
 
     @property
     def resolution(self) -> Resolution | None:
+        # If the market is not closed, it doesn't have a resolution.
         if not self.closed:
             return None
 
@@ -179,6 +180,8 @@ class Market(BaseModel):
             zip(self.outcomes, self.outcomePrices)
         )
 
+        # On Polymarket, we can find out binary market resolution by by checking for the outcome prices.
+        # E.g. if `Yes` price (probability) is 1$ and `No` price (probability) is 0$, it means the resolution is `Yes`.
         if (
             outcome_to_outcome_price[POLYMARKET_TRUE_OUTCOME] == 1.0
             and outcome_to_outcome_price[POLYMARKET_FALSE_OUTCOME] == 0.0

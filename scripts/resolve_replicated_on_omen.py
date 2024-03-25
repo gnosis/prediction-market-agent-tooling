@@ -16,9 +16,10 @@ def main(
     python scripts/resolve_replicated_on_omen.py --from-private-key your-private-key
     ```
     """
-    omen_resolve_all_markets_based_on_others_tx(
+    resolved_addresses = omen_resolve_all_markets_based_on_others_tx(
         from_private_key=private_key_type(from_private_key),
     )
+    print(f"Resolved markets: {resolved_addresses}")
 
 
 if __name__ == "__main__":

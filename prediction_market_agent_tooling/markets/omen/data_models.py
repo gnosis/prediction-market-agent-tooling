@@ -2,12 +2,13 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
-from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    ChecksumAddress,
+    HexAddress,
     HexBytes,
     OmenOutcomeToken,
     Probability,
@@ -48,7 +49,9 @@ class Condition(BaseModel):
 
 
 class Question(BaseModel):
-    id: HexAddress
+    id: HexBytes
+    title: str
+    outcomes: list[str]
     answerFinalizedTimestamp: t.Optional[datetime] = None
     currentAnswer: t.Optional[str] = None
 
@@ -286,3 +289,27 @@ class FixedProductMarketMakersData(BaseModel):
 
 class FixedProductMarketMakersResponse(BaseModel):
     data: FixedProductMarketMakersData
+
+
+class RealityQuestion(BaseModel):
+    id: str
+    user: str
+    historyHash: HexBytes
+    updatedTimestamp: datetime
+    questionId: HexBytes
+
+
+class RealityAnswer(BaseModel):
+    answer: str
+    bondAggregate: Wei
+    lastBond: Wei
+    timestamp: datetime
+    question: RealityQuestion
+
+
+class RealityAnswers(BaseModel):
+    answers: list[RealityAnswer]
+
+
+class RealityAnswersResponse(BaseModel):
+    data: RealityAnswers

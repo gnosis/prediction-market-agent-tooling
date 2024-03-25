@@ -77,10 +77,12 @@ query getFixedProductMarketMakerTrades(
             isPendingArbitration
             arbitrationOccurred
             openingTimestamp
-             question {
-                    id
-                    answerFinalizedTimestamp
-                    currentAnswer                                  
+            question {
+                id
+                title
+                outcomes
+                answerFinalizedTimestamp
+                currentAnswer
             }
             condition {
                 id
@@ -124,8 +126,10 @@ query getFixedProductMarketMaker($id: String!) {
         currentAnswer
         question {
             id
+            title
+            outcomes
             answerFinalizedTimestamp
-            currentAnswer 
+            currentAnswer
         }
     }
 }
@@ -265,8 +269,9 @@ def construct_query_get_fixed_product_markets_makers(
                 question {
                     id
                     title
+                    outcomes
                     answerFinalizedTimestamp
-                    currentAnswer                                  
+                    currentAnswer
                 }
                 condition {
                     id
@@ -342,7 +347,7 @@ def get_omen_markets(
     return [
         m
         for m in markets.data.fixedProductMarketMakers
-        if not excluded_questions or m.question not in excluded_questions
+        if not excluded_questions or m.question_title not in excluded_questions
     ]
 
 

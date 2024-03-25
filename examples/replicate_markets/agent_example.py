@@ -11,6 +11,9 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
 )
+from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import (
+    omen_resolve_all_markets_based_on_others_tx,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 
@@ -30,6 +33,12 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
     ) -> None:
         keys = APIKeys()
         settings = ReplicateSettings()
+
+        print(f"Resolving existing markets replicated by {keys.bet_from_address}")
+        omen_resolve_all_markets_based_on_others_tx(
+            from_private_key=keys.bet_from_private_key
+        )
+
         close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)
 

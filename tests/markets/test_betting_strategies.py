@@ -61,7 +61,7 @@ def omen_market() -> OmenMarket:
         fee=wei_type(20000000000000000),
         category="foo",
         condition=Condition(id=HexBytes("0x123"), outcomeSlotCount=2),
-        question=Question(id=HexAddress(HexStr("0x123"))),
+        question=Question(id=HexBytes("0x123"), title="title", outcomes=["Yes", "No"]),
     )
 
 

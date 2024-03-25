@@ -1,4 +1,4 @@
-from prediction_market_agent_tooling.gtypes import HexAddress, PrivateKey
+from prediction_market_agent_tooling.gtypes import HexAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.manifold.utils import (
@@ -6,12 +6,21 @@ from prediction_market_agent_tooling.markets.manifold.utils import (
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
-from prediction_market_agent_tooling.markets.omen.omen import get_omen_binary_markets
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OMEN_DEFAULT_REALITIO_BOND_VALUE,
+    get_omen_binary_markets,
+)
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenRealitioContract,
+)
 from prediction_market_agent_tooling.markets.polymarket.utils import (
     find_resolution_on_polymarket,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
+from prediction_market_agent_tooling.tools.web3_utils import (
+    private_key_to_public_key,
+    xdai_to_wei,
+)
 
 
 def omen_resolve_all_markets_based_on_others_tx(
@@ -26,12 +35,20 @@ def omen_resolve_all_markets_based_on_others_tx(
         filter_by=FilterBy.NONE,
         opened_before=utcnow(),
     )
+    print(f"Found {len(created_already_opened_markets)} markets created by us.")
     if len(created_already_opened_markets) == last_n_omen_markets_to_fetch:
         raise ValueError(
             "TODO: Switch to paged version (once available) to fetch all markets, we don't know if we aren't creating duplicates now."
         )
 
     # Filter for only markets without any outcome proposal.
+    # TODO: Switch to on-graph filtering after subground PR is in.
+    created_already_opened_without_set_outcome = [
+        m for m in created_already_opened_markets if not m.has_bonded_outcome
+    ]
+    print(
+        f"Filtered down to {len(created_already_opened_without_set_outcome)} markets that don't have any resolution yet."
+    )
     created_already_opened_without_set_outcome = [
         m for m in created_already_opened_markets if not m.has_bonded_outcome
     ]
@@ -39,21 +56,37 @@ def omen_resolve_all_markets_based_on_others_tx(
     resolved_addressses: list[HexAddress] = []
 
     for market in created_already_opened_without_set_outcome:
+        print(f"Looking into {market.url=} {market.question_title=}")
         resolution = find_resolution_on_other_markets(market)
         if resolution is not None:
-            omen_resolve_market_tx(from_private_key, market, resolution)
+            print(f"Found resolution {resolution.value=} for {market.url=}")
+            omen_resolve_market_tx(
+                market, resolution, OMEN_DEFAULT_REALITIO_BOND_VALUE, from_private_key
+            )
             resolved_addressses.append(market.id)
+            print(f"Resolved {market.url=}")
+
+        else:
+            print(f"Error: No resolution found for {market.url=}")
 
     return resolved_addressses
 
 
 def omen_resolve_market_tx(
-    from_private_key: PrivateKey,
     market: OmenMarket,
     resolution: Resolution,
+    bond: xDai,
+    from_private_key: PrivateKey,
 ) -> None:
-    # TODO: Finish this.
-    pass
+    realitio_contract = OmenRealitioContract()
+
+    realitio_contract.submitAnswer(
+        question_id=market.question.id,
+        answer=resolution.value,
+        outcomes=market.question.outcomes,
+        bond=xdai_to_wei(bond),
+        from_private_key=from_private_key,
+    )
 
 
 def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
@@ -66,9 +99,11 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
                 continue
 
             case MarketType.MANIFOLD:
+                print(f"Looing on Manifold for {market.question_title=}")
                 resolution = find_resolution_on_manifold(market.question_title)
 
             case MarketType.POLYMARKET:
+                print(f"Looing on Polymarket for {market.question_title=}")
                 resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:

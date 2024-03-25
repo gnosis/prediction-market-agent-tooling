@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     wei_type,
     xDai,
+    xdai_type,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -54,6 +55,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
 )
 
 MAX_NUMBER_OF_MARKETS_FOR_SUBGRAPH_RETRIEVAL = 1000
+OMEN_DEFAULT_REALITIO_BOND_VALUE = xdai_type(0.01)
 
 
 class OmenAgentMarket(AgentMarket):
@@ -583,6 +585,7 @@ def omen_remove_fund_market_tx(
     market_contract.removeFunding(shares, from_private_key)
 
     # TODO: How to withdraw remove funding back to our wallet.
+    # Then also add to the test in tests_integration/markets/omen/test_omen.py.
     if auto_withdraw:
         raise NotImplementedError("TODO")
 

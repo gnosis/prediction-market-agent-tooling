@@ -98,14 +98,6 @@ def omen_replicate_from_tx(
             )
             continue
 
-        # Don't replicate markets that are too much into the future.
-        latest_allowed_resolution_known_time = utcnow() + timedelta(days=365)
-        if market.close_time > latest_allowed_resolution_known_time:
-            print(
-                f"Skipping `{market.question}` because it closes later than {latest_allowed_resolution_known_time}."
-            )
-            continue
-
         # Do as the last step, becuase it calls OpenAI (costly & slow).
         if not is_predictable(market.question):
             print(
@@ -114,6 +106,13 @@ def omen_replicate_from_tx(
             continue
 
         category = infer_category(market.question, existing_categories)
+        # Realitio will allow new categories or misformated categories, so double check that the LLM got it right.
+        if category not in existing_categories:
+            print(
+                f"Error: LLM went rouge. Skipping `{market.question}` because the category `{category}` is not in the existing categories {existing_categories}."
+            )
+            continue
+
         market_address = omen_create_market_tx(
             initial_funds=initial_funds,
             fee=OMEN_DEFAULT_MARKET_FEE,

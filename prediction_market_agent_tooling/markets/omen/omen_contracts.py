@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
+    int_to_hexbytes,
     wei_type,
     xdai_type,
 )
@@ -471,3 +472,34 @@ class OmenRealitioContract(ContractOnGnosisChain):
             receipt_tx["logs"][0]["topics"][1]
         )  # The question id is available in the first emitted log, in the second topic.
         return question_id
+
+    def submitAnswer(
+        self,
+        question_id: HexBytes,
+        answer: str,
+        outcomes: list[str],
+        bond: Wei,
+        from_private_key: PrivateKey,
+        max_previous: Wei | None = None,
+    ) -> TxReceipt:
+        if max_previous is None:
+            # If not provided, defaults to 0, which means no checking,
+            # same as on Omen website: https://github.com/protofire/omen-exchange/blob/763d9c9d05ebf9edacbc1dbaa561aa5d08813c0f/app/src/services/realitio.ts#L363.
+            max_previous = Wei(0)
+
+        # Normalise the answer to lowercase, to match Enum values as [YES, NO] against outcomes as ["Yes", "No"].
+        answer = answer.lower()
+        outcomes = [o.lower() for o in outcomes]
+
+        return self.send_with_value(
+            from_private_key=from_private_key,
+            function_name="submitAnswer",
+            function_params=dict(
+                question_id=question_id,
+                answer=int_to_hexbytes(
+                    outcomes.index(answer)
+                ),  # Contract's method expects answer index in bytes.
+                max_previous=max_previous,
+            ),
+            amount_wei=bond,
+        )

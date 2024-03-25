@@ -137,7 +137,6 @@ class OmenSubgraphHandler:
         if filter_by == FilterBy.RESOLVED:
             where_stms.append(fpmm.answerFinalizedTimestamp != None)
             where_stms.append(fpmm.currentAnswer != None)
-            # where_stms.append(fpmm.currentAnswer != self.INVALID_ANSWER_STR)
             # We cannot add the same type of filter twice, it gets overwritten, hence we use nested filter.
             where_stms.append(
                 fpmm.question.currentAnswer
@@ -173,10 +172,6 @@ class OmenSubgraphHandler:
         excluded_questions: set[str] | None = None,  # question titles
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
     ) -> t.List[OmenMarket]:
-        """
-        Fetches Omen markets according to filters.
-        """
-
         where_stms = self._build_where_statements(
             filter_by=filter_by,
             creator=creator,

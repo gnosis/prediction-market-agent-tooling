@@ -207,7 +207,7 @@ def get_omen_binary_markets(
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
-    subgraph_handler: OmenSubgraphHandler = OmenSubgraphHandler()
+    subgraph_handler = OmenSubgraphHandler()
     return subgraph_handler.get_omen_markets(
         limit=limit,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
@@ -598,8 +598,8 @@ def redeem_positions_from_all_omen_markets() -> None:
     Redeems positions from all resolved Omen markets.
     """
     keys = APIKeys()
-    h = OmenSubgraphHandler()
-    bets = h.get_bets(
+    omen_subgraph_handler = OmenSubgraphHandler()
+    bets = omen_subgraph_handler.get_bets(
         better_address=keys.bet_from_address,
         start_time=datetime(2020, 1, 1),
         end_time=None,

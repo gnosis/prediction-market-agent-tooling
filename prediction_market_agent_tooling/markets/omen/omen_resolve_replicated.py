@@ -66,10 +66,10 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
                 continue
 
             case MarketType.MANIFOLD:
-                resolution = find_resolution_on_manifold(market.question)
+                resolution = find_resolution_on_manifold(market.question_title)
 
             case MarketType.POLYMARKET:
-                resolution = find_resolution_on_polymarket(market.question)
+                resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:
                 raise ValueError(

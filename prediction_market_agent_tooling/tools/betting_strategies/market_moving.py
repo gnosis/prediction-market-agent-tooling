@@ -2,6 +2,7 @@ import typing as t
 from functools import reduce
 
 import numpy as np
+from loguru import logger
 
 from prediction_market_agent_tooling.gtypes import Probability, wei_type, xDai
 from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
@@ -97,7 +98,7 @@ def get_market_moving_bet(
         bet_amount_wei = wei_type(bet_amount)
         if verbose:
             outcome = market_agent.get_outcome_str(bet_outcome_index)
-            print(
+            logger.debug(
                 f"Target p_yes: {target_p_yes:.2f}, bet: {wei_to_xdai(bet_amount_wei):.2f}{market_agent.currency} for {outcome}, new p_yes: {new_p_yes:.2f}"
             )
         if abs(target_p_yes - new_p_yes) < 0.01:

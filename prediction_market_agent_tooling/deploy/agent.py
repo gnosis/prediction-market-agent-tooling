@@ -5,6 +5,8 @@ import time
 import typing as t
 from datetime import datetime
 
+from loguru import logger
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -193,11 +195,11 @@ def {entrypoint_function_name}(request) -> str:
         for market in markets:
             result = self.answer_binary_market(market)
             if result is None:
-                print(f"Skipping market {market} as no answer was provided")
+                logger.debug(f"Skipping market {market} as no answer was provided")
                 continue
             if _place_bet:
                 amount = self.calculate_bet_amount(result, market)
-                print(
+                logger.debug(
                     f"Placing bet on {market} with result {result} and amount {amount}"
                 )
                 market.place_bet(

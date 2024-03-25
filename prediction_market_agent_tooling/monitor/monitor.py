@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from google.cloud.functions_v2.types.functions import Function
+from loguru import logger
 from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -142,7 +143,9 @@ class DeployedAgent(BaseModel):
             try:
                 agents.append(cls.from_gcp_function(function))
             except ValueError:
-                print(f"Could not parse `{function.name}` into {cls.__name__}.")
+                logger.warning(
+                    f"Could not parse `{function.name}` into {cls.__name__}."
+                )
 
         return agents
 

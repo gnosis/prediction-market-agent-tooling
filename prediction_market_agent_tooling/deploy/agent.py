@@ -25,10 +25,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import (
-    MARKET_TYPE_TO_AGENT_MARKET,
-    MarketType,
-)
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
     redeem_positions_from_all_omen_markets,
 )
@@ -172,9 +169,7 @@ def {entrypoint_function_name}(request) -> str:
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
         filter_by: FilterBy = FilterBy.OPEN,
     ) -> list[AgentMarket]:
-        cls = MARKET_TYPE_TO_AGENT_MARKET.get(market_type)
-        if not cls:
-            raise ValueError(f"Unknown market type: {market_type}")
+        cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(
             limit=limit, sort_by=sort_by, filter_by=filter_by

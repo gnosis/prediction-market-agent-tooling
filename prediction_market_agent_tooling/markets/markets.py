@@ -20,6 +20,12 @@ class MarketType(str, Enum):
     OMEN = "omen"
     POLYMARKET = "polymarket"
 
+    @property
+    def market_class(self) -> type[AgentMarket]:
+        if self not in MARKET_TYPE_TO_AGENT_MARKET:
+            raise ValueError(f"Unknown market type: {self}")
+        return MARKET_TYPE_TO_AGENT_MARKET[self]
+
 
 MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.MANIFOLD: ManifoldAgentMarket,

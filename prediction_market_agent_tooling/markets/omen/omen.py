@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_BASE_URL,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     Condition,
@@ -61,6 +62,7 @@ class OmenAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.xDai
+    base_url: t.ClassVar[str] = OMEN_BASE_URL
 
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
@@ -183,70 +185,6 @@ class OmenAgentMarket(AgentMarket):
         )
 
 
-def construct_query_get_fixed_product_markets_makers(
-    include_creator: bool, filter_by: FilterBy
-) -> str:
-    query = """
-        query getFixedProductMarketMakers(
-            $first: Int!,
-            $outcomes: [String!],
-            $orderBy: String!,
-            $orderDirection: String!,
-            $creationTimestamp_gt: Int!,
-            $creator: Bytes = null,
-        ) {
-            fixedProductMarketMakers(
-                where: {
-                    isPendingArbitration: false,
-                    outcomes: $outcomes
-                    creationTimestamp_gt: $creationTimestamp_gt
-                    creator: $creator,
-                    answerFinalizedTimestamp: null
-                    resolutionTimestamp_not: null
-                },
-                orderBy: creationTimestamp,
-                orderDirection: desc,
-                first: $first
-            ) {
-                id
-                title
-                collateralVolume
-                usdVolume
-                collateralToken
-                outcomes
-                outcomeTokenAmounts
-                outcomeTokenMarginalPrices
-                fee
-                answerFinalizedTimestamp
-                resolutionTimestamp
-                currentAnswer
-                creationTimestamp
-                category
-                condition {
-                    id
-                    outcomeSlotCount
-                }
-            }
-        }
-    """
-
-    if filter_by == FilterBy.OPEN:
-        query = query.replace("resolutionTimestamp_not: null", "")
-    elif filter_by == FilterBy.RESOLVED:
-        query = query.replace("answerFinalizedTimestamp: null", "")
-    elif filter_by == FilterBy.NONE:
-        query = query.replace("answerFinalizedTimestamp: null", "")
-        query = query.replace("resolutionTimestamp_not: null", "")
-    else:
-        raise ValueError(f"Unknown filter_by: {filter_by}")
-
-    if not include_creator:
-        # If we aren't filtering by query, we need to remove it from where, otherwise "creator: null" will return 0 results.
-        query = query.replace("creator: $creator,", "")
-
-    return query
-
-
 def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
     """
     Returns 'orderBy' and 'orderDirection' strings for the given SortBy.
@@ -264,6 +202,7 @@ def get_omen_binary_markets(
     sort_by: SortBy,
     filter_by: FilterBy = FilterBy.OPEN,
     created_after: t.Optional[datetime] = None,
+    opened_before: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
@@ -272,6 +211,7 @@ def get_omen_binary_markets(
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         sort_by=sort_by,
         created_after=created_after,
+        opened_before=opened_before,
         filter_by=filter_by,
         creator=creator,
         excluded_questions=excluded_questions,

@@ -37,6 +37,7 @@ class AgentMarket(BaseModel):
     """
 
     currency: t.ClassVar[Currency]
+    base_url: t.ClassVar[str]
 
     id: str
     question: str

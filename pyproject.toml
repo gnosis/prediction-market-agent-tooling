@@ -33,9 +33,11 @@ types-pytz = "^2024.1.0.20240203"
 google-cloud-secret-manager = "^2.18.2"
 langchain = { version = "^0.1.9", optional = true}
 langchain-openai = { version = "^0.0.8", optional = true}
+google-api-python-client = { version = "2.95.0", optional = true}
 
 [tool.poetry.extras]
 langchain = ["langchain", "langchain-openai"]
+google = ["google-api-python-client"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

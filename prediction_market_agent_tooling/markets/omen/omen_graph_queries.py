@@ -78,10 +78,11 @@ query getFixedProductMarketMakerTrades(
             arbitrationOccurred
             openingTimestamp
             question {
-                title
                 id
+                title
                 outcomes
                 answerFinalizedTimestamp
+                currentAnswer
             }
             condition {
                 id
@@ -124,10 +125,11 @@ query getFixedProductMarketMaker($id: String!) {
         resolutionTimestamp
         currentAnswer
         question {
-            title
             id
+            title
             outcomes
             answerFinalizedTimestamp
+            currentAnswer
         }
     }
 }
@@ -265,11 +267,11 @@ def construct_query_get_fixed_product_markets_makers(
                 creationTimestamp
                 category
                 question {
-                    title
                     id
-                    outcomes
                     title
+                    outcomes
                     answerFinalizedTimestamp
+                    currentAnswer
                 }
                 condition {
                     id

@@ -297,13 +297,23 @@ class PolymarketFullMarket(BaseModel):
             if isinstance(q.state.data, PolymarketFullMarket)
         ]
 
-        if len(full_market_queries) != 1:
+        # We expect either 0 markets (if it doesn't exist) or 1 market.
+        if len(full_market_queries) not in (0, 1):
             raise ValueError(
                 f"Unexpected number of queries in the response, please check it out and modify the code accordingly: `{response_dict}`"
             )
 
         # It will be `PolymarketFullMarket` thanks to the filter above.
-        return t.cast(PolymarketFullMarket, full_market_queries[0].state.data)
+        market = (
+            t.cast(PolymarketFullMarket, full_market_queries[0].state.data)
+            if full_market_queries
+            else None
+        )
+
+        if market is None:
+            print(f"Warning: No polymarket found for {url}")
+
+        return market
 
 
 class PriceSide(BaseModel):

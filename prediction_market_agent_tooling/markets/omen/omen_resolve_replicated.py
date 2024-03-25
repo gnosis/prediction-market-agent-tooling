@@ -58,14 +58,18 @@ def omen_resolve_all_markets_based_on_others_tx(
     resolved_addressses: list[HexAddress] = []
 
     for market in created_already_opened_without_set_outcome:
-        print(f"Looking into {market.id=} {market.question_title=}")
+        print(f"Looking into {market.url=} {market.question_title=}")
         resolution = find_resolution_on_other_markets(market)
         if resolution is not None:
-            print(f"Found resolution {resolution.value=} for {market.id=}")
+            print(f"Found resolution {resolution.value=} for {market.url=}")
             omen_resolve_market_tx(
                 market, resolution, OMEN_DEFAULT_REALITIO_BOND_VALUE, from_private_key
             )
             resolved_addressses.append(market.id)
+            print(f"Resolved {market.url=}")
+
+        else:
+            print(f"Error: No resolution found for {market.url=}")
 
     return resolved_addressses
 
@@ -97,10 +101,12 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
                 continue
 
             case MarketType.MANIFOLD:
-                resolution = find_resolution_on_manifold(market.question)
+                print(f"Looing on Manifold for {market.question_title=}")
+                resolution = find_resolution_on_manifold(market.question_title)
 
             case MarketType.POLYMARKET:
-                resolution = find_resolution_on_polymarket(market.question)
+                print(f"Looing on Polymarket for {market.question_title=}")
+                resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:
                 raise ValueError(

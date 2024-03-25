@@ -2,7 +2,6 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
-from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel
 from web3 import Web3
 
@@ -12,6 +11,9 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
     Wei,
     xDai,
+    ChecksumAddress,
+    HexAddress,
+    HexBytes,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
@@ -268,3 +270,27 @@ class FixedProductMarketMakersData(BaseModel):
 
 class FixedProductMarketMakersResponse(BaseModel):
     data: FixedProductMarketMakersData
+
+
+class RealityQuestion(BaseModel):
+    id: str
+    user: str
+    historyHash: bytes
+    updatedTimestamp: datetime
+    questionId: bytes
+
+
+class RealityAnswer(BaseModel):
+    answer: str
+    bondAggregate: Wei
+    lastBond: Wei
+    timestamp: datetime
+    question: RealityQuestion
+
+
+class RealityAnswers(BaseModel):
+    answers: list[RealityAnswer]
+
+
+class RealityAnswersResponse(BaseModel):
+    data: RealityAnswers

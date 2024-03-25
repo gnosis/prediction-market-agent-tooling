@@ -77,10 +77,11 @@ query getFixedProductMarketMakerTrades(
             isPendingArbitration
             arbitrationOccurred
             openingTimestamp
-             question {
-                    id
-                    answerFinalizedTimestamp
-                    currentAnswer                                  
+            question {
+                title
+                id
+                outcomes
+                answerFinalizedTimestamp
             }
             condition {
                 id
@@ -123,9 +124,10 @@ query getFixedProductMarketMaker($id: String!) {
         resolutionTimestamp
         currentAnswer
         question {
+            title
             id
+            outcomes
             answerFinalizedTimestamp
-            currentAnswer 
         }
     }
 }
@@ -259,9 +261,10 @@ def construct_query_get_fixed_product_markets_makers(
                 creationTimestamp
                 category
                 question {
+                    title
                     id
+                    outcomes
                     answerFinalizedTimestamp
-                    currentAnswer                                  
                 }
                 condition {
                     id
@@ -294,6 +297,7 @@ def get_omen_markets(
     sort_by: SortBy,
     filter_by: FilterBy,
     created_after: t.Optional[datetime] = None,
+    opened_before: t.Optional[datetime] = None,
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
@@ -307,6 +311,7 @@ def get_omen_markets(
             json={
                 "query": construct_query_get_fixed_product_markets_makers(
                     include_creator=creator is not None,
+                    include_opening_timestamp=opened_before is not None,
                     filter_by=filter_by,
                 ),
                 "variables": {
@@ -316,6 +321,9 @@ def get_omen_markets(
                     "orderDirection": order_direction,
                     "creationTimestamp_gt": (
                         to_int_timestamp(created_after) if created_after else 0
+                    ),
+                    "openingTimestamp_lt": (
+                        to_int_timestamp(opened_before) if opened_before else None
                     ),
                     "creator": creator,
                 },
@@ -327,7 +335,7 @@ def get_omen_markets(
     return [
         m
         for m in markets.data.fixedProductMarketMakers
-        if not excluded_questions or m.question not in excluded_questions
+        if not excluded_questions or m.question_title not in excluded_questions
     ]
 
 

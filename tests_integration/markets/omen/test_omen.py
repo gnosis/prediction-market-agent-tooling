@@ -18,7 +18,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
 )
-from prediction_market_agent_tooling.markets.omen.omen_graph_queries import get_market
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
@@ -51,7 +50,7 @@ def test_create_bet_withdraw_resolve_market(
             auto_deposit=True,
         )
     print(f"Market created at address: {market_address}")
-    market = get_market(market_address)
+    market = omen_subgraph_handler.get_omen_market(market_address)
 
     # Double check the market was created correctly.
     assert market.question_title == question

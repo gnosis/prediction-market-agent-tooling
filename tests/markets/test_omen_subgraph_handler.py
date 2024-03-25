@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import loguru
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 

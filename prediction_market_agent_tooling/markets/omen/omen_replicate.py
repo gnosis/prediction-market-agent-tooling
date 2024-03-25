@@ -106,7 +106,7 @@ def omen_replicate_from_tx(
             continue
 
         category = infer_category(market.question, existing_categories)
-        # Realio will allow new categories or misformated categories, so double check that the LLM got it right.
+        # Realitio will allow new categories or misformated categories, so double check that the LLM got it right.
         if category not in existing_categories:
             print(
                 f"Error: LLM went rouge. Skipping `{market.question}` because the category `{category}` is not in the existing categories {existing_categories}."

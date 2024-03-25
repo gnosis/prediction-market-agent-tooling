@@ -8,6 +8,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    HexBytes,
     OmenOutcomeToken,
     Probability,
     Wei,
@@ -38,12 +39,28 @@ def get_boolean_outcome(outcome_str: str) -> bool:
 
 
 class Condition(BaseModel):
-    id: HexAddress
+    id: HexBytes
     outcomeSlotCount: int
 
     @property
     def index_sets(self) -> t.List[int]:
         return [i + 1 for i in range(self.outcomeSlotCount)]
+
+
+class Question(BaseModel):
+    id: HexAddress
+    answerFinalizedTimestamp: t.Optional[datetime] = None
+    currentAnswer: t.Optional[str] = None
+
+
+class OmenPosition(BaseModel):
+    id: HexBytes
+    conditionIds: t.List[HexBytes]
+
+
+class OmenUserPosition(BaseModel):
+    id: HexBytes
+    position: OmenPosition
 
 
 class OmenMarket(BaseModel):
@@ -68,6 +85,7 @@ class OmenMarket(BaseModel):
     currentAnswer: t.Optional[str] = None
     creationTimestamp: t.Optional[int] = None
     condition: Condition
+    question: Question
 
     @property
     def answer_index(self) -> t.Optional[int]:
@@ -86,7 +104,7 @@ class OmenMarket(BaseModel):
         return self.answerFinalizedTimestamp is not None and self.has_valid_answer
 
     @property
-    def question(self) -> str:
+    def question_title(self) -> str:
         return self.title
 
     @property

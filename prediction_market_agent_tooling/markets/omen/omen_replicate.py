@@ -48,12 +48,8 @@ def omen_replicate_from_tx(
         10 if market_type == MarketType.POLYMARKET else 100,
         market_type,
         filter_by=FilterBy.OPEN,
-        sort_by=(
-            SortBy.CLOSING_SOONEST
-            if market_type == MarketType.MANIFOLD
-            else SortBy.NONE
-        ),
-        excluded_questions=set(m.question for m in already_created_markets),
+        sort_by=SortBy.NONE,
+        excluded_questions=set(m.question_title for m in already_created_markets),
     )
     markets_sorted = sorted(
         markets,
@@ -90,11 +86,6 @@ def omen_replicate_from_tx(
                 f"Skipping `{market.question}` because it's missing the closing time."
             )
             continue
-        if not is_predictable(market.question):
-            print(
-                f"Skipping `{market.question}` because it seems to not be predictable."
-            )
-            continue
 
         # According to Omen's recommendation, closing time of the market should be at least 6 days after the outcome is known.
         # That is because at the closing time, the question will open on Realitio, and we don't want it to be resolved as unknown/invalid.
@@ -106,6 +97,22 @@ def omen_replicate_from_tx(
                 f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_resolution_known_time}."
             )
             continue
+
+        # Don't replicate markets that are too much into the future.
+        latest_allowed_resolution_known_time = utcnow() + timedelta(days=365)
+        if market.close_time > latest_allowed_resolution_known_time:
+            print(
+                f"Skipping `{market.question}` because it closes later than {latest_allowed_resolution_known_time}."
+            )
+            continue
+
+        # Do as the last step, becuase it calls OpenAI (costly & slow).
+        if not is_predictable(market.question):
+            print(
+                f"Skipping `{market.question}` because it seems to not be predictable."
+            )
+            continue
+
         category = infer_category(market.question, existing_categories)
         market_address = omen_create_market_tx(
             initial_funds=initial_funds,

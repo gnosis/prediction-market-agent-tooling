@@ -133,7 +133,7 @@ class OmenAgentMarket(AgentMarket):
 
         bet_was_correct = self.was_bet_outcome_correct(bets_on_market)
         if not bet_was_correct:
-            # print(f"Bet placed on market {self.id} was incorrect.")
+            logger.debug(f"Bet placed on market {self.id} was incorrect.")
             return None
 
         position_already_redeemed = self.check_if_position_was_already_redeemed()

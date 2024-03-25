@@ -104,7 +104,6 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
 
             case MarketType.POLYMARKET:
                 print(f"Looing on Polymarket for {market.question_title=}")
-
                 resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:

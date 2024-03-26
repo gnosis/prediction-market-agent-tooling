@@ -2,7 +2,6 @@ import sys
 import typing as t
 from datetime import datetime
 
-import subgrounds.subgraph
 from eth_typing import ChecksumAddress
 from hexbytes import HexBytes
 from subgrounds import FieldPath, Subgrounds
@@ -33,10 +32,7 @@ class OmenSubgraphHandler:
         "https://api.thegraph.com/subgraphs/name/realityeth/realityeth-gnosis"
     )
 
-    # We define here as str for easier filtering.
-    INVALID_ANSWER_STR = HexBytes(
-        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    )
+    INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
     def __init__(self) -> None:
         self.sg = Subgrounds()
@@ -47,7 +43,7 @@ class OmenSubgraphHandler:
         )
         self.realityeth_subgraph = self.sg.load_subgraph(self.REALITYETH_GRAPH_URL)
 
-    def _get_fields_for_bets(self, bets_field: t.Any) -> list[FieldPath]:
+    def _get_fields_for_bets(self, bets_field: FieldPath) -> list[FieldPath]:
         markets = bets_field.fpmm
         fields_for_markets = self._get_fields_for_markets(markets)
 
@@ -69,7 +65,7 @@ class OmenSubgraphHandler:
         ]
         return fields_for_bets + fields_for_markets
 
-    def _get_fields_for_answers(self, answers_field: t.Any) -> list[FieldPath]:
+    def _get_fields_for_answers(self, answers_field: FieldPath) -> list[FieldPath]:
         return [
             answers_field.answer,
             answers_field.question.historyHash,
@@ -82,7 +78,7 @@ class OmenSubgraphHandler:
             answers_field.timestamp,
         ]
 
-    def _get_fields_for_markets(self, markets_field: t.Any) -> list[FieldPath]:
+    def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
         # In theory it's possible to store the subgraph schema locally (see https://github.com/0xPlaygrounds/subgrounds/issues/41).
         # Since it's still not working, we hardcode the schema to be fetched below.
         return [
@@ -117,47 +113,48 @@ class OmenSubgraphHandler:
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list[subgrounds.subgraph.Filter]:
-        fpmm = self.trades_subgraph.FixedProductMarketMaker
-        where_stms = [
-            fpmm.isPendingArbitration == False,
-            fpmm.outcomes == outcomes,
-            fpmm.title != None,
-        ]
+    ) -> dict[str, t.Any]:
+        where_stms: dict[str, t.Any] = {
+            "isPendingArbitration": False,
+            "outcomes": outcomes,
+            "title_not": None,
+        }
 
         if creator:
-            where_stms.append(fpmm.creator == creator)
+            where_stms["creator"] = creator
 
         if created_after:
-            where_stms.append(fpmm.creationTimestamp > to_int_timestamp(created_after))
+            where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
 
         if opened_before:
-            where_stms.append(fpmm.openingTimestamp > to_int_timestamp(opened_before))
+            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_before)
 
+        where_stms["question_"] = {}
         if filter_by == FilterBy.RESOLVED:
-            where_stms.append(fpmm.answerFinalizedTimestamp != None)
-            where_stms.append(fpmm.currentAnswer != None)
+            where_stms["answerFinalizedTimestamp_not"] = None
+            where_stms["currentAnswer_not"] = None
             # We cannot add the same type of filter twice, it gets overwritten, hence we use nested filter.
-            where_stms.append(
-                fpmm.question.currentAnswer
-                != "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-            )
+            where_stms["question_"]["currentAnswer_not"] = self.INVALID_ANSWER
         elif filter_by == FilterBy.OPEN:
-            where_stms.append(fpmm.currentAnswer == None)
+            where_stms["currentAnswer"] = None
 
+        excluded_question_titles = [""]
         if excluded_questions is not None:
-            for question_title in excluded_questions:
-                where_stms.append(fpmm.question.title != question_title)
+            excluded_question_titles = [i for i in excluded_questions]
 
+        where_stms["question_"]["title_not_in"] = excluded_question_titles
         return where_stms
 
     def _build_sort_direction(self, sort_by: SortBy) -> str:
-        sort_direction = "asc"
         match sort_by:
             case SortBy.NEWEST:
                 sort_direction = "desc"
+            case SortBy.CLOSING_SOONEST:
+                sort_direction = "asc"
+            case SortBy.NONE:
+                sort_direction = "desc"
             case _:
-                pass
+                raise ValueError(f"Unknown sort_by: {sort_by}")
 
         return sort_direction
 
@@ -205,20 +202,22 @@ class OmenSubgraphHandler:
         items = self._parse_items_from_json(result)
         omen_markets = [OmenMarket.model_validate(i) for i in items]
 
-        if len(omen_markets) > 1:
+        if len(omen_markets) != 1:
             raise ValueError(
                 f"Fetched wrong number of markets. Expected 1 but got {len(omen_markets)}"
             )
 
         return omen_markets[0]
 
-    def _parse_items_from_json(self, result: t.Any) -> t.List[t.Any]:
+    def _parse_items_from_json(
+        self, result: list[dict[str, t.Any]]
+    ) -> list[dict[str, t.Any]]:
         """subgrounds return a weird key as a dict key"""
         items = []
         for result_chunk in result:
             for k, v in result_chunk.items():
                 # subgrounds might pack all items as a list, indexed by a key, or pack it as a dictionary (if one single element)
-                if type(v) is dict:
+                if isinstance(v, dict):
                     items.extend([v])
                 else:
                     items.extend(v)

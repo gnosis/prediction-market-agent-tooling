@@ -45,6 +45,24 @@ def test_markets_with_creation_timestamp_between(
     assert bet.id == expected_trade_id
 
 
+def test_get_markets_exclude_questions(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    excluded_question_titles = [
+        "Belgium v Italy - Who will win this UEFA Euro 2020 Quarter-Finals match?",
+        "Will the Grayscale Ethereum Trust (ETHE) have a discount to NAV at the end of September 2021?",
+    ]
+    markets = omen_subgraph_handler.get_omen_markets(
+        excluded_questions=set(excluded_question_titles),
+        filter_by=FilterBy.NONE,
+        sort_by=SortBy.NONE,
+        limit=sys.maxsize,
+    )
+
+    for m in markets:
+        assert m.question.title not in excluded_question_titles
+
+
 def test_resolved_omen_bets(
     a_bet_from_address: str, omen_subgraph_handler: OmenSubgraphHandler
 ) -> None:

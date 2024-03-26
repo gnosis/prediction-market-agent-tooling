@@ -42,9 +42,8 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
 )
-from prediction_market_agent_tooling.markets.omen.omen_graph_queries import (
-    get_omen_markets,
-    get_resolved_omen_bets,
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -208,8 +207,9 @@ def get_omen_binary_markets(
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
-    return get_omen_markets(
-        first=limit,
+    subgraph_handler = OmenSubgraphHandler()
+    return subgraph_handler.get_omen_markets(
+        limit=limit,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         sort_by=sort_by,
         created_after=created_after,
@@ -223,7 +223,10 @@ def get_omen_binary_markets(
 def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
 ) -> OmenMarket:
-    return get_omen_binary_markets(limit=1, sort_by=sort_by, filter_by=filter_by)[0]
+    subgraph_handler = OmenSubgraphHandler()
+    return subgraph_handler.get_omen_markets(
+        limit=1, sort_by=sort_by, filter_by=filter_by
+    )[0]
 
 
 def omen_buy_outcome_tx(
@@ -595,11 +598,12 @@ def redeem_positions_from_all_omen_markets() -> None:
     Redeems positions from all resolved Omen markets.
     """
     keys = APIKeys()
-    resolved_omen_bets = get_resolved_omen_bets(
-        start_time=datetime(2020, 1, 1),
-        end_time=None,
+    omen_subgraph_handler = OmenSubgraphHandler()
+    resolved_omen_bets = omen_subgraph_handler.get_resolved_bets(
         better_address=keys.bet_from_address,
+        start_time=datetime(2020, 1, 1),
     )
+
     bets_per_market_id: t.Dict[HexAddress, t.List[OmenBet]] = defaultdict(list)
     market_id_to_market: t.Dict[HexAddress, OmenMarket] = {}
 

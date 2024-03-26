@@ -103,6 +103,10 @@ def get_current_git_commit_sha() -> str:
     return git.Repo(search_parent_directories=True).head.commit.hexsha
 
 
+def to_int_timestamp(dt: datetime) -> int:
+    return int(dt.timestamp())
+
+
 def get_current_git_branch() -> str:
     return git.Repo(search_parent_directories=True).active_branch.name
 

@@ -114,7 +114,7 @@ class OmenSubgraphHandler:
         opened_before: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
     ) -> dict[str, t.Any]:
-        where_stms = {
+        where_stms: dict[str, t.Any] = {
             "isPendingArbitration": False,
             "outcomes": outcomes,
             "title_not": None,

@@ -599,11 +599,9 @@ def redeem_positions_from_all_omen_markets() -> None:
     """
     keys = APIKeys()
     omen_subgraph_handler = OmenSubgraphHandler()
-    bets = omen_subgraph_handler.get_bets(
+    bets = omen_subgraph_handler.get_resolved_bets(
         better_address=keys.bet_from_address,
         start_time=datetime(2020, 1, 1),
-        end_time=None,
-        filter_by_answer_finalized_not_null=True,
     )
     resolved_omen_bets = [b for b in bets if b.fpmm.is_resolved]
 

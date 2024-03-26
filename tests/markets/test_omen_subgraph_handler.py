@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime
 
 from eth_typing import HexAddress, HexStr
@@ -18,6 +19,30 @@ def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:
         market.title
         == "Will Bethesda's 'Indiana Jones and the Great Circle' be released by January 25, 2024?"
     ), "Omen market question doesn't match the expected value."
+
+
+def test_markets_with_outcome_null(omen_subgraph_handler: OmenSubgraphHandler) -> None:
+    markets = omen_subgraph_handler.get_omen_markets(
+        limit=sys.maxsize, filter_by=FilterBy.NONE, sort_by=SortBy.NONE
+    )
+    for market in markets:
+        assert isinstance(market.outcomes, list)
+
+
+def test_markets_with_creation_timestamp_between(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    creator = "0x95aa7cc38f8ff36efecf2fefa6f4850320dd32f7"
+    expected_trade_id = "0x004469fa6abc620479ca3006199c00f74bd388ef0x95aa7cc38f8ff36efecf2fefa6f4850320dd32f70x29"
+    bets = omen_subgraph_handler.get_bets(
+        better_address=Web3.to_checksum_address(creator),
+        filter_by_answer_finalized_not_null=False,
+        start_time=datetime.fromtimestamp(1625073159),
+        end_time=datetime.fromtimestamp(1625073162),
+    )
+    assert len(bets) == 1
+    bet = bets[0]
+    assert bet.id == expected_trade_id
 
 
 def test_resolved_omen_bets(

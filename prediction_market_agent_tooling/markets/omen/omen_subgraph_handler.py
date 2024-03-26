@@ -34,7 +34,7 @@ class OmenSubgraphHandler:
     )
 
     # We define here as str for easier filtering.
-    INVALID_ANSWER_STR = HexBytes(
+    INVALID_ANSWER = HexBytes(
         "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
     )
 
@@ -47,7 +47,7 @@ class OmenSubgraphHandler:
         )
         self.realityeth_subgraph = self.sg.load_subgraph(self.REALITYETH_GRAPH_URL)
 
-    def _get_fields_for_bets(self, bets_field: t.Any) -> list[FieldPath]:
+    def _get_fields_for_bets(self, bets_field: FieldPath) -> list[FieldPath]:
         markets = bets_field.fpmm
         fields_for_markets = self._get_fields_for_markets(markets)
 
@@ -69,7 +69,7 @@ class OmenSubgraphHandler:
         ]
         return fields_for_bets + fields_for_markets
 
-    def _get_fields_for_answers(self, answers_field: t.Any) -> list[FieldPath]:
+    def _get_fields_for_answers(self, answers_field: FieldPath) -> list[FieldPath]:
         return [
             answers_field.answer,
             answers_field.question.historyHash,
@@ -82,7 +82,7 @@ class OmenSubgraphHandler:
             answers_field.timestamp,
         ]
 
-    def _get_fields_for_markets(self, markets_field: t.Any) -> list[FieldPath]:
+    def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
         # In theory it's possible to store the subgraph schema locally (see https://github.com/0xPlaygrounds/subgrounds/issues/41).
         # Since it's still not working, we hardcode the schema to be fetched below.
         return [
@@ -123,6 +123,7 @@ class OmenSubgraphHandler:
             fpmm.isPendingArbitration == False,
             fpmm.outcomes == outcomes,
             fpmm.title != None,
+            fpmm.outcomes != None,  # we always want non-null outcomes
         ]
 
         if creator:
@@ -212,13 +213,15 @@ class OmenSubgraphHandler:
 
         return omen_markets[0]
 
-    def _parse_items_from_json(self, result: t.Any) -> t.List[t.Any]:
+    def _parse_items_from_json(
+        self, result: list[dict[str, t.Any]]
+    ) -> list[dict[str, t.Any]]:
         """subgrounds return a weird key as a dict key"""
         items = []
         for result_chunk in result:
             for k, v in result_chunk.items():
                 # subgrounds might pack all items as a list, indexed by a key, or pack it as a dictionary (if one single element)
-                if type(v) is dict:
+                if isinstance(v, dict):
                     items.extend([v])
                 else:
                     items.extend(v)

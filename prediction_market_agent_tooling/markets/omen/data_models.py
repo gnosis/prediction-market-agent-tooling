@@ -3,8 +3,6 @@ from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
-from pydantic.functional_validators import BeforeValidator
-from typing_extensions import Annotated
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -68,17 +66,6 @@ class OmenUserPosition(BaseModel):
     position: OmenPosition
 
 
-def convert_none_to_empty_list(v: None | list[str]) -> list[str]:
-    if v is None:
-        return []
-    return v
-
-
-Possibly_Empty_List_of_Strings = Annotated[
-    list[str], BeforeValidator(convert_none_to_empty_list)
-]
-
-
 class OmenMarket(BaseModel):
     """
     https://aiomen.eth.limo
@@ -92,7 +79,7 @@ class OmenMarket(BaseModel):
     collateralVolume: Wei
     usdVolume: USD
     collateralToken: HexAddress
-    outcomes: Possibly_Empty_List_of_Strings
+    outcomes: list[str]
     outcomeTokenAmounts: list[OmenOutcomeToken]
     outcomeTokenMarginalPrices: t.Optional[list[xDai]]
     fee: t.Optional[Wei]

@@ -151,6 +151,8 @@ class OmenSubgraphHandler:
                 sort_direction = "desc"
             case SortBy.CLOSING_SOONEST:
                 sort_direction = "asc"
+            case SortBy.NONE:
+                sort_direction = "desc"
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
 

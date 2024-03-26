@@ -146,12 +146,13 @@ class OmenSubgraphHandler:
         return where_stms
 
     def _build_sort_direction(self, sort_by: SortBy) -> str:
-        sort_direction = "asc"
         match sort_by:
             case SortBy.NEWEST:
                 sort_direction = "desc"
+            case SortBy.CLOSING_SOONEST:
+                sort_direction = "asc"
             case _:
-                pass
+                raise ValueError(f"Unknown sort_by: {sort_by}")
 
         return sort_direction
 

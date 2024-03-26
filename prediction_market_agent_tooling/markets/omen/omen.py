@@ -603,7 +603,6 @@ def redeem_positions_from_all_omen_markets() -> None:
         better_address=keys.bet_from_address,
         start_time=datetime(2020, 1, 1),
     )
-    resolved_omen_bets = [b for b in resolved_omen_bets if b.fpmm.is_resolved]
 
     bets_per_market_id: t.Dict[HexAddress, t.List[OmenBet]] = defaultdict(list)
     market_id_to_market: t.Dict[HexAddress, OmenMarket] = {}

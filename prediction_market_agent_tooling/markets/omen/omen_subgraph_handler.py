@@ -129,11 +129,12 @@ class OmenSubgraphHandler:
         if opened_before:
             where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_before)
 
+        where_stms["question_"] = {}
         if filter_by == FilterBy.RESOLVED:
             where_stms["answerFinalizedTimestamp_not"] = None
             where_stms["currentAnswer_not"] = None
             # We cannot add the same type of filter twice, it gets overwritten, hence we use nested filter.
-            where_stms["question_"] = {"currentAnswer_not": self.INVALID_ANSWER}
+            where_stms["question_"]["currentAnswer_not"] = self.INVALID_ANSWER
         elif filter_by == FilterBy.OPEN:
             where_stms["currentAnswer"] = None
 
@@ -141,7 +142,7 @@ class OmenSubgraphHandler:
         if excluded_questions is not None:
             excluded_question_titles = [i for i in excluded_questions]
 
-        where_stms["question_"] = {"title_not_in": excluded_question_titles}
+        where_stms["question_"]["title_not_in"] = excluded_question_titles
         return where_stms
 
     def _build_sort_direction(self, sort_by: SortBy) -> str:

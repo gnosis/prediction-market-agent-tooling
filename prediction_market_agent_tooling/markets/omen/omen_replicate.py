@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from loguru import logger
+
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
@@ -63,10 +65,10 @@ def omen_replicate_from_tx(
         or (m.close_time is not None and m.close_time <= close_time_before)
     ]
     if not markets_to_replicate:
-        print(f"No markets found for {market_type}")
+        logger.info(f"No markets found for {market_type}")
         return []
 
-    print(f"Found {len(markets_to_replicate)} markets to replicate.")
+    logger.info(f"Found {len(markets_to_replicate)} markets to replicate.")
 
     # Get a set of possible categories from existing markets (but created by anyone, not just your agent)
     existing_categories = set(
@@ -82,7 +84,7 @@ def omen_replicate_from_tx(
 
     for market in markets_to_replicate:
         if market.close_time is None:
-            print(
+            logger.info(
                 f"Skipping `{market.question}` because it's missing the closing time."
             )
             continue
@@ -93,14 +95,14 @@ def omen_replicate_from_tx(
         # Force at least 48 hours of time where the resolution is unknown.
         soonest_allowed_resolution_known_time = utcnow() + timedelta(hours=48)
         if market.close_time <= soonest_allowed_resolution_known_time:
-            print(
+            logger.info(
                 f"Skipping `{market.question}` because it closes sooner than {soonest_allowed_resolution_known_time}."
             )
             continue
 
         # Do as the last step, becuase it calls OpenAI (costly & slow).
         if not is_predictable(market.question):
-            print(
+            logger.info(
                 f"Skipping `{market.question}` because it seems to not be predictable."
             )
             continue
@@ -108,7 +110,7 @@ def omen_replicate_from_tx(
         category = infer_category(market.question, existing_categories)
         # Realitio will allow new categories or misformated categories, so double check that the LLM got it right.
         if category not in existing_categories:
-            print(
+            logger.info(
                 f"Error: LLM went rouge. Skipping `{market.question}` because the category `{category}` is not in the existing categories {existing_categories}."
             )
             continue
@@ -125,12 +127,14 @@ def omen_replicate_from_tx(
             auto_deposit=auto_deposit,
         )
         created_addresses.append(market_address)
-        print(
+        logger.info(
             f"Created `https://aiomen.eth.limo/#/{market_address}` for `{market.question}` in category {category} out of {market.url}."
         )
 
         if len(created_addresses) >= n_to_replicate:
-            print(f"Replicated {len(created_addresses)} from {market_type}, breaking.")
+            logger.info(
+                f"Replicated {len(created_addresses)} from {market_type}, breaking."
+            )
             break
 
     return created_addresses

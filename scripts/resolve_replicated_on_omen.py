@@ -1,4 +1,5 @@
 import typer
+from loguru import logger
 
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import (
@@ -19,7 +20,7 @@ def main(
     resolved_addresses = omen_resolve_all_markets_based_on_others_tx(
         from_private_key=private_key_type(from_private_key),
     )
-    print(f"Resolved markets: {resolved_addresses}")
+    logger.info(f"Resolved markets: {resolved_addresses}")
 
 
 if __name__ == "__main__":

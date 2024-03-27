@@ -84,7 +84,11 @@ def finalize_markets(
     for market in markets:
         print(f"Looking into {market.url=} {market.question_title=}")
         resolution = find_resolution_on_other_markets(market)
-        if resolution is not None:
+
+        if resolution is None:
+            print(f"Error: No resolution found for {market.url=}")
+
+        elif resolution in (Resolution.YES, Resolution.NO):
             print(f"Found resolution {resolution.value=} for {market.url=}")
             omen_submit_answer_market_tx(
                 market, resolution, OMEN_DEFAULT_REALITIO_BOND_VALUE, from_private_key
@@ -93,7 +97,7 @@ def finalize_markets(
             print(f"Resolved {market.url=}")
 
         else:
-            print(f"Error: No resolution found for {market.url=}")
+            print(f"Error: Invalid resolution found, {resolution=}, for {market.url=}")
 
     return finalized_markets
 

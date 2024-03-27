@@ -166,11 +166,11 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
                 continue
 
             case MarketType.MANIFOLD:
-                print(f"Looing on Manifold for {market.question_title=}")
+                print(f"Looking on Manifold for {market.question_title=}")
                 resolution = find_resolution_on_manifold(market.question_title)
 
             case MarketType.POLYMARKET:
-                print(f"Looing on Polymarket for {market.question_title=}")
+                print(f"Looking on Polymarket for {market.question_title=}")
                 resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:

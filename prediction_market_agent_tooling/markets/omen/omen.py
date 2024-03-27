@@ -463,11 +463,10 @@ def omen_create_market_tx(
 
 def omen_fund_market_tx(
     market: OmenAgentMarket,
-    funds: xDai,
+    funds: Wei,
     from_private_key: PrivateKey,
     auto_deposit: bool,
 ) -> None:
-    funds_wei = xdai_to_wei(funds)
     from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
     collateral_token_contract = OmenCollateralTokenContract()
@@ -479,17 +478,17 @@ def omen_fund_market_tx(
         and collateral_token_contract.balanceOf(
             for_address=from_address,
         )
-        < funds_wei
+        < funds
     ):
-        collateral_token_contract.deposit(funds_wei, from_private_key)
+        collateral_token_contract.deposit(funds, from_private_key)
 
     collateral_token_contract.approve(
         for_address=market_contract.address,
-        amount_wei=funds_wei,
+        amount_wei=funds,
         from_private_key=from_private_key,
     )
 
-    market_contract.addFunding(funds_wei, from_private_key)
+    market_contract.addFunding(funds, from_private_key)
 
 
 def build_parent_collection_id() -> HexStr:
@@ -581,17 +580,44 @@ def get_conditional_tokens_balance_for_market(
 
 def omen_remove_fund_market_tx(
     market: OmenAgentMarket,
-    shares: OmenOutcomeToken,
+    shares: Wei | None,
     from_private_key: PrivateKey,
-    auto_withdraw: bool,
+    web3: Web3 | None = None,
 ) -> None:
+    """
+    Removes funding from a given OmenMarket (moving the funds from the OmenMarket to the
+    ConditionalTokens contract), and finally calls the `mergePositions` method which transfers collateralToken from the ConditionalTokens contract to the address corresponding to `from_private_key`.
+    """
+    from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
-    market_contract.removeFunding(shares, from_private_key)
 
-    # TODO: How to withdraw remove funding back to our wallet.
-    # Then also add to the test in tests_integration/markets/omen/test_omen.py.
-    if auto_withdraw:
-        raise NotImplementedError("TODO")
+    total_shares = market_contract.balanceOf(from_address, web3=web3)
+    if total_shares == 0:
+        logger.info("No shares to remove. Exiting.")
+        return
+
+    if not shares or shares > total_shares:
+        logger.debug(
+            f"shares available to claim {total_shares} - defaulting to a total removal."
+        )
+        shares = total_shares
+
+    market_contract.removeFunding(
+        remove_funding=shares, from_private_key=from_private_key, web3=web3
+    )
+
+    conditional_tokens = OmenConditionalTokenContract()
+    parent_collection_id = build_parent_collection_id()
+    result = conditional_tokens.mergePositions(
+        from_private_key=from_private_key,
+        collateral_token_address=market.collateral_token_contract_address_checksummed,
+        parent_collection_id=parent_collection_id,
+        conditionId=market.condition.id,
+        index_sets=market.condition.index_sets,
+        amount=shares,
+        web3=web3,
+    )
+    logger.debug(f"Result from merge positions {result}")
 
 
 def redeem_positions_from_all_omen_markets() -> None:

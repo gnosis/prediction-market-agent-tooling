@@ -81,8 +81,10 @@ def finalize_markets(
 ) -> list[HexAddress]:
     finalized_markets: list[HexAddress] = []
 
-    for market in markets:
-        print(f"Looking into {market.url=} {market.question_title=}")
+    for idx, market in enumerate(markets):
+        print(
+            f"[{idx+1} / {len(markets)}] Looking into {market.url=} {market.question_title=}"
+        )
         resolution = find_resolution_on_other_markets(market)
 
         if resolution is None:
@@ -103,12 +105,14 @@ def finalize_markets(
 
 
 def resolve_markets(
-    markest: list[OmenMarket], from_private_key: PrivateKey
+    markets: list[OmenMarket], from_private_key: PrivateKey
 ) -> list[HexAddress]:
     resolved_markets: list[HexAddress] = []
 
-    for market in markest:
-        print(f"Resolving {market.url=} {market.question_title=}")
+    for idx, market in enumerate(markets):
+        print(
+            f"[{idx+1} / {len(markets)}] Resolving {market.url=} {market.question_title=}"
+        )
         omen_resolve_market_tx(market, from_private_key)
         resolved_markets.append(market.id)
 

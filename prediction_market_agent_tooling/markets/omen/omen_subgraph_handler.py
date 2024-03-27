@@ -84,6 +84,7 @@ class OmenSubgraphHandler:
         return [
             markets_field.id,
             markets_field.title,
+            markets_field.creator,
             markets_field.collateralVolume,
             markets_field.usdVolume,
             markets_field.collateralToken,

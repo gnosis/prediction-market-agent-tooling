@@ -12,7 +12,6 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexStr,
-    OmenOutcomeToken,
     PrivateKey,
     Wei,
     wei_type,
@@ -65,6 +64,7 @@ class OmenAgentMarket(AgentMarket):
 
     currency: t.ClassVar[Currency] = Currency.xDai
     base_url: t.ClassVar[str] = OMEN_BASE_URL
+    creator: HexAddress
 
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
@@ -150,6 +150,7 @@ class OmenAgentMarket(AgentMarket):
         return OmenAgentMarket(
             id=model.id,
             question=model.title,
+            creator=model.creator,
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,

@@ -61,7 +61,7 @@ def omen_finalize_and_resolve_all_markets_based_on_others_tx(
         creator=public_key,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.NONE,
-        finalized_before=before,
+        finalized_before=before - timedelta(hours=24),
         resolved=False,
     )
     # Resolve them (resolve them on Oracle).

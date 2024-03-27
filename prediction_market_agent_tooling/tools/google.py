@@ -8,7 +8,9 @@ from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cach
 
 
 @tenacity.retry(
-    stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1), reraise=True
+    wait=tenacity.wait_fixed(1),
+    stop=tenacity.stop_after_attempt(3),
+    after=lambda x: print(f"search_google failed, {x.attempt_number=}."),
 )
 @persistent_inmemory_cache
 def search_google(

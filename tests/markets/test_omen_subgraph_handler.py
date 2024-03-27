@@ -8,7 +8,7 @@ from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortB
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.hexbytes import HexBytes
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
 def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:

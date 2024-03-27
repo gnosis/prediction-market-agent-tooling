@@ -1,6 +1,6 @@
 import pytest
 
-from prediction_market_agent_tooling.tools.is_predictable import is_predictable
+from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -32,9 +32,13 @@ from tests.utils import RUN_PAID_TESTS
         ),
         ("Will this market have an odd number of traders by the end of 2024?", False),
         ("Did COVID-19 come from a laboratory?", False),
+        (
+            "What percentile did the median superforecaster get in the 2023 ACX prediction contest?",
+            False,
+        ),
     ],
 )
-def test_evaluate_question(question: str, answerable: bool) -> None:
+def test_is_predictable_binary(question: str, answerable: bool) -> None:
     assert (
-        is_predictable(question=question) == answerable
-    ), f"Question is not evaluated correctly, see the completion: {is_predictable}"
+        is_predictable_binary(question=question) == answerable
+    ), f"Question is not evaluated correctly, see the completion: {is_predictable_binary}"

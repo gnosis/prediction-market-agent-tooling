@@ -16,7 +16,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     get_omen_binary_markets,
     omen_create_market_tx,
 )
-from prediction_market_agent_tooling.tools.is_predictable import is_predictable
+from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
@@ -99,7 +99,7 @@ def omen_replicate_from_tx(
             continue
 
         # Do as the last step, becuase it calls OpenAI (costly & slow).
-        if not is_predictable(market.question):
+        if not is_predictable_binary(market.question):
             print(
                 f"Skipping `{market.question}` because it seems to not be predictable."
             )

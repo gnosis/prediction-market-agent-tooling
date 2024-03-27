@@ -21,6 +21,8 @@ def main(
     github_repo_url: str = "https://github.com/gnosis/prediction-market-agent-tooling",
     from_private_key_secret_name: str = typer.Option(),
     openai_api_key_secret_name: str = typer.Option(),
+    google_search_api_key_name: str = typer.Option(),
+    google_search_engine_id_name: str = typer.Option(),
     env_vars: str | None = None,
     secrets: str | None = None,
 ) -> None:
@@ -31,6 +33,8 @@ def main(
         # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
         BET_FROM_PRIVATE_KEY=private_key_type(f"{from_private_key_secret_name}:latest"),
         OPENAI_API_KEY=SecretStr(f"{openai_api_key_secret_name}:latest"),
+        GOOGLE_SEARCH_API_KEY=SecretStr(f"{google_search_api_key_name}:latest"),
+        GOOGLE_SEARCH_ENGINE_ID=SecretStr(f"{google_search_engine_id_name}:latest"),
         # Not needed for replication, won't be saved in the deployment.
         MANIFOLD_API_KEY=None,
     )

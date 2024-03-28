@@ -7,7 +7,11 @@ from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import
     omen_finalize_and_resolve_all_markets_based_on_others_tx,
 )
 
+# Use without the pretty exceptions, because they make the error stack unusable here.
+app = typer.Typer(pretty_exceptions_show_locals=False)
 
+
+@app.command()
 def main(
     from_private_key: str = typer.Option(),
 ) -> None:
@@ -25,4 +29,4 @@ def main(
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()

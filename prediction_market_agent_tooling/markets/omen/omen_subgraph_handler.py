@@ -128,6 +128,7 @@ class OmenSubgraphHandler:
             "isPendingArbitration": False,
             "outcomes": outcomes,
             "title_not": None,
+            "question_": {},
         }
 
         if creator:
@@ -139,6 +140,19 @@ class OmenSubgraphHandler:
         if opened_before:
             where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
 
+        if filter_by == FilterBy.RESOLVED:
+            finalized = True
+            resolved = True
+        elif filter_by == FilterBy.OPEN:
+            finalized = False
+            resolved = False
+
+        if resolved is not None:
+            if resolved:
+                where_stms["resolutionTimestamp_not"] = None
+            else:
+                where_stms["resolutionTimestamp"] = None
+
         if finalized is not None:
             if finalized:
                 where_stms["answerFinalizedTimestamp_not"] = None
@@ -149,21 +163,6 @@ class OmenSubgraphHandler:
             where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
                 finalized_before
             )
-
-        if resolved is not None:
-            if resolved:
-                where_stms["resolutionTimestamp_not"] = None
-            else:
-                where_stms["resolutionTimestamp"] = None
-
-        where_stms["question_"] = {}
-        if filter_by == FilterBy.RESOLVED:
-            where_stms["answerFinalizedTimestamp_not"] = None
-            where_stms["currentAnswer_not"] = None
-            # We cannot add the same type of filter twice, it gets overwritten, hence we use nested filter.
-            where_stms["question_"]["currentAnswer_not"] = self.INVALID_ANSWER
-        elif filter_by == FilterBy.OPEN:
-            where_stms["currentAnswer"] = None
 
         excluded_question_titles = [""]
         if excluded_questions is not None:

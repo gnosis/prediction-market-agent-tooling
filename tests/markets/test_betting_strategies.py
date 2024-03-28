@@ -38,7 +38,6 @@ from prediction_market_agent_tooling.tools.betting_strategies.market_moving impo
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 
-
 GANACHE_ADDRESS_NR_1 = HexAddress(
     Web3.to_checksum_address("0x9B7bc47837d4061a11389267C06D829c5C97E404")
 )

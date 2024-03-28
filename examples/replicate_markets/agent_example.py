@@ -34,7 +34,9 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         keys = APIKeys()
         settings = ReplicateSettings()
 
-        print(f"Resolving existing markets replicated by {keys.bet_from_address}")
+        print(
+            f"Finalising, resolving anc claiming back xDai from existing markets replicated by {keys.bet_from_address}"
+        )
         omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
             from_private_key=keys.bet_from_private_key
         )

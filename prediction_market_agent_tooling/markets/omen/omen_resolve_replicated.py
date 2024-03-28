@@ -1,7 +1,7 @@
 from datetime import timedelta
-from pydantic import BaseModel
 
 from loguru import logger
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import HexAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy

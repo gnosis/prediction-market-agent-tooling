@@ -3,6 +3,7 @@ from datetime import timedelta
 import numpy as np
 import pytest
 from eth_typing import HexAddress, HexStr
+from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type
@@ -85,7 +86,7 @@ def test_omen_create_market() -> None:
 def test_omen_fund_and_remove_fund_market() -> None:
     # You can double check your address at https://gnosisscan.io/ afterwards or at the market's address.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
-    print(
+    logger.debug(
         "Fund and remove funding market test address:",
         market.market_maker_contract_address_checksummed,
     )

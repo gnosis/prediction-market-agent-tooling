@@ -1,6 +1,7 @@
 from datetime import timedelta
-
 from pydantic import BaseModel
+
+from loguru import logger
 
 from prediction_market_agent_tooling.gtypes import HexAddress, PrivateKey, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -82,24 +83,24 @@ def finalize_markets(
     finalized_markets: list[HexAddress] = []
 
     for idx, market in enumerate(markets):
-        print(
+        logger.info(
             f"[{idx+1} / {len(markets)}] Looking into {market.url=} {market.question_title=}"
         )
         resolution = find_resolution_on_other_markets(market)
 
         if resolution is None:
-            print(f"Error: No resolution found for {market.url=}")
+            logger.error(f"No resolution found for {market.url=}")
 
         elif resolution in (Resolution.YES, Resolution.NO):
-            print(f"Found resolution {resolution.value=} for {market.url=}")
+            logger.info(f"Found resolution {resolution.value=} for {market.url=}")
             omen_submit_answer_market_tx(
                 market, resolution, OMEN_DEFAULT_REALITIO_BOND_VALUE, from_private_key
             )
             finalized_markets.append(market.id)
-            print(f"Resolved {market.url=}")
+            logger.info(f"Resolved {market.url=}")
 
         else:
-            print(f"Error: Invalid resolution found, {resolution=}, for {market.url=}")
+            logger.error(f"Invalid resolution found, {resolution=}, for {market.url=}")
 
     return finalized_markets
 
@@ -166,11 +167,11 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
                 continue
 
             case MarketType.MANIFOLD:
-                print(f"Looking on Manifold for {market.question_title=}")
+                logger.info(f"Looking on Manifold for {market.question_title=}")
                 resolution = find_resolution_on_manifold(market.question_title)
 
             case MarketType.POLYMARKET:
-                print(f"Looking on Polymarket for {market.question_title=}")
+                logger.info(f"Looking on Polymarket for {market.question_title=}")
                 resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:

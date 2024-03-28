@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pytest
+from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -23,4 +24,4 @@ def test_ask_question() -> None:
         opening=utcnow() + timedelta(minutes=2),
         from_private_key=APIKeys().bet_from_private_key,
     )
-    print(question_id)
+    logger.info(question_id)

@@ -1,4 +1,5 @@
 import typer
+from loguru import logger
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     remove_deployed_gcp_function,
@@ -7,7 +8,7 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
 
 def main(names: list[str]) -> None:
     for name in names:
-        print(f"Removing {name}.")
+        logger.info(f"Removing {name}.")
         remove_deployed_gcp_function(name)
 
 

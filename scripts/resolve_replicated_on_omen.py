@@ -1,6 +1,7 @@
 from pprint import pprint
 
 import typer
+from loguru import logger
 
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import (

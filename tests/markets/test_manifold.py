@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 import pytz
+from loguru import logger
 
 from prediction_market_agent_tooling.gtypes import mana_type
 from prediction_market_agent_tooling.markets.manifold.api import (
@@ -23,7 +24,7 @@ def a_user_id() -> str:
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_manifold() -> None:
     market = get_one_manifold_binary_market()
-    print("Placing bet on market:", market.question)
+    logger.info("Placing bet on market:", market.question)
     place_bet(mana_type(1), market.id, True)
 
 

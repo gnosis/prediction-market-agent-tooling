@@ -10,6 +10,7 @@ import typing as t
 from datetime import datetime
 
 import requests
+from loguru import logger
 from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import USDC, HexAddress
@@ -314,7 +315,7 @@ class PolymarketFullMarket(BaseModel):
         )
 
         if market is None:
-            print(f"Warning: No polymarket found for {url}")
+            logger.warning(f"Warning: No polymarket found for {url}")
 
         return market
 

@@ -93,8 +93,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
     balances_after_resolution = get_balances(public_key)
     print(f"{balances_after_resolution=}")
 
-    # Fetch answers that are already resolved, but we didn't claim the bonded xDai yet.
-    # And deduplicate them into a list of unique questions.
+    # Fetch questions that are already finalised (last answer is older than 24 hours), but we didn't claim the bonded xDai yet.
     created_not_claimed_questions: list[
         RealityQuestion
     ] = OmenSubgraphHandler().get_questions(

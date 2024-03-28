@@ -154,6 +154,7 @@ class OmenSubgraphHandler:
 
         where_stms["question_"] = {}
         if filter_by == FilterBy.RESOLVED:
+            where_stms["resolutionTimestamp_not"] = None
             where_stms["answerFinalizedTimestamp_not"] = None
             where_stms["currentAnswer_not"] = None
             # We cannot add the same type of filter twice, it gets overwritten, hence we use nested filter.

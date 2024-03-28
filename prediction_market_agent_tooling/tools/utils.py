@@ -72,13 +72,11 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
-    ...
+def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone: ...
 
 
 @t.overload
-def add_utc_timezone_validator(value: None) -> None:
-    ...
+def add_utc_timezone_validator(value: None) -> None: ...
 
 
 def add_utc_timezone_validator(value: datetime | None) -> DatetimeWithTimezone | None:
@@ -147,13 +145,3 @@ def response_list_to_model(
 def secret_str_from_env(key: str) -> SecretStr | None:
     value = os.getenv(key)
     return SecretStr(value) if value else None
-
-
-def deduplicate_by(items: list[T], key: t.Callable[[T], t.Hashable]) -> list[T]:
-    """
-    Deduplicate a list of items by a key.
-    """
-    seen = {}
-    for item in items:
-        seen[key(item)] = item
-    return list(seen.values())

@@ -36,7 +36,7 @@ from prediction_market_agent_tooling.markets.polymarket.utils import (
     find_resolution_on_polymarket,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
-from prediction_market_agent_tooling.tools.utils import deduplicate_by, utcnow
+from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     private_key_to_public_key,
@@ -94,17 +94,15 @@ def omen_finalize_and_resolve_all_markets_based_on_others_tx(
 
     # Fetch answers that are already resolved, but we didn't claim the bonded xDai yet.
     # And deduplicate them into a list of unique questions.
-    created_resolved_not_claimed_questions: list[RealityQuestion] = deduplicate_by(
-        [
-            a.question
-            for a in OmenSubgraphHandler().get_answers(
-                user=public_key, claimed=False, current_answer_before=before
-            )
-        ],
-        lambda x: x.questionId,
+    created_not_claimed_questions: list[
+        RealityQuestion
+    ] = OmenSubgraphHandler().get_questions(
+        user=public_key,
+        claimed=False,
+        current_answer_before=before - timedelta(hours=24),
     )
     claimed_question_ids = claim_bonds_on_realitio_quetions(
-        created_resolved_not_claimed_questions, from_private_key, auto_withdraw=True
+        created_not_claimed_questions, from_private_key, auto_withdraw=True
     )
     balances_after_claiming = get_balances(public_key)
     print(f"{balances_after_claiming=}")

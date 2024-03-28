@@ -147,3 +147,15 @@ def response_list_to_model(
 def secret_str_from_env(key: str) -> SecretStr | None:
     value = os.getenv(key)
     return SecretStr(value) if value else None
+
+
+def deduplicate_by(items: list[T], key: t.Callable[[T], t.Hashable]) -> list[T]:
+    """
+    Deduplicate a list of items by a key.
+
+    If `keep_last` is True, the last item will be kept.
+    """
+    seen = {}
+    for item in items:
+        seen[key(item)] = item
+    return list(seen.values())

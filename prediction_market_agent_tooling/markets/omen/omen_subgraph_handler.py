@@ -3,10 +3,9 @@ import typing as t
 from datetime import datetime
 
 from eth_typing import ChecksumAddress
-from hexbytes import HexBytes
 from subgrounds import FieldPath, Subgrounds
 
-from prediction_market_agent_tooling.gtypes import HexAddress
+from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -17,6 +16,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityAnswer,
 )
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
+from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
 class OmenSubgraphHandler:
@@ -67,15 +67,19 @@ class OmenSubgraphHandler:
 
     def _get_fields_for_answers(self, answers_field: FieldPath) -> list[FieldPath]:
         return [
+            answers_field.id,
             answers_field.answer,
             answers_field.question.historyHash,
             answers_field.question.id,
             answers_field.question.user,
             answers_field.question.updatedTimestamp,
             answers_field.question.questionId,
+            answers_field.question.contentHash,
+            answers_field.question.historyHash,
             answers_field.bondAggregate,
             answers_field.lastBond,
             answers_field.timestamp,
+            answers_field.createdBlock,
         ]
 
     def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
@@ -218,7 +222,7 @@ class OmenSubgraphHandler:
         )
 
         fields = self._get_fields_for_markets(markets)
-        result: t.Any = self.sg.query_json(fields)
+        result = self.sg.query_json(fields)
 
         items = self._parse_items_from_json(result)
         omen_markets = [OmenMarket.model_validate(i) for i in items]
@@ -227,7 +231,7 @@ class OmenSubgraphHandler:
     def get_omen_market(self, market_id: HexAddress) -> OmenMarket:
         markets = self.trades_subgraph.Query.fixedProductMarketMaker(id=market_id)
         fields = self._get_fields_for_markets(markets)
-        result: t.Any = self.sg.query_json(fields)
+        result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         omen_markets = [OmenMarket.model_validate(i) for i in items]
 
@@ -263,7 +267,7 @@ class OmenSubgraphHandler:
             ],
         )
 
-        result: t.Any = self.sg.query_json(
+        result = self.sg.query_json(
             [positions.id, positions.position.id, positions.position.conditionIds]
         )
         items = self._parse_items_from_json(result)
@@ -296,7 +300,7 @@ class OmenSubgraphHandler:
             first=sys.maxsize, where=where_stms
         )
         fields = self._get_fields_for_bets(trades)
-        result: t.Any = self.sg.query_json(fields)
+        result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [OmenBet.model_validate(i) for i in items]
 
@@ -316,15 +320,32 @@ class OmenSubgraphHandler:
         )
         return [b for b in omen_bets if b.fpmm.is_resolved]
 
-    def get_answers(self, question_id: HexBytes) -> list[RealityAnswer]:
+    def get_answers(
+        self,
+        question_id: HexBytes | None = None,
+        user: HexAddress | None = None,
+        claimed: bool | None = None,
+    ) -> list[RealityAnswer]:
         answer = self.realityeth_subgraph.Answer
-        # subgrounds complains if bytes is passed, hence we convert it to HexStr
-        where_stms = [
-            answer.question.questionId == question_id.hex(),
-        ]
+        where_stms: list[FieldPath] = []
+
+        if question_id is not None:
+            # subgrounds complains if bytes is passed, hence we convert it to HexStr
+            where_stms.append(
+                answer.question.questionId == question_id.hex(),
+            )
+
+        if user is not None:
+            where_stms.append(answer.question.user == user.lower())
+
+        if claimed is not None:
+            if claimed:
+                where_stms.append(answer.question.historyHash == ZERO_BYTES.hex())
+            else:
+                where_stms.append(answer.question.historyHash != ZERO_BYTES.hex())
 
         answers = self.realityeth_subgraph.Query.answers(where=where_stms)
         fields = self._get_fields_for_answers(answers)
-        result: t.Any = self.sg.query_json(fields)
+        result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]

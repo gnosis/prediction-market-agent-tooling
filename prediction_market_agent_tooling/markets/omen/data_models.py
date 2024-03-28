@@ -321,6 +321,10 @@ class RealityQuestion(BaseModel):
     contentHash: HexBytes
     questionId: HexBytes
 
+    @property
+    def url(self) -> str:
+        return f"https://reality.eth.limo/app/#!/question/{self.id}"
+
 
 class RealityAnswer(BaseModel):
     id: str

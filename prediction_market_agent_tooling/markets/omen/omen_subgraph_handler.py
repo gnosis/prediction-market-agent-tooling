@@ -324,6 +324,7 @@ class OmenSubgraphHandler:
         question_id: HexBytes | None = None,
         user: HexAddress | None = None,
         claimed: bool | None = None,
+        current_answer_before: datetime | None = None,
     ) -> list[RealityAnswer]:
         answer = self.realityeth_subgraph.Answer
         where_stms: list[FieldPath] = []
@@ -342,6 +343,12 @@ class OmenSubgraphHandler:
                 where_stms.append(answer.question.historyHash == ZERO_BYTES.hex())
             else:
                 where_stms.append(answer.question.historyHash != ZERO_BYTES.hex())
+
+        if current_answer_before is not None:
+            where_stms.append(
+                answer.question.currentAnswerTimestamp_lt
+                < to_int_timestamp(current_answer_before)
+            )
 
         answers = self.realityeth_subgraph.Query.answers(where=where_stms)
         fields = self._get_fields_for_answers(answers)

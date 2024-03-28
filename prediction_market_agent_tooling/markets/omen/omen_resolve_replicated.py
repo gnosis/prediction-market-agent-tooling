@@ -97,7 +97,9 @@ def omen_finalize_and_resolve_all_markets_based_on_others_tx(
     created_resolved_not_claimed_questions: list[RealityQuestion] = deduplicate_by(
         [
             a.question
-            for a in OmenSubgraphHandler().get_answers(user=public_key, claimed=False)
+            for a in OmenSubgraphHandler().get_answers(
+                user=public_key, claimed=False, current_answer_before=before
+            )
         ],
         lambda x: x.questionId,
     )
@@ -120,7 +122,9 @@ def claim_bonds_on_realitio_quetions(
     claimed_questions: list[HexBytes] = []
 
     for idx, question in enumerate(questions):
-        print(f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=}")
+        print(
+            f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=} {question.url=}"
+        )
         claim_bonds_on_realitio_question(
             question, from_private_key, auto_withdraw=auto_withdraw
         )

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import typer
+from loguru import logger
 
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -50,7 +51,7 @@ def main(
         outcomes=outcomes,
         auto_deposit=auto_deposit,
     )
-    print(f"Market created at address: {market_address}")
+    logger.info(f"Market created at address: {market_address}")
 
 
 if __name__ == "__main__":

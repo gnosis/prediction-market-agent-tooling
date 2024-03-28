@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 
+from loguru import logger
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
@@ -132,12 +133,12 @@ class OmenAgentMarket(AgentMarket):
 
         bet_was_correct = self.was_bet_outcome_correct(bets_on_market)
         if not bet_was_correct:
-            # print(f"Bet placed on market {self.id} was incorrect.")
+            logger.debug(f"Bet placed on market {self.id} was incorrect.")
             return None
 
         position_already_redeemed = self.check_if_position_was_already_redeemed()
         if position_already_redeemed:
-            print(f"Position on market {self.id} was already redeemed.")
+            logger.debug(f"Position on market {self.id} was already redeemed.")
             return None
 
         return omen_redeem_full_position_tx(
@@ -526,12 +527,12 @@ def omen_redeem_full_position_tx(
     parent_collection_id = build_parent_collection_id()
 
     if not market.is_resolved():
-        print("Cannot redeem winnings if market is not yet resolved. Exiting.")
+        logger.debug("Cannot redeem winnings if market is not yet resolved. Exiting.")
         return
 
     amount_wei = get_conditional_tokens_balance_for_market(market, from_address, web3)
     if amount_wei == 0:
-        print("No balance to claim. Exiting.")
+        logger.debug("No balance to claim. Exiting.")
         return
 
     # check if condition has already been resolved by oracle
@@ -541,7 +542,7 @@ def omen_redeem_full_position_tx(
     if not payout_for_condition > 0:
         # from ConditionalTokens.redeemPositions:
         # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
-        print("Market not yet resolved, not possible to claim")
+        logger.debug("Market not yet resolved, not possible to claim")
         return
 
     conditional_token_contract.redeemPositions(

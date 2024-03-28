@@ -50,7 +50,7 @@ class FinalizeAndResolveResult(BaseModel):
     claimed_question_ids: list[HexBytes]
 
 
-def omen_finalize_and_resolve_all_markets_based_on_others_tx(
+def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
     from_private_key: PrivateKey,
 ) -> FinalizeAndResolveResult:
     public_key = private_key_to_public_key(from_private_key)

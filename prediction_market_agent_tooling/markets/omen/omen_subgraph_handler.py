@@ -148,6 +148,7 @@ class OmenSubgraphHandler:
             finalized = True
             resolved = True
         elif filter_by == FilterBy.OPEN:
+            where_stms["currentAnswer"] = None
             finalized = False
             resolved = False
 

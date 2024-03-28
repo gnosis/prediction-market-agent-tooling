@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
+    omen_unfund_replicated_soon_to_be_known_markets_tx,
 )
 from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import (
     omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx,
@@ -35,9 +36,16 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         settings = ReplicateSettings()
 
         print(
-            f"Finalising, resolving anc claiming back xDai from existing markets replicated by {keys.bet_from_address}"
+            f"Finalising, resolving anc claiming back xDai from existing markets replicated by {keys.bet_from_address}."
         )
         omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
+            from_private_key=keys.bet_from_private_key
+        )
+
+        print(
+            f"Unfunding soon to be known markets replicated by {keys.bet_from_address}."
+        )
+        omen_unfund_replicated_soon_to_be_known_markets_tx(
             from_private_key=keys.bet_from_private_key
         )
 

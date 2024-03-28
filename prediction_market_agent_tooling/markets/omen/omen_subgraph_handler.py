@@ -123,6 +123,7 @@ class OmenSubgraphHandler:
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
+        opened_after: t.Optional[datetime] = None,
         finalized_before: t.Optional[datetime] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
@@ -144,12 +145,19 @@ class OmenSubgraphHandler:
         if opened_before:
             where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
 
+        if opened_after:
+            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
+
         if filter_by == FilterBy.RESOLVED:
             finalized = True
             resolved = True
         elif filter_by == FilterBy.OPEN:
             finalized = False
             resolved = False
+        elif filter_by == FilterBy.NONE:
+            pass
+        else:
+            raise ValueError(f"Unknown filter_by: {filter_by}")
 
         if resolved is not None:
             if resolved:
@@ -195,6 +203,7 @@ class OmenSubgraphHandler:
         filter_by: FilterBy,
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
+        opened_after: t.Optional[datetime] = None,
         finalized_before: t.Optional[datetime] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
@@ -208,6 +217,7 @@ class OmenSubgraphHandler:
             outcomes=outcomes,
             created_after=created_after,
             opened_before=opened_before,
+            opened_after=opened_after,
             finalized_before=finalized_before,
             finalized=finalized,
             resolved=resolved,

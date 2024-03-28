@@ -329,7 +329,6 @@ class OmenSubgraphHandler:
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
     ) -> list[RealityQuestion]:
-        question = self.realityeth_subgraph.Question
         where_stms: dict[str, t.Any] = {}
 
         if user is not None:

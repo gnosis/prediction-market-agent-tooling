@@ -6,7 +6,7 @@ from eth_typing import HexAddress, HexStr
 from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type
+from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
@@ -91,8 +91,8 @@ def test_omen_fund_and_remove_fund_market() -> None:
         market.market_maker_contract_address_checksummed,
     )
 
-    funds = xdai_type(0.1)
-    remove_fund = omen_outcome_type(xdai_to_wei(xdai_type(0.01)))
+    funds = xdai_to_wei(xdai_type(0.1))
+    remove_fund = xdai_to_wei(xdai_type(0.01))
     keys = APIKeys()
     with wait_until_nonce_changed(keys.bet_from_address):
         omen_fund_market_tx(
@@ -106,7 +106,6 @@ def test_omen_fund_and_remove_fund_market() -> None:
             market=market,
             shares=remove_fund,
             from_private_key=keys.bet_from_private_key,
-            auto_withdraw=False,  # Switch to true after implemented.
         )
 
 
@@ -139,3 +138,17 @@ def test_omen_redeem_positions() -> None:
         market=market,
         from_private_key=keys.bet_from_private_key,
     )
+
+
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+def create_market_fund_market_remove_funding() -> None:
+    """
+    ToDo - Once we have tests running in an isolated blockchain, write this test as follows:
+        - Create a new market
+        - Fund the market with amount
+        - Assert balanceOf(creator) == amount
+        - (Optionally) Close the market
+        - Remove funding
+        - Assert amount in xDAI is reflected in user's balance
+    """
+    assert True

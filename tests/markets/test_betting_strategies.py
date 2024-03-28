@@ -38,12 +38,17 @@ from prediction_market_agent_tooling.tools.betting_strategies.market_moving impo
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 
+GANACHE_ADDRESS_NR_1 = HexAddress(
+    Web3.to_checksum_address("0x9B7bc47837d4061a11389267C06D829c5C97E404")
+)
+
 
 @pytest.fixture
 def omen_market() -> OmenMarket:
     return OmenMarket(
         id=HexAddress(HexStr("0x76a7a3487f85390dc568f3fce01e0a649cb39651")),
         title="Will Plex launch a store for movies and TV shows by 26 January 2024?",
+        creator=GANACHE_ADDRESS_NR_1,
         collateralVolume=Wei(4369016776639073062),
         usdVolume=usd_type("4.369023756584789670441178585394842"),
         collateralToken=HexAddress(
@@ -82,6 +87,7 @@ def test_minimum_bet_to_win(
         OmenAgentMarket(
             id="id",
             question="question",
+            creator=GANACHE_ADDRESS_NR_1,
             outcomes=["Yes", "No"],
             p_yes=market_p_yes,
             collateral_token_contract_address_checksummed=OmenCollateralTokenContract().address,

@@ -594,10 +594,10 @@ def omen_remove_fund_market_tx(
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
-        logger.info("No shares to remove. Exiting.")
+        logger.info("No shares to remove.")
         return
 
-    if not shares or shares > total_shares:
+    if shares is None or shares > total_shares:
         logger.debug(
             f"shares available to claim {total_shares} - defaulting to a total removal."
         )

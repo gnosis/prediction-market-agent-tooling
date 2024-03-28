@@ -35,6 +35,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.markets.polymarket.utils import (
     find_resolution_on_polymarket,
 )
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import deduplicate_by, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
@@ -53,6 +54,8 @@ def omen_finalize_and_resolve_all_markets_based_on_others_tx(
     from_private_key: PrivateKey,
 ) -> FinalizeAndResolveResult:
     public_key = private_key_to_public_key(from_private_key)
+    balances_start = get_balances(public_key)
+    print(f"{balances_start=}")
 
     # Just to be friendly with timezones.
     before = utcnow() - timedelta(hours=8)
@@ -70,6 +73,8 @@ def omen_finalize_and_resolve_all_markets_based_on_others_tx(
     finalized_markets = finalize_markets(
         created_opened_markets, from_private_key=from_private_key
     )
+    balances_after_finalization = get_balances(public_key)
+    print(f"{balances_after_finalization=}")
 
     # Fetch markets created by us that are already open, and we already submitted an answer more than a day ago, but they aren't resolved yet.
     created_finalized_markets = get_omen_binary_markets(
@@ -84,6 +89,8 @@ def omen_finalize_and_resolve_all_markets_based_on_others_tx(
     resolved_markets = resolve_markets(
         created_finalized_markets, from_private_key=from_private_key
     )
+    balances_after_resolution = get_balances(public_key)
+    print(f"{balances_after_resolution=}")
 
     # Fetch answers that are already resolved, but we didn't claim the bonded xDai yet.
     # And deduplicate them into a list of unique questions.
@@ -94,10 +101,11 @@ def omen_finalize_and_resolve_all_markets_based_on_others_tx(
         ],
         lambda x: x.questionId,
     )
-
     claimed_question_ids = claim_bonds_on_realitio_quetions(
         created_resolved_not_claimed_questions, from_private_key, auto_withdraw=True
     )
+    balances_after_claiming = get_balances(public_key)
+    print(f"{balances_after_claiming=}")
 
     return FinalizeAndResolveResult(
         finalized=finalized_markets,

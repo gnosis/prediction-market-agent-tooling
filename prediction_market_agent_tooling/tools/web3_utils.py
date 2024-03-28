@@ -83,7 +83,9 @@ def parse_function_params(params: Optional[list[Any] | dict[str, Any]]) -> list[
 
 
 @tenacity.retry(
-    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)])
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
+    stop=tenacity.stop_after_attempt(5),
+    after=lambda x: print(f"call_function_on_contract failed, {x.attempt_number=}."),
 )
 def call_function_on_contract(
     web3: Web3,
@@ -104,6 +106,8 @@ def call_function_on_contract(
         match="(.*wrong transaction nonce.*)|(.*Invalid.*)"
     ),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
+    stop=tenacity.stop_after_attempt(9),
+    after=lambda x: print(f"send_function_on_contract_tx failed, {x.attempt_number=}."),
 )
 def send_function_on_contract_tx(
     web3: Web3,

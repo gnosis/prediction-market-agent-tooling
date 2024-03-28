@@ -18,7 +18,7 @@ from web3.types import (  # noqa: F401  # Import for the sake of easy importing 
     Wei,
 )
 
-from prediction_market_agent_tooling.tools.hexbytes import (  # noqa: F401  # Import for the sake of easy importing with others from here.
+from prediction_market_agent_tooling.tools.hexbytes_custom import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     HexBytes,
 )
 

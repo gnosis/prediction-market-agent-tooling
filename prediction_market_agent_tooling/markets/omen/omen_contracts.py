@@ -551,3 +551,36 @@ class OmenRealitioContract(ContractOnGnosisChain):
             ),
             amount_wei=bond,
         )
+
+    def claimWinnings(
+        self,
+        question_id: HexBytes,
+        history_hashes: list[HexBytes],
+        addresses: list[ChecksumAddress],
+        bonds: list[Wei],
+        answers: list[HexBytes],
+        from_private_key: PrivateKey,
+        tx_params: t.Optional[TxParams] = None,
+    ) -> TxReceipt:
+        return self.send(
+            function_name="claimWinnings",
+            function_params=dict(
+                question_id=question_id,
+                history_hashes=history_hashes,
+                addrs=addresses,
+                bonds=bonds,
+                answers=answers,
+            ),
+            from_private_key=from_private_key,
+            tx_params=tx_params,
+        )
+
+    def balanceOf(self, from_address: ChecksumAddress) -> Wei:
+        balance = wei_type(self.call("balanceOf", [from_address]))
+        return balance
+
+    def withdraw(self, from_private_key: PrivateKey) -> TxReceipt:
+        return self.send(
+            function_name="withdraw",
+            from_private_key=from_private_key,
+        )

@@ -10,7 +10,11 @@ import requests
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, SecretStr
+from prediction_market_agent_tooling.gtypes import (
+    DatetimeWithTimezone,
+    Probability,
+    SecretStr,
+)
 
 T = TypeVar("T")
 
@@ -73,13 +77,11 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
-    ...
+def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone: ...
 
 
 @t.overload
-def add_utc_timezone_validator(value: None) -> None:
-    ...
+def add_utc_timezone_validator(value: None) -> None: ...
 
 
 def add_utc_timezone_validator(value: datetime | None) -> DatetimeWithTimezone | None:
@@ -148,3 +150,15 @@ def response_list_to_model(
 def secret_str_from_env(key: str) -> SecretStr | None:
     value = os.getenv(key)
     return SecretStr(value) if value else None
+
+
+def prob_uncertainty(prob: Probability) -> float:
+    """
+    Returns a value between 0 and 1, where 0 means the market is not uncertain at all and 1 means it's completely uncertain.
+
+    Examples:
+        - Market's probability is 0.5, so the market is completely uncertain: prob_uncertainty(0.5) == 1
+        - Market's probability is 0.1, so the market is quite certain about NO: prob_uncertainty(0.1) == 0.36
+        - Market's probability is 0.95, so the market is quite certain about YES: prob_uncertainty(0.95) == 0.19
+    """
+    return -4 * (prob - 0.5) ** 2 + 1

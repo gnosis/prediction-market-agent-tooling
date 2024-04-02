@@ -132,6 +132,29 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         )
         return position_id
 
+    def mergePositions(
+        self,
+        from_private_key: PrivateKey,
+        collateral_token_address: ChecksumAddress,
+        parent_collection_id: HexStr,
+        conditionId: HexBytes,
+        index_sets: t.List[int],
+        amount: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            from_private_key=from_private_key,
+            function_name="mergePositions",
+            function_params=[
+                collateral_token_address,
+                parent_collection_id,
+                conditionId,
+                index_sets,
+                amount,
+            ],
+            web3=web3,
+        )
+
     def redeemPositions(
         self,
         from_private_key: PrivateKey,
@@ -223,6 +246,10 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     # ! Note: This doesn't have a fixed contract address, as this is something created by the `OmenFixedProductMarketMakerFactory`.
     # Factory contract at https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0.
+
+    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
+        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
+        return balance
 
     def calcBuyAmount(
         self,
@@ -318,9 +345,10 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     def removeFunding(
         self,
-        remove_funding: OmenOutcomeToken,
+        remove_funding: Wei,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         """
         Remove funding is done in shares.
@@ -330,6 +358,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
             function_name="removeFunding",
             function_params=[remove_funding],
             tx_params=tx_params,
+            web3=web3,
         )
 
 

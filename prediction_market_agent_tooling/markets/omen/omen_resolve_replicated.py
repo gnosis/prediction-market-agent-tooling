@@ -195,7 +195,7 @@ def claim_bonds_on_realitio_question(
         print(f"Withdrawing remaining balance {current_balance=}")
         realitio_contract.withdraw(from_private_key)
 
-
+        
 def finalize_markets(
     markets: list[OmenMarket], from_private_key: PrivateKey
 ) -> list[HexAddress]:

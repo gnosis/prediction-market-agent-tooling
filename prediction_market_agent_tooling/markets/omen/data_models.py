@@ -87,6 +87,7 @@ class OmenMarket(BaseModel):
 
     id: HexAddress
     title: str
+    creator: HexAddress
     category: str
     collateralVolume: Wei
     usdVolume: USD

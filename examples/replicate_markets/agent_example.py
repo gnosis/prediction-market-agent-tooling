@@ -43,7 +43,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             from_private_key=keys.bet_from_private_key
         )
 
-        print(
+        logger.info(
             f"Unfunding soon to be known markets replicated by {keys.bet_from_address}."
         )
         omen_unfund_replicated_soon_to_be_known_markets_tx(

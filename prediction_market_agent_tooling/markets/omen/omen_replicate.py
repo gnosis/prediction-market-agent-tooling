@@ -157,7 +157,7 @@ def omen_unfund_replicated_soon_to_be_known_markets_tx(
     )
 
     for idx, market in enumerate(markets):
-        print(
+        logger.info(
             f"[{idx+1}/{len(markets)}] Unfunding market {market.question=} {market.url=}."
         )
         # TODO: Finish after Gabriel's PR is merged.

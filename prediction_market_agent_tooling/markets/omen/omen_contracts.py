@@ -49,6 +49,25 @@ class OmenOracleContract(ContractOnGnosisChain):
         realitio_address: ChecksumAddress = self.call("conditionalTokens")
         return realitio_address
 
+    def resolve(
+        self,
+        question_id: HexBytes,
+        template_id: int,
+        question_raw: str,
+        n_outcomes: int,
+        from_private_key: PrivateKey,
+    ) -> TxReceipt:
+        return self.send(
+            from_private_key=from_private_key,
+            function_name="resolve",
+            function_params=dict(
+                questionId=question_id,
+                templateId=template_id,
+                question=question_raw,
+                numOutcomes=n_outcomes,
+            ),
+        )
+
 
 class OmenConditionalTokenContract(ContractOnGnosisChain):
     # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.
@@ -531,4 +550,37 @@ class OmenRealitioContract(ContractOnGnosisChain):
                 max_previous=max_previous,
             ),
             amount_wei=bond,
+        )
+
+    def claimWinnings(
+        self,
+        question_id: HexBytes,
+        history_hashes: list[HexBytes],
+        addresses: list[ChecksumAddress],
+        bonds: list[Wei],
+        answers: list[HexBytes],
+        from_private_key: PrivateKey,
+        tx_params: t.Optional[TxParams] = None,
+    ) -> TxReceipt:
+        return self.send(
+            function_name="claimWinnings",
+            function_params=dict(
+                question_id=question_id,
+                history_hashes=history_hashes,
+                addrs=addresses,
+                bonds=bonds,
+                answers=answers,
+            ),
+            from_private_key=from_private_key,
+            tx_params=tx_params,
+        )
+
+    def balanceOf(self, from_address: ChecksumAddress) -> Wei:
+        balance = wei_type(self.call("balanceOf", [from_address]))
+        return balance
+
+    def withdraw(self, from_private_key: PrivateKey) -> TxReceipt:
+        return self.send(
+            function_name="withdraw",
+            from_private_key=from_private_key,
         )

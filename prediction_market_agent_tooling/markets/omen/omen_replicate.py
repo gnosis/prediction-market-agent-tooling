@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_create_market_tx,
     omen_remove_fund_market_tx,
 )
+from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
@@ -161,7 +162,7 @@ def omen_unfund_replicated_soon_to_be_known_markets_tx(
             f"[{idx+1}/{len(markets)}] Unfunding market {market.question=} {market.url=}."
         )
         omen_remove_fund_market_tx(
-            market=market,
+            market=OmenAgentMarket.from_data_model(market),
             shares=None,
             from_private_key=from_private_key,
         )

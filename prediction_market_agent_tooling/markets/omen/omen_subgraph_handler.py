@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
 class OmenSubgraphHandler(metaclass=SingletonMeta):
+
     """
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """

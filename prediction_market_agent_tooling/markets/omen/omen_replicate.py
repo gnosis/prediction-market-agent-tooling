@@ -15,11 +15,11 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
+    OmenAgentMarket,
     get_omen_binary_markets,
     omen_create_market_tx,
     omen_remove_fund_market_tx,
 )
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key

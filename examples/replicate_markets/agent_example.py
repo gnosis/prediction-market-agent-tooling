@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import functions_framework
 from flask import Request
+from loguru import logger
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -12,7 +13,7 @@ from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
 )
 from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import (
-    omen_resolve_all_markets_based_on_others_tx,
+    omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 
@@ -34,15 +35,17 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         keys = APIKeys()
         settings = ReplicateSettings()
 
-        print(f"Resolving existing markets replicated by {keys.bet_from_address}")
-        omen_resolve_all_markets_based_on_others_tx(
+        logger.info(
+            f"Finalising, resolving anc claiming back xDai from existing markets replicated by {keys.bet_from_address}"
+        )
+        omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
             from_private_key=keys.bet_from_private_key
         )
 
         close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)
 
-        print(f"Replicating from {MarketType.MANIFOLD}.")
+        logger.info(f"Replicating from {MarketType.MANIFOLD}.")
         omen_replicate_from_tx(
             market_type=MarketType.MANIFOLD,
             n_to_replicate=settings.N_TO_REPLICATE,
@@ -51,7 +54,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             close_time_before=close_time_before,
             auto_deposit=True,
         )
-        print(f"Replicating from {MarketType.POLYMARKET}.")
+        logger.info(f"Replicating from {MarketType.POLYMARKET}.")
         omen_replicate_from_tx(
             market_type=MarketType.POLYMARKET,
             n_to_replicate=settings.N_TO_REPLICATE,
@@ -60,7 +63,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             close_time_before=close_time_before,
             auto_deposit=True,
         )
-        print("Done.")
+        logger.debug("Done.")
 
 
 @functions_framework.http

@@ -51,9 +51,21 @@ class Condition(BaseModel):
 class Question(BaseModel):
     id: HexBytes
     title: str
+    data: str
+    templateId: int
     outcomes: list[str]
+    isPendingArbitration: bool
     answerFinalizedTimestamp: t.Optional[datetime] = None
     currentAnswer: t.Optional[str] = None
+
+    @property
+    def question_raw(self) -> str:
+        # Based on https://github.com/protofire/omen-exchange/blob/2cfdf6bfe37afa8b169731d51fea69d42321d66c/app/src/hooks/graph/useGraphMarketMakerData.tsx#L217.
+        return self.data
+
+    @property
+    def n_outcomes(self) -> int:
+        return len(self.outcomes)
 
 
 class OmenPosition(BaseModel):
@@ -75,6 +87,7 @@ class OmenMarket(BaseModel):
 
     id: HexAddress
     title: str
+    creator: HexAddress
     category: str
     collateralVolume: Wei
     usdVolume: USD
@@ -104,7 +117,13 @@ class OmenMarket(BaseModel):
 
     @property
     def is_resolved(self) -> bool:
-        return self.answerFinalizedTimestamp is not None and self.has_valid_answer
+        return (
+            # Finalized on Realitio (e.g. 24h has passed since the last answer was submitted)
+            self.answerFinalizedTimestamp is not None
+            # Resolved on Oracle (e.g. resolved after it was finalized)
+            and self.resolutionTimestamp is not None
+            and self.has_valid_answer
+        )
 
     @property
     def question_title(self) -> str:
@@ -292,19 +311,30 @@ class FixedProductMarketMakersResponse(BaseModel):
 
 
 class RealityQuestion(BaseModel):
+    # This `id` is in form of `0x79e32ae03fb27b07c89c0c568f80287c01ca2e57-0x2d362f435e7b5159794ff0b5457a900283fca41fe6301dc855a647595903db13`,
+    # which I couldn't find how it is created, but based on how it looks like I assume it's composed of `answerId-questionId`.
+    # (Why is answer id as part of the question object? Because this question object is actually received from the answer object below).
+    # And because all the contract methods so far needed bytes32 input, when asked for question id, `questionId` field was the correct one to use so far.
     id: str
-    user: str
+    user: HexAddress
     historyHash: HexBytes
     updatedTimestamp: datetime
+    contentHash: HexBytes
     questionId: HexBytes
+
+    @property
+    def url(self) -> str:
+        return f"https://reality.eth.limo/app/#!/question/{self.id}"
 
 
 class RealityAnswer(BaseModel):
-    answer: str
-    bondAggregate: Wei
-    lastBond: Wei
+    id: str
     timestamp: datetime
+    answer: HexBytes
+    lastBond: Wei
+    bondAggregate: Wei
     question: RealityQuestion
+    createdBlock: int
 
 
 class RealityAnswers(BaseModel):

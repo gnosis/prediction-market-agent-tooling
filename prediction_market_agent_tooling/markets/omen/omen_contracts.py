@@ -49,6 +49,25 @@ class OmenOracleContract(ContractOnGnosisChain):
         realitio_address: ChecksumAddress = self.call("conditionalTokens")
         return realitio_address
 
+    def resolve(
+        self,
+        question_id: HexBytes,
+        template_id: int,
+        question_raw: str,
+        n_outcomes: int,
+        from_private_key: PrivateKey,
+    ) -> TxReceipt:
+        return self.send(
+            from_private_key=from_private_key,
+            function_name="resolve",
+            function_params=dict(
+                questionId=question_id,
+                templateId=template_id,
+                question=question_raw,
+                numOutcomes=n_outcomes,
+            ),
+        )
+
 
 class OmenConditionalTokenContract(ContractOnGnosisChain):
     # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.
@@ -112,6 +131,29 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
             web3=web3,
         )
         return position_id
+
+    def mergePositions(
+        self,
+        from_private_key: PrivateKey,
+        collateral_token_address: ChecksumAddress,
+        parent_collection_id: HexStr,
+        conditionId: HexBytes,
+        index_sets: t.List[int],
+        amount: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            from_private_key=from_private_key,
+            function_name="mergePositions",
+            function_params=[
+                collateral_token_address,
+                parent_collection_id,
+                conditionId,
+                index_sets,
+                amount,
+            ],
+            web3=web3,
+        )
 
     def redeemPositions(
         self,
@@ -204,6 +246,10 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     # ! Note: This doesn't have a fixed contract address, as this is something created by the `OmenFixedProductMarketMakerFactory`.
     # Factory contract at https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0.
+
+    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
+        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
+        return balance
 
     def calcBuyAmount(
         self,
@@ -299,9 +345,10 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     def removeFunding(
         self,
-        remove_funding: OmenOutcomeToken,
+        remove_funding: Wei,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         """
         Remove funding is done in shares.
@@ -311,6 +358,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
             function_name="removeFunding",
             function_params=[remove_funding],
             tx_params=tx_params,
+            web3=web3,
         )
 
 
@@ -502,4 +550,37 @@ class OmenRealitioContract(ContractOnGnosisChain):
                 max_previous=max_previous,
             ),
             amount_wei=bond,
+        )
+
+    def claimWinnings(
+        self,
+        question_id: HexBytes,
+        history_hashes: list[HexBytes],
+        addresses: list[ChecksumAddress],
+        bonds: list[Wei],
+        answers: list[HexBytes],
+        from_private_key: PrivateKey,
+        tx_params: t.Optional[TxParams] = None,
+    ) -> TxReceipt:
+        return self.send(
+            function_name="claimWinnings",
+            function_params=dict(
+                question_id=question_id,
+                history_hashes=history_hashes,
+                addrs=addresses,
+                bonds=bonds,
+                answers=answers,
+            ),
+            from_private_key=from_private_key,
+            tx_params=tx_params,
+        )
+
+    def balanceOf(self, from_address: ChecksumAddress) -> Wei:
+        balance = wei_type(self.call("balanceOf", [from_address]))
+        return balance
+
+    def withdraw(self, from_private_key: PrivateKey) -> TxReceipt:
+        return self.send(
+            function_name="withdraw",
+            from_private_key=from_private_key,
         )

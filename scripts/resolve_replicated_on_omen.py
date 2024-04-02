@@ -1,11 +1,17 @@
+from pprint import pprint
+
 import typer
 
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import (
-    omen_resolve_all_markets_based_on_others_tx,
+    omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx,
 )
 
+# Use without the pretty exceptions, because they make the error stack unusable here.
+app = typer.Typer(pretty_exceptions_show_locals=False)
 
+
+@app.command()
 def main(
     from_private_key: str = typer.Option(),
 ) -> None:
@@ -16,11 +22,11 @@ def main(
     python scripts/resolve_replicated_on_omen.py --from-private-key your-private-key
     ```
     """
-    resolved_addresses = omen_resolve_all_markets_based_on_others_tx(
+    result = omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         from_private_key=private_key_type(from_private_key),
     )
-    print(f"Resolved markets: {resolved_addresses}")
+    pprint(result.model_dump())
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()

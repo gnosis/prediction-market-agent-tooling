@@ -9,9 +9,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.betting_strategies import (
-    minimum_bet_to_win,
-)
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_binary_markets,
@@ -20,6 +17,9 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     MANIFOLD_BASE_URL,
     ManifoldMarket,
+)
+from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
+    minimum_bet_to_win,
 )
 
 

@@ -5,12 +5,14 @@ import tenacity
 from eth_account import Account
 from pydantic.types import SecretStr
 from web3 import Web3
+from web3.constants import HASH_ZERO
 from web3.types import Nonce, TxParams, TxReceipt, Wei
 
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
     HexAddress,
+    HexBytes,
     HexStr,
     PrivateKey,
     xDai,
@@ -19,6 +21,7 @@ from prediction_market_agent_tooling.gtypes import (
 
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
+ZERO_BYTES = HexBytes(HASH_ZERO)
 
 
 def private_key_to_public_key(private_key: SecretStr) -> ChecksumAddress:
@@ -83,7 +86,9 @@ def parse_function_params(params: Optional[list[Any] | dict[str, Any]]) -> list[
 
 
 @tenacity.retry(
-    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)])
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
+    stop=tenacity.stop_after_attempt(5),
+    after=lambda x: print(f"call_function_on_contract failed, {x.attempt_number=}."),
 )
 def call_function_on_contract(
     web3: Web3,
@@ -101,9 +106,11 @@ def call_function_on_contract(
     # Retry only for the transaction errors that match the given patterns,
     # add other retrieable errors gradually to be safe.
     retry=tenacity.retry_if_exception_message(
-        match="(.*wrong transaction nonce.*)|(.*Invalid.*)"
+        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)"
     ),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
+    stop=tenacity.stop_after_attempt(9),
+    after=lambda x: print(f"send_function_on_contract_tx failed, {x.attempt_number=}."),
 )
 def send_function_on_contract_tx(
     web3: Web3,

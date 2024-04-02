@@ -15,9 +15,6 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xdai_type,
 )
-from prediction_market_agent_tooling.markets.betting_strategies import (
-    minimum_bet_to_win,
-)
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )
@@ -36,7 +33,17 @@ from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion im
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
     get_market_moving_bet,
 )
+from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
+    minimum_bet_to_win,
+)
+from prediction_market_agent_tooling.tools.betting_strategies.stretch_bet_between import (
+    stretch_bet_between,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
+
+GANACHE_ADDRESS_NR_1 = HexAddress(
+    Web3.to_checksum_address("0x9B7bc47837d4061a11389267C06D829c5C97E404")
+)
 
 
 @pytest.fixture
@@ -44,6 +51,7 @@ def omen_market() -> OmenMarket:
     return OmenMarket(
         id=HexAddress(HexStr("0x76a7a3487f85390dc568f3fce01e0a649cb39651")),
         title="Will Plex launch a store for movies and TV shows by 26 January 2024?",
+        creator=GANACHE_ADDRESS_NR_1,
         collateralVolume=Wei(4369016776639073062),
         usdVolume=usd_type("4.369023756584789670441178585394842"),
         collateralToken=HexAddress(
@@ -61,7 +69,14 @@ def omen_market() -> OmenMarket:
         fee=wei_type(20000000000000000),
         category="foo",
         condition=Condition(id=HexBytes("0x123"), outcomeSlotCount=2),
-        question=Question(id=HexBytes("0x123"), title="title", outcomes=["Yes", "No"]),
+        question=Question(
+            id=HexBytes("0x123"),
+            title="title",
+            outcomes=["Yes", "No"],
+            templateId=2,
+            isPendingArbitration=False,
+            data="...",
+        ),
     )
 
 
@@ -82,6 +97,7 @@ def test_minimum_bet_to_win(
         OmenAgentMarket(
             id="id",
             question="question",
+            creator=GANACHE_ADDRESS_NR_1,
             outcomes=["Yes", "No"],
             p_yes=market_p_yes,
             collateral_token_contract_address_checksummed=OmenCollateralTokenContract().address,
@@ -175,3 +191,18 @@ def test_kelly_criterion_bet(
     # Kelly estimates the best bet for maximizing the expected value of the logarithm of the wealth.
     # We don't know the real best xdai_amount, but at least we know which outcome index makes sense.
     assert outcome_index == omen_market.outcomes.index(expected_outcome)
+
+
+@pytest.mark.parametrize(
+    "probability, min_bet, max_bet, expected_bet",
+    [
+        (Probability(0.1), 0, 1, 0.1),
+        (Probability(0.7), 0, 1, 0.7),
+        (Probability(0.9), 0.5, 1.0, 0.95),
+        (Probability(0.1), 0.5, 1.0, 0.55),
+    ],
+)
+def test_stretch_bet_between(
+    probability: Probability, min_bet: float, max_bet: float, expected_bet: float
+) -> None:
+    assert stretch_bet_between(probability, min_bet, max_bet) == expected_bet

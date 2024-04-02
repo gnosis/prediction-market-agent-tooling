@@ -2,6 +2,7 @@ import time
 from datetime import timedelta
 
 import pytest
+from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
@@ -18,9 +19,8 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
 )
-from prediction_market_agent_tooling.markets.omen.omen_graph_queries import get_market
-from prediction_market_agent_tooling.markets.omen.reality_subgraph import (
-    reality_get_answers,
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -29,7 +29,9 @@ from tests.utils import RUN_PAID_TESTS
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
-def test_create_bet_withdraw_resolve_market() -> None:
+def test_create_bet_withdraw_resolve_market(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
     wait_time = 60
     keys = APIKeys()
 
@@ -48,14 +50,14 @@ def test_create_bet_withdraw_resolve_market() -> None:
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
             auto_deposit=True,
         )
-    print(f"Market created at address: {market_address}")
-    market = get_market(market_address)
+    logger.debug(f"Market created at address: {market_address}")
+    market = omen_subgraph_handler.get_omen_market(market_address)
 
     # Double check the market was created correctly.
     assert market.question_title == question
 
     # Bet on the false outcome.
-    print("Betting on the false outcome.")
+    logger.debug("Betting on the false outcome.")
     agent_market = OmenAgentMarket.from_data_model(market)
     with wait_until_nonce_changed(for_address=keys.bet_from_address):
         binary_omen_buy_outcome_tx(
@@ -69,11 +71,11 @@ def test_create_bet_withdraw_resolve_market() -> None:
     # TODO: Add withdraw funds from the market.
 
     # Wait until the realitio question is opened (== market is closed).
-    print("Waiting for the market to close.")
+    logger.debug("Waiting for the market to close.")
     time.sleep(wait_time)
 
     # Submit the answer and verify it was successfully submitted.
-    print(f"Submitting the answer to {market.question.id=}.")
+    logger.debug(f"Submitting the answer to {market.question.id=}.")
     with wait_until_nonce_changed(for_address=keys.bet_from_address):
         OmenRealitioContract().submitAnswer(
             question_id=market.question.id,
@@ -82,7 +84,8 @@ def test_create_bet_withdraw_resolve_market() -> None:
             bond=xdai_to_wei(0.001),
             from_private_key=APIKeys().bet_from_private_key,
         )
-    answers = reality_get_answers(market.question.id)
+
+    answers = omen_subgraph_handler.get_answers(market.question.id)
     assert len(answers) == 1, answers
     assert answers[0].answer == OMEN_FALSE_OUTCOME, answers[0]
 

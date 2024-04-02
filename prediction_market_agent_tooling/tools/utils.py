@@ -7,6 +7,7 @@ from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 import git
 import pytz
 import requests
+from loguru import logger
 from pydantic import BaseModel, ValidationError
 
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, SecretStr
@@ -68,7 +69,7 @@ def export_requirements_from_toml(output_dir: str) -> None:
         shell=True,
         check=True,
     )
-    print(f"Saved requirements to {output_dir}/requirements.txt")
+    logger.debug(f"Saved requirements to {output_dir}/requirements.txt")
 
 
 @t.overload
@@ -101,6 +102,10 @@ def utcnow() -> DatetimeWithTimezone:
 
 def get_current_git_commit_sha() -> str:
     return git.Repo(search_parent_directories=True).head.commit.hexsha
+
+
+def to_int_timestamp(dt: datetime) -> int:
+    return int(dt.timestamp())
 
 
 def get_current_git_branch() -> str:

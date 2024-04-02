@@ -15,9 +15,6 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xdai_type,
 )
-from prediction_market_agent_tooling.markets.betting_strategies import (
-    minimum_bet_to_win,
-)
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )
@@ -35,6 +32,12 @@ from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion im
 )
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
     get_market_moving_bet,
+)
+from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
+    minimum_bet_to_win,
+)
+from prediction_market_agent_tooling.tools.betting_strategies.stretch_bet_between import (
+    stretch_bet_between,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 
@@ -188,3 +191,18 @@ def test_kelly_criterion_bet(
     # Kelly estimates the best bet for maximizing the expected value of the logarithm of the wealth.
     # We don't know the real best xdai_amount, but at least we know which outcome index makes sense.
     assert outcome_index == omen_market.outcomes.index(expected_outcome)
+
+
+@pytest.mark.parametrize(
+    "probability, min_bet, max_bet, expected_bet",
+    [
+        (Probability(0.1), 0, 1, 0.1),
+        (Probability(0.7), 0, 1, 0.7),
+        (Probability(0.9), 0.5, 1.0, 0.95),
+        (Probability(0.1), 0.5, 1.0, 0.55),
+    ],
+)
+def test_stretch_bet_between(
+    probability: Probability, min_bet: float, max_bet: float, expected_bet: float
+) -> None:
+    assert stretch_bet_between(probability, min_bet, max_bet) == expected_bet

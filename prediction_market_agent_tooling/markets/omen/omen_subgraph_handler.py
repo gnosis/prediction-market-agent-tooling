@@ -16,11 +16,12 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityAnswer,
     RealityQuestion,
 )
+from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
-class OmenSubgraphHandler:
+class OmenSubgraphHandler(metaclass=SingletonMeta):
     """
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """

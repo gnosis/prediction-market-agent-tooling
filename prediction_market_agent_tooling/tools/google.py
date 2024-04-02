@@ -7,9 +7,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
 
 
-@tenacity.retry(
-    stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1), reraise=True
-)
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @persistent_inmemory_cache
 def search_google(
     query: str | None = None,

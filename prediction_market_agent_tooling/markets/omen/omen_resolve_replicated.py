@@ -56,7 +56,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
 ) -> FinalizeAndResolveResult:
     public_key = private_key_to_public_key(from_private_key)
     balances_start = get_balances(public_key)
-    print(f"{balances_start=}")
+    logger.info(f"{balances_start=}")
 
     # Just to be friendly with timezones.
     before = utcnow() - timedelta(hours=8)
@@ -75,7 +75,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         created_opened_markets, from_private_key=from_private_key
     )
     balances_after_finalization = get_balances(public_key)
-    print(f"{balances_after_finalization=}")
+    logger.info(f"{balances_after_finalization=}")
 
     # Fetch markets created by us that are already open, and we already submitted an answer more than a day ago, but they aren't resolved yet.
     created_finalized_markets = get_omen_binary_markets(
@@ -91,7 +91,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         created_finalized_markets, from_private_key=from_private_key
     )
     balances_after_resolution = get_balances(public_key)
-    print(f"{balances_after_resolution=}")
+    logger.info(f"{balances_after_resolution=}")
 
     # Fetch questions that are already finalised (last answer is older than 24 hours), but we didn't claim the bonded xDai yet.
     created_not_claimed_questions: list[
@@ -105,7 +105,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         created_not_claimed_questions, from_private_key, auto_withdraw=True
     )
     balances_after_claiming = get_balances(public_key)
-    print(f"{balances_after_claiming=}")
+    logger.info(f"{balances_after_claiming=}")
 
     return FinalizeAndResolveResult(
         finalized=finalized_markets,
@@ -120,7 +120,7 @@ def claim_bonds_on_realitio_quetions(
     claimed_questions: list[HexBytes] = []
 
     for idx, question in enumerate(questions):
-        print(
+        logger.info(
             f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=} {question.url=}"
         )
         claim_bonds_on_realitio_question(
@@ -192,7 +192,7 @@ def claim_bonds_on_realitio_question(
     current_balance = realitio_contract.balanceOf(public_key)
     # Keeping balance on Realitio is not useful, so it's recommended to just withdraw it.
     if current_balance > 0 and auto_withdraw:
-        print(f"Withdrawing remaining balance {current_balance=}")
+        logger.info(f"Withdrawing remaining balance {current_balance=}")
         realitio_contract.withdraw(from_private_key)
 
 
@@ -230,7 +230,7 @@ def resolve_markets(
     resolved_markets: list[HexAddress] = []
 
     for idx, market in enumerate(markets):
-        print(
+        logger.info(
             f"[{idx+1} / {len(markets)}] Resolving {market.url=} {market.question_title=}"
         )
         omen_resolve_market_tx(market, from_private_key)

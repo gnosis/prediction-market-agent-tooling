@@ -2,6 +2,7 @@ import typing as t
 
 import tenacity
 from googleapiclient.discovery import build
+from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
@@ -10,7 +11,7 @@ from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cach
 @tenacity.retry(
     wait=tenacity.wait_fixed(1),
     stop=tenacity.stop_after_attempt(3),
-    after=lambda x: print(f"search_google failed, {x.attempt_number=}."),
+    after=lambda x: logger.debug(f"search_google failed, {x.attempt_number=}."),
 )
 @persistent_inmemory_cache
 def search_google(

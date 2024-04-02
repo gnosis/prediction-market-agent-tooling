@@ -164,4 +164,4 @@ def prob_uncertainty(prob: Probability) -> float:
         - Market's probability is 0.1, so the market is quite certain about NO: prob_uncertainty(0.1) == 0.468
         - Market's probability is 0.95, so the market is quite certain about YES: prob_uncertainty(0.95) == 0.286
     """
-    return entropy([prob, 1 - prob], base=2)
+    return float(entropy([prob, 1 - prob], base=2))

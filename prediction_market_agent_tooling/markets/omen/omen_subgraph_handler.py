@@ -92,6 +92,7 @@ class OmenSubgraphHandler:
         return [
             markets_field.id,
             markets_field.title,
+            markets_field.creator,
             markets_field.collateralVolume,
             markets_field.usdVolume,
             markets_field.collateralToken,
@@ -243,7 +244,9 @@ class OmenSubgraphHandler:
         return omen_markets
 
     def get_omen_market(self, market_id: HexAddress) -> OmenMarket:
-        markets = self.trades_subgraph.Query.fixedProductMarketMaker(id=market_id)
+        markets = self.trades_subgraph.Query.fixedProductMarketMaker(
+            id=market_id.lower()
+        )
         fields = self._get_fields_for_markets(markets)
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)

@@ -47,7 +47,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             f"Unfunding soon to be known markets replicated by {keys.bet_from_address}."
         )
         omen_unfund_replicated_soon_to_be_known_markets_tx(
-            from_private_key=keys.bet_from_private_key
+            f"Finalising, resolving anc claiming back xDai from existing markets replicated by {keys.bet_from_address}"
         )
 
         close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)

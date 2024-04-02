@@ -3,6 +3,7 @@ from typing import Any, Optional, TypeVar
 
 import tenacity
 from eth_account import Account
+from loguru import logger
 from pydantic.types import SecretStr
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -88,7 +89,9 @@ def parse_function_params(params: Optional[list[Any] | dict[str, Any]]) -> list[
 @tenacity.retry(
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
     stop=tenacity.stop_after_attempt(5),
-    after=lambda x: print(f"call_function_on_contract failed, {x.attempt_number=}."),
+    after=lambda x: logger.debug(
+        f"call_function_on_contract failed, {x.attempt_number=}."
+    ),
 )
 def call_function_on_contract(
     web3: Web3,
@@ -110,7 +113,9 @@ def call_function_on_contract(
     ),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
     stop=tenacity.stop_after_attempt(9),
-    after=lambda x: print(f"send_function_on_contract_tx failed, {x.attempt_number=}."),
+    after=lambda x: logger.debug(
+        f"send_function_on_contract_tx failed, {x.attempt_number=}."
+    ),
 )
 def send_function_on_contract_tx(
     web3: Web3,

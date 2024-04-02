@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
 
+import pytest
+
 from prediction_market_agent_tooling.deploy.agent_example import DeployableCoinFlipAgent
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     deploy_to_gcp,
@@ -28,6 +30,8 @@ def test_local_deployment() -> None:
     )
 
 
+# TODO: We can remove the test after we have IAC for GCP deployment.
+@pytest.mark.xfail
 def test_gcp_deployment() -> None:
     gcp_fname = f"coin-flip-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"
     env_vars = {

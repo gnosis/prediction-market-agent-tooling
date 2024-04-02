@@ -9,6 +9,7 @@ import pytz
 import requests
 from loguru import logger
 from pydantic import BaseModel, ValidationError
+from scipy.stats import entropy
 
 from prediction_market_agent_tooling.gtypes import (
     DatetimeWithTimezone,
@@ -163,4 +164,4 @@ def prob_uncertainty(prob: Probability) -> float:
         - Market's probability is 0.1, so the market is quite certain about NO: prob_uncertainty(0.1) == 0.36
         - Market's probability is 0.95, so the market is quite certain about YES: prob_uncertainty(0.95) == 0.19
     """
-    return -4 * (prob - 0.5) ** 2 + 1
+    return entropy([prob, 1 - prob], base=2)

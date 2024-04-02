@@ -49,6 +49,25 @@ class OmenOracleContract(ContractOnGnosisChain):
         realitio_address: ChecksumAddress = self.call("conditionalTokens")
         return realitio_address
 
+    def resolve(
+        self,
+        question_id: HexBytes,
+        template_id: int,
+        question_raw: str,
+        n_outcomes: int,
+        from_private_key: PrivateKey,
+    ) -> TxReceipt:
+        return self.send(
+            from_private_key=from_private_key,
+            function_name="resolve",
+            function_params=dict(
+                questionId=question_id,
+                templateId=template_id,
+                question=question_raw,
+                numOutcomes=n_outcomes,
+            ),
+        )
+
 
 class OmenConditionalTokenContract(ContractOnGnosisChain):
     # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.

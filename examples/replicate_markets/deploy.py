@@ -13,14 +13,18 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
 )
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.gtypes import SecretStr, private_key_type
-from prediction_market_agent_tooling.tools.utils import get_current_git_commit_sha
+from prediction_market_agent_tooling.tools.utils import (
+    get_current_git_commit_sha,
+    get_current_git_url,
+)
 
 
 def main(
     fname: str = "replicate-markets-to-omen",
-    github_repo_url: str = "https://github.com/gnosis/prediction-market-agent-tooling",
     from_private_key_secret_name: str = typer.Option(),
     openai_api_key_secret_name: str = typer.Option(),
+    google_search_api_key_name: str = typer.Option(),
+    google_search_engine_id_name: str = typer.Option(),
     env_vars: str | None = None,
     secrets: str | None = None,
 ) -> None:
@@ -31,6 +35,8 @@ def main(
         # For GCP deployment, passwords, private keys, api keys, etc. must be stored in Secret Manager and here, only their name + version is passed.
         BET_FROM_PRIVATE_KEY=private_key_type(f"{from_private_key_secret_name}:latest"),
         OPENAI_API_KEY=SecretStr(f"{openai_api_key_secret_name}:latest"),
+        GOOGLE_SEARCH_API_KEY=SecretStr(f"{google_search_api_key_name}:latest"),
+        GOOGLE_SEARCH_ENGINE_ID=SecretStr(f"{google_search_engine_id_name}:latest"),
         # Not needed for replication, won't be saved in the deployment.
         MANIFOLD_API_KEY=None,
     )
@@ -47,7 +53,7 @@ def main(
         gcp_fname=fname,
         requirements_file=None,
         extra_deps=[
-            f"git+{github_repo_url}.git@{get_current_git_commit_sha()}#egg=prediction-market-agent-tooling[langchain]",
+            f"git+{get_current_git_url()}@{get_current_git_commit_sha()}#egg=prediction-market-agent-tooling[langchain,google]",
         ],
         function_file=os.path.join(current_dir, "agent_example.py"),
         memory=512,

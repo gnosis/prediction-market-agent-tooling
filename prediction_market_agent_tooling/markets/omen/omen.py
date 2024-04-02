@@ -201,21 +201,26 @@ def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
 
 
 def get_omen_binary_markets(
-    limit: int,
+    limit: int | None,
     sort_by: SortBy,
     filter_by: FilterBy = FilterBy.OPEN,
     created_after: t.Optional[datetime] = None,
     opened_before: t.Optional[datetime] = None,
+    finalized_before: t.Optional[datetime] = None,
+    finalized: bool | None = None,
+    resolved: bool | None = None,
     creator: t.Optional[HexAddress] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     subgraph_handler = OmenSubgraphHandler()
-    return subgraph_handler.get_omen_markets(
+    return subgraph_handler.get_omen_binary_markets(
         limit=limit,
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         sort_by=sort_by,
         created_after=created_after,
         opened_before=opened_before,
+        finalized_before=finalized_before,
+        finalized=finalized,
+        resolved=resolved,
         filter_by=filter_by,
         creator=creator,
         excluded_questions=excluded_questions,
@@ -226,7 +231,7 @@ def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
 ) -> OmenMarket:
     subgraph_handler = OmenSubgraphHandler()
-    return subgraph_handler.get_omen_markets(
+    return subgraph_handler.get_omen_binary_markets(
         limit=1, sort_by=sort_by, filter_by=filter_by
     )[0]
 

@@ -102,6 +102,9 @@ class OmenSubgraphHandler:
             markets_field.question.outcomes,
             markets_field.question.answerFinalizedTimestamp,
             markets_field.question.currentAnswer,
+            markets_field.question.data,
+            markets_field.question.templateId,
+            markets_field.question.isPendingArbitration,
             markets_field.condition.id,
             markets_field.condition.outcomeSlotCount,
         ]
@@ -113,6 +116,9 @@ class OmenSubgraphHandler:
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
+        finalized_before: t.Optional[datetime] = None,
+        finalized: bool | None = None,
+        resolved: bool | None = None,
         excluded_questions: set[str] | None = None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
@@ -128,10 +134,28 @@ class OmenSubgraphHandler:
             where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
 
         if opened_before:
-            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_before)
+            where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
+
+        if finalized is not None:
+            if finalized:
+                where_stms["answerFinalizedTimestamp_not"] = None
+            else:
+                where_stms["answerFinalizedTimestamp"] = None
+
+        if finalized_before:
+            where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
+                finalized_before
+            )
+
+        if resolved is not None:
+            if resolved:
+                where_stms["resolutionTimestamp_not"] = None
+            else:
+                where_stms["resolutionTimestamp"] = None
 
         where_stms["question_"] = {}
         if filter_by == FilterBy.RESOLVED:
+            where_stms["resolutionTimestamp_not"] = None
             where_stms["answerFinalizedTimestamp_not"] = None
             where_stms["currentAnswer_not"] = None
             # We cannot add the same type of filter twice, it gets overwritten, hence we use nested filter.
@@ -159,13 +183,16 @@ class OmenSubgraphHandler:
 
         return sort_direction
 
-    def get_omen_markets(
+    def get_omen_binary_markets(
         self,
         limit: t.Optional[int],
         sort_by: SortBy,
         filter_by: FilterBy,
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
+        finalized_before: t.Optional[datetime] = None,
+        finalized: bool | None = None,
+        resolved: bool | None = None,
         creator: t.Optional[HexAddress] = None,
         excluded_questions: set[str] | None = None,  # question titles
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
@@ -176,6 +203,9 @@ class OmenSubgraphHandler:
             outcomes=outcomes,
             created_after=created_after,
             opened_before=opened_before,
+            finalized_before=finalized_before,
+            finalized=finalized,
+            resolved=resolved,
             excluded_questions=excluded_questions,
         )
 
@@ -183,9 +213,9 @@ class OmenSubgraphHandler:
         markets = self.trades_subgraph.Query.fixedProductMarketMakers(
             orderBy=self.trades_subgraph.FixedProductMarketMaker.creationTimestamp,
             orderDirection=sort_direction,
-            first=limit
-            if limit
-            else sys.maxsize,  # if not limit, we fetch all possible markets
+            first=(
+                limit if limit else sys.maxsize
+            ),  # if not limit, we fetch all possible markets
             where=where_stms,
         )
 

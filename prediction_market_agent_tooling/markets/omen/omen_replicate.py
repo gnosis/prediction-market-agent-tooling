@@ -160,10 +160,8 @@ def omen_unfund_replicated_soon_to_be_known_markets_tx(
         logger.info(
             f"[{idx+1}/{len(markets)}] Unfunding market {market.question=} {market.url=}."
         )
-        # TODO: Finish after Gabriel's PR is merged.
         omen_remove_fund_market_tx(
             market=market,
-            shares=...,
+            shares=None,
             from_private_key=from_private_key,
-            auto_withdraw=True,
         )

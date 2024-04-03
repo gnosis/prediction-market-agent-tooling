@@ -151,10 +151,10 @@ def omen_unfund_replicated_known_markets_tx(
     from_address = private_key_to_public_key(from_private_key)
 
     now = utcnow()
-    # We want to unfund markets around the time when the resolution should be known.
+    # We want to unfund markets ~1 day before the resolution should be known.
     # That is, if the original market would be closing now, but we added `EXTEND_CLOSING_TIME_DELTA` to it,
-    # we want to unfund any market that closes sooner than NOW + `EXTEND_CLOSING_TIME_DELTA`.
-    opened_before = now + EXTEND_CLOSING_TIME_DELTA
+    # we want to unfund any market that closes sooner than NOW + `EXTEND_CLOSING_TIME_DELTA` - 1 day.
+    opened_before = now + EXTEND_CLOSING_TIME_DELTA - timedelta(days=1)
 
     # Fetch markets that we created, are soon to be known,
     # and still have liquidity in them (we didn't withdraw it yet).

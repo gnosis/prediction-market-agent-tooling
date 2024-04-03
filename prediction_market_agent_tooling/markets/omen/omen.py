@@ -211,6 +211,7 @@ def get_omen_binary_markets(
     finalized: bool | None = None,
     resolved: bool | None = None,
     creator: t.Optional[HexAddress] = None,
+    liquidity_bigger_than: Wei | None = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     subgraph_handler = OmenSubgraphHandler()
@@ -225,6 +226,7 @@ def get_omen_binary_markets(
         resolved=resolved,
         filter_by=filter_by,
         creator=creator,
+        liquidity_bigger_than=liquidity_bigger_than,
         excluded_questions=excluded_questions,
     )
 

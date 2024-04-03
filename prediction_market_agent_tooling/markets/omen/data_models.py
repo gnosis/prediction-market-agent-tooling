@@ -90,6 +90,7 @@ class OmenMarket(BaseModel):
     creator: HexAddress
     category: str
     collateralVolume: Wei
+    liquidityMeasure: Wei
     usdVolume: USD
     collateralToken: HexAddress
     outcomes: list[str]

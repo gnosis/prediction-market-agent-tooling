@@ -5,7 +5,7 @@ from datetime import datetime
 from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
 
-from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes
+from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -95,6 +95,7 @@ class OmenSubgraphHandler:
             markets_field.creator,
             markets_field.collateralVolume,
             markets_field.usdVolume,
+            markets_field.liquidityMeasure,
             markets_field.collateralToken,
             markets_field.outcomes,
             markets_field.outcomeTokenAmounts,
@@ -128,6 +129,7 @@ class OmenSubgraphHandler:
         finalized_before: t.Optional[datetime] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
+        liquidity_bigger_than: Wei | None = None,
         excluded_questions: set[str] | None = None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
@@ -148,6 +150,9 @@ class OmenSubgraphHandler:
 
         if opened_after:
             where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
+
+        if liquidity_bigger_than is not None:
+            where_stms["liquidityMeasure_gt"] = liquidity_bigger_than
 
         if filter_by == FilterBy.RESOLVED:
             finalized = True
@@ -210,6 +215,7 @@ class OmenSubgraphHandler:
         finalized: bool | None = None,
         resolved: bool | None = None,
         creator: t.Optional[HexAddress] = None,
+        liquidity_bigger_than: Wei | None = None,
         excluded_questions: set[str] | None = None,  # question titles
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
     ) -> t.List[OmenMarket]:
@@ -224,6 +230,7 @@ class OmenSubgraphHandler:
             finalized=finalized,
             resolved=resolved,
             excluded_questions=excluded_questions,
+            liquidity_bigger_than=liquidity_bigger_than,
         )
 
         sort_direction = self._build_sort_direction(sort_by)

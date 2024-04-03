@@ -7,6 +7,7 @@ from loguru import logger
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
@@ -603,6 +604,7 @@ def omen_remove_fund_market_tx(
     """
     from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
+    original_balances = get_balances(from_address)
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -638,7 +640,12 @@ def omen_remove_fund_market_tx(
         amount=amount_to_merge,
         web3=web3,
     )
+    new_balances = get_balances(from_address)
+
     logger.debug(f"Result from merge positions {result}")
+    logger.info(
+        f"Withdrawn {new_balances.wxdai - original_balances.wxdai} wxDai from liquidity at {market.url=}."
+    )
 
 
 def redeem_positions_from_all_omen_markets() -> None:

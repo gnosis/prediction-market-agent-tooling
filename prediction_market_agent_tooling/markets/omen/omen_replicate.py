@@ -2,7 +2,12 @@ from datetime import datetime, timedelta
 
 from loguru import logger
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+    xDai,
+    wei_type,
+)
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
 from prediction_market_agent_tooling.markets.markets import (
@@ -144,22 +149,25 @@ def omen_unfund_replicated_soon_to_be_known_markets_tx(
 ) -> None:
     from_address = private_key_to_public_key(from_private_key)
 
-    # We want to unfund markets +/- 1 day before their resolution should be known.
-    # That is, if original market closed at N, and we added `EXTEND_CLOSING_TIME_DELTA` to it,
-    # we want to unfund any market that closes sooner than N + `EXTEND_CLOSING_TIME_DELTA` - 1 day.
-    opened_before = utcnow() + EXTEND_CLOSING_TIME_DELTA - timedelta(days=1)
+    # We want to unfund markets around the time when the resolution should be known.
+    # That is, if the original market would be closing now, but we added `EXTEND_CLOSING_TIME_DELTA` to it,
+    # we want to unfund any market that closes sooner than NOW + `EXTEND_CLOSING_TIME_DELTA`.
+    opened_before = utcnow() + EXTEND_CLOSING_TIME_DELTA
 
+    # Fetch markets that we created, are soon to be known,
+    # and still have liquidity in them (we didn't withdraw it yet).
     markets = get_omen_binary_markets(
         limit=None,
         creator=from_address,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.NONE,
         opened_before=opened_before,
+        liquidity_bigger_than=wei_type(0),
     )
 
     for idx, market in enumerate(markets):
         logger.info(
-            f"[{idx+1}/{len(markets)}] Unfunding market {market.question=} {market.url=}."
+            f"[{idx+1}/{len(markets)}] Unfunding market {market.liquidityMeasure=} {market.question=} {market.url=}."
         )
         omen_remove_fund_market_tx(
             market=OmenAgentMarket.from_data_model(market),

@@ -11,7 +11,7 @@ from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
-    omen_unfund_replicated_soon_to_be_known_markets_tx,
+    omen_unfund_replicated_known_markets_tx,
 )
 from prediction_market_agent_tooling.markets.omen.omen_resolve_replicated import (
     omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx,
@@ -46,7 +46,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         logger.info(
             f"Unfunding soon to be known markets replicated by {keys.bet_from_address}."
         )
-        omen_unfund_replicated_soon_to_be_known_markets_tx(keys.bet_from_private_key)
+        omen_unfund_replicated_known_markets_tx(keys.bet_from_private_key)
 
         close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)

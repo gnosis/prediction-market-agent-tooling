@@ -144,7 +144,7 @@ def omen_replicate_from_tx(
     return created_addresses
 
 
-def omen_unfund_replicated_soon_to_be_known_markets_tx(
+def omen_unfund_replicated_known_markets_tx(
     from_private_key: PrivateKey,
 ) -> None:
     from_address = private_key_to_public_key(from_private_key)

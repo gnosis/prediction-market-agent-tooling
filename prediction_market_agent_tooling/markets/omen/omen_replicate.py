@@ -5,8 +5,8 @@ from loguru import logger
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     PrivateKey,
-    xDai,
     wei_type,
+    xDai,
 )
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category

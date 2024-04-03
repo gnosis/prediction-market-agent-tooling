@@ -12,12 +12,12 @@ class SingletonMeta(type, t.Generic[_T]):
 
     _instances: dict[t.Any, _T] = {}
 
-    def __call__(cls, *args: t.Any, **kwargs: t.Any) -> _T:
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> _T:
         """
         Possible changes to the value of the `__init__` argument do not affect
         the returned instance.
         """
-        if cls not in cls._instances:
+        if self not in self._instances:
             instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
+            self._instances[self] = instance
+        return self._instances[self]

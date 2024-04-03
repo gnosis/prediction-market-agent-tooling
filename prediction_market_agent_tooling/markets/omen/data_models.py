@@ -90,6 +90,7 @@ class OmenMarket(BaseModel):
     creator: HexAddress
     category: str
     collateralVolume: Wei
+    liquidityMeasure: Wei
     usdVolume: USD
     collateralToken: HexAddress
     outcomes: list[str]
@@ -122,8 +123,11 @@ class OmenMarket(BaseModel):
             self.answerFinalizedTimestamp is not None
             # Resolved on Oracle (e.g. resolved after it was finalized)
             and self.resolutionTimestamp is not None
-            and self.has_valid_answer
         )
+
+    @property
+    def is_resolved_with_valid_answer(self) -> bool:
+        return self.is_resolved and self.has_valid_answer
 
     @property
     def question_title(self) -> str:
@@ -220,14 +224,14 @@ class OmenMarket(BaseModel):
             raise ValueError(
                 f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
             )
-        if not self.is_resolved:
+        if not self.is_resolved_with_valid_answer:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
 
         outcome: str = self.outcomes[check_not_none(self.answer_index)]
         return get_boolean_outcome(outcome)
 
     def get_resolution_enum(self) -> t.Optional[Resolution]:
-        if not self.is_resolved:
+        if not self.is_resolved_with_valid_answer:
             return None
         if self.boolean_outcome:
             return Resolution.YES
@@ -282,7 +286,7 @@ class OmenBet(BaseModel):
         )
 
     def to_generic_resolved_bet(self) -> ResolvedBet:
-        if not self.fpmm.is_resolved:
+        if not self.fpmm.is_resolved_with_valid_answer:
             raise ValueError(
                 f"Bet with title {self.title} is not resolved. It has no resolution time."
             )

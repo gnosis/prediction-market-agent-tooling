@@ -45,6 +45,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -203,13 +204,15 @@ def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
 def get_omen_binary_markets(
     limit: int | None,
     sort_by: SortBy,
-    filter_by: FilterBy = FilterBy.OPEN,
+    filter_by: FilterBy,
     created_after: t.Optional[datetime] = None,
     opened_before: t.Optional[datetime] = None,
+    opened_after: t.Optional[datetime] = None,
     finalized_before: t.Optional[datetime] = None,
     finalized: bool | None = None,
     resolved: bool | None = None,
     creator: t.Optional[HexAddress] = None,
+    liquidity_bigger_than: Wei | None = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     subgraph_handler = OmenSubgraphHandler()
@@ -218,11 +221,13 @@ def get_omen_binary_markets(
         sort_by=sort_by,
         created_after=created_after,
         opened_before=opened_before,
+        opened_after=opened_after,
         finalized_before=finalized_before,
         finalized=finalized,
         resolved=resolved,
         filter_by=filter_by,
         creator=creator,
+        liquidity_bigger_than=liquidity_bigger_than,
         excluded_questions=excluded_questions,
     )
 
@@ -528,7 +533,10 @@ def omen_redeem_full_position_tx(
         logger.debug("Cannot redeem winnings if market is not yet resolved. Exiting.")
         return
 
-    amount_wei = get_conditional_tokens_balance_for_market(market, from_address, web3)
+    amount_per_index = get_conditional_tokens_balance_for_market(
+        market, from_address, web3
+    )
+    amount_wei = sum(amount_per_index.values())
     if amount_wei == 0:
         logger.debug("No balance to claim. Exiting.")
         return
@@ -557,14 +565,14 @@ def get_conditional_tokens_balance_for_market(
     market: OmenAgentMarket,
     from_address: ChecksumAddress,
     web3: Web3 | None = None,
-) -> Wei:
+) -> dict[int, Wei]:
     """
     We derive the withdrawable balance from the ConditionalTokens contract through CollectionId -> PositionId (which
     also serves as tokenId) -> TokenBalances.
     """
+    balance_per_index_set: dict[int, Wei] = {}
     conditional_token_contract = OmenConditionalTokenContract()
     parent_collection_id = build_parent_collection_id()
-    balance = wei_type(0)
 
     for index_set in market.condition.index_sets:
         collection_id = conditional_token_contract.getCollectionId(
@@ -579,9 +587,9 @@ def get_conditional_tokens_balance_for_market(
         balance_for_position = conditional_token_contract.balanceOf(
             from_address=from_address, position_id=position_id, web3=web3
         )
-        balance = wei_type(balance + balance_for_position)
+        balance_per_index_set[index_set] = wei_type(balance_for_position)
 
-    return balance
+    return balance_per_index_set
 
 
 def omen_remove_fund_market_tx(
@@ -596,6 +604,7 @@ def omen_remove_fund_market_tx(
     """
     from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
+    original_balances = get_balances(from_address)
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -614,16 +623,29 @@ def omen_remove_fund_market_tx(
 
     conditional_tokens = OmenConditionalTokenContract()
     parent_collection_id = build_parent_collection_id()
+    amount_per_index_set = get_conditional_tokens_balance_for_market(
+        market, from_address, web3
+    )
+    # We fetch the minimum balance of outcome token - for ex, in this tx (https://gnosisscan.io/tx/0xc31c4e9bc6a60cf7db9991a40ec2f2a06e3539f8cb8dd81b6af893cef6f40cd7#eventlog) - event #460, this should yield 9804940144070370149. This amount matches what is displayed in the Omen UI.
+    # See similar logic from Olas
+    # https://github.com/valory-xyz/market-creator/blob/4bc47f696fb5ecb61c3b7ec8c001ff2ab6c60fcf/packages/valory/skills/market_creation_manager_abci/behaviours.py#L1308
+    amount_to_merge = min(amount_per_index_set.values())
+
     result = conditional_tokens.mergePositions(
         from_private_key=from_private_key,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
         parent_collection_id=parent_collection_id,
         conditionId=market.condition.id,
         index_sets=market.condition.index_sets,
-        amount=shares,
+        amount=amount_to_merge,
         web3=web3,
     )
+    new_balances = get_balances(from_address)
+
     logger.debug(f"Result from merge positions {result}")
+    logger.info(
+        f"Withdrawn {new_balances.wxdai - original_balances.wxdai} wxDai from liquidity at {market.url=}."
+    )
 
 
 def redeem_positions_from_all_omen_markets() -> None:

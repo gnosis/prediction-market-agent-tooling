@@ -59,7 +59,7 @@ from prediction_market_agent_tooling.deploy.agent import DeployableAgent
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 
 class DeployableCoinFlipAgent(DeployableAgent):
-    def answer_binary_market(self, market: AgentMarket) -> bool:
+    def answer_binary_market(self, market: AgentMarket) -> bool | None:
         return random.choice([True, False])
 
 DeployableCoinFlipAgent().deploy_gcp(...)

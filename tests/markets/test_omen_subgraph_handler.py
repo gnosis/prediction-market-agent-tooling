@@ -121,7 +121,7 @@ def test_filter_resolved_markets(omen_subgraph_handler: OmenSubgraphHandler) -> 
     )
     assert len(markets) == limit
     for market in markets:
-        assert market.is_resolved
+        assert market.is_resolved_with_valid_answer
 
 
 def test_get_user_positions(

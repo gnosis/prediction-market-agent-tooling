@@ -150,10 +150,11 @@ def omen_unfund_replicated_known_markets_tx(
 ) -> None:
     from_address = private_key_to_public_key(from_private_key)
 
+    now = utcnow()
     # We want to unfund markets around the time when the resolution should be known.
     # That is, if the original market would be closing now, but we added `EXTEND_CLOSING_TIME_DELTA` to it,
     # we want to unfund any market that closes sooner than NOW + `EXTEND_CLOSING_TIME_DELTA`.
-    opened_before = utcnow() + EXTEND_CLOSING_TIME_DELTA
+    opened_before = now + EXTEND_CLOSING_TIME_DELTA
 
     # Fetch markets that we created, are soon to be known,
     # and still have liquidity in them (we didn't withdraw it yet).
@@ -168,12 +169,16 @@ def omen_unfund_replicated_known_markets_tx(
 
     for idx, market in enumerate(markets):
         # Optionally, if `saturation_above_threshold` is provided, skip markets that are not saturated to leave some free money motivation for agents.
-        if saturation_above_threshold is not None and not (
-            market.p_yes > saturation_above_threshold
-            or market.p_no > saturation_above_threshold
+        if (
+            saturation_above_threshold is not None
+            and not market.is_resolved
+            and not (
+                market.p_yes > saturation_above_threshold
+                or market.p_no > saturation_above_threshold
+            )
         ):
             logger.info(
-                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityMeasure=} {market.question=}  {market.url=}`, because it's not saturated, `{market.p_yes=}`."
+                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityMeasure=} {market.question=}  {market.url=}`, because it's not saturated yet, `{market.p_yes=}`."
             )
             continue
         logger.info(

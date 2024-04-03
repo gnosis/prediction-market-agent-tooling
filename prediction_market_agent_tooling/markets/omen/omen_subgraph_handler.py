@@ -342,7 +342,7 @@ class OmenSubgraphHandler:
             market_id=market_id,
             filter_by_answer_finalized_not_null=True,
         )
-        return [b for b in omen_bets if b.fpmm.is_resolved]
+        return [b for b in omen_bets if b.fpmm.is_resolved_with_valid_answer]
 
     def get_questions(
         self,

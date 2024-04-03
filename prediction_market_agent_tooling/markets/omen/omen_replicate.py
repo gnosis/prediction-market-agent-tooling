@@ -173,7 +173,7 @@ def omen_unfund_replicated_known_markets_tx(
             or market.p_no > saturation_above_threshold
         ):
             logger.info(
-                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityMeasure=} {market.question=}  {market.url=}`, because it's not saturated."
+                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityMeasure=} {market.question=}  {market.url=}`, because it's not saturated, `{market.p_yes=}`."
             )
             continue
         logger.info(

@@ -46,6 +46,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -601,6 +602,10 @@ def omen_remove_fund_market_tx(
     """
     Removes funding from a given OmenMarket (moving the funds from the OmenMarket to the
     ConditionalTokens contract), and finally calls the `mergePositions` method which transfers collateralToken from the ConditionalTokens contract to the address corresponding to `from_private_key`.
+
+    Warning: Liquidity removal works on the principle of getting market's shares, not the collateral token itself.
+    After we remove funding, using the `mergePositions` we get `min(shares per index)` of wxDai back, but the remaining shares can be converted back only after the market is resolved.
+    That can be done using the `redeem_positions_from_all_user_withdrawn_funds` function.
     """
     from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
@@ -648,9 +653,77 @@ def omen_remove_fund_market_tx(
     )
 
 
-def redeem_positions_from_all_omen_markets() -> None:
+def redeem_positions_from_all_user_withdrawn_funds(
+    from_private_key: PrivateKey,
+    web3: Web3 | None = None,
+) -> None:
     """
-    Redeems positions from all resolved Omen markets.
+    Redeems positions from all resolved Omen markets where the user has withdrawn funds and didn't redeem it yet.
+    """
+    public_key = private_key_to_public_key(from_private_key)
+
+    conditional_token_contract = OmenConditionalTokenContract()
+
+    user_positions = OmenSubgraphHandler().get_user_positions(
+        public_key,
+        # After redeem, this will became zero and we won't re-process it.
+        total_balance_bigger_than=wei_type(0),
+    )
+    # For each user position, we fetch the resolved markets,
+    # because we need to know if the position's market is resolved or not.
+    user_positions_resolved_markets = par_map(
+        user_positions,
+        lambda user_position: OmenSubgraphHandler().get_omen_binary_markets(
+            limit=1,
+            sort_by=SortBy.NONE,
+            filter_by=FilterBy.RESOLVED,
+            condition_id_in=[
+                condition_id for condition_id in user_position.position.conditionIds
+            ],
+        ),
+    )
+
+    for index, (user_position, resolved_markets) in enumerate(
+        zip(user_positions, user_positions_resolved_markets, strict=True)
+    ):
+        # I didn't find any example where this wouldn't hold, but keeping this double-check here in case something changes in the future.
+        if len(user_position.position.conditionIds) != 1:
+            raise ValueError(
+                f"Bug in the logic, please investigate why zero or multiple conditions are returned for {user_position.id=}"
+            )
+        condition_id = user_position.position.conditionIds[0]
+
+        # We skip the redeem if there are no resolved markets for the user position (they aren't resolved yet, so we can't redeem).
+        if not resolved_markets:
+            logger.info(
+                f"[{index+1} / {len(user_positions)}] Skipping redeem, no resolved markets found for {user_position.id=}."
+            )
+            continue
+
+        logger.info(
+            f"[{index+1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
+        )
+
+        resolved_market = resolved_markets[0]
+        original_balances = get_balances(public_key)
+        conditional_token_contract.redeemPositions(
+            from_private_key=from_private_key,
+            collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
+            condition_id=condition_id,
+            parent_collection_id=build_parent_collection_id(),
+            index_sets=user_position.position.indexSets,
+            web3=web3,
+        )
+        new_balances = get_balances(public_key)
+
+        logger.info(
+            f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from withdrawn liquidity at {resolved_market.url=}."
+        )
+
+
+def redeem_positions_from_all_user_bets() -> None:
+    """
+    Redeems positions from all resolved Omen markets where the user placed a bet.
     """
     keys = APIKeys()
     omen_subgraph_handler = OmenSubgraphHandler()

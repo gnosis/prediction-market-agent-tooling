@@ -542,13 +542,7 @@ def omen_redeem_full_position_tx(
         logger.debug("No balance to claim. Exiting.")
         return
 
-    # check if condition has already been resolved by oracle
-    payout_for_condition = conditional_token_contract.payoutDenominator(
-        market.condition.id
-    )
-    if not payout_for_condition > 0:
-        # from ConditionalTokens.redeemPositions:
-        # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
+    if not conditional_token_contract.is_condition_resolved(market.condition.id):
         logger.debug("Market not yet resolved, not possible to claim")
         return
 
@@ -663,29 +657,13 @@ def redeem_from_all_user_positions(
     public_key = private_key_to_public_key(from_private_key)
 
     conditional_token_contract = OmenConditionalTokenContract()
-
     user_positions = OmenSubgraphHandler().get_user_positions(
         public_key,
         # After redeem, this will became zero and we won't re-process it.
         total_balance_bigger_than=wei_type(0),
     )
-    # For each user position, we fetch the resolved markets,
-    # because we need to know if the position's market is resolved or not.
-    user_positions_resolved_markets = par_map(
-        user_positions,
-        lambda user_position: OmenSubgraphHandler().get_omen_binary_markets(
-            limit=1,
-            sort_by=SortBy.NONE,
-            filter_by=FilterBy.RESOLVED,
-            condition_id_in=[
-                condition_id for condition_id in user_position.position.conditionIds
-            ],
-        ),
-    )
 
-    for index, (user_position, resolved_markets) in enumerate(
-        zip(user_positions, user_positions_resolved_markets, strict=True)
-    ):
+    for index, user_position in enumerate(user_positions):
         # I didn't find any example where this wouldn't hold, but keeping this double-check here in case something changes in the future.
         if len(user_position.position.conditionIds) != 1:
             raise ValueError(
@@ -693,10 +671,9 @@ def redeem_from_all_user_positions(
             )
         condition_id = user_position.position.conditionIds[0]
 
-        # We skip the redeem if there are no resolved markets for the user position (they aren't resolved yet, so we can't redeem).
-        if not resolved_markets:
+        if not conditional_token_contract.is_condition_resolved(condition_id):
             logger.info(
-                f"[{index+1} / {len(user_positions)}] Skipping redeem, no resolved markets found for {user_position.id=}."
+                f"[{index+1} / {len(user_positions)}] Skipping redeem, {user_position.id=} isn't resolved yet."
             )
             continue
 
@@ -704,7 +681,6 @@ def redeem_from_all_user_positions(
             f"[{index+1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
         )
 
-        resolved_market = resolved_markets[0]
         original_balances = get_balances(public_key)
         conditional_token_contract.redeemPositions(
             from_private_key=from_private_key,
@@ -717,7 +693,7 @@ def redeem_from_all_user_positions(
         new_balances = get_balances(public_key)
 
         logger.info(
-            f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from withdrawn liquidity at {resolved_market.url=}."
+            f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from position {user_position.id=}."
         )
 
 

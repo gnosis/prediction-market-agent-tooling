@@ -192,6 +192,15 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     ) -> bool:
         return self.getOutcomeSlotCount(condition_id) > 0
 
+    def is_condition_resolved(
+        self,
+        condition_id: HexBytes,
+    ) -> bool:
+        # from ConditionalTokens.redeemPositions:
+        # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
+        payout_for_condition = self.payoutDenominator(condition_id)
+        return payout_for_condition > 0
+
     def payoutDenominator(self, condition_id: HexBytes) -> int:
         payoutForCondition: int = self.call(
             "payoutDenominator",

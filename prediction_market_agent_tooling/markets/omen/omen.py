@@ -46,7 +46,6 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
-from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,

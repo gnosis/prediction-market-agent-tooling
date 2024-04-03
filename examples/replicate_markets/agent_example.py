@@ -46,7 +46,9 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         logger.info(
             f"Unfunding soon to be known markets replicated by {keys.bet_from_address}."
         )
-        omen_unfund_replicated_known_markets_tx(keys.bet_from_private_key)
+        omen_unfund_replicated_known_markets_tx(
+            keys.bet_from_private_key, saturation_above_threshold=0.9
+        )
 
         close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)

@@ -146,6 +146,7 @@ def omen_replicate_from_tx(
 
 def omen_unfund_replicated_known_markets_tx(
     from_private_key: PrivateKey,
+    saturation_above_threshold: float | None = None,
 ) -> None:
     from_address = private_key_to_public_key(from_private_key)
 
@@ -166,8 +167,17 @@ def omen_unfund_replicated_known_markets_tx(
     )
 
     for idx, market in enumerate(markets):
+        # Optionally, if `saturation_above_threshold` is provided, skip markets that are not saturated to leave some free money motivation for agents.
+        if saturation_above_threshold is not None and not (
+            market.p_yes > saturation_above_threshold
+            or market.p_no > saturation_above_threshold
+        ):
+            logger.info(
+                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityMeasure=} {market.question=}  {market.url=}`, because it's not saturated."
+            )
+            continue
         logger.info(
-            f"[{idx+1}/{len(markets)}] Unfunding market {market.liquidityMeasure=} {market.question=} {market.url=}."
+            f"[{idx+1}/{len(markets)}] Unfunding market `{market.liquidityMeasure=} {market.question=} {market.url=}`."
         )
         omen_remove_fund_market_tx(
             market=OmenAgentMarket.from_data_model(market),

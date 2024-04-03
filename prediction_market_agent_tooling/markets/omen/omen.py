@@ -653,12 +653,12 @@ def omen_remove_fund_market_tx(
     )
 
 
-def redeem_positions_from_all_user_withdrawn_funds(
+def redeem_from_all_user_positions(
     from_private_key: PrivateKey,
     web3: Web3 | None = None,
 ) -> None:
     """
-    Redeems positions from all resolved Omen markets where the user has withdrawn funds and didn't redeem it yet.
+    Redeems from all user positions where the user didn't redeem yet.
     """
     public_key = private_key_to_public_key(from_private_key)
 

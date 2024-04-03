@@ -45,6 +45,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -203,13 +204,15 @@ def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
 def get_omen_binary_markets(
     limit: int | None,
     sort_by: SortBy,
-    filter_by: FilterBy = FilterBy.OPEN,
+    filter_by: FilterBy,
     created_after: t.Optional[datetime] = None,
     opened_before: t.Optional[datetime] = None,
+    opened_after: t.Optional[datetime] = None,
     finalized_before: t.Optional[datetime] = None,
     finalized: bool | None = None,
     resolved: bool | None = None,
     creator: t.Optional[HexAddress] = None,
+    liquidity_bigger_than: Wei | None = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     subgraph_handler = OmenSubgraphHandler()
@@ -218,11 +221,13 @@ def get_omen_binary_markets(
         sort_by=sort_by,
         created_after=created_after,
         opened_before=opened_before,
+        opened_after=opened_after,
         finalized_before=finalized_before,
         finalized=finalized,
         resolved=resolved,
         filter_by=filter_by,
         creator=creator,
+        liquidity_bigger_than=liquidity_bigger_than,
         excluded_questions=excluded_questions,
     )
 
@@ -599,6 +604,7 @@ def omen_remove_fund_market_tx(
     """
     from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
+    original_balances = get_balances(from_address)
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -634,7 +640,12 @@ def omen_remove_fund_market_tx(
         amount=amount_to_merge,
         web3=web3,
     )
+    new_balances = get_balances(from_address)
+
     logger.debug(f"Result from merge positions {result}")
+    logger.info(
+        f"Withdrawn {new_balances.wxdai - original_balances.wxdai} wxDai from liquidity at {market.url=}."
+    )
 
 
 def redeem_positions_from_all_omen_markets() -> None:

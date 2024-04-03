@@ -2,7 +2,12 @@ from datetime import datetime, timedelta
 
 from loguru import logger
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+    wei_type,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
 from prediction_market_agent_tooling.markets.markets import (
@@ -15,12 +20,19 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
+    OmenAgentMarket,
     get_omen_binary_markets,
     omen_create_market_tx,
+    omen_remove_fund_market_tx,
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
+
+# According to Omen's recommendation, closing time of the market should be at least 6 days after the outcome is known.
+# That is because at the closing time, the question will open on Realitio, and we don't want it to be resolved as unknown/invalid.
+# All replicated markets that close at N, needs to have closing time on Realition N + `EXTEND_CLOSING_TIME_DELTA`.
+EXTEND_CLOSING_TIME_DELTA = timedelta(days=6)
 
 
 def omen_replicate_from_tx(
@@ -28,22 +40,16 @@ def omen_replicate_from_tx(
     n_to_replicate: int,
     initial_funds: xDai,
     from_private_key: PrivateKey,
-    last_n_omen_markets_to_fetch: int = 1000,
     close_time_before: datetime | None = None,
     auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
     from_address = private_key_to_public_key(from_private_key)
-
     already_created_markets = get_omen_binary_markets(
-        limit=last_n_omen_markets_to_fetch,
+        limit=None,
         creator=from_address,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.NONE,
     )
-    if len(already_created_markets) == last_n_omen_markets_to_fetch:
-        raise ValueError(
-            "TODO: Switch to paged version (once available) to fetch all markets, we don't know if we aren't creating duplicates now."
-        )
 
     markets = get_binary_markets(
         # Polymarket is slow to get, so take only 10 candidates for him.
@@ -74,7 +80,7 @@ def omen_replicate_from_tx(
     existing_categories = set(
         m.category
         for m in get_omen_binary_markets(
-            limit=last_n_omen_markets_to_fetch,
+            limit=1000,
             sort_by=SortBy.NEWEST,
             filter_by=FilterBy.NONE,
         )
@@ -89,9 +95,7 @@ def omen_replicate_from_tx(
             )
             continue
 
-        # According to Omen's recommendation, closing time of the market should be at least 6 days after the outcome is known.
-        # That is because at the closing time, the question will open on Realitio, and we don't want it to be resolved as unknown/invalid.
-        safe_closing_time = market.close_time + timedelta(days=6)
+        safe_closing_time = market.close_time + EXTEND_CLOSING_TIME_DELTA
         # Force at least 48 hours of time where the resolution is unknown.
         soonest_allowed_resolution_known_time = utcnow() + timedelta(hours=48)
         if market.close_time <= soonest_allowed_resolution_known_time:
@@ -138,3 +142,50 @@ def omen_replicate_from_tx(
             break
 
     return created_addresses
+
+
+def omen_unfund_replicated_known_markets_tx(
+    from_private_key: PrivateKey,
+    saturation_above_threshold: float | None = None,
+) -> None:
+    from_address = private_key_to_public_key(from_private_key)
+
+    now = utcnow()
+    # We want to unfund markets ~1 day before the resolution should be known.
+    # That is, if the original market would be closing now, but we added `EXTEND_CLOSING_TIME_DELTA` to it,
+    # we want to unfund any market that closes sooner than NOW + `EXTEND_CLOSING_TIME_DELTA` - 1 day.
+    opened_before = now + EXTEND_CLOSING_TIME_DELTA - timedelta(days=1)
+
+    # Fetch markets that we created, are soon to be known,
+    # and still have liquidity in them (we didn't withdraw it yet).
+    markets = get_omen_binary_markets(
+        limit=None,
+        creator=from_address,
+        sort_by=SortBy.NEWEST,
+        filter_by=FilterBy.NONE,
+        opened_before=opened_before,
+        liquidity_bigger_than=wei_type(0),
+    )
+
+    for idx, market in enumerate(markets):
+        # Optionally, if `saturation_above_threshold` is provided, skip markets that are not saturated to leave some free money motivation for agents.
+        if (
+            saturation_above_threshold is not None
+            and not market.is_resolved
+            and not (
+                market.p_yes > saturation_above_threshold
+                or market.p_no > saturation_above_threshold
+            )
+        ):
+            logger.info(
+                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityMeasure=} {market.question=}  {market.url=}`, because it's not saturated yet, `{market.p_yes=}`."
+            )
+            continue
+        logger.info(
+            f"[{idx+1}/{len(markets)}] Unfunding market `{market.liquidityMeasure=} {market.question=} {market.url=}`."
+        )
+        omen_remove_fund_market_tx(
+            market=OmenAgentMarket.from_data_model(market),
+            shares=None,
+            from_private_key=from_private_key,
+        )

@@ -699,6 +699,8 @@ def redeem_from_all_user_positions(
 def redeem_positions_from_all_user_bets() -> None:
     """
     Redeems positions from all resolved Omen markets where the user placed a bet.
+
+    Note: This function is very similar to `redeem_from_all_user_positions`, but it will redeem only positions obtained from bets, not from liquidity withdrawals.
     """
     keys = APIKeys()
     omen_subgraph_handler = OmenSubgraphHandler()

@@ -75,6 +75,12 @@ class OmenAgentMarket(AgentMarket):
         "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     )
 
+    def get_liquidity(self) -> Wei:
+        return self.get_contract().totalSupply()
+
+    def get_liquidity_in_xdai(self) -> xDai:
+        return wei_to_xdai(self.get_liquidity())
+
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(0.00001), currency=self.currency)
 

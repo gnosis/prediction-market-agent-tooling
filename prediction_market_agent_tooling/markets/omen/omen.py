@@ -76,10 +76,7 @@ class OmenAgentMarket(AgentMarket):
     )
 
     def get_liquidity(self) -> Wei:
-        contract = OmenFixedProductMarketMakerContract(
-            address=self.market_maker_contract_address_checksummed
-        )
-        return contract.totalSupply()
+        return self.get_contract().totalSupply()
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=Decimal(0.00001), currency=self.currency)

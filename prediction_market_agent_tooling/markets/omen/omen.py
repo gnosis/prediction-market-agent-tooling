@@ -70,6 +70,7 @@ class OmenAgentMarket(AgentMarket):
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
     condition: Condition
+    finalized_time: datetime | None
 
     INVALID_MARKET_ANSWER: HexStr = HexStr(
         "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
@@ -163,11 +164,14 @@ class OmenAgentMarket(AgentMarket):
             market_maker_contract_address_checksummed=model.market_maker_contract_address_checksummed,
             resolution=model.get_resolution_enum(),
             created_time=model.creation_datetime,
-            close_time=model.finalized_datetime,
+            finalized_time=model.finalized_datetime,
             p_yes=model.p_yes,
             condition=model.condition,
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
+            close_time=datetime.fromtimestamp(model.openingTimestamp)
+            if model.openingTimestamp
+            else None,
         )
 
     @staticmethod

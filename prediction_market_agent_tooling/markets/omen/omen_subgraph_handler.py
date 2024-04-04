@@ -201,8 +201,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             case SortBy.NEWEST:
                 sort_direction = "desc"
             case SortBy.CLOSING_SOONEST:
-                # `desc` feel unintuitive, but really if we use `asc`, we are getting markets closing in 2030, 2026, etc.
-                sort_direction = "desc"
+                sort_direction = "asc"
             case SortBy.NONE:
                 sort_direction = "desc"
             case _:
@@ -243,8 +242,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         )
 
         sort_direction = self._build_sort_direction(sort_by)
+
         markets = self.trades_subgraph.Query.fixedProductMarketMakers(
-            orderBy=self.trades_subgraph.FixedProductMarketMaker.creationTimestamp,
+            orderBy=self.trades_subgraph.FixedProductMarketMaker.openingTimestamp
+            if sort_by == SortBy.CLOSING_SOONEST
+            else self.trades_subgraph.FixedProductMarketMaker.creationTimestamp,
             orderDirection=sort_direction,
             first=(
                 limit if limit else sys.maxsize

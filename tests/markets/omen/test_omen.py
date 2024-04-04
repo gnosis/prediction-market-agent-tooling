@@ -152,3 +152,10 @@ def create_market_fund_market_remove_funding() -> None:
         - Assert amount in xDAI is reflected in user's balance
     """
     assert True
+
+
+def test_omen_market_close_time() -> None:
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    assert (
+        market.close_time > market.created_time
+    ), "Market close time should be after open time."

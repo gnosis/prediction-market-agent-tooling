@@ -112,6 +112,9 @@ class OmenMarket(BaseModel):
     creationTimestamp: t.Optional[int] = None
     condition: Condition
     question: Question
+    openingTimestamp: t.Optional[
+        int
+    ] = None  # Don't be fooled - this is the time that the market closes for trading, and the market question is opened on reality.eth!
 
     @property
     def answer_index(self) -> t.Optional[int]:

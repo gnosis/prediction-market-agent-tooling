@@ -121,14 +121,17 @@ class OmenAgentMarket(AgentMarket):
 
     def market_redeemable_by(self, user: ChecksumAddress) -> bool:
         """
-        Will return true if given user placed a bet on this market and that bet was correct.
+        Will return true if given user placed a bet on this market and that bet has a balance.
         If the user never placed a bet on this market, this corretly return False.
         """
         positions = OmenSubgraphHandler().get_positions(condition_id=self.condition.id)
         user_positions = OmenSubgraphHandler().get_user_positions(
-            better_address=user, position_id_in=[p.id for p in positions]
+            better_address=user,
+            position_id_in=[p.id for p in positions],
+            # After redeem, this will became zero.
+            total_balance_bigger_than=wei_type(0),
         )
-        return any(u.redeemable for u in user_positions)
+        return len(user_positions) > 0
 
     def redeem_positions(self, for_private_key: PrivateKey) -> None:
         for_public_key = private_key_to_public_key(for_private_key)

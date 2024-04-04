@@ -29,7 +29,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
-    redeem_positions_from_all_user_bets,
+    redeem_from_all_user_positions,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
@@ -182,9 +182,11 @@ def {entrypoint_function_name}(request) -> str:
         """
         Executes actions that occur before bets are placed.
         """
+        keys = APIKeys()
 
         if market_type == MarketType.OMEN:
-            redeem_positions_from_all_user_bets()
+            # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
+            redeem_from_all_user_positions(keys.bet_from_private_key)
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """

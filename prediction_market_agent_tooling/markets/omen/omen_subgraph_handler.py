@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
     OmenBet,
     OmenMarket,
+    OmenPosition,
     OmenUserPosition,
     RealityAnswer,
     RealityQuestion,
@@ -22,7 +23,6 @@ from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
 class OmenSubgraphHandler(metaclass=SingletonMeta):
-
     """
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """
@@ -292,26 +292,52 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def _get_fields_for_user_positions(self, positions: FieldPath) -> list[FieldPath]:
         return [
             positions.id,
-            positions.position.id,
-            positions.position.conditionIds,
-            positions.position.collateralTokenAddress,
-            positions.position.indexSets,
             positions.balance,
             positions.wrappedBalance,
             positions.totalBalance,
+        ] + self._get_fields_for_positions(positions)
+
+    def _get_fields_for_positions(self, positions: FieldPath) -> list[FieldPath]:
+        return [
+            positions.id,
+            positions.conditionIds,
+            positions.collateralTokenAddress,
+            positions.indexSets,
         ]
+
+    def get_positions(
+        self,
+        condition_id: HexBytes | None = None,
+    ) -> list[OmenPosition]:
+        where_stms: dict[str, t.Any] = {}
+
+        if condition_id is not None:
+            where_stms["conditionIds_contains"] = [condition_id.hex()]
+
+        positions = self.conditional_tokens_subgraph.Query.positions(
+            first=sys.maxsize, where=where_stms
+        )
+        fields = self._get_fields_for_positions(positions)
+        result = self.sg.query_json(fields)
+        items = self._parse_items_from_json(result)
+        return [OmenPosition.model_validate(i) for i in items]
 
     def get_user_positions(
         self,
         better_address: ChecksumAddress,
+        position_id_in: list[HexBytes] | None = None,
         total_balance_bigger_than: Wei | None = None,
     ) -> list[OmenUserPosition]:
         where_stms: dict[str, t.Any] = {
             "user": better_address.lower(),
+            "position_": {},
         }
 
         if total_balance_bigger_than is not None:
             where_stms["totalBalance_gt"] = total_balance_bigger_than
+
+        if position_id_in is not None:
+            where_stms["position_"]["positionId_in"] = [x.hex() for x in position_id_in]
 
         positions = self.conditional_tokens_subgraph.Query.userPositions(
             first=sys.maxsize, where=where_stms

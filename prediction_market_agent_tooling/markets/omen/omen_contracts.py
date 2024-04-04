@@ -370,6 +370,11 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
             web3=web3,
         )
 
+    def totalSupply(self) -> Wei:
+        # This is the liquidity you seen on the Omen website (but in Wei).
+        total_supply: Wei = self.call("totalSupply")
+        return total_supply
+
 
 class WrappedxDaiContract(ContractERC20OnGnosisChain):
     # File content taken from https://gnosisscan.io/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d#code.

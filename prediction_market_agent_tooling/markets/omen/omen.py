@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     wei_type,
     xDai,
     xdai_type,
+    HexBytes,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -118,31 +119,27 @@ class OmenAgentMarket(AgentMarket):
 
         return False
 
-    def market_already_redeemed_by(self, user: ChecksumAddress) -> bool:
+    def market_redeemable_by(self, user: ChecksumAddress) -> bool:
+        """
+        Will return true if given user placed a bet on this market and that bet was correct.
+        If the user never placed a bet on this market, this corretly return False.
+        """
         positions = OmenSubgraphHandler().get_positions(condition_id=self.condition.id)
         user_positions = OmenSubgraphHandler().get_user_positions(
             better_address=user, position_id_in=[p.id for p in positions]
         )
-        return not any(u.redeemable for u in user_positions)
+        return any(u.redeemable for u in user_positions)
 
-    def redeem_positions(self, bets_on_market: t.List[OmenBet]) -> None:
-        keys = APIKeys()
-
-        bet_was_correct = self.was_any_bet_outcome_correct(bets_on_market)
-        if not bet_was_correct:
-            logger.debug(f"Bet placed on market {self.id} was incorrect.")
+    def redeem_positions(self, for_private_key: PrivateKey) -> None:
+        for_public_key = private_key_to_public_key(for_private_key)
+        market_is_redeemable = self.market_redeemable_by(user=for_public_key)
+        if not market_is_redeemable:
+            logger.debug(
+                f"Position on market {self.id} was already redeemed or no bets were placed at all by {for_public_key=}."
+            )
             return None
 
-        position_already_redeemed = self.market_already_redeemed_by(
-            user=keys.bet_from_address
-        )
-        if position_already_redeemed:
-            logger.debug(f"Position on market {self.id} was already redeemed.")
-            return None
-
-        omen_redeem_full_position_tx(
-            market=self, from_private_key=keys.bet_from_private_key
-        )
+        omen_redeem_full_position_tx(market=self, from_private_key=for_private_key)
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -211,6 +208,7 @@ def get_omen_binary_markets(
     resolved: bool | None = None,
     creator: t.Optional[HexAddress] = None,
     liquidity_bigger_than: Wei | None = None,
+    condition_id_in: list[HexBytes] | None = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     subgraph_handler = OmenSubgraphHandler()
@@ -226,6 +224,7 @@ def get_omen_binary_markets(
         filter_by=filter_by,
         creator=creator,
         liquidity_bigger_than=liquidity_bigger_than,
+        condition_id_in=condition_id_in,
         excluded_questions=excluded_questions,
     )
 

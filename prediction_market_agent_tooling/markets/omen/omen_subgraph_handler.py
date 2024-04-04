@@ -289,13 +289,15 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                     items.extend(v)
         return items
 
-    def _get_fields_for_user_positions(self, positions: FieldPath) -> list[FieldPath]:
+    def _get_fields_for_user_positions(
+        self, user_positions: FieldPath
+    ) -> list[FieldPath]:
         return [
-            positions.id,
-            positions.balance,
-            positions.wrappedBalance,
-            positions.totalBalance,
-        ] + self._get_fields_for_positions(positions)
+            user_positions.id,
+            user_positions.balance,
+            user_positions.wrappedBalance,
+            user_positions.totalBalance,
+        ] + self._get_fields_for_positions(user_positions.position)
 
     def _get_fields_for_positions(self, positions: FieldPath) -> list[FieldPath]:
         return [

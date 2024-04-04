@@ -10,13 +10,13 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
+    HexBytes,
     HexStr,
     PrivateKey,
     Wei,
     wei_type,
     xDai,
     xdai_type,
-    HexBytes,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,

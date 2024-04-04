@@ -362,7 +362,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         )
 
     def totalSupply(self) -> Wei:
-        # This is the liquidity you seen on the Omen website.
+        # This is the liquidity you seen on the Omen website (but in Wei).
         total_supply: Wei = self.call("totalSupply")
         return total_supply
 

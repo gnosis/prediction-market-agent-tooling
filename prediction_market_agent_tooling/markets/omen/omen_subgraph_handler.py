@@ -1,6 +1,6 @@
 import sys
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
@@ -22,7 +22,6 @@ from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
 class OmenSubgraphHandler(metaclass=SingletonMeta):
-
     """
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """
@@ -152,9 +151,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if opened_before:
             where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
 
-        if opened_after:
-            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
-
         if liquidity_bigger_than is not None:
             where_stms["liquidityMeasure_gt"] = liquidity_bigger_than
 
@@ -165,9 +161,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             finalized = True
             resolved = True
         elif filter_by == FilterBy.OPEN:
-            where_stms["currentAnswer"] = None
-            finalized = False
-            resolved = False
+            # We can not use `resolved=False` + `finalized=False` here,
+            # because even closed markets don't need to be resolved yet (e.g. if someone forgot to finalize the question on reality).
+            opened_after = utcnow() + timedelta(seconds=42)
         elif filter_by == FilterBy.NONE:
             pass
         else:
@@ -184,6 +180,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 where_stms["answerFinalizedTimestamp_not"] = None
             else:
                 where_stms["answerFinalizedTimestamp"] = None
+
+        if opened_after:
+            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
 
         if finalized_before:
             where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
@@ -202,7 +201,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             case SortBy.NEWEST:
                 sort_direction = "desc"
             case SortBy.CLOSING_SOONEST:
-                sort_direction = "asc"
+                # `desc` feel unintuitive, but really if we use `asc`, we are getting markets closing in 2030, 2026, etc.
+                sort_direction = "desc"
             case SortBy.NONE:
                 sort_direction = "desc"
             case _:

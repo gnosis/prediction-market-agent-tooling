@@ -598,7 +598,7 @@ def omen_remove_fund_market_tx(
 
     Warning: Liquidity removal works on the principle of getting market's shares, not the collateral token itself.
     After we remove funding, using the `mergePositions` we get `min(shares per index)` of wxDai back, but the remaining shares can be converted back only after the market is resolved.
-    That can be done using the `redeem_positions_from_all_user_withdrawn_funds` function.
+    That can be done using the `redeem_from_all_user_positions` function below.
     """
     from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()

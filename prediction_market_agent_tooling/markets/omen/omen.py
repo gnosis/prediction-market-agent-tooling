@@ -541,13 +541,7 @@ def omen_redeem_full_position_tx(
         logger.debug("No balance to claim. Exiting.")
         return
 
-    # check if condition has already been resolved by oracle
-    payout_for_condition = conditional_token_contract.payoutDenominator(
-        market.condition.id
-    )
-    if not payout_for_condition > 0:
-        # from ConditionalTokens.redeemPositions:
-        # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
+    if not conditional_token_contract.is_condition_resolved(market.condition.id):
         logger.debug("Market not yet resolved, not possible to claim")
         return
 
@@ -601,6 +595,10 @@ def omen_remove_fund_market_tx(
     """
     Removes funding from a given OmenMarket (moving the funds from the OmenMarket to the
     ConditionalTokens contract), and finally calls the `mergePositions` method which transfers collateralToken from the ConditionalTokens contract to the address corresponding to `from_private_key`.
+
+    Warning: Liquidity removal works on the principle of getting market's shares, not the collateral token itself.
+    After we remove funding, using the `mergePositions` we get `min(shares per index)` of wxDai back, but the remaining shares can be converted back only after the market is resolved.
+    That can be done using the `redeem_from_all_user_positions` function below.
     """
     from_address = private_key_to_public_key(from_private_key)
     market_contract = market.get_contract()
@@ -648,9 +646,61 @@ def omen_remove_fund_market_tx(
     )
 
 
-def redeem_positions_from_all_omen_markets() -> None:
+def redeem_from_all_user_positions(
+    from_private_key: PrivateKey,
+    web3: Web3 | None = None,
+) -> None:
     """
-    Redeems positions from all resolved Omen markets.
+    Redeems from all user positions where the user didn't redeem yet.
+    """
+    public_key = private_key_to_public_key(from_private_key)
+
+    conditional_token_contract = OmenConditionalTokenContract()
+    user_positions = OmenSubgraphHandler().get_user_positions(
+        public_key,
+        # After redeem, this will became zero and we won't re-process it.
+        total_balance_bigger_than=wei_type(0),
+    )
+
+    for index, user_position in enumerate(user_positions):
+        # I didn't find any example where this wouldn't hold, but keeping this double-check here in case something changes in the future.
+        if len(user_position.position.conditionIds) != 1:
+            raise ValueError(
+                f"Bug in the logic, please investigate why zero or multiple conditions are returned for {user_position.id=}"
+            )
+        condition_id = user_position.position.conditionIds[0]
+
+        if not conditional_token_contract.is_condition_resolved(condition_id):
+            logger.info(
+                f"[{index+1} / {len(user_positions)}] Skipping redeem, {user_position.id=} isn't resolved yet."
+            )
+            continue
+
+        logger.info(
+            f"[{index+1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
+        )
+
+        original_balances = get_balances(public_key)
+        conditional_token_contract.redeemPositions(
+            from_private_key=from_private_key,
+            collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
+            condition_id=condition_id,
+            parent_collection_id=build_parent_collection_id(),
+            index_sets=user_position.position.indexSets,
+            web3=web3,
+        )
+        new_balances = get_balances(public_key)
+
+        logger.info(
+            f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from position {user_position.id=}."
+        )
+
+
+def redeem_positions_from_all_user_bets() -> None:
+    """
+    Redeems positions from all resolved Omen markets where the user placed a bet.
+
+    Note: This function is very similar to `redeem_from_all_user_positions`, but it will redeem only positions obtained from bets, not from liquidity withdrawals.
     """
     keys = APIKeys()
     omen_subgraph_handler = OmenSubgraphHandler()

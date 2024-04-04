@@ -9,6 +9,9 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent import DeployableAgent, MarketType
 from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.omen.omen import (
+    redeem_from_all_user_positions,
+)
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
     omen_replicate_from_tx,
     omen_unfund_replicated_known_markets_tx,
@@ -49,6 +52,9 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         omen_unfund_replicated_known_markets_tx(
             keys.bet_from_private_key, saturation_above_threshold=0.9
         )
+
+        logger.info("Redeeming funds from previously unfunded markets.")
+        redeem_from_all_user_positions(keys.bet_from_private_key)
 
         close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)

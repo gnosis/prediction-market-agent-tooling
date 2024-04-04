@@ -70,12 +70,21 @@ class Question(BaseModel):
 
 class OmenPosition(BaseModel):
     id: HexBytes
-    conditionIds: t.List[HexBytes]
+    conditionIds: list[HexBytes]
+    collateralTokenAddress: HexAddress
+    indexSets: list[int]
+
+    @property
+    def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.collateralTokenAddress)
 
 
 class OmenUserPosition(BaseModel):
     id: HexBytes
     position: OmenPosition
+    balance: Wei
+    wrappedBalance: Wei
+    totalBalance: Wei
 
 
 class OmenMarket(BaseModel):

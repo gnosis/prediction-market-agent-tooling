@@ -29,7 +29,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
-    redeem_positions_from_all_omen_markets,
+    redeem_positions_from_all_user_bets,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
@@ -184,7 +184,7 @@ def {entrypoint_function_name}(request) -> str:
         """
 
         if market_type == MarketType.OMEN:
-            redeem_positions_from_all_omen_markets()
+            redeem_positions_from_all_user_bets()
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """

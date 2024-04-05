@@ -172,6 +172,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if resolved is not None:
             if resolved:
                 where_stms["resolutionTimestamp_not"] = None
+                where_stms["currentAnswer_not"] = self.INVALID_ANSWER
             else:
                 where_stms["resolutionTimestamp"] = None
 

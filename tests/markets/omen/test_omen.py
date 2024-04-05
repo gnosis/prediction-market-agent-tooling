@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import numpy as np
 import pytest
@@ -6,7 +6,7 @@ from eth_typing import HexAddress, HexStr
 from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
@@ -161,7 +161,7 @@ def test_omen_market_close_time() -> None:
     - close time is in the future
     - close time is in ascending order
     """
-    time_now = datetime.now()
+    time_now = utcnow()
     markets = [
         OmenAgentMarket.from_data_model(m)
         for m in get_omen_binary_markets(
@@ -177,4 +177,6 @@ def test_omen_market_close_time() -> None:
         assert (
             market.close_time >= time_now
         ), "Market close time should be in the future."
-        time_now = market.close_time  # Ensure close time is in ascending order
+        time_now = DatetimeWithTimezone(
+            market.close_time
+        )  # Ensure close time is in ascending order

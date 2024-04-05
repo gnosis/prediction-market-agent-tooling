@@ -119,7 +119,11 @@ class OmenAgentMarket(AgentMarket):
 
             # Like Olas, we assert correctness by matching index OR invalid market answer
             if bet.outcomeIndex == int(
-                check_not_none(bet.fpmm.question.currentAnswer), 16
+                check_not_none(
+                    bet.fpmm.question.currentAnswer,
+                    "Shouldn't be None if the market is resolved",
+                ),
+                16,
             ) or bet.outcomeIndex == int(self.INVALID_MARKET_ANSWER, 16):
                 return True
 

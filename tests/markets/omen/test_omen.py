@@ -180,3 +180,19 @@ def test_omen_market_close_time() -> None:
         time_now = DatetimeWithTimezone(
             market.close_time
         )  # Ensure close time is in ascending order
+
+
+def test_market_liquidity() -> None:
+    """
+    Get open markets sorted by 'closing soonest'. Verify that liquidity is
+    greater than 0
+    """
+    markets = OmenAgentMarket.get_binary_markets(
+        limit=10,
+        sort_by=SortBy.CLOSING_SOONEST,
+        filter_by=FilterBy.OPEN,
+    )
+    for market in markets:
+        assert (
+            market.get_liquidity_in_xdai() > 0
+        ), "Market liquidity should be greater than 0."

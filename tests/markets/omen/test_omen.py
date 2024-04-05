@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
@@ -161,7 +161,7 @@ def test_omen_market_close_time() -> None:
     - close time is in the future
     - close time is in ascending order
     """
-    time_now = utcnow()
+    time_now = datetime.now()
     markets = [
         OmenAgentMarket.from_data_model(m)
         for m in get_omen_binary_markets(

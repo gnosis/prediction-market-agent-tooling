@@ -193,6 +193,7 @@ def test_market_liquidity() -> None:
         filter_by=FilterBy.OPEN,
     )
     for market in markets:
+        assert type(market) == OmenAgentMarket
         assert (
             market.get_liquidity_in_xdai() > 0
         ), "Market liquidity should be greater than 0."

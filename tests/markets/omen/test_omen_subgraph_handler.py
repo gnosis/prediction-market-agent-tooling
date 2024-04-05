@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime
 
+import pytest
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
@@ -143,3 +144,48 @@ def test_get_answers(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     assert answer.question.user == HexAddress(
         HexStr("0xdaa72a1944191a15e92218d9f00c375a8607a568")
     )
+
+
+@pytest.mark.parametrize(
+    "position_id_in",
+    [
+        None,
+        [
+            HexBytes(
+                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"
+            )
+        ],
+        [
+            HexBytes(
+                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"
+            ),
+            HexBytes(
+                "0xfa2f09d7375837e791c66f7ccee06d4fa7955812baf668883c2a5f939670ef33"
+            ),
+        ],
+        [
+            HexBytes(
+                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"
+            ),
+            HexBytes(
+                "0xfa2f09d7375837e791c66f7ccee06d4fa7955812baf668883c2a5f939670ef33"
+            ),
+        ]
+        * 100,  # Multiply to test if API won't fail with many IDs in the list.
+    ],
+)
+def test_get_user_positions_with_position_ids(
+    omen_subgraph_handler: OmenSubgraphHandler,
+    position_id_in: list[HexBytes] | None,
+) -> None:
+    user_positions = omen_subgraph_handler.get_user_positions(
+        better_address=Web3.to_checksum_address(
+            "0x2DD9f5678484C1F59F97eD334725858b938B4102"
+        ),
+        position_id_in=position_id_in,
+    )
+    if position_id_in is None:
+        assert len(user_positions) > 0
+    else:
+        assert len(user_positions) == len(set(position_id_in))
+        assert all(u.position.id in position_id_in for u in user_positions)

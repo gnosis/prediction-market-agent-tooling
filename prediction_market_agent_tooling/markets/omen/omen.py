@@ -1,5 +1,4 @@
 import typing as t
-from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 
@@ -11,6 +10,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
+    HexBytes,
     HexStr,
     PrivateKey,
     Wei,
@@ -46,6 +46,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     private_key_to_public_key,
@@ -100,7 +101,7 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
-    def was_bet_outcome_correct(self, resolved_omen_bets: t.List[OmenBet]) -> bool:
+    def was_any_bet_outcome_correct(self, resolved_omen_bets: t.List[OmenBet]) -> bool:
         resolved_bets_for_market = [
             bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
         ]
@@ -114,44 +115,45 @@ class OmenAgentMarket(AgentMarket):
         # If one of the bets was correct, we return true since there is a redeemable amount to be retrieved.
         for bet in resolved_bets_for_market:
             # We only handle markets that are already finalized AND have a final answer
-            if (
-                bet.fpmm.question.answerFinalizedTimestamp is None
-                or bet.fpmm.question.currentAnswer is None
-            ):
+            if not bet.fpmm.is_resolved:
                 continue
 
             # Like Olas, we assert correctness by matching index OR invalid market answer
             if bet.outcomeIndex == int(
-                bet.fpmm.question.currentAnswer, 16
+                check_not_none(
+                    bet.fpmm.question.currentAnswer,
+                    "Shouldn't be None if the market is resolved",
+                ),
+                16,
             ) or bet.outcomeIndex == int(self.INVALID_MARKET_ANSWER, 16):
                 return True
 
         return False
 
-    def check_if_position_was_already_redeemed(self) -> bool:
+    def market_redeemable_by(self, user: ChecksumAddress) -> bool:
         """
-        Olas solves this problem (see https://github.com/valory-xyz/trader/blob/033ad88998fe0dc16457cd312b32f9e3b2d9a25f/packages/valory/skills/decision_maker_abci/behaviours/reedem.py#L487) by keeping state of the conditionIDs that were already claimed.
-        Since we currently use stateless functions to redeem positions, it's not possible to query state. Hence we proceed by not tracking the positions already redeemed.
-        Note that this has no major consequences from a gas perspective, it only incurs extra subgraph queries and RPC reads, no writes hence no gas costs.
+        Will return true if given user placed a bet on this market and that bet has a balance.
+        If the user never placed a bet on this market, this corretly return False.
         """
-        return False
-
-    def redeem_positions(self, bets_on_market: t.List[OmenBet]) -> None:
-        keys = APIKeys()
-
-        bet_was_correct = self.was_bet_outcome_correct(bets_on_market)
-        if not bet_was_correct:
-            logger.debug(f"Bet placed on market {self.id} was incorrect.")
-            return None
-
-        position_already_redeemed = self.check_if_position_was_already_redeemed()
-        if position_already_redeemed:
-            logger.debug(f"Position on market {self.id} was already redeemed.")
-            return None
-
-        return omen_redeem_full_position_tx(
-            market=self, from_private_key=keys.bet_from_private_key
+        positions = OmenSubgraphHandler().get_positions(condition_id=self.condition.id)
+        user_positions = OmenSubgraphHandler().get_user_positions(
+            better_address=user,
+            position_id_in=[p.id for p in positions],
+            # After redeem, this will became zero.
+            total_balance_bigger_than=wei_type(0),
         )
+        return len(user_positions) > 0
+
+    def redeem_positions(self, for_private_key: PrivateKey) -> None:
+        for_public_key = private_key_to_public_key(for_private_key)
+        market_is_redeemable = self.market_redeemable_by(user=for_public_key)
+        if not market_is_redeemable:
+            logger.debug(
+                f"Position on market {self.id} was already redeemed or no bets were placed at all by {for_public_key=}."
+            )
+            return None
+
+        omen_redeem_full_position_tx(market=self, from_private_key=for_private_key)
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -223,6 +225,7 @@ def get_omen_binary_markets(
     resolved: bool | None = None,
     creator: t.Optional[HexAddress] = None,
     liquidity_bigger_than: Wei | None = None,
+    condition_id_in: list[HexBytes] | None = None,
     excluded_questions: set[str] | None = None,
 ) -> list[OmenMarket]:
     subgraph_handler = OmenSubgraphHandler()
@@ -238,6 +241,7 @@ def get_omen_binary_markets(
         filter_by=filter_by,
         creator=creator,
         liquidity_bigger_than=liquidity_bigger_than,
+        condition_id_in=condition_id_in,
         excluded_questions=excluded_questions,
     )
 
@@ -704,33 +708,3 @@ def redeem_from_all_user_positions(
         logger.info(
             f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from position {user_position.id=}."
         )
-
-
-def redeem_positions_from_all_user_bets() -> None:
-    """
-    Redeems positions from all resolved Omen markets where the user placed a bet.
-
-    Note: This function is very similar to `redeem_from_all_user_positions`, but it will redeem only positions obtained from bets, not from liquidity withdrawals.
-    """
-    keys = APIKeys()
-    omen_subgraph_handler = OmenSubgraphHandler()
-    resolved_omen_bets = omen_subgraph_handler.get_resolved_bets(
-        better_address=keys.bet_from_address,
-        start_time=datetime(2020, 1, 1),
-    )
-
-    bets_per_market_id: t.Dict[HexAddress, t.List[OmenBet]] = defaultdict(list)
-    market_id_to_market: t.Dict[HexAddress, OmenMarket] = {}
-
-    for bet in resolved_omen_bets:
-        bets_per_market_id[bet.fpmm.id].append(bet)
-        # We keep track of the unique markets
-        if bet.fpmm.id not in market_id_to_market:
-            market_id_to_market[bet.fpmm.id] = bet.fpmm
-
-    # We redeem positions for each unique resolved market where the
-    # agent has placed bets.
-    for market_id, omen_bets in bets_per_market_id.items():
-        market_data_model = market_id_to_market[market_id]
-        market = OmenAgentMarket.from_data_model(market_data_model)
-        market.redeem_positions(omen_bets)

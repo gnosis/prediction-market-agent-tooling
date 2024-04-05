@@ -86,6 +86,10 @@ class OmenUserPosition(BaseModel):
     wrappedBalance: Wei
     totalBalance: Wei
 
+    @property
+    def redeemable(self) -> bool:
+        return self.totalBalance > 0
+
 
 class OmenMarket(BaseModel):
     """

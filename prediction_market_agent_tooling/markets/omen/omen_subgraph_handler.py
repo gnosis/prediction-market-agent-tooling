@@ -197,18 +197,27 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         where_stms["question_"]["title_not_in"] = excluded_question_titles
         return where_stms
 
-    def _build_sort_direction(self, sort_by: SortBy) -> str:
+    def _build_sort_params(self, sort_by: SortBy) -> tuple[str, FieldPath]:
         match sort_by:
             case SortBy.NEWEST:
                 sort_direction = "desc"
+                sort_by_field = (
+                    self.trades_subgraph.FixedProductMarketMaker.creationTimestamp
+                )
             case SortBy.CLOSING_SOONEST:
                 sort_direction = "asc"
+                sort_by_field = (
+                    self.trades_subgraph.FixedProductMarketMaker.openingTimestamp
+                )
             case SortBy.NONE:
                 sort_direction = "desc"
+                sort_by_field = (
+                    self.trades_subgraph.FixedProductMarketMaker.creationTimestamp
+                )
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
 
-        return sort_direction
+        return sort_direction, sort_by_field
 
     def get_omen_binary_markets(
         self,
@@ -242,12 +251,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             liquidity_bigger_than=liquidity_bigger_than,
         )
 
-        sort_direction = self._build_sort_direction(sort_by)
+        sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
         markets = self.trades_subgraph.Query.fixedProductMarketMakers(
-            orderBy=self.trades_subgraph.FixedProductMarketMaker.openingTimestamp
-            if sort_by == SortBy.CLOSING_SOONEST
-            else self.trades_subgraph.FixedProductMarketMaker.creationTimestamp,
+            orderBy=sort_by_field,
             orderDirection=sort_direction,
             first=(
                 limit if limit else sys.maxsize

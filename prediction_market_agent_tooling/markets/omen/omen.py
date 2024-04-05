@@ -184,6 +184,13 @@ class OmenAgentMarket(AgentMarket):
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
     ) -> list[AgentMarket]:
+        if filter_by == FilterBy.OPEN:
+            # We assume here that we are only interested in markets that
+            # we can trade on, i.e. ones with non-zero liquidity.
+            liquidity_bigger_than = wei_type(0)
+        else:
+            liquidity_bigger_than = None
+
         return [
             OmenAgentMarket.from_data_model(m)
             for m in get_omen_binary_markets(
@@ -192,6 +199,7 @@ class OmenAgentMarket(AgentMarket):
                 created_after=created_after,
                 filter_by=filter_by,
                 excluded_questions=excluded_questions,
+                liquidity_bigger_than=liquidity_bigger_than,
             )
         ]
 

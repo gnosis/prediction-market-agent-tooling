@@ -77,7 +77,7 @@ def omen_market() -> OmenMarket:
             isPendingArbitration=False,
             data="...",
         ),
-        liquidityMeasure=Wei(10),
+        liquidityParameter=Wei(10),
     )
 
 

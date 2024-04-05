@@ -202,8 +202,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             case SortBy.NEWEST:
                 sort_direction = "desc"
             case SortBy.CLOSING_SOONEST:
-                # `desc` feel unintuitive, but really if we use `asc`, we are getting markets closing in 2030, 2026, etc.
-                sort_direction = "desc"
+                sort_direction = "asc"
             case SortBy.NONE:
                 sort_direction = "desc"
             case _:

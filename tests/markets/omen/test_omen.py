@@ -155,7 +155,26 @@ def create_market_fund_market_remove_funding() -> None:
 
 
 def test_omen_market_close_time() -> None:
-    market = OmenAgentMarket.from_data_model(pick_binary_market())
-    assert (
-        market.close_time > market.created_time
-    ), "Market close time should be after open time."
+    """
+    Get open markets sorted by 'closing_soonest'. Verify that:
+    - close time is after open time
+    - close time is in the future
+    - close time is in ascending order
+    """
+    time_now = utcnow()
+    markets = [
+        OmenAgentMarket.from_data_model(m)
+        for m in get_omen_binary_markets(
+            limit=100,
+            sort_by=SortBy.CLOSING_SOONEST,
+            filter_by=FilterBy.OPEN,
+        )
+    ]
+    for market in markets:
+        assert (
+            market.close_time > market.created_time
+        ), "Market close time should be after open time."
+        assert (
+            market.close_time >= time_now
+        ), "Market close time should be in the future."
+        time_now = market.close_time  # Ensure close time is in ascending order

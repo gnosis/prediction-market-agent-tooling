@@ -96,7 +96,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             markets_field.creator,
             markets_field.collateralVolume,
             markets_field.usdVolume,
-            markets_field.liquidityMeasure,
+            markets_field.liquidityParameter,
             markets_field.collateralToken,
             markets_field.outcomes,
             markets_field.outcomeTokenAmounts,
@@ -152,7 +152,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
 
         if liquidity_bigger_than is not None:
-            where_stms["liquidityMeasure_gt"] = liquidity_bigger_than
+            where_stms["liquidityParameter_gt"] = liquidity_bigger_than
 
         if condition_id_in is not None:
             where_stms["condition_"]["id_in"] = [x.hex() for x in condition_id_in]

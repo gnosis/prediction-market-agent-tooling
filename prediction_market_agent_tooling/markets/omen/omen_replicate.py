@@ -178,11 +178,11 @@ def omen_unfund_replicated_known_markets_tx(
             )
         ):
             logger.info(
-                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityMeasure=} {market.question=}  {market.url=}`, because it's not saturated yet, `{market.p_yes=}`."
+                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityParameter=} {market.question=}  {market.url=}`, because it's not saturated yet, `{market.p_yes=}`."
             )
             continue
         logger.info(
-            f"[{idx+1}/{len(markets)}] Unfunding market `{market.liquidityMeasure=} {market.question=} {market.url=}`."
+            f"[{idx+1}/{len(markets)}] Unfunding market `{market.liquidityParameter=} {market.question=} {market.url=}`."
         )
         omen_remove_fund_market_tx(
             market=OmenAgentMarket.from_data_model(market),

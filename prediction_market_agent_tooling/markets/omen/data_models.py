@@ -99,7 +99,12 @@ class OmenMarket(BaseModel):
     creator: HexAddress
     category: str
     collateralVolume: Wei
-    liquidityMeasure: Wei
+    # Note: there are two similar parameters relating to liquidity:
+    # liquidityParameter and liquidityMeasure. The former appears to match most
+    # closely with the liquidity returned when calling the contract directly
+    # (see OmenAgentMarket.get_liquidity). So we can use it e.g. for filtering
+    # markets, but until better understood, please call the contract directly.
+    liquidityParameter: Wei
     usdVolume: USD
     collateralToken: HexAddress
     outcomes: list[str]

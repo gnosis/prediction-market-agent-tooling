@@ -6,7 +6,7 @@ from eth_typing import HexAddress, HexStr
 from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
@@ -152,3 +152,31 @@ def create_market_fund_market_remove_funding() -> None:
         - Assert amount in xDAI is reflected in user's balance
     """
     assert True
+
+
+def test_omen_market_close_time() -> None:
+    """
+    Get open markets sorted by 'closing_soonest'. Verify that:
+    - close time is after open time
+    - close time is in the future
+    - close time is in ascending order
+    """
+    time_now = utcnow()
+    markets = [
+        OmenAgentMarket.from_data_model(m)
+        for m in get_omen_binary_markets(
+            limit=100,
+            sort_by=SortBy.CLOSING_SOONEST,
+            filter_by=FilterBy.OPEN,
+        )
+    ]
+    for market in markets:
+        assert (
+            market.close_time > market.created_time
+        ), "Market close time should be after open time."
+        assert (
+            market.close_time >= time_now
+        ), "Market close time should be in the future."
+        time_now = DatetimeWithTimezone(
+            market.close_time
+        )  # Ensure close time is in ascending order

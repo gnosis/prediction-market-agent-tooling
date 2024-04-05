@@ -111,6 +111,7 @@ def test_minimum_bet_to_win(
             condition=Condition(id=HexBytes("0x123"), outcomeSlotCount=2),
             url="url",
             volume=None,
+            finalized_time=None,
         ),
     )
     assert (

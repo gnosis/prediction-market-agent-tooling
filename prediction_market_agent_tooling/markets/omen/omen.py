@@ -185,7 +185,7 @@ class OmenAgentMarket(AgentMarket):
         if filter_by == FilterBy.OPEN:
             # We assume here that we are only interested in markets that
             # we can trade on, i.e. ones with non-zero liquidity.
-            liquidity_bigger_than = (wei_type(0),)
+            liquidity_bigger_than = wei_type(0)
         else:
             liquidity_bigger_than = None
 

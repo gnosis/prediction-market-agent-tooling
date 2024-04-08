@@ -325,9 +325,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
 
         items = self._parse_items_from_json(result)
-        from pprint import pprint
-
-        pprint(items)
         omen_markets = [OmenMarket.model_validate(i) for i in items]
         return omen_markets
 

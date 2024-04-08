@@ -291,13 +291,19 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             liquidity_bigger_than=liquidity_bigger_than,
         )
 
+        # These values can not be set to `None`, but they can be omitted.
+        optional_params = {}
+        if sort_by_field is not None:
+            optional_params["orderBy"] = sort_by_field
+        if sort_direction is not None:
+            optional_params["orderDirection"] = sort_direction
+
         markets = self.trades_subgraph.Query.fixedProductMarketMakers(
-            orderBy=sort_by_field,
-            orderDirection=sort_direction,
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible markets
             where=where_stms,
+            **optional_params,
         )
 
         fields = self._get_fields_for_markets(markets)

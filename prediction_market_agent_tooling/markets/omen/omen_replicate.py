@@ -56,7 +56,11 @@ def omen_replicate_from_tx(
         10 if market_type == MarketType.POLYMARKET else 100,
         market_type,
         filter_by=FilterBy.OPEN,
-        sort_by=SortBy.NONE,
+        sort_by=(
+            SortBy.NONE
+            if market_type == MarketType.POLYMARKET
+            else SortBy.CLOSING_SOONEST
+        ),
         excluded_questions=set(m.question_title for m in already_created_markets),
     )
     markets_sorted = sorted(

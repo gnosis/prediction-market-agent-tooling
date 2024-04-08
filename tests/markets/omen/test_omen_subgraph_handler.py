@@ -114,15 +114,17 @@ def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None
 
 
 def test_filter_resolved_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None:
-    limit = 10
+    limit = 100
     markets = omen_subgraph_handler.get_omen_binary_markets_simple(
         limit=limit,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.RESOLVED,
     )
     assert len(markets) == limit
-    for market in markets:
+    for index, market in enumerate(markets):
         assert market.is_resolved_with_valid_answer
+        if index > 0:
+            assert markets[index - 1].opening_datetime <= market.opening_datetime
 
 
 def test_get_user_positions(

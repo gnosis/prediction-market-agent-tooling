@@ -170,11 +170,7 @@ class OmenAgentMarket(AgentMarket):
             condition=model.condition,
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
-            close_time=(
-                datetime.fromtimestamp(model.openingTimestamp)
-                if model.openingTimestamp
-                else None
-            ),
+            close_time=model.opening_datetime,
         )
 
     @staticmethod

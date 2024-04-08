@@ -76,8 +76,10 @@ def omen_market() -> OmenMarket:
             templateId=2,
             isPendingArbitration=False,
             data="...",
+            openingTimestamp=int(utcnow().timestamp()),
         ),
         liquidityParameter=Wei(10),
+        creationTimestamp=int(utcnow().timestamp()),
     )
 
 

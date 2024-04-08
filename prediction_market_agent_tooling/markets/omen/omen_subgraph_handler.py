@@ -1,11 +1,11 @@
 import sys
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
 
-from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei
+from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -122,7 +122,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def _build_where_statements(
         self,
-        filter_by: FilterBy,
         creator: t.Optional[HexAddress] = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         created_after: t.Optional[datetime] = None,
@@ -157,18 +156,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         if condition_id_in is not None:
             where_stms["condition_"]["id_in"] = [x.hex() for x in condition_id_in]
-
-        if filter_by == FilterBy.RESOLVED:
-            finalized = True
-            resolved = True
-        elif filter_by == FilterBy.OPEN:
-            # We can not use `resolved=False` + `finalized=False` here,
-            # because even closed markets don't need to be resolved yet (e.g. if someone forgot to finalize the question on reality).
-            opened_after = utcnow() + timedelta(seconds=42)
-        elif filter_by == FilterBy.NONE:
-            pass
-        else:
-            raise ValueError(f"Unknown filter_by: {filter_by}")
 
         if resolved is not None:
             if resolved:
@@ -220,11 +207,56 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         return sort_direction, sort_by_field
 
+    def get_omen_binary_markets_simple(
+        self,
+        limit: t.Optional[int],
+        # Enumerated values for simpler usage.
+        filter_by: FilterBy,
+        sort_by: SortBy,
+        # Additional filters, these can not be modified by the enums above.
+        created_after: datetime | None = None,
+        excluded_questions: set[str] | None = None,  # question titles
+    ) -> t.List[OmenMarket]:
+        """
+        Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
+        """
+        # These values need to be set according to the filter_by value, so they can not be passed as arguments.
+        finalized: bool | None = None
+        resolved: bool | None = None
+        opened_after: datetime | None = None
+        liquidity_bigger_than: Wei | None = None
+
+        if filter_by == FilterBy.RESOLVED:
+            finalized = True
+            resolved = True
+        elif filter_by == FilterBy.OPEN:
+            # We can not use `resolved=False` + `finalized=False` here,
+            # because even closed markets don't need to be resolved yet (e.g. if someone forgot to finalize the question on reality).
+            opened_after = utcnow()
+            # Even if the market isn't closed yet, liquidity can be withdrawn to 0, which essentially closes the market.
+            liquidity_bigger_than = wei_type(0)
+        elif filter_by == FilterBy.NONE:
+            pass
+        else:
+            raise ValueError(f"Unknown filter_by: {filter_by}")
+
+        sort_direction, sort_by_field = self._build_sort_params(sort_by)
+
+        return self.get_omen_binary_markets(
+            limit=limit,
+            finalized=finalized,
+            resolved=resolved,
+            opened_after=opened_after,
+            liquidity_bigger_than=liquidity_bigger_than,
+            sort_direction=sort_direction,
+            sort_by_field=sort_by_field,
+            created_after=created_after,
+            excluded_questions=excluded_questions,
+        )
+
     def get_omen_binary_markets(
         self,
         limit: t.Optional[int],
-        sort_by: SortBy,
-        filter_by: FilterBy,
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
         opened_after: t.Optional[datetime] = None,
@@ -235,10 +267,14 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
         excluded_questions: set[str] | None = None,  # question titles
+        sort_by_field: FieldPath | None = None,
+        sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
     ) -> t.List[OmenMarket]:
+        """
+        Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
+        """
         where_stms = self._build_where_statements(
-            filter_by=filter_by,
             creator=creator,
             outcomes=outcomes,
             created_after=created_after,
@@ -251,8 +287,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             excluded_questions=excluded_questions,
             liquidity_bigger_than=liquidity_bigger_than,
         )
-
-        sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
         markets = self.trades_subgraph.Query.fixedProductMarketMakers(
             orderBy=sort_by_field,

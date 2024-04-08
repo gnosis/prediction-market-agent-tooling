@@ -23,7 +23,7 @@ def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:
 
 
 def test_markets_with_outcome_null(omen_subgraph_handler: OmenSubgraphHandler) -> None:
-    markets = omen_subgraph_handler.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
         limit=sys.maxsize, filter_by=FilterBy.NONE, sort_by=SortBy.NONE
     )
     for market in markets:
@@ -53,7 +53,7 @@ def test_get_markets_exclude_questions(
         "Belgium v Italy - Who will win this UEFA Euro 2020 Quarter-Finals match?",
         "Will the Grayscale Ethereum Trust (ETHE) have a discount to NAV at the end of September 2021?",
     ]
-    markets = omen_subgraph_handler.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
         excluded_questions=set(excluded_question_titles),
         filter_by=FilterBy.NONE,
         sort_by=SortBy.NONE,
@@ -103,7 +103,7 @@ def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None
     # ToDo
     limit = 100
 
-    markets = omen_subgraph_handler.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
         limit=limit,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
@@ -115,7 +115,7 @@ def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None
 
 def test_filter_resolved_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     limit = 10
-    markets = omen_subgraph_handler.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
         limit=limit,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.RESOLVED,

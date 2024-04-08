@@ -12,7 +12,6 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     xDai,
 )
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.manifold.utils import (
     find_resolution_on_manifold,
@@ -24,7 +23,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_REALITIO_BOND_VALUE,
-    get_omen_binary_markets,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
@@ -62,11 +60,9 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
     before = utcnow() - timedelta(hours=8)
 
     # Fetch markets created by us that are already open, but no answer was submitted yet.
-    created_opened_markets = get_omen_binary_markets(
+    created_opened_markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         creator=public_key,
-        sort_by=SortBy.NEWEST,
-        filter_by=FilterBy.NONE,
         opened_before=before,
         finalized=False,
     )
@@ -78,11 +74,9 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
     logger.info(f"{balances_after_finalization=}")
 
     # Fetch markets created by us that are already open, and we already submitted an answer more than a day ago, but they aren't resolved yet.
-    created_finalized_markets = get_omen_binary_markets(
+    created_finalized_markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         creator=public_key,
-        sort_by=SortBy.NEWEST,
-        filter_by=FilterBy.NONE,
         finalized_before=before - timedelta(hours=24),
         resolved=False,
     )

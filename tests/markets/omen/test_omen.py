@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
-    get_omen_binary_markets,
     omen_create_market_tx,
     omen_fund_market_tx,
     omen_redeem_full_position_tx,
@@ -111,7 +110,7 @@ def test_omen_fund_and_remove_fund_market() -> None:
 
 def test_p_yes() -> None:
     # Find a market with outcomeTokenMarginalPrices and verify that p_yes is correct.
-    for m in get_omen_binary_markets(
+    for m in OmenSubgraphHandler().get_omen_binary_markets_simple(
         limit=200,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
@@ -164,7 +163,7 @@ def test_omen_market_close_time() -> None:
     time_now = utcnow()
     markets = [
         OmenAgentMarket.from_data_model(m)
-        for m in get_omen_binary_markets(
+        for m in OmenSubgraphHandler().get_omen_binary_markets_simple(
             limit=100,
             sort_by=SortBy.CLOSING_SOONEST,
             filter_by=FilterBy.OPEN,

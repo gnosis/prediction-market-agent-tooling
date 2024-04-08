@@ -10,7 +10,6 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
-    HexBytes,
     HexStr,
     PrivateKey,
     Wei,
@@ -171,9 +170,11 @@ class OmenAgentMarket(AgentMarket):
             condition=model.condition,
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
-            close_time=datetime.fromtimestamp(model.openingTimestamp)
-            if model.openingTimestamp
-            else None,
+            close_time=(
+                datetime.fromtimestamp(model.openingTimestamp)
+                if model.openingTimestamp
+                else None
+            ),
         )
 
     @staticmethod
@@ -184,22 +185,14 @@ class OmenAgentMarket(AgentMarket):
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
     ) -> list[AgentMarket]:
-        if filter_by == FilterBy.OPEN:
-            # We assume here that we are only interested in markets that
-            # we can trade on, i.e. ones with non-zero liquidity.
-            liquidity_bigger_than = wei_type(0)
-        else:
-            liquidity_bigger_than = None
-
         return [
             OmenAgentMarket.from_data_model(m)
-            for m in get_omen_binary_markets(
+            for m in OmenSubgraphHandler().get_omen_binary_markets_simple(
                 limit=limit,
                 sort_by=sort_by,
-                created_after=created_after,
                 filter_by=filter_by,
+                created_after=created_after,
                 excluded_questions=excluded_questions,
-                liquidity_bigger_than=liquidity_bigger_than,
             )
         ]
 
@@ -221,44 +214,11 @@ def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
         raise ValueError(f"Unknown sort_by: {sort_by}")
 
 
-def get_omen_binary_markets(
-    limit: int | None,
-    sort_by: SortBy,
-    filter_by: FilterBy,
-    created_after: t.Optional[datetime] = None,
-    opened_before: t.Optional[datetime] = None,
-    opened_after: t.Optional[datetime] = None,
-    finalized_before: t.Optional[datetime] = None,
-    finalized: bool | None = None,
-    resolved: bool | None = None,
-    creator: t.Optional[HexAddress] = None,
-    liquidity_bigger_than: Wei | None = None,
-    condition_id_in: list[HexBytes] | None = None,
-    excluded_questions: set[str] | None = None,
-) -> list[OmenMarket]:
-    subgraph_handler = OmenSubgraphHandler()
-    return subgraph_handler.get_omen_binary_markets(
-        limit=limit,
-        sort_by=sort_by,
-        created_after=created_after,
-        opened_before=opened_before,
-        opened_after=opened_after,
-        finalized_before=finalized_before,
-        finalized=finalized,
-        resolved=resolved,
-        filter_by=filter_by,
-        creator=creator,
-        liquidity_bigger_than=liquidity_bigger_than,
-        condition_id_in=condition_id_in,
-        excluded_questions=excluded_questions,
-    )
-
-
 def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
 ) -> OmenMarket:
     subgraph_handler = OmenSubgraphHandler()
-    return subgraph_handler.get_omen_binary_markets(
+    return subgraph_handler.get_omen_binary_markets_simple(
         limit=1, sort_by=sort_by, filter_by=filter_by
     )[0]
 

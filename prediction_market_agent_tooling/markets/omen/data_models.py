@@ -67,6 +67,17 @@ class Question(BaseModel):
     def n_outcomes(self) -> int:
         return len(self.outcomes)
 
+    @property
+    def outcome_index(self) -> int | None:
+        return (
+            int(
+                self.currentAnswer,
+                16,
+            )
+            if self.currentAnswer is not None
+            else None
+        )
+
 
 class OmenPosition(BaseModel):
     id: HexBytes

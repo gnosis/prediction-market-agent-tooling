@@ -7,8 +7,8 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OmenUserPosition,
     OmenPosition,
+    OmenUserPosition,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -234,5 +234,7 @@ def build_incomplete_user_position_from_condition_ids(
     condition_ids: list[HexBytes],
 ) -> OmenUserPosition:
     return OmenUserPosition.construct(
-        position=OmenPosition.construct(condition_ids=condition_ids)
+        position=OmenPosition.construct(
+            conditionIds=condition_ids,
+        )
     )

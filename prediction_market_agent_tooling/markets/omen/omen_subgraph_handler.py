@@ -509,7 +509,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_markets_from_all_user_positions(
         self, user_positions: list[OmenUserPosition]
     ) -> list[OmenMarket]:
-        condition_ids = sum([u.position.condition_ids for u in user_positions], [])
+        condition_ids: list[HexBytes] = sum(
+            [u.position.conditionIds for u in user_positions], []
+        )
         markets = self.get_omen_binary_markets(
             limit=sys.maxsize, condition_id_in=condition_ids
         )
@@ -519,7 +521,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self, user_position: OmenUserPosition
     ) -> OmenMarket:
         """Markets and user positions are uniquely connected via condition_ids"""
-        condition_ids = user_position.position.condition_ids
+        condition_ids = user_position.position.conditionIds
         markets = self.get_omen_binary_markets(limit=1, condition_id_in=condition_ids)
         if len(markets) != 1:
             raise ValueError(

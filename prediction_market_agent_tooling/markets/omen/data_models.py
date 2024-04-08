@@ -67,6 +67,17 @@ class Question(BaseModel):
     def n_outcomes(self) -> int:
         return len(self.outcomes)
 
+    @property
+    def outcome_index(self) -> int | None:
+        return (
+            int(
+                self.currentAnswer,
+                16,
+            )
+            if self.currentAnswer is not None
+            else None
+        )
+
 
 class OmenPosition(BaseModel):
     id: HexBytes
@@ -121,9 +132,9 @@ class OmenMarket(BaseModel):
     creationTimestamp: t.Optional[int] = None
     condition: Condition
     question: Question
-    openingTimestamp: t.Optional[
-        int
-    ] = None  # Don't be fooled - this is the time that the market closes for trading, and the market question is opened on reality.eth!
+    openingTimestamp: t.Optional[int] = (
+        None  # Don't be fooled - this is the time that the market closes for trading, and the market question is opened on reality.eth!
+    )
 
     @property
     def answer_index(self) -> t.Optional[int]:

@@ -448,7 +448,22 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             market_id=market_id,
             filter_by_answer_finalized_not_null=True,
         )
-        return [b for b in omen_bets if b.fpmm.is_resolved_with_valid_answer]
+        return [b for b in omen_bets if b.fpmm.is_resolved]
+
+    def get_resolved_bets_with_valid_answer(
+        self,
+        better_address: ChecksumAddress,
+        start_time: datetime,
+        end_time: t.Optional[datetime] = None,
+        market_id: t.Optional[str] = None,
+    ) -> list[OmenBet]:
+        bets = self.get_resolved_bets(
+            better_address=better_address,
+            start_time=start_time,
+            end_time=end_time,
+            market_id=market_id,
+        )
+        return [b for b in bets if b.fpmm.is_resolved_with_valid_answer]
 
     def get_questions(
         self,

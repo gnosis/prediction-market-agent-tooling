@@ -104,7 +104,9 @@ class OmenAgentMarket(AgentMarket):
         self, resolved_omen_bets: t.List[OmenBet]
     ) -> bool | None:
         resolved_bets_for_market = [
-            bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
+            bet
+            for bet in resolved_omen_bets
+            if bet.fpmm.id == self.id and bet.fpmm.is_resolved
         ]
 
         # If there were no bets for this market, we conservatively say that
@@ -119,10 +121,6 @@ class OmenAgentMarket(AgentMarket):
         # We iterate through bets since agent could have placed bets on multiple outcomes.
         # If one of the bets was correct, we return true since there is a redeemable amount to be retrieved.
         for bet in resolved_bets_for_market:
-            # We only handle markets that are already finalized and resolved
-            if not bet.fpmm.is_resolved:
-                continue
-
             # Like Olas, we assert correctness by matching index
             if bet.outcomeIndex == check_not_none(
                 bet.fpmm.question.outcome_index,

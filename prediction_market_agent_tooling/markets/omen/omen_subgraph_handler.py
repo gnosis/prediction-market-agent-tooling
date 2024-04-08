@@ -306,26 +306,46 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             **optional_params,
         )
 
+        omen_markets = self.do_markets_query(markets)
+        return omen_markets
+
+    def do_markets_query(self, markets: FieldPath) -> list[OmenMarket]:
         fields = self._get_fields_for_markets(markets)
         result = self.sg.query_json(fields)
-
         items = self._parse_items_from_json(result)
         omen_markets = [OmenMarket.model_validate(i) for i in items]
         return omen_markets
 
-    def get_omen_market(self, market_id: HexAddress) -> OmenMarket:
+    def get_omen_market_by_market_id(self, market_id: HexAddress) -> OmenMarket:
         markets = self.trades_subgraph.Query.fixedProductMarketMaker(
             id=market_id.lower()
         )
-        fields = self._get_fields_for_markets(markets)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        omen_markets = [OmenMarket.model_validate(i) for i in items]
+
+        omen_markets = self.do_markets_query(markets)
 
         if len(omen_markets) != 1:
             raise ValueError(
                 f"Fetched wrong number of markets. Expected 1 but got {len(omen_markets)}"
             )
+
+        return omen_markets[0]
+
+    def get_omen_market_by_title(self, market_question_title: str) -> OmenMarket | None:
+        markets = self.trades_subgraph.Query.fixedProductMarketMakers(
+            where=[
+                self.trades_subgraph.FixedProductMarketMaker.title
+                == market_question_title
+            ],
+            orderBy=self.trades_subgraph.FixedProductMarketMaker.creationTimestamp,
+            orderDirection="desc",
+        )
+
+        omen_markets = self.do_markets_query(markets)
+
+        # We assume it's possible to have multiple markets with the same title, hence we don't
+        # enforce the number of markets retrieved. However, we return the one that was created most recently.
+        if not omen_markets:
+            return None
 
         return omen_markets[0]
 

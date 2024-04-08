@@ -17,7 +17,7 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
 def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:
-    market = omen_subgraph_handler.get_omen_market(
+    market = omen_subgraph_handler.get_omen_market_by_market_id(
         HexAddress(HexStr("0xa3e47bb771074b33f2e279b9801341e9e0c9c6d7"))
     )
     assert (
@@ -228,6 +228,24 @@ def test_get_markets_from_multiple_user_positions(
     assert len(markets) == len(condition_ids)
     actual_condition_ids = set([m.condition.id for m in markets])
     assert actual_condition_ids.issubset(condition_ids)
+
+
+def test_get_omen_market_by_title(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    expected_title = "Will Sam Altman be the CEO of OpenAI at the end of 2024?"
+    expected_market_id = "0xd1f92ce6aa94fffd6eb819e238a2dc9217aec058"
+    market = omen_subgraph_handler.get_omen_market_by_title(expected_title)
+    assert market is not None
+    assert market.id == expected_market_id
+
+
+def test_get_not_existing_omen_market_by_title(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    wrong_title = "I am not a title, I don't exist"
+    market = omen_subgraph_handler.get_omen_market_by_title(wrong_title)
+    assert market is None
 
 
 def build_incomplete_user_position_from_condition_ids(

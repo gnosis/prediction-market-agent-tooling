@@ -128,7 +128,7 @@ def test_omen_redeem_positions() -> None:
         "0x6469da5478e5b2ddf9f6b7fba365e5670b7880f4".lower()
     )  # Market on which agent previously betted on
     subgraph_handler = OmenSubgraphHandler()
-    market_data_model = subgraph_handler.get_omen_market(
+    market_data_model = subgraph_handler.get_omen_market_by_market_id(
         market_id=HexAddress(HexStr(market_id))
     )
     market = OmenAgentMarket.from_data_model(market_data_model)

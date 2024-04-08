@@ -138,6 +138,12 @@ class OmenMarket(BaseModel):
         return datetime.fromtimestamp(self.openingTimestamp)
 
     @property
+    def close_time(self) -> datetime:
+        # Opening of the Reality's question is close time for the market,
+        # however, market is usually "closed" even sooner by removing all the liquidity.
+        return self.opening_datetime
+
+    @property
     def answer_index(self) -> t.Optional[int]:
         return int(self.currentAnswer, 16) if self.currentAnswer else None
 

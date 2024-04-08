@@ -505,3 +505,24 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
+
+    def get_markets_from_all_user_positions(
+        self, user_positions: list[OmenUserPosition]
+    ) -> list[OmenMarket]:
+        condition_ids = sum([u.position.condition_ids for u in user_positions], [])
+        markets = self.get_omen_binary_markets(
+            limit=sys.maxsize, condition_id_in=condition_ids
+        )
+        return markets
+
+    def get_market_from_user_position(
+        self, user_position: OmenUserPosition
+    ) -> OmenMarket:
+        """Markets and user positions are uniquely connected via condition_ids"""
+        condition_ids = user_position.position.condition_ids
+        markets = self.get_omen_binary_markets(limit=1, condition_id_in=condition_ids)
+        if len(markets) != 1:
+            raise ValueError(
+                f"Incorrect number of markets fetched {len(markets)}, expected 1."
+            )
+        return markets[0]

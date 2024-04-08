@@ -6,6 +6,10 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OmenUserPosition,
+    OmenPosition,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
@@ -189,3 +193,46 @@ def test_get_user_positions_with_position_ids(
     else:
         assert len(user_positions) == len(set(position_id_in))
         assert all(u.position.id in position_id_in for u in user_positions)
+
+
+def test_get_market_with_condition_ids(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    condition_ids = [
+        HexBytes("0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b")
+    ]
+    expected_market_title = (
+        "Will the Federal Reserve cut interest rates on 28 March 2024?"
+    )
+    omen_user_position = build_incomplete_user_position_from_condition_ids(
+        condition_ids
+    )
+    market = omen_subgraph_handler.get_market_from_user_position(omen_user_position)
+    assert market is not None
+    assert market.condition.id in condition_ids
+    assert market.title == expected_market_title
+
+
+def test_get_markets_from_multiple_user_positions(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    condition_ids = [
+        HexBytes("0xe2bf80af2a936cdabeef4f511620a2eec46f1caf8e75eb5dc189372367a9154c"),
+        HexBytes("0x3f8153364001b26b983dd92191a084de8230f199b5ad0b045e9e1df61089b30d"),
+    ]
+    user_positions = [
+        build_incomplete_user_position_from_condition_ids([condition_id])
+        for condition_id in condition_ids
+    ]
+    markets = omen_subgraph_handler.get_markets_from_all_user_positions(user_positions)
+    assert len(markets) == len(condition_ids)
+    actual_condition_ids = set([m.condition.id for m in markets])
+    assert actual_condition_ids.issubset(condition_ids)
+
+
+def build_incomplete_user_position_from_condition_ids(
+    condition_ids: list[HexBytes],
+) -> OmenUserPosition:
+    return OmenUserPosition.construct(
+        position=OmenPosition.construct(condition_ids=condition_ids)
+    )

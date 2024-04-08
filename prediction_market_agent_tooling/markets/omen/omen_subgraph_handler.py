@@ -185,7 +185,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         where_stms["question_"]["title_not_in"] = excluded_question_titles
         return where_stms
 
-    def _build_sort_params(self, sort_by: SortBy) -> tuple[str, FieldPath]:
+    def _build_sort_params(
+        self, sort_by: SortBy
+    ) -> tuple[str | None, FieldPath | None]:
+        sort_direction: str | None
+        sort_by_field: FieldPath | None
+
         match sort_by:
             case SortBy.NEWEST:
                 sort_direction = "desc"
@@ -198,10 +203,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                     self.trades_subgraph.FixedProductMarketMaker.openingTimestamp
                 )
             case SortBy.NONE:
-                sort_direction = "desc"
-                sort_by_field = (
-                    self.trades_subgraph.FixedProductMarketMaker.creationTimestamp
-                )
+                sort_direction = None
+                sort_by_field = None
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
 

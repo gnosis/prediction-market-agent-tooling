@@ -21,9 +21,11 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     OmenAgentMarket,
-    get_omen_binary_markets,
     omen_create_market_tx,
     omen_remove_fund_market_tx,
+)
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -44,11 +46,9 @@ def omen_replicate_from_tx(
     auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
     from_address = private_key_to_public_key(from_private_key)
-    already_created_markets = get_omen_binary_markets(
+    already_created_markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         creator=from_address,
-        sort_by=SortBy.NEWEST,
-        filter_by=FilterBy.NONE,
     )
 
     markets = get_binary_markets(
@@ -79,7 +79,7 @@ def omen_replicate_from_tx(
     # Get a set of possible categories from existing markets (but created by anyone, not just your agent)
     existing_categories = set(
         m.category
-        for m in get_omen_binary_markets(
+        for m in OmenSubgraphHandler().get_omen_binary_markets_simple(
             limit=1000,
             sort_by=SortBy.NEWEST,
             filter_by=FilterBy.NONE,
@@ -158,11 +158,9 @@ def omen_unfund_replicated_known_markets_tx(
 
     # Fetch markets that we created, are soon to be known,
     # and still have liquidity in them (we didn't withdraw it yet).
-    markets = get_omen_binary_markets(
+    markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         creator=from_address,
-        sort_by=SortBy.NEWEST,
-        filter_by=FilterBy.NONE,
         opened_before=opened_before,
         liquidity_bigger_than=wei_type(0),
     )

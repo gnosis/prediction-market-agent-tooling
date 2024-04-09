@@ -315,7 +315,7 @@ class PolymarketFullMarket(BaseModel):
         )
 
         if market is None:
-            logger.warning(f"Warning: No polymarket found for {url}")
+            logger.warning(f"No polymarket found for {url}")
 
         return market
 

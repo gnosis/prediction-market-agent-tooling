@@ -4,7 +4,6 @@ import typing as t
 from datetime import datetime
 from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
-import git
 import pytz
 import requests
 from loguru import logger
@@ -106,6 +105,9 @@ def utcnow() -> DatetimeWithTimezone:
 
 
 def get_current_git_commit_sha() -> str:
+    # Import here to avoid erroring out if git repository is not present, but the function is not used anyway.
+    import git
+
     return git.Repo(search_parent_directories=True).head.commit.hexsha
 
 
@@ -114,10 +116,16 @@ def to_int_timestamp(dt: datetime) -> int:
 
 
 def get_current_git_branch() -> str:
+    # Import here to avoid erroring out if git repository is not present, but the function is not used anyway.
+    import git
+
     return git.Repo(search_parent_directories=True).active_branch.name
 
 
 def get_current_git_url() -> str:
+    # Import here to avoid erroring out if git repository is not present, but the function is not used anyway.
+    import git
+
     return git.Repo(search_parent_directories=True).remotes.origin.url
 
 

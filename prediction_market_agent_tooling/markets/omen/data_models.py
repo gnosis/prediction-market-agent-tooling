@@ -72,6 +72,7 @@ class Question(BaseModel):
     def opening_datetime(self) -> datetime:
         return datetime.fromtimestamp(self.openingTimestamp)
 
+    @property
     def outcome_index(self) -> int | None:
         return (
             int(

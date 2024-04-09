@@ -68,7 +68,7 @@ class ManifoldAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list["ManifoldAgentMarket"]:
+    ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None
         if sort_by == SortBy.CLOSING_SOONEST:
             sort = "close-date"

@@ -72,6 +72,16 @@ class Question(BaseModel):
     def opening_datetime(self) -> datetime:
         return datetime.fromtimestamp(self.openingTimestamp)
 
+    def outcome_index(self) -> int | None:
+        return (
+            int(
+                self.currentAnswer,
+                16,
+            )
+            if self.currentAnswer is not None
+            else None
+        )
+
 
 class OmenPosition(BaseModel):
     id: HexBytes

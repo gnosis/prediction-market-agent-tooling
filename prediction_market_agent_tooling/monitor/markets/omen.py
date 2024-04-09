@@ -21,8 +21,9 @@ class DeployedOmenAgent(DeployedAgent):
     omen_public_key: ChecksumAddress
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
+        # For monitoring of deployed agent, return only resolved bets with valid answer.
         subgraph_handler = OmenSubgraphHandler()
-        bets = subgraph_handler.get_resolved_bets(
+        bets = subgraph_handler.get_resolved_bets_with_valid_answer(
             better_address=self.omen_public_key,
             start_time=self.start_time,
             end_time=self.end_time,

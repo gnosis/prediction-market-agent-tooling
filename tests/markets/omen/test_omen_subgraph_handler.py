@@ -68,7 +68,7 @@ def test_resolved_omen_bets(
     a_bet_from_address: str, omen_subgraph_handler: OmenSubgraphHandler
 ) -> None:
     better_address = Web3.to_checksum_address(a_bet_from_address)
-    resolved_bets = omen_subgraph_handler.get_resolved_bets(
+    resolved_bets = omen_subgraph_handler.get_resolved_bets_with_valid_answer(
         start_time=datetime(2024, 2, 20),
         end_time=datetime(2024, 2, 28),
         better_address=better_address,

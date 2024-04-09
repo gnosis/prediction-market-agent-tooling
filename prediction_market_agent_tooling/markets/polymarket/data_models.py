@@ -14,11 +14,11 @@ from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
 
 class PolymarketRewards(BaseModel):
     min_size: int
-    max_spread: float
-    event_start_date: datetime | None
-    event_end_date: datetime | None
-    in_game_multiplier: int
-    reward_epoch: int
+    max_spread: float | None
+    event_start_date: datetime | None = None
+    event_end_date: datetime | None = None
+    in_game_multiplier: int | None = None
+    reward_epoch: int | None = None
 
 
 class PolymarketToken(BaseModel):

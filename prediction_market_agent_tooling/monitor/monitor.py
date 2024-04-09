@@ -205,7 +205,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
 
 
 def monitor_market(
-    open_markets: list[AgentMarket], resolved_markets: list[AgentMarket]
+    open_markets: t.Sequence[AgentMarket], resolved_markets: t.Sequence[AgentMarket]
 ) -> None:
     col1, col2 = st.columns(2)
     col1.metric(label="Number open markets", value=f"{len(open_markets)}")
@@ -215,7 +215,7 @@ def monitor_market(
     monitor_market_outcome_bias(open_markets, resolved_markets)
 
 
-def monitor_brier_score(resolved_markets: list[AgentMarket]) -> None:
+def monitor_brier_score(resolved_markets: t.Sequence[AgentMarket]) -> None:
     """
     https://en.wikipedia.org/wiki/Brier_score
 
@@ -256,7 +256,7 @@ def monitor_brier_score(resolved_markets: list[AgentMarket]) -> None:
 
 
 def monitor_market_outcome_bias(
-    open_markets: list[AgentMarket], resolved_markets: list[AgentMarket]
+    open_markets: t.Sequence[AgentMarket], resolved_markets: t.Sequence[AgentMarket]
 ) -> None:
     st.subheader("Market Outcome Bias")
 

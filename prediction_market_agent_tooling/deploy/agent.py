@@ -52,7 +52,7 @@ class DeployableAgent:
     def load(self) -> None:
         pass
 
-    def pick_markets(self, markets: list[AgentMarket]) -> list[AgentMarket]:
+    def pick_markets(self, markets: t.Sequence[AgentMarket]) -> t.Sequence[AgentMarket]:
         """
         This method should be implemented by the subclass to pick the markets to bet on. By default, it picks only the first market.
         """
@@ -170,7 +170,7 @@ def {entrypoint_function_name}(request) -> str:
         limit: int = MAX_AVAILABLE_MARKETS,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
         filter_by: FilterBy = FilterBy.OPEN,
-    ) -> list[AgentMarket]:
+    ) -> t.Sequence[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(

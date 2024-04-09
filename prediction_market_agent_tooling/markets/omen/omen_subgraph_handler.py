@@ -330,25 +330,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         return omen_markets[0]
 
-    def get_omen_market_by_title(self, market_question_title: str) -> OmenMarket | None:
-        markets = self.trades_subgraph.Query.fixedProductMarketMakers(
-            where=[
-                self.trades_subgraph.FixedProductMarketMaker.title
-                == market_question_title
-            ],
-            orderBy=self.trades_subgraph.FixedProductMarketMaker.creationTimestamp,
-            orderDirection="desc",
-        )
-
-        omen_markets = self.do_markets_query(markets)
-
-        # We assume it's possible to have multiple markets with the same title, hence we don't
-        # enforce the number of markets retrieved. However, we return the one that was created most recently.
-        if not omen_markets:
-            return None
-
-        return omen_markets[0]
-
     def _parse_items_from_json(
         self, result: list[dict[str, t.Any]]
     ) -> list[dict[str, t.Any]]:

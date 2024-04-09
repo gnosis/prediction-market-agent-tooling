@@ -230,22 +230,14 @@ def test_get_markets_from_multiple_user_positions(
     assert actual_condition_ids.issubset(condition_ids)
 
 
-def test_get_omen_market_by_title(
+def test_get_positions_by_condition_id(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
-    expected_title = "Will Sam Altman be the CEO of OpenAI at the end of 2024?"
-    expected_market_id = "0xd1f92ce6aa94fffd6eb819e238a2dc9217aec058"
-    market = omen_subgraph_handler.get_omen_market_by_title(expected_title)
-    assert market is not None
-    assert market.id == expected_market_id
-
-
-def test_get_not_existing_omen_market_by_title(
-    omen_subgraph_handler: OmenSubgraphHandler,
-) -> None:
-    wrong_title = "I am not a title, I don't exist"
-    market = omen_subgraph_handler.get_omen_market_by_title(wrong_title)
-    assert market is None
+    condition_id = HexBytes(
+        "0xffe4bf3e61be010728813a2a61ef422fd7d07b410170b64a5dfced9549f2e057"
+    )
+    positions = omen_subgraph_handler.get_positions(condition_id)
+    assert len(positions) == 2
 
 
 def build_incomplete_user_position_from_condition_ids(

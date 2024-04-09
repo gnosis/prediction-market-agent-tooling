@@ -6,6 +6,10 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OmenPosition,
+    OmenUserPosition,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
@@ -13,7 +17,7 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
 def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:
-    market = omen_subgraph_handler.get_omen_market(
+    market = omen_subgraph_handler.get_omen_market_by_market_id(
         HexAddress(HexStr("0xa3e47bb771074b33f2e279b9801341e9e0c9c6d7"))
     )
     assert (
@@ -191,3 +195,58 @@ def test_get_user_positions_with_position_ids(
     else:
         assert len(user_positions) == len(set(position_id_in))
         assert all(u.position.id in position_id_in for u in user_positions)
+
+
+def test_get_market_with_condition_ids(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    condition_ids = [
+        HexBytes("0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b")
+    ]
+    expected_market_title = (
+        "Will the Federal Reserve cut interest rates on 28 March 2024?"
+    )
+    omen_user_position = build_incomplete_user_position_from_condition_ids(
+        condition_ids
+    )
+    market = omen_subgraph_handler.get_market_from_user_position(omen_user_position)
+    assert market is not None
+    assert market.condition.id in condition_ids
+    assert market.title == expected_market_title
+
+
+def test_get_markets_from_multiple_user_positions(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    condition_ids = [
+        HexBytes("0xe2bf80af2a936cdabeef4f511620a2eec46f1caf8e75eb5dc189372367a9154c"),
+        HexBytes("0x3f8153364001b26b983dd92191a084de8230f199b5ad0b045e9e1df61089b30d"),
+    ]
+    user_positions = [
+        build_incomplete_user_position_from_condition_ids([condition_id])
+        for condition_id in condition_ids
+    ]
+    markets = omen_subgraph_handler.get_markets_from_all_user_positions(user_positions)
+    assert len(markets) == len(condition_ids)
+    actual_condition_ids = set([m.condition.id for m in markets])
+    assert actual_condition_ids.issubset(condition_ids)
+
+
+def test_get_positions_by_condition_id(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    condition_id = HexBytes(
+        "0xffe4bf3e61be010728813a2a61ef422fd7d07b410170b64a5dfced9549f2e057"
+    )
+    positions = omen_subgraph_handler.get_positions(condition_id)
+    assert len(positions) == 2
+
+
+def build_incomplete_user_position_from_condition_ids(
+    condition_ids: list[HexBytes],
+) -> OmenUserPosition:
+    return OmenUserPosition.construct(
+        position=OmenPosition.construct(
+            conditionIds=condition_ids,
+        )
+    )

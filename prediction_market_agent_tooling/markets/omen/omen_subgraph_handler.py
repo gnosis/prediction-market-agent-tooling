@@ -321,21 +321,22 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             **optional_params,
         )
 
+        omen_markets = self.do_markets_query(markets)
+        return omen_markets
+
+    def do_markets_query(self, markets: FieldPath) -> list[OmenMarket]:
         fields = self._get_fields_for_markets(markets)
         result = self.sg.query_json(fields)
-
         items = self._parse_items_from_json(result)
         omen_markets = [OmenMarket.model_validate(i) for i in items]
         return omen_markets
 
-    def get_omen_market(self, market_id: HexAddress) -> OmenMarket:
+    def get_omen_market_by_market_id(self, market_id: HexAddress) -> OmenMarket:
         markets = self.trades_subgraph.Query.fixedProductMarketMaker(
             id=market_id.lower()
         )
-        fields = self._get_fields_for_markets(markets)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        omen_markets = [OmenMarket.model_validate(i) for i in items]
+
+        omen_markets = self.do_markets_query(markets)
 
         if len(omen_markets) != 1:
             raise ValueError(
@@ -520,3 +521,26 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
+
+    def get_markets_from_all_user_positions(
+        self, user_positions: list[OmenUserPosition]
+    ) -> list[OmenMarket]:
+        unique_condition_ids: list[HexBytes] = list(
+            set(sum([u.position.conditionIds for u in user_positions], []))
+        )
+        markets = self.get_omen_binary_markets(
+            limit=sys.maxsize, condition_id_in=unique_condition_ids
+        )
+        return markets
+
+    def get_market_from_user_position(
+        self, user_position: OmenUserPosition
+    ) -> OmenMarket:
+        """Markets and user positions are uniquely connected via condition_ids"""
+        condition_ids = user_position.position.conditionIds
+        markets = self.get_omen_binary_markets(limit=1, condition_id_in=condition_ids)
+        if len(markets) != 1:
+            raise ValueError(
+                f"Incorrect number of markets fetched {len(markets)}, expected 1."
+            )
+        return markets[0]

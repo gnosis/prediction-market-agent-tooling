@@ -1,123 +1,79 @@
-from typing import List, Optional
-from eth_typing import ChecksumAddress
-from web3.types import Nonce, TxParams, TxReceipt, Wei
-from web3 import Web3
-from gnosis.eth import EthereumClient, EthereumTxSent
+import os
+
+from dotenv import load_dotenv
+from eth_account import Account
+from eth_typing import URI
+from gnosis.eth import EthereumClient
 from gnosis.eth.constants import NULL_ADDRESS
-from gnosis.eth.contracts import get_safe_V1_3_0_contract
-from gnosis.safe import ProxyFactory, Safe
+from gnosis.eth.contracts import (
+    get_safe_contract,
+    get_safe_V1_4_1_contract,
+)
+from gnosis.safe import ProxyFactory
+from web3 import Web3
 
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
-def _deploy_test_safe(
-        self,
-        initializer: bytes,
-        master_copy_address: ChecksumAddress,
-        initial_funding_wei: Optional[Wei] = None,
-    ) -> Safe:
-        """
-        Internal method to deploy a Safe given the initializer and master copy
-
-        :param initializer:
-        :param master_copy_address:
-        :param initial_funding_wei: If provided, funds will be sent to the Safe
-        :return: A deployed Safe
-        """
-        ethereum_tx_sent = self.proxy_factory.deploy_proxy_contract_with_nonce(
-            self.ethereum_test_account,
-            master_copy_address,
-            initializer=initializer,
-        )
-        safe = Safe(
-            ethereum_tx_sent.contract_address,
-            self.ethereum_client,
-            simulate_tx_accessor_address=self.simulate_tx_accessor_V1_4_1.address,
-        )
-
-        if initial_funding_wei:
-            self.send_ether(safe.address, initial_funding_wei)
-
-        return safe
-
-def _deploy_new_test_safe(
-        master_copy_version: str,
-        master_copy_address: ChecksumAddress,
-        number_owners: int = 3,
-        threshold: Optional[int] = None,
-        owners: Optional[List[ChecksumAddress]] = None,
-        initial_funding_wei: int = 0,
-        fallback_handler: Optional[ChecksumAddress] = None,
-    ) -> Safe:
-        """
-        Internal method to deploy Safes from 1.1.1 to 1.4.1, as setup method didn't change
-
-        :param master_copy_version:
-        :param master_copy_address:
-        :param number_owners:
-        :param threshold:
-        :param owners:
-        :param initial_funding_wei:
-        :param fallback_handler:
-        :return: A deployed Safe
-        """
-
-        fallback_handler = (
-            fallback_handler or self.compatibility_fallback_handler.address
-        )
-        owners = (
-            owners
-            if owners
-            else [Account.create().address for _ in range(number_owners)]
-        )
-        if not threshold:
-            threshold = len(owners) - 1 if len(owners) > 1 else 1
-        to = NULL_ADDRESS
-        data = b""
-        payment_token = NULL_ADDRESS
-        payment = 0
-        payment_receiver = NULL_ADDRESS
-        initializer = HexBytes(
-            self.safe_contract_V1_4_1.functions.setup(
-                owners,
-                threshold,
-                to,
-                data,
-                fallback_handler,
-                payment_token,
-                payment,
-                payment_receiver,
-            ).build_transaction(get_empty_tx_params())["data"]
-        )
-
-        safe = self._deploy_test_safe(
-            initializer, master_copy_address, initial_funding_wei=initial_funding_wei
-        )
-
 
 def main():
-
-    print ('start') 
-    
+    print("start")
+    load_dotenv()
+    print(f"priv key {os.environ['BET_FROM_PRIVATE_KEY']}")
 
     # addresses.MASTER_COPIES[EthereumNetwork.MAINNET]
-    MASTER_COPY_141 = "0x41675C099F32341bf84BFc5382aF534df5C7461a"
-    CHAIN_RPC_URL = 'https://rpc.tenderly.co/fork/afb295ce-87ed-4bad-a38f-f7e3b32d2932'
-    PROXY_FACTORY_ADDRESS = '0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67'
+    MASTER_COPY_141 = Web3.to_checksum_address(
+        "0x41675C099F32341bf84BFc5382aF534df5C7461a"
+    )
+    FALLBACK_HANDLER = Web3.to_checksum_address(
+        "0xFD0732DC9E303F09FCEF3A7388AD10A83459EC99"
+    )
+    # CHAIN_RPC_URL = "https://rpc.tenderly.co/fork/afb295ce-87ed-4bad-a38f-f7e3b32d2932"
+    CHAIN_RPC_URL = "https://gnosis-rpc.publicnode.com"
+    PROXY_FACTORY_ADDRESS = Web3.to_checksum_address(
+        "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67"
+    )
+
     web3 = Web3(Web3.HTTPProvider(CHAIN_RPC_URL))
 
-    _deploy_new_test_safe(
-            "1.4.1",
-            MASTER_COPY_141,
-            number_owners=1,
-            threshold=1,
-            owners=[Web3.to_checksum_address("0xC073C043189b79b18508cA9330f49B007D345605")],
-            initial_funding_wei=0,
-            fallback_handler=None,
-        )
+    safe_141 = get_safe_contract(web3, MASTER_COPY_141)
+    account_dev = Web3.to_checksum_address("0xC073C043189b79b18508cA9330f49B007D345605")
+    safe_1412 = get_safe_V1_4_1_contract(web3, MASTER_COPY_141)
 
+    print(safe_1412)
 
+    print(safe_141)
+    # from safe-cli
+    safe_creation_tx_data = HexBytes(
+        safe_1412.functions.setup(
+            [account_dev],
+            1,
+            NULL_ADDRESS,
+            b"",
+            FALLBACK_HANDLER,
+            NULL_ADDRESS,
+            0,
+            NULL_ADDRESS,
+        ).build_transaction({"gas": 1, "gasPrice": 1})["data"]
+    )
+    salt_nonce = 42
+    ethereum_client = EthereumClient(URI(CHAIN_RPC_URL))
+    proxy_factory = ProxyFactory(PROXY_FACTORY_ADDRESS, ethereum_client)
+    expected_safe_address = proxy_factory.calculate_proxy_address(
+        MASTER_COPY_141, safe_creation_tx_data, salt_nonce
+    )
+    account = Account.from_key(os.environ["BET_FROM_PRIVATE_KEY"])
+    ethereum_tx_sent = proxy_factory.deploy_proxy_contract_with_nonce(
+        account, MASTER_COPY_141, safe_creation_tx_data, salt_nonce
+    )
+    print(
+        f"Sent tx with tx-hash={ethereum_tx_sent.tx_hash.hex()} "
+        f"Safe={ethereum_tx_sent.contract_address} is being created"
+    )
+    print(f"Tx parameters={ethereum_tx_sent.tx}")
+    # ToDo - Use dev account for this
+    # ToDo - Fund the safe from dev account, send from safe to another account
+    print("end")
 
-    print ('end')
 
 if __name__ == "__main__":
     main()

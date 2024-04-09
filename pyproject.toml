@@ -36,6 +36,8 @@ langchain-openai = { version = "^0.0.8", optional = true}
 google-api-python-client = { version = "2.95.0", optional = true}
 subgrounds = "^1.8.1"
 loguru = "^0.7.2"
+safe-eth-py = "^5.8.0"
+prompt-toolkit = "^3.0.43"
 
 [tool.poetry.extras]
 langchain = ["langchain", "langchain-openai"]

@@ -50,4 +50,4 @@ def get_binary_markets(
         created_after=created_after,
         excluded_questions=excluded_questions,
     )
-    return markets
+    return list(markets)

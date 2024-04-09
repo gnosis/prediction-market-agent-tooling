@@ -65,17 +65,21 @@ def get_open_and_resolved_markets(
     market_type: MarketType,
 ) -> tuple[list[AgentMarket], list[AgentMarket]]:
     cls = market_type.market_class
-    open_markets = cls.get_binary_markets(
-        limit=MAX_MONITOR_MARKETS,
-        sort_by=SortBy.NEWEST,
-        created_after=start_time,
-        filter_by=FilterBy.OPEN,
+    open_markets = list(
+        cls.get_binary_markets(
+            limit=MAX_MONITOR_MARKETS,
+            sort_by=SortBy.NEWEST,
+            created_after=start_time,
+            filter_by=FilterBy.OPEN,
+        )
     )
-    resolved_markets = cls.get_binary_markets(
-        limit=MAX_MONITOR_MARKETS,
-        sort_by=SortBy.NEWEST,
-        created_after=start_time,
-        filter_by=FilterBy.RESOLVED,
+    resolved_markets = list(
+        cls.get_binary_markets(
+            limit=MAX_MONITOR_MARKETS,
+            sort_by=SortBy.NEWEST,
+            created_after=start_time,
+            filter_by=FilterBy.RESOLVED,
+        )
     )
     resolved_markets = [m for m in resolved_markets if m.has_successful_resolution()]
     return open_markets, resolved_markets

@@ -173,8 +173,8 @@ def {entrypoint_function_name}(request) -> str:
     ) -> list[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
-        available_markets = cls.get_binary_markets(
-            limit=limit, sort_by=sort_by, filter_by=filter_by
+        available_markets = list(
+            cls.get_binary_markets(limit=limit, sort_by=sort_by, filter_by=filter_by)
         )
         return available_markets
 

@@ -68,7 +68,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         ]
         return fields_for_bets + fields_for_markets
 
-    def _get_fields_for_questions(self, questions_field: FieldPath) -> list[FieldPath]:
+    def _get_fields_for_reality_questions(
+        self, questions_field: FieldPath
+    ) -> list[FieldPath]:
+        # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
         return [
             questions_field.id,
             questions_field.user,
@@ -86,7 +89,23 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             answers_field.lastBond,
             answers_field.timestamp,
             answers_field.createdBlock,
-        ] + self._get_fields_for_questions(answers_field.question)
+        ] + self._get_fields_for_reality_questions(answers_field.question)
+
+    def _get_fields_for_market_questions(
+        self, questions_field: FieldPath
+    ) -> list[FieldPath]:
+        # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
+        return [
+            questions_field.id,
+            questions_field.title,
+            questions_field.outcomes,
+            questions_field.answerFinalizedTimestamp,
+            questions_field.currentAnswer,
+            questions_field.data,
+            questions_field.templateId,
+            questions_field.isPendingArbitration,
+            questions_field.openingTimestamp,
+        ]
 
     def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
         # In theory it's possible to store the subgraph schema locally (see https://github.com/0xPlaygrounds/subgrounds/issues/41).
@@ -108,17 +127,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             markets_field.currentAnswer,
             markets_field.creationTimestamp,
             markets_field.category,
-            markets_field.question.id,
-            markets_field.question.title,
-            markets_field.question.outcomes,
-            markets_field.question.answerFinalizedTimestamp,
-            markets_field.question.currentAnswer,
-            markets_field.question.data,
-            markets_field.question.templateId,
-            markets_field.question.isPendingArbitration,
             markets_field.condition.id,
             markets_field.condition.outcomeSlotCount,
-        ]
+        ] + self._get_fields_for_market_questions(markets_field.question)
 
     def _build_where_statements(
         self,
@@ -149,7 +160,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
 
         if opened_before:
-            where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
+            where_stms["question_"]["openingTimestamp_lt"] = to_int_timestamp(
+                opened_before
+            )
 
         if liquidity_bigger_than is not None:
             where_stms["liquidityParameter_gt"] = liquidity_bigger_than
@@ -171,7 +184,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 where_stms["answerFinalizedTimestamp"] = None
 
         if opened_after:
-            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
+            where_stms["question_"]["openingTimestamp_gt"] = to_int_timestamp(
+                opened_after
+            )
 
         if finalized_before:
             where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
@@ -488,7 +503,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             )
 
         questions = self.realityeth_subgraph.Query.questions(where=where_stms)
-        fields = self._get_fields_for_questions(questions)
+        fields = self._get_fields_for_reality_questions(questions)
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityQuestion.model_validate(i) for i in items]

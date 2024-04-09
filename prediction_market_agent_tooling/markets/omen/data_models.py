@@ -55,6 +55,7 @@ class Question(BaseModel):
     templateId: int
     outcomes: list[str]
     isPendingArbitration: bool
+    openingTimestamp: int
     answerFinalizedTimestamp: t.Optional[datetime] = None
     currentAnswer: t.Optional[str] = None
 
@@ -66,6 +67,10 @@ class Question(BaseModel):
     @property
     def n_outcomes(self) -> int:
         return len(self.outcomes)
+
+    @property
+    def opening_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.openingTimestamp)
 
     @property
     def outcome_index(self) -> int | None:
@@ -129,12 +134,25 @@ class OmenMarket(BaseModel):
     resolutionTimestamp: t.Optional[int] = None
     answerFinalizedTimestamp: t.Optional[int] = None
     currentAnswer: t.Optional[str] = None
-    creationTimestamp: t.Optional[int] = None
+    creationTimestamp: int
     condition: Condition
     question: Question
-    openingTimestamp: t.Optional[
-        int
-    ] = None  # Don't be fooled - this is the time that the market closes for trading, and the market question is opened on reality.eth!
+
+    @property
+    def openingTimestamp(self) -> int:
+        # This field is also available on this model itself, but for some reason it's typed to be optional,
+        # but Question's openingTimestamp is typed to be always present, so use that one instead.
+        return self.question.openingTimestamp
+
+    @property
+    def opening_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.openingTimestamp)
+
+    @property
+    def close_time(self) -> datetime:
+        # Opening of the Reality's question is close time for the market,
+        # however, market is usually "closed" even sooner by removing all the liquidity.
+        return self.opening_datetime
 
     @property
     def answer_index(self) -> t.Optional[int]:
@@ -166,12 +184,8 @@ class OmenMarket(BaseModel):
         return self.title
 
     @property
-    def creation_datetime(self) -> datetime | None:
-        return (
-            datetime.fromtimestamp(self.creationTimestamp)
-            if self.creationTimestamp is not None
-            else None
-        )
+    def creation_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.creationTimestamp)
 
     @property
     def finalized_datetime(self) -> datetime | None:

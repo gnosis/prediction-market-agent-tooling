@@ -1,3 +1,4 @@
+import typing as t
 from datetime import datetime
 from enum import Enum
 
@@ -41,7 +42,7 @@ def get_binary_markets(
     sort_by: SortBy = SortBy.NONE,
     excluded_questions: set[str] | None = None,
     created_after: datetime | None = None,
-) -> list[AgentMarket]:
+) -> t.Sequence[AgentMarket]:
     agent_market_class = MARKET_TYPE_TO_AGENT_MARKET[market_type]
     markets = agent_market_class.get_binary_markets(
         limit=limit,
@@ -50,4 +51,4 @@ def get_binary_markets(
         created_after=created_after,
         excluded_questions=excluded_questions,
     )
-    return list(markets)
+    return markets

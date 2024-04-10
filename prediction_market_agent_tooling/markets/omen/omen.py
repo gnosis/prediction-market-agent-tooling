@@ -207,18 +207,6 @@ class OmenAgentMarket(AgentMarket):
         )
 
 
-def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
-    """
-    Returns 'orderBy' and 'orderDirection' strings for the given SortBy.
-    """
-    if sort_by == SortBy.CLOSING_SOONEST:
-        return "creationTimestamp", "desc"  # TODO make more accurate
-    elif sort_by == SortBy.NEWEST:
-        return "creationTimestamp", "desc"
-    else:
-        raise ValueError(f"Unknown sort_by: {sort_by}")
-
-
 def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
 ) -> OmenMarket:

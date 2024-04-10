@@ -143,3 +143,6 @@ class AgentMarket(BaseModel):
 
     def get_squared_error(self) -> float:
         return (self.p_yes - self.boolean_outcome) ** 2
+
+    def get_token_balance(self, user_id: str, outcome: str) -> Decimal:
+        raise NotImplementedError("Subclasses must implement this method")

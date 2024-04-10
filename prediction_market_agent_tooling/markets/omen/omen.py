@@ -206,6 +206,23 @@ class OmenAgentMarket(AgentMarket):
             address=self.market_maker_contract_address_checksummed
         )
 
+    def get_index_set(self, outcome: str) -> int:
+        return self.get_outcome_index(outcome) + 1
+
+    def get_token_balance(self, user_id: str, outcome: str) -> Decimal:
+        positions = OmenSubgraphHandler().get_positions(self.condition.id)
+
+        # Find position matching market_outcome
+        index_set = self.get_index_set(outcome)
+        position_for_index_set = next(p for p in positions if index_set in p.indexSets)
+        position_as_int = int(position_for_index_set.id.hex(), 16)
+
+        balance = OmenConditionalTokenContract().balanceOf(
+            from_address=Web3.to_checksum_address(user_id),
+            position_id=position_as_int,
+        )
+        return Decimal(balance)
+
 
 def ordering_from_sort_by(sort_by: SortBy) -> tuple[str, str]:
     """

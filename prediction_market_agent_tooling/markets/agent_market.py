@@ -114,6 +114,10 @@ class AgentMarket(BaseModel):
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
+    @staticmethod
+    def get_binary_market(id: str) -> "AgentMarket":
+        raise NotImplementedError("Subclasses must implement this method")
+
     def is_resolved(self) -> bool:
         return self.resolution is not None
 

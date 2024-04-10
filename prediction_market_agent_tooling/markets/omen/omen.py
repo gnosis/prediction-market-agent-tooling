@@ -194,7 +194,7 @@ class OmenAgentMarket(AgentMarket):
         ]
 
     @staticmethod
-    def get_binary_market(id: str) -> "AgentMarket":
+    def get_binary_market(id: str) -> "OmenAgentMarket":
         return OmenAgentMarket.from_data_model(
             OmenSubgraphHandler().get_omen_market(market_id=HexAddress(id))
         )

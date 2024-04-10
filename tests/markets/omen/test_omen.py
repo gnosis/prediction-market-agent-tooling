@@ -202,4 +202,3 @@ def test_get_binary_market() -> None:
     id = "0x0020d13c89140b47e10db54cbd53852b90bc1391"
     market = OmenAgentMarket.get_binary_market(id)
     assert market.id == id
-    print(market.p_yes, market.p_no)

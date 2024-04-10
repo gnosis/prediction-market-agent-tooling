@@ -196,3 +196,9 @@ def test_market_liquidity() -> None:
         assert (
             market.get_liquidity_in_xdai() > 0
         ), "Market liquidity should be greater than 0."
+
+
+def test_get_binary_market() -> None:
+    id = "0x0020d13c89140b47e10db54cbd53852b90bc1391"
+    market = OmenAgentMarket.get_binary_market(id)
+    assert market.id == id

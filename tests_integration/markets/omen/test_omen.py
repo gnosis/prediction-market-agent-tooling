@@ -51,7 +51,7 @@ def test_create_bet_withdraw_resolve_market(
             auto_deposit=True,
         )
     logger.debug(f"Market created at address: {market_address}")
-    market = omen_subgraph_handler.get_omen_market(market_address)
+    market = omen_subgraph_handler.get_omen_market_by_market_id(market_address)
 
     # Double check the market was created correctly.
     assert market.question_title == question

@@ -63,7 +63,7 @@ def get_deployed_agents(
 def get_open_and_resolved_markets(
     start_time: datetime,
     market_type: MarketType,
-) -> tuple[list[AgentMarket], list[AgentMarket]]:
+) -> tuple[t.Sequence[AgentMarket], t.Sequence[AgentMarket]]:
     cls = market_type.market_class
     open_markets = cls.get_binary_markets(
         limit=MAX_MONITOR_MARKETS,

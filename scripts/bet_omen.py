@@ -78,7 +78,9 @@ def sell(
 
 def build_omen_agent_market(market_id: str) -> OmenAgentMarket:
     subgraph_handler = OmenSubgraphHandler()
-    market_data_model = subgraph_handler.get_omen_market(HexAddress(HexStr(market_id)))
+    market_data_model = subgraph_handler.get_omen_market_by_market_id(
+        HexAddress(HexStr(market_id))
+    )
     market = OmenAgentMarket.from_data_model(market_data_model)
     return market
 

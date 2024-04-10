@@ -100,9 +100,13 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
-    def was_any_bet_outcome_correct(self, resolved_omen_bets: t.List[OmenBet]) -> bool:
+    def was_any_bet_outcome_correct(
+        self, resolved_omen_bets: t.List[OmenBet]
+    ) -> bool | None:
         resolved_bets_for_market = [
-            bet for bet in resolved_omen_bets if bet.fpmm.id == self.id
+            bet
+            for bet in resolved_omen_bets
+            if bet.fpmm.id == self.id and bet.fpmm.is_resolved
         ]
 
         # If there were no bets for this market, we conservatively say that
@@ -110,21 +114,18 @@ class OmenAgentMarket(AgentMarket):
         if not resolved_bets_for_market:
             raise ValueError(f"No resolved bets provided for market {self.id}")
 
+        if not resolved_bets_for_market[0].fpmm.has_valid_answer:
+            # We return None if the market was resolved as invalid, as we were neither right or wrong.
+            return None
+
         # We iterate through bets since agent could have placed bets on multiple outcomes.
         # If one of the bets was correct, we return true since there is a redeemable amount to be retrieved.
         for bet in resolved_bets_for_market:
-            # We only handle markets that are already finalized AND have a final answer
-            if not bet.fpmm.is_resolved:
-                continue
-
-            # Like Olas, we assert correctness by matching index OR invalid market answer
-            if bet.outcomeIndex == int(
-                check_not_none(
-                    bet.fpmm.question.currentAnswer,
-                    "Shouldn't be None if the market is resolved",
-                ),
-                16,
-            ) or bet.outcomeIndex == int(self.INVALID_MARKET_ANSWER, 16):
+            # Like Olas, we assert correctness by matching index
+            if bet.outcomeIndex == check_not_none(
+                bet.fpmm.question.outcome_index,
+                "Shouldn't be None if the market is resolved",
+            ):
                 return True
 
         return False
@@ -170,11 +171,7 @@ class OmenAgentMarket(AgentMarket):
             condition=model.condition,
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
-            close_time=(
-                datetime.fromtimestamp(model.openingTimestamp)
-                if model.openingTimestamp
-                else None
-            ),
+            close_time=model.close_time,
         )
 
     @staticmethod
@@ -184,7 +181,7 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list[AgentMarket]:
+    ) -> t.Sequence["OmenAgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)
             for m in OmenSubgraphHandler().get_omen_binary_markets_simple(

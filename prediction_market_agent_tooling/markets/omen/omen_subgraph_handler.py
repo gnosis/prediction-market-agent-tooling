@@ -68,7 +68,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         ]
         return fields_for_bets + fields_for_markets
 
-    def _get_fields_for_questions(self, questions_field: FieldPath) -> list[FieldPath]:
+    def _get_fields_for_reality_questions(
+        self, questions_field: FieldPath
+    ) -> list[FieldPath]:
+        # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
         return [
             questions_field.id,
             questions_field.user,
@@ -86,7 +89,23 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             answers_field.lastBond,
             answers_field.timestamp,
             answers_field.createdBlock,
-        ] + self._get_fields_for_questions(answers_field.question)
+        ] + self._get_fields_for_reality_questions(answers_field.question)
+
+    def _get_fields_for_market_questions(
+        self, questions_field: FieldPath
+    ) -> list[FieldPath]:
+        # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
+        return [
+            questions_field.id,
+            questions_field.title,
+            questions_field.outcomes,
+            questions_field.answerFinalizedTimestamp,
+            questions_field.currentAnswer,
+            questions_field.data,
+            questions_field.templateId,
+            questions_field.isPendingArbitration,
+            questions_field.openingTimestamp,
+        ]
 
     def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
         # In theory it's possible to store the subgraph schema locally (see https://github.com/0xPlaygrounds/subgrounds/issues/41).
@@ -108,17 +127,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             markets_field.currentAnswer,
             markets_field.creationTimestamp,
             markets_field.category,
-            markets_field.question.id,
-            markets_field.question.title,
-            markets_field.question.outcomes,
-            markets_field.question.answerFinalizedTimestamp,
-            markets_field.question.currentAnswer,
-            markets_field.question.data,
-            markets_field.question.templateId,
-            markets_field.question.isPendingArbitration,
             markets_field.condition.id,
             markets_field.condition.outcomeSlotCount,
-        ]
+        ] + self._get_fields_for_market_questions(markets_field.question)
 
     def _build_where_statements(
         self,
@@ -149,7 +160,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
 
         if opened_before:
-            where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
+            where_stms["question_"]["openingTimestamp_lt"] = to_int_timestamp(
+                opened_before
+            )
 
         if liquidity_bigger_than is not None:
             where_stms["liquidityParameter_gt"] = liquidity_bigger_than
@@ -171,7 +184,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 where_stms["answerFinalizedTimestamp"] = None
 
         if opened_after:
-            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
+            where_stms["question_"]["openingTimestamp_gt"] = to_int_timestamp(
+                opened_after
+            )
 
         if finalized_before:
             where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
@@ -306,21 +321,22 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             **optional_params,
         )
 
+        omen_markets = self.do_markets_query(markets)
+        return omen_markets
+
+    def do_markets_query(self, markets: FieldPath) -> list[OmenMarket]:
         fields = self._get_fields_for_markets(markets)
         result = self.sg.query_json(fields)
-
         items = self._parse_items_from_json(result)
         omen_markets = [OmenMarket.model_validate(i) for i in items]
         return omen_markets
 
-    def get_omen_market(self, market_id: HexAddress) -> OmenMarket:
+    def get_omen_market_by_market_id(self, market_id: HexAddress) -> OmenMarket:
         markets = self.trades_subgraph.Query.fixedProductMarketMaker(
             id=market_id.lower()
         )
-        fields = self._get_fields_for_markets(markets)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        omen_markets = [OmenMarket.model_validate(i) for i in items]
+
+        omen_markets = self.do_markets_query(markets)
 
         if len(omen_markets) != 1:
             raise ValueError(
@@ -448,7 +464,22 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             market_id=market_id,
             filter_by_answer_finalized_not_null=True,
         )
-        return [b for b in omen_bets if b.fpmm.is_resolved_with_valid_answer]
+        return [b for b in omen_bets if b.fpmm.is_resolved]
+
+    def get_resolved_bets_with_valid_answer(
+        self,
+        better_address: ChecksumAddress,
+        start_time: datetime,
+        end_time: t.Optional[datetime] = None,
+        market_id: t.Optional[str] = None,
+    ) -> list[OmenBet]:
+        bets = self.get_resolved_bets(
+            better_address=better_address,
+            start_time=start_time,
+            end_time=end_time,
+            market_id=market_id,
+        )
+        return [b for b in bets if b.fpmm.is_resolved_with_valid_answer]
 
     def get_questions(
         self,
@@ -473,7 +504,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             )
 
         questions = self.realityeth_subgraph.Query.questions(where=where_stms)
-        fields = self._get_fields_for_questions(questions)
+        fields = self._get_fields_for_reality_questions(questions)
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityQuestion.model_validate(i) for i in items]
@@ -490,3 +521,26 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
+
+    def get_markets_from_all_user_positions(
+        self, user_positions: list[OmenUserPosition]
+    ) -> list[OmenMarket]:
+        unique_condition_ids: list[HexBytes] = list(
+            set(sum([u.position.conditionIds for u in user_positions], []))
+        )
+        markets = self.get_omen_binary_markets(
+            limit=sys.maxsize, condition_id_in=unique_condition_ids
+        )
+        return markets
+
+    def get_market_from_user_position(
+        self, user_position: OmenUserPosition
+    ) -> OmenMarket:
+        """Markets and user positions are uniquely connected via condition_ids"""
+        condition_ids = user_position.position.conditionIds
+        markets = self.get_omen_binary_markets(limit=1, condition_id_in=condition_ids)
+        if len(markets) != 1:
+            raise ValueError(
+                f"Incorrect number of markets fetched {len(markets)}, expected 1."
+            )
+        return markets[0]

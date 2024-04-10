@@ -44,7 +44,7 @@ class AgentMarket(BaseModel):
     outcomes: list[str]
     resolution: Resolution | None
     created_time: datetime | None
-    close_time: datetime | None
+    close_time: datetime
     p_yes: Probability
     url: str
     volume: Decimal | None  # Should be in currency of `currency` above.
@@ -111,7 +111,7 @@ class AgentMarket(BaseModel):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
-    ) -> list["AgentMarket"]:
+    ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod

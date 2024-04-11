@@ -104,6 +104,18 @@ class OmenAgentMarket(AgentMarket):
             auto_deposit=omen_auto_deposit,
         )
 
+    def sell_tokens(
+        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
+    ) -> None:
+        keys = APIKeys()
+        binary_omen_sell_outcome_tx(
+            amount=xDai(amount.amount),
+            from_private_key=keys.bet_from_private_key,
+            market=self,
+            binary_outcome=outcome,
+            auto_withdraw=auto_withdraw,
+        )
+
     def was_any_bet_outcome_correct(
         self, resolved_omen_bets: t.List[OmenBet]
     ) -> bool | None:

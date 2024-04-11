@@ -104,6 +104,12 @@ class AgentMarket(BaseModel):
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
+    def buy_tokens(self, outcome: bool, amount: BetAmount) -> None:
+        return self.place_bet(outcome=outcome, amount=amount)
+
+    def sell_tokens(self, outcome: bool, amount: BetAmount) -> None:
+        raise NotImplementedError("Subclasses must implement this method")
+
     @staticmethod
     def get_binary_markets(
         limit: int,

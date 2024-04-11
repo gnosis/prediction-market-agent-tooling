@@ -42,7 +42,7 @@ def is_predictable_binary(
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
     messages = prompt.format_messages(question=question)
-    completion = llm(messages, max_tokens=512).content
+    completion = str(llm(messages, max_tokens=512).content)
 
     try:
         decision = completion.lower().rsplit("decision", 1)[1]

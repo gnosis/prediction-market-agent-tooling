@@ -7,8 +7,9 @@ from eth_account.signers.local import LocalAccount
 from eth_typing import ChecksumAddress, HexStr
 from gnosis.eth import EthereumClient, EthereumNetwork
 from gnosis.eth.constants import NULL_ADDRESS
+from gnosis.safe import Safe, addresses
 from gnosis.eth.multicall import Multicall
-from gnosis.safe import Safe, SafeTx, SafeOperation
+from gnosis.safe import Safe, SafeTx, SafeOperationEnum
 from gnosis.safe.api import TransactionServiceApi
 from gnosis.safe.api.base_api import SafeAPIException
 from gnosis.safe.multi_send import MultiSend, MultiSendOperation, MultiSendTx
@@ -141,7 +142,7 @@ class SafeManager:
             to=Web3.to_checksum_address(self.multisend.address),
             value=sum(tx["value"] for tx in txs),
             data=safe_multisend_data,
-            operation=SafeOperation.DELEGATE_CALL.value,
+            operation=SafeOperationEnum.DELEGATE_CALL.value,
             safe_nonce=self.track_nonce(safe_nonce),
         )
 

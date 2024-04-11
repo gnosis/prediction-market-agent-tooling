@@ -28,12 +28,13 @@ def main():
         "0xFD0732DC9E303F09FCEF3A7388AD10A83459EC99"
     )
     # CHAIN_RPC_URL = "https://rpc.tenderly.co/fork/afb295ce-87ed-4bad-a38f-f7e3b32d2932"
-    CHAIN_RPC_URL = "https://gnosis-rpc.publicnode.com"
+    # CHAIN_RPC_URL = "https://gnosis-rpc.publicnode.com"
+    CHAIN_RPC_URL = "http://localhost:8545"
     PROXY_FACTORY_ADDRESS = Web3.to_checksum_address(
         "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67"
     )
 
-    web3 = Web3(Web3.HTTPProvider(CHAIN_RPC_URL))
+    web3 = Web3(Web3.HTTPProvider("http://localhost:8545"))
 
     safe_141 = get_safe_contract(web3, MASTER_COPY_141)
     account_dev = Web3.to_checksum_address("0xC073C043189b79b18508cA9330f49B007D345605")

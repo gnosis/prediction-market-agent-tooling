@@ -36,7 +36,7 @@ langchain-openai = { version = "^0.0.5", optional = true}
 google-api-python-client = { version = "2.95.0", optional = true}
 subgrounds = "^1.8.1"
 loguru = "^0.7.2"
-safe-eth-py = "^5.8.0"
+safe-eth-py = "^6.0.0b23"
 eth-account = "^0.11.0"
 prompt-toolkit = "^3.0.43"
 

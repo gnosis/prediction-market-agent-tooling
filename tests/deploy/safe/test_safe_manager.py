@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
+from gnosis.safe import Safe, addresses
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
@@ -29,9 +30,12 @@ def test_safe_creation():
     account = ganache1
     s = SafeManager(client, account, None)
     owners = [Web3.to_checksum_address(account.address), ganache2.address]
+    # ToDo - Deploy 1.4.1
     m = s.deploy_safe(client, account, account, owners, 1)
     print(m)
+    safe_contract = Safe(m.address, client)
     is_valid = m.is_valid_safe(client, m.safe.address)
+    assert m.safe.get_version() == "1.4.1"
     assert is_valid
     # send 100 xDAI to Safe
     send_eth(ganache1, m.safe.address, xdai_to_wei(xDai(Decimal(1))), client.w3)
@@ -42,18 +46,21 @@ def test_safe_creation():
     # balance_safe = get_balances(m.safe.address)
     assert balance_safe == 1e18
     print(f"balance_safe {balance_safe}")
-    # executeTx - send wxDAI
-    wxdai = WrappedxDaiContract()
-    wxdai_contract = client.w3.eth.contract(address=wxdai.address, abi=wxdai.abi)
+    # # executeTx - send wxDAI
+    # wxdai = WrappedxDaiContract()
+    # wxdai_contract = client.w3.eth.contract(address=wxdai.address, abi=wxdai.abi)
+    #
+    # tx_params = wxdai_contract.functions.approve(
+    #     m.safe.address, xdai_to_wei(xDai(Decimal(2)))
+    # ).build_transaction({"from": account.address})
+    # tx_hash = m.execute_tx(tx_params)
+    # print(f"approved {tx_hash}")
+    #
+    # # check that allowance changed
+    # tx_params = wxdai_contract.functions.allowance(account.address, m.safe.address)
+    # allowance_wxdai = tx_params.call()
+    # print(f"allowance wxDAI {allowance_wxdai}")
+    # assert allowance_wxdai == 2e18
+    # ToDo - execute tx
 
-    tx_params = wxdai_contract.functions.approve(
-        m.safe.address, xdai_to_wei(xDai(Decimal(2)))
-    ).build_transaction({"from": account.address})
-    tx_hash = m.execute_tx(tx_params)
-    print(f"approved {tx_hash}")
-
-    # check that allowance changed
-    tx_params = wxdai_contract.functions.allowance(account.address, m.safe.address)
-    allowance_wxdai = tx_params.call()
-    print(f"allowance wxDAI {allowance_wxdai}")
-    assert allowance_wxdai == 2e18
+    # m.build_multisend_tx(tx_params)

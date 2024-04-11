@@ -45,6 +45,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.contract import wait_until_nonce_changed
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -92,13 +93,27 @@ class OmenAgentMarket(AgentMarket):
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
         amount_xdai = xDai(amount.amount)
         keys = APIKeys()
-        binary_omen_buy_outcome_tx(
-            amount=amount_xdai,
-            from_private_key=keys.bet_from_private_key,
-            market=self,
-            binary_outcome=outcome,
-            auto_deposit=omen_auto_deposit,
-        )
+        with wait_until_nonce_changed(keys.bet_from_address):
+            binary_omen_buy_outcome_tx(
+                amount=amount_xdai,
+                from_private_key=keys.bet_from_private_key,
+                market=self,
+                binary_outcome=outcome,
+                auto_deposit=omen_auto_deposit,
+            )
+
+    def sell_tokens(
+        self, outcome: bool, amount: BetAmount, auto_withdraw: bool = True
+    ) -> None:
+        keys = APIKeys()
+        with wait_until_nonce_changed(keys.bet_from_address):
+            binary_omen_sell_outcome_tx(
+                amount=xDai(amount.amount),
+                from_private_key=keys.bet_from_private_key,
+                market=self,
+                binary_outcome=outcome,
+                auto_withdraw=auto_withdraw,
+            )
 
     def was_any_bet_outcome_correct(
         self, resolved_omen_bets: t.List[OmenBet]

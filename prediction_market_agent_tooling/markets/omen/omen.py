@@ -22,7 +22,11 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.markets.data_models import (
+    BetAmount,
+    Currency,
+    TokenAmount,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BASE_URL,
     OMEN_FALSE_OUTCOME,
@@ -209,12 +213,15 @@ class OmenAgentMarket(AgentMarket):
     def get_index_set(self, outcome: str) -> int:
         return self.get_outcome_index(outcome) + 1
 
-    def get_token_balance(self, user_id: str, outcome: str) -> Decimal:
+    def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         index_set = self.get_index_set(outcome)
         balances = get_conditional_tokens_balance_for_market(
             self, Web3.to_checksum_address(user_id)
         )
-        return Decimal(balances[index_set])
+        return TokenAmount(
+            amount=Decimal(wei_to_xdai(balances[index_set])),
+            currency=Currency.xDai,
+        )
 
 
 def pick_binary_market(

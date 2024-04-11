@@ -4,10 +4,12 @@ import numpy as np
 import pytest
 from eth_typing import HexAddress, HexStr
 from loguru import logger
+from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -202,3 +204,24 @@ def test_get_binary_market() -> None:
     id = "0x0020d13c89140b47e10db54cbd53852b90bc1391"
     market = OmenAgentMarket.get_binary_market(id)
     assert market.id == id
+
+
+def test_balance_for_user_in_market() -> None:
+    user_address = Web3.to_checksum_address(
+        "0x2DD9f5678484C1F59F97eD334725858b938B4102"
+    )
+    market_id = "0x59975b067b0716fef6f561e1e30e44f606b08803"
+    market = OmenAgentMarket.get_binary_market(market_id)
+    balance_yes: TokenAmount = market.get_token_balance(
+        user_id=user_address,
+        outcome=OMEN_TRUE_OUTCOME,
+    )
+    assert balance_yes.currency == Currency.xDai
+    assert float(balance_yes.amount) == 0.001959903969410997
+
+    balance_no = market.get_token_balance(
+        user_id=user_address,
+        outcome=OMEN_FALSE_OUTCOME,
+    )
+    assert balance_no.currency == Currency.xDai
+    assert float(balance_no.amount) == 0

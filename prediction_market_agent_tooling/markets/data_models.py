@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import TypeAlias
 
 from pydantic import BaseModel
 
@@ -18,14 +19,13 @@ class Resolution(str, Enum):
     MKT = "MKT"
 
 
-class BetAmount(BaseModel):
+class TokenAmount(BaseModel):
     amount: Decimal
     currency: Currency
 
 
-class ProfitAmount(BaseModel):
-    amount: Decimal
-    currency: Currency
+BetAmount: TypeAlias = TokenAmount
+ProfitAmount: TypeAlias = TokenAmount
 
 
 class Bet(BaseModel):

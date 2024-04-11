@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
+    private_key_to_public_key,
     send_function_on_contract_tx,
 )
 
@@ -95,17 +96,18 @@ class ContractBaseClass(BaseModel):
         """
         Used for changing a state (writing) to the contract.
         """
-        web3 = web3 or self.get_web3()
-        return send_function_on_contract_tx(
-            web3=web3,
-            contract_address=self.address,
-            contract_abi=self.abi,
-            from_private_key=from_private_key,
-            function_name=function_name,
-            function_params=function_params,
-            tx_params=tx_params,
-            timeout=timeout,
-        )
+        with wait_until_nonce_changed(private_key_to_public_key(from_private_key)):
+            receipt = send_function_on_contract_tx(
+                web3=web3 or self.get_web3(),
+                contract_address=self.address,
+                contract_abi=self.abi,
+                from_private_key=from_private_key,
+                function_name=function_name,
+                function_params=function_params,
+                tx_params=tx_params,
+                timeout=timeout,
+            )
+        return receipt
 
     def send_with_value(
         self,

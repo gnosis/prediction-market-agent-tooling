@@ -9,6 +9,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -211,15 +212,16 @@ def test_balance_for_user_in_market() -> None:
     )
     market_id = "0x59975b067b0716fef6f561e1e30e44f606b08803"
     market = OmenAgentMarket.get_binary_market(market_id)
-    balance_yes = market.get_token_balance(
+    balance_yes: TokenAmount = market.get_token_balance(
         user_id=user_address,
         outcome=OMEN_TRUE_OUTCOME,
     )
-
-    assert balance_yes == 1959903969410997
+    assert balance_yes.currency == Currency.xDai
+    assert float(balance_yes.amount) == 0.001959903969410997
 
     balance_no = market.get_token_balance(
         user_id=user_address,
         outcome=OMEN_FALSE_OUTCOME,
     )
-    assert balance_no == 0
+    assert balance_no.currency == Currency.xDai
+    assert float(balance_no.amount) == 0

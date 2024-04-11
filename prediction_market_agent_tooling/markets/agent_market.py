@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
     Resolution,
+    TokenAmount,
 )
 from prediction_market_agent_tooling.tools.utils import (
     add_utc_timezone_validator,
@@ -104,10 +105,10 @@ class AgentMarket(BaseModel):
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def buy_tokens(self, outcome: bool, amount: BetAmount) -> None:
+    def buy_tokens(self, outcome: bool, amount: TokenAmount) -> None:
         return self.place_bet(outcome=outcome, amount=amount)
 
-    def sell_tokens(self, outcome: bool, amount: BetAmount) -> None:
+    def sell_tokens(self, outcome: bool, amount: TokenAmount) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
@@ -150,5 +151,5 @@ class AgentMarket(BaseModel):
     def get_squared_error(self) -> float:
         return (self.p_yes - self.boolean_outcome) ** 2
 
-    def get_token_balance(self, user_id: str, outcome: str) -> Decimal:
+    def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         raise NotImplementedError("Subclasses must implement this method")

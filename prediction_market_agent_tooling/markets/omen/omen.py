@@ -310,14 +310,18 @@ def binary_omen_buy_outcome_tx(
 
 
 def omen_sell_outcome_tx(
-    amount: xDai,
+    amount: xDai,  # The xDai value of shares to sell.
     from_private_key: PrivateKey,
     market: OmenAgentMarket,
     outcome: str,
     auto_withdraw: bool,
 ) -> None:
     """
-    Sells the given amount of shares for the given outcome in the given market.
+    Sells the given xDai value of shares corresponding to the given outcome in
+    the given market.
+
+    The number of shares sold will depend on the share price at the time of the
+    transaction.
     """
     amount_wei = xdai_to_wei(amount)
 

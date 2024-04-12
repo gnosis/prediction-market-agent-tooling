@@ -96,18 +96,28 @@ class ContractBaseClass(BaseModel):
         """
         Used for changing a state (writing) to the contract.
         """
-        with wait_until_nonce_changed(private_key_to_public_key(from_private_key)):
-            receipt = send_function_on_contract_tx(
-                web3=web3 or self.get_web3(),
-                contract_address=self.address,
-                contract_abi=self.abi,
-                from_private_key=from_private_key,
-                function_name=function_name,
-                function_params=function_params,
-                tx_params=tx_params,
-                timeout=timeout,
-            )
-        return receipt
+        # with wait_until_nonce_changed(private_key_to_public_key(from_private_key)):
+        #     receipt = send_function_on_contract_tx(
+        #         web3=web3 or self.get_web3(),
+        #         contract_address=self.address,
+        #         contract_abi=self.abi,
+        #         from_private_key=from_private_key,
+        #         function_name=function_name,
+        #         function_params=function_params,
+        #         tx_params=tx_params,
+        #         timeout=timeout,
+        #     )
+        # return receipt
+        return send_function_on_contract_tx(
+            web3=web3 or self.get_web3(),
+            contract_address=self.address,
+            contract_abi=self.abi,
+            from_private_key=from_private_key,
+            function_name=function_name,
+            function_params=function_params,
+            tx_params=tx_params,
+            timeout=timeout,
+        )
 
     def send_with_value(
         self,
@@ -151,6 +161,7 @@ class ContractERC20BaseClass(ContractBaseClass):
         amount_wei: Wei,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             from_private_key=from_private_key,
@@ -160,6 +171,7 @@ class ContractERC20BaseClass(ContractBaseClass):
                 amount_wei,
             ],
             tx_params=tx_params,
+            web3=web3,
         )
 
     def deposit(
@@ -167,12 +179,14 @@ class ContractERC20BaseClass(ContractBaseClass):
         amount_wei: Wei,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send_with_value(
             from_private_key=from_private_key,
             function_name="deposit",
             amount_wei=amount_wei,
             tx_params=tx_params,
+            web3=web3,
         )
 
     def withdraw(

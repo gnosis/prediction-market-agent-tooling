@@ -79,14 +79,13 @@ def get_erc20_balance(
 def send_eth(
     account: LocalAccount, to: ChecksumAddress, value: Wei, web3: Web3
 ) -> tuple[str, TxReceipt]:
-    nonce = web3.eth.get_transaction_count(account.address)
-
     tx: TxParams = {
         "from": account.address,
         "to": to,
         "value": value,
-        "nonce": nonce,
-        "gasPrice": web3.eth.gas_price,
+        "nonce": web3.eth.get_transaction_count(account.address),
+        "maxFeePerGas": 2000000000,
+        "maxPriorityFeePerGas": 1000000000,
         "chainId": web3.eth.chain_id,
     }
 

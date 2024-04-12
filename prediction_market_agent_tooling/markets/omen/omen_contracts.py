@@ -303,6 +303,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         min_outcome_tokens_to_buy: OmenOutcomeToken,
         from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             from_private_key=from_private_key,
@@ -313,6 +314,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
                 min_outcome_tokens_to_buy,
             ],
             tx_params=tx_params,
+            web3=web3,
         )
 
     def sell(

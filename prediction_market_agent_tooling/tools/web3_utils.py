@@ -138,14 +138,17 @@ def send_function_on_contract_tx(
         "nonce", web3.eth.get_transaction_count(from_address)
     )
     tx_params["from"] = tx_params.get("from", from_address)
+    tx_params["gas"] = 700000
 
     # Build the transaction.
     function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
     tx = function_call.build_transaction(tx_params)
     # Sign with the private key.
-    signed_tx = web3.eth.account.sign_transaction(
-        tx, private_key=from_private_key.get_secret_value()
-    )
+    # ToDo - Safe is also trying to sign - return this
+    # signed_tx = web3.eth.account.sign_transaction(
+    #    tx, private_key=from_private_key.get_secret_value()
+    # )
+    return tx
     # Send the signed transaction.
     send_tx = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
     # And wait for the receipt.

@@ -57,7 +57,7 @@ def deploy_safe_with_create2(
         {
             "to": safe_creation_tx.safe_address,
             "value": safe_creation_tx.payment,
-            "gasPrice": Wei(int(w3.eth.gas_price * GAS_PRICE_MULTIPLIER)),
+            "gasPrice": w3.eth.generate_gas_price(),
         },
         account=account,
     )

@@ -1937,13 +1937,13 @@ extended-testing = ["lxml (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.45"
+version = "0.1.46"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.45-py3-none-any.whl", hash = "sha256:5a5b7fafe767fa28826c925f175875c09bf5368bfdb141286381a94bf737e6ef"},
-    {file = "langsmith-0.1.45.tar.gz", hash = "sha256:713206107df636db1edf30867d64b92495afb1f09d2fee0857a77b7a8ee083d5"},
+    {file = "langsmith-0.1.46-py3-none-any.whl", hash = "sha256:459b76b25fe3b86e7bf5521f4dc8c3f796de288ceb3e0d05c99db4d509edaabf"},
+    {file = "langsmith-0.1.46.tar.gz", hash = "sha256:a5a96259e411641633561575b567c2139bede997f7104eeedb59cb9511416d1b"},
 ]
 
 [package.dependencies]
@@ -4233,13 +4233,13 @@ files = [
 
 [[package]]
 name = "web3"
-version = "6.16.0"
+version = "6.17.0"
 description = "web3.py"
 optional = false
 python-versions = ">=3.7.2"
 files = [
-    {file = "web3-6.16.0-py3-none-any.whl", hash = "sha256:50e96cc447823444510ee659586b264ebc7ddbfc74cccb720d042146aa404348"},
-    {file = "web3-6.16.0.tar.gz", hash = "sha256:b10c93476c106acc44b8428e47c61c385b7d0885e82cdc24049d27f521833552"},
+    {file = "web3-6.17.0-py3-none-any.whl", hash = "sha256:37334971dc195d0b3fb930317b63a36b0f71e6a0fd30deca96f1ac58e65704c0"},
+    {file = "web3-6.17.0.tar.gz", hash = "sha256:1b535272a40da3d8d2b120856edb53b84b0c08bcc8fe1a5bbd5f816fd72f4ec6"},
 ]
 
 [package.dependencies]
@@ -4247,7 +4247,7 @@ aiohttp = ">=3.7.4.post0"
 eth-abi = ">=4.0.0"
 eth-account = ">=0.8.0"
 eth-hash = {version = ">=0.5.1", extras = ["pycryptodome"]}
-eth-typing = ">=3.0.0"
+eth-typing = ">=3.0.0,<4.2.0"
 eth-utils = ">=2.1.0"
 hexbytes = ">=0.1.0,<0.4.0"
 jsonschema = ">=4.0.0"
@@ -4260,11 +4260,10 @@ typing-extensions = ">=4.0.1"
 websockets = ">=10.0.0"
 
 [package.extras]
-dev = ["black (>=22.1.0)", "build (>=0.9.0)", "bumpversion", "eth-tester[py-evm] (==v0.9.1-b.2)", "flake8 (==3.8.3)", "flaky (>=3.7.0)", "hypothesis (>=3.31.2)", "importlib-metadata (<5.0)", "ipfshttpclient (==0.8.0a2)", "isort (>=5.11.0)", "mypy (==1.4.1)", "py-geth (>=3.14.0)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1,<0.23)", "pytest-mock (>=1.10)", "pytest-watch (>=4.2)", "pytest-xdist (>=1.29)", "setuptools (>=38.6.0)", "sphinx (>=5.3.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=3.18.0)", "tqdm (>4.32)", "twine (>=1.13)", "types-protobuf (==3.19.13)", "types-requests (>=2.26.1)", "types-setuptools (>=57.4.4)", "when-changed (>=0.3.0)"]
+dev = ["build (>=0.9.0)", "bumpversion", "eth-tester[py-evm] (>=0.11.0b1,<0.12.0b1)", "eth-tester[py-evm] (>=0.9.0b1,<0.10.0b1)", "flaky (>=3.7.0)", "hypothesis (>=3.31.2)", "importlib-metadata (<5.0)", "ipfshttpclient (==0.8.0a2)", "pre-commit (>=2.21.0)", "py-geth (>=3.14.0)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1,<0.23)", "pytest-mock (>=1.10)", "pytest-watch (>=4.2)", "pytest-xdist (>=1.29)", "setuptools (>=38.6.0)", "sphinx (>=5.3.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=3.18.0)", "tqdm (>4.32)", "twine (>=1.13)", "when-changed (>=0.3.0)"]
 docs = ["sphinx (>=5.3.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
 ipfs = ["ipfshttpclient (==0.8.0a2)"]
-linter = ["black (>=22.1.0)", "flake8 (==3.8.3)", "isort (>=5.11.0)", "mypy (==1.4.1)", "types-protobuf (==3.19.13)", "types-requests (>=2.26.1)", "types-setuptools (>=57.4.4)"]
-tester = ["eth-tester[py-evm] (==v0.9.1-b.2)", "py-geth (>=3.14.0)"]
+tester = ["eth-tester[py-evm] (>=0.11.0b1,<0.12.0b1)", "eth-tester[py-evm] (>=0.9.0b1,<0.10.0b1)", "py-geth (>=3.14.0)"]
 
 [[package]]
 name = "websockets"

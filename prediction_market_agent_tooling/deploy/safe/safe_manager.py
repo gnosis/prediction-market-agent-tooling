@@ -15,7 +15,7 @@ from gnosis.safe.api.base_api import SafeAPIException
 from gnosis.safe.multi_send import MultiSend, MultiSendOperation, MultiSendTx
 from hexbytes import HexBytes
 from web3 import Web3
-from web3.types import TxParams, TxReceipt
+from web3.types import TxParams, TxReceipt, Wei
 
 from prediction_market_agent_tooling.deploy.safe.constants import (
     MULTI_SEND_ADDRESS,
@@ -158,14 +158,17 @@ class SafeManager:
             0,
             0,
             0,
-            self.gas_price(),
+            Wei(int(self.client.w3.eth.gas_price))
+            * GAS_PRICE_MULTIPLIER,  # self.gas_price(),
             None,
             self.address,
             safe_nonce=self.track_nonce(safe_nonce),
         )
-        safe_tx.safe_tx_gas = self.safe.estimate_tx_gas(
-            safe_tx.to, safe_tx.value, safe_tx.data, safe_tx.operation
-        )
+        # ToDo - make it safe
+        # safe_tx.safe_tx_gas = self.safe.estimate_tx_gas(
+        #     safe_tx.to, safe_tx.value, safe_tx.data, safe_tx.operation
+        # )
+        safe_tx.safe_tx_gas = 70000
         safe_tx.base_gas = self.safe.estimate_tx_base_gas(
             safe_tx.to,
             safe_tx.value,
@@ -188,7 +191,7 @@ class SafeManager:
 
             safe_tx.sign(self.agent.key.hex())
 
-            safe_tx.call(tx_sender_address=self.dev_account.address)
+            safe_tx.call()
 
             tx_hash, _ = safe_tx.execute(
                 tx_sender_private_key=self.dev_account.key.hex()

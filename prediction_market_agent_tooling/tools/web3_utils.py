@@ -3,8 +3,9 @@ from typing import Any, Optional, TypeVar
 
 import tenacity
 from eth_account import Account
-from eth_typing import URI
-from gnosis.safe import Safe
+from eth_typing import URI, Address
+from gnosis.eth import EthereumClient
+from gnosis.safe.safe import SafeV141
 from loguru import logger
 from pydantic.types import SecretStr
 from web3 import Web3
@@ -21,7 +22,6 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xdai_type,
 )
-from gnosis.eth import EthereumClient
 
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
@@ -121,13 +121,19 @@ def prepare_tx(
 
     # Fill in required defaults, if not provided.
     tx_params_new = TxParams()
-    tx_params_new.update(tx_params)
+    if tx_params:
+        tx_params_new.update(tx_params)
 
-    if not tx_params_new["nonce"]:
-        tx_params_new["nonce"] = web3.eth.get_transaction_count(from_address)
+    if not tx_params_new["from"] and not from_address:
+        raise ValueError(
+            "Cannot have both tx_params[`from`] and from_address not defined."
+        )
 
     if not tx_params_new["from"]:
-        tx_params_new["from"] = from_address
+        tx_params_new["from"] = Address.fromhex(from_address)
+
+    if not tx_params_new["nonce"]:
+        tx_params_new["nonce"] = web3.eth.get_transaction_count(tx_params_new["from"])
 
     # Build the transaction.
     function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore
@@ -219,13 +225,15 @@ def send_function_on_contract_tx_using_safe(
         tx_params=tx_params,
     )
 
+    if not web3.HTTPProvider.endpoint_uri:
+        raise EnvironmentError(f"RPC_URL not available in web3 object.")
     ethereum_client = EthereumClient(
         ethereum_node_url=URI(web3.HTTPProvider.endpoint_uri)
     )
-    s = Safe(safe_address, ethereum_client)
+    s = SafeV141(safe_address, ethereum_client)
     safe_tx = s.build_multisig_tx(
         to=Web3.to_checksum_address(tx_params["to"]),
-        data=bytes(tx_params["data"]),
+        data=HexBytes(tx_params["data"]),
         value=tx_params["value"],
     )
     safe_tx.sign(from_private_key.get_secret_value())

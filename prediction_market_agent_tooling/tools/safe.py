@@ -1,10 +1,10 @@
-
 from eth_account.signers.local import LocalAccount
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
 from gnosis.eth.constants import NULL_ADDRESS
 from gnosis.eth.contracts import get_safe_V1_4_1_contract
-from gnosis.safe import Safe, ProxyFactory
+from gnosis.safe.proxy_factory import ProxyFactoryV141
+from gnosis.safe.safe import SafeV141
 from loguru import logger
 from safe_cli.safe_addresses import (
     get_safe_contract_address,
@@ -12,6 +12,7 @@ from safe_cli.safe_addresses import (
     get_proxy_factory_address,
     get_default_fallback_handler_address,
 )
+from web3.types import Wei
 
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
@@ -21,8 +22,8 @@ def create_safe(
     account: LocalAccount,
     owners: list[str],
     salt_nonce: int,
-    threshold=1,
-    without_events=False,  # following safe-cli convention
+    threshold: int = 1,
+    without_events: bool = False,  # following safe-cli convention
 ) -> ChecksumAddress | None:
     to = NULL_ADDRESS
     data = b""
@@ -83,7 +84,7 @@ def create_safe(
     logger.info(
         f"Creating new Safe with owners={owners} threshold={threshold} salt-nonce={salt_nonce}"
     )
-    safe_version = Safe(safe_contract_address, ethereum_client).retrieve_version()
+    safe_version = SafeV141(safe_contract_address, ethereum_client).retrieve_version()
     logger.info(
         f"Safe-master-copy={safe_contract_address} version={safe_version}\n"
         f"Fallback-handler={fallback_handler}\n"
@@ -101,10 +102,10 @@ def create_safe(
             payment_token,
             payment,
             payment_receiver,
-        ).build_transaction({"gas": 1, "gasPrice": 1})["data"]
+        ).build_transaction({"gas": 1, "gasPrice": Wei(1)})["data"]
     )
 
-    proxy_factory = ProxyFactory(proxy_factory_address, ethereum_client)
+    proxy_factory = ProxyFactoryV141(proxy_factory_address, ethereum_client)
     expected_safe_address = proxy_factory.calculate_proxy_address(
         safe_contract_address, safe_creation_tx_data, salt_nonce
     )

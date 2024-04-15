@@ -53,13 +53,11 @@ class DeployedManifoldAgent(DeployedAgent):
     @staticmethod
     def from_api_keys(
         name: str,
-        deployableagent_class_name: str,
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedManifoldAgent":
         return DeployedManifoldAgent(
             name=name,
-            deployableagent_class_name=deployableagent_class_name,
             start_time=start_time,
             manifold_user_id=get_authenticated_user(
                 api_key=api_keys.manifold_api_key.get_secret_value()
@@ -73,7 +71,6 @@ class DeployedManifoldAgent(DeployedAgent):
         return [
             DeployedManifoldAgent(
                 name=f"ManifoldAgent-{idx}",
-                deployableagent_class_name="deployableagent_class_name",
                 start_time=start_time,
                 manifold_user_id=get_authenticated_user(key).id,
             )

@@ -25,13 +25,11 @@ class DeployedPolymarketAgent(DeployedAgent):
     @staticmethod
     def from_api_keys(
         name: str,
-        deployableagent_class_name: str,
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedPolymarketAgent":
         return DeployedPolymarketAgent(
             name=name,
-            deployableagent_class_name=deployableagent_class_name,
             start_time=start_time,
             polymarket_public_key=api_keys.bet_from_address,
         )
@@ -43,7 +41,6 @@ class DeployedPolymarketAgent(DeployedAgent):
         return [
             DeployedPolymarketAgent(
                 name=f"PolymarketAgent-{idx}",
-                deployableagent_class_name="deployableagent_class_name",
                 start_time=start_time,
                 polymarket_public_key=Web3.to_checksum_address(polymarket_public_key),
             )

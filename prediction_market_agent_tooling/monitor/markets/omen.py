@@ -54,13 +54,11 @@ class DeployedOmenAgent(DeployedAgent):
     @staticmethod
     def from_api_keys(
         name: str,
-        deployableagent_class_name: str,
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedOmenAgent":
         return DeployedOmenAgent(
             name=name,
-            deployableagent_class_name=deployableagent_class_name,
             start_time=start_time,
             omen_public_key=api_keys.bet_from_address,
         )
@@ -72,7 +70,6 @@ class DeployedOmenAgent(DeployedAgent):
         return [
             DeployedOmenAgent(
                 name=f"OmenAgent-{idx}",
-                deployableagent_class_name="deployableagent_class_name",
                 start_time=start_time,
                 omen_public_key=Web3.to_checksum_address(omen_public_key),
             )

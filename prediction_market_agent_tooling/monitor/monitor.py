@@ -62,7 +62,6 @@ class DeployedAgent(BaseModel):
     PREFIX: t.ClassVar["str"] = "deployedagent_var_"
 
     name: str
-    deployableagent_class_name: str
 
     start_time: DatetimeWithTimezone
     end_time: t.Optional[
@@ -119,7 +118,6 @@ class DeployedAgent(BaseModel):
     @staticmethod
     def from_api_keys(
         name: str,
-        deployableagent_class_name: str,
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedAgent":
@@ -219,7 +217,6 @@ def monitor_agent(agent: DeployedAgent) -> None:
     # Info
     col1, col2, col3 = st.columns(3)
     col1.markdown(f"Name: `{agent.name}`")
-    col2.markdown(f"DeployableAgent Class: `{agent.deployableagent_class_name}`")
     col3.markdown(f"Start Time: `{agent.start_time}`")
 
     # Metrics

@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from math import ceil
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -45,6 +46,7 @@ class ManifoldAgentMarket(AgentMarket):
             amount=Mana(amount.amount),
             market_id=self.id,
             outcome=outcome,
+            manifold_api_key=APIKeys().manifold_api_key,
         )
 
     @staticmethod

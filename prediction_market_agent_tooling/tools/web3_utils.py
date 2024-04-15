@@ -120,18 +120,21 @@ def prepare_tx(
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
     # Fill in required defaults, if not provided.
-    tx_params = tx_params or {}
-    tx_params["nonce"] = tx_params.get(
-        "nonce", web3.eth.get_transaction_count(from_address)
-    )
-    tx_params["from"] = tx_params.get("from", from_address)
+    tx_params_new = TxParams()
+    tx_params_new.update(tx_params)
+
+    if not tx_params_new["nonce"]:
+        tx_params_new["nonce"] = web3.eth.get_transaction_count(from_address)
+
+    if not tx_params_new["from"]:
+        tx_params_new["from"] = from_address
 
     # Build the transaction.
     function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore
-    tx_params = function_call.build_transaction(tx_params)
-    gas = web3.eth.estimate_gas(tx_params)
-    tx_params["gas"] = gas
-    return tx_params
+    tx_params_new = function_call.build_transaction(tx_params_new)
+    gas = web3.eth.estimate_gas(tx_params_new)
+    tx_params_new["gas"] = gas
+    return tx_params_new
 
 
 @tenacity.retry(
@@ -220,7 +223,11 @@ def send_function_on_contract_tx_using_safe(
         ethereum_node_url=URI(web3.HTTPProvider.endpoint_uri)
     )
     s = Safe(safe_address, ethereum_client)
-    safe_tx = s.build_multisig_tx(to=tx_params["to"], data=tx_params["data"], value=0)
+    safe_tx = s.build_multisig_tx(
+        to=Web3.to_checksum_address(tx_params["to"]),
+        data=bytes(tx_params["data"]),
+        value=tx_params["value"],
+    )
     safe_tx.sign(from_private_key.get_secret_value())
     safe_tx.call()  # simulate call
     tx_hash, tx = safe_tx.execute(from_private_key.get_secret_value())

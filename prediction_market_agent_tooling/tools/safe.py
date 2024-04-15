@@ -1,4 +1,3 @@
-import secrets
 
 from eth_account.signers.local import LocalAccount
 from eth_typing import ChecksumAddress

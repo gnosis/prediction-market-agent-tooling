@@ -223,7 +223,6 @@ class OmenAgentMarket(AgentMarket):
     ) -> OmenFixedProductMarketMakerContract:
         return OmenFixedProductMarketMakerContract(
             address=self.market_maker_contract_address_checksummed,
-            safe_address=safe_address,
         )
 
     def get_index_set(self, outcome: str) -> int:

@@ -54,10 +54,6 @@ class APIKeys(BaseSettings):
         return self.SAFE_ADDRESS
 
     @property
-    def master_safe_private_key(self) -> HexAddress | None:
-        return self.MASTER_SAFE_PRIVATE_KEY
-
-    @property
     def openai_api_key(self) -> SecretStr:
         return check_not_none(
             self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."

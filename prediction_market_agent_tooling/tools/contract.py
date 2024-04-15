@@ -153,8 +153,11 @@ class ContractBaseClass(BaseModel):
     def get_web3(cls) -> Web3:
         return Web3(Web3.HTTPProvider(cls.CHAIN_RPC_URL))
 
-    def _safe_parse_safe_address(self) -> ChecksumAddress | None:
+    @staticmethod
+    def _safe_parse_safe_address() -> ChecksumAddress | None:
         keys = APIKeys()
+        if not keys.safe_address:
+            return None
         try:
             return Web3.to_checksum_address(keys.safe_address)
         except Exception:

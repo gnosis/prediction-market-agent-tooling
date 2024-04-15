@@ -169,6 +169,20 @@ test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypo
 trio = ["trio (>=0.23)"]
 
 [[package]]
+name = "art"
+version = "6.1"
+description = "ASCII Art Library For Python"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "art-6.1-py3-none-any.whl", hash = "sha256:159819c418001467f8d79616fa0814277deac97c8a363d1eb3e7c0a31526bfc3"},
+    {file = "art-6.1.tar.gz", hash = "sha256:6ab3031e3b7710039e73497b0e750cadfe04d4c1279ce3a123500dbafb9e1b64"},
+]
+
+[package.extras]
+dev = ["bandit (>=1.5.1)", "coverage (>=4.1)", "pydocstyle (>=3.0.0)", "vulture (>=1.0)"]
+
+[[package]]
 name = "async-timeout"
 version = "4.0.3"
 description = "Timeout context manager for asyncio programs"
@@ -1937,13 +1951,13 @@ extended-testing = ["lxml (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.46"
+version = "0.1.47"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.46-py3-none-any.whl", hash = "sha256:459b76b25fe3b86e7bf5521f4dc8c3f796de288ceb3e0d05c99db4d509edaabf"},
-    {file = "langsmith-0.1.46.tar.gz", hash = "sha256:a5a96259e411641633561575b567c2139bede997f7104eeedb59cb9511416d1b"},
+    {file = "langsmith-0.1.47-py3-none-any.whl", hash = "sha256:17b0a908b8d39b6da3ecff658c8c00304b0b62f59945a5e16c2da5a254ea21a6"},
+    {file = "langsmith-0.1.47.tar.gz", hash = "sha256:f5ddd17628baa03a775525c5547a543a559313e425cdb2bf23579ffcf6056a76"},
 ]
 
 [package.dependencies]
@@ -2390,13 +2404,13 @@ files = [
 
 [[package]]
 name = "openai"
-version = "1.17.0"
+version = "1.17.1"
 description = "The official Python library for the openai API"
 optional = true
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.17.0-py3-none-any.whl", hash = "sha256:72464cdb0602a57af87acb4888b1a48a1c02182cc9f09d2f2f3200b185223d5f"},
-    {file = "openai-1.17.0.tar.gz", hash = "sha256:72e6758cec080a3e5a9daf843178c975fed656fe0831919f4dd89bb62431724f"},
+    {file = "openai-1.17.1-py3-none-any.whl", hash = "sha256:d42e0d7a692c7b78cbae21598df5ded396abecf6c285325635ec62621e6c82f1"},
+    {file = "openai-1.17.1.tar.gz", hash = "sha256:c5a909e70e2b4cd04ef4076b68497c4eb894704cf8ab23d32d6552931fda6e5b"},
 ]
 
 [package.dependencies]
@@ -3578,21 +3592,45 @@ files = [
 pyasn1 = ">=0.1.3"
 
 [[package]]
+name = "safe-cli"
+version = "1.0.0"
+description = "Command Line Interface for Safe"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "safe_cli-1.0.0-py3-none-any.whl", hash = "sha256:525c24d5b8c2e9b3a796c091676f0acfb9004eeb60a54a0f96055f30437a7b26"},
+    {file = "safe_cli-1.0.0.tar.gz", hash = "sha256:eaa52dd486e68c6bbd7919a55238c785c33bf9fcdb8062220786cf8f777bdaa0"},
+]
+
+[package.dependencies]
+art = ">=6"
+colorama = ">=0.4"
+prompt-toolkit = ">=3"
+pygments = ">=2"
+requests = ">=2"
+safe-eth-py = "6.0.0b14"
+tabulate = ">=0.8"
+
+[package.extras]
+ledger = ["ledgereth (==0.9.1)"]
+trezor = ["trezor (==0.13.8)"]
+
+[[package]]
 name = "safe-eth-py"
-version = "6.0.0b24"
+version = "6.0.0b14"
 description = "Safe Ecosystem Foundation utilities for Ethereum projects"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.8"
 files = [
-    {file = "safe-eth-py-6.0.0b24.tar.gz", hash = "sha256:a9e3a66ad6c4c454aa4f5a16da6bcf58ce95232275785487a83f4b5314ba6432"},
-    {file = "safe_eth_py-6.0.0b24-py3-none-any.whl", hash = "sha256:8efe40c6ddf82644e21d638e85783d95536b8443e4470fb0222874d7c97b3290"},
+    {file = "safe-eth-py-6.0.0b14.tar.gz", hash = "sha256:6a273d118decbd002a9a8fa34ae5f17b8b4af3ab0b87de6432ebc6bd38cf3c87"},
+    {file = "safe_eth_py-6.0.0b14-py3-none-any.whl", hash = "sha256:cd2f843fae89141319c99204e4598c21c76f8fdf4ed7e346201edf3d8547e3ac"},
 ]
 
 [package.dependencies]
 packaging = "*"
 py-evm = ">=0.7.0a1"
 requests = ">=2"
-safe-pysha3 = ">=1.0.0"
+safe-pysha3 = {version = ">=1.0.0", markers = "python_version >= \"3.9\""}
 web3 = ">=6.2.0"
 
 [package.extras]
@@ -4487,4 +4525,4 @@ langchain = ["langchain", "langchain-openai"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "35b24ec95af03d267bda1847f658a68573e703f5e385726aa208a5c966b6fed7"
+content-hash = "c451be1090b5683bb81a51f10d4e4cbe31e2fd8c4a6d2923d92f66c9a7b2b65d"

@@ -70,6 +70,7 @@ class OmenAgentMarket(AgentMarket):
     currency: t.ClassVar[Currency] = Currency.xDai
     base_url: t.ClassVar[str] = OMEN_BASE_URL
     creator: HexAddress
+    use_safe: bool = False
 
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
@@ -217,9 +218,12 @@ class OmenAgentMarket(AgentMarket):
             )
         )
 
-    def get_contract(self) -> OmenFixedProductMarketMakerContract:
+    def get_contract(
+        self, safe_address: ChecksumAddress | None = None
+    ) -> OmenFixedProductMarketMakerContract:
         return OmenFixedProductMarketMakerContract(
-            address=self.market_maker_contract_address_checksummed
+            address=self.market_maker_contract_address_checksummed,
+            safe_address=safe_address,
         )
 
     def get_index_set(self, outcome: str) -> int:
@@ -251,6 +255,7 @@ def omen_buy_outcome_tx(
     market: OmenAgentMarket,
     outcome: str,
     auto_deposit: bool,
+    safe_address: ChecksumAddress | None = None,
 ) -> None:
     """
     Bets the given amount of xDai for the given outcome in the given market.
@@ -259,6 +264,7 @@ def omen_buy_outcome_tx(
     from_address_checksummed = private_key_to_public_key(from_private_key)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
+
     collateral_token_contract = OmenCollateralTokenContract()
 
     # Get the index of the outcome we want to buy.

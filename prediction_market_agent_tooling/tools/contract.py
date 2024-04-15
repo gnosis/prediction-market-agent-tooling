@@ -3,9 +3,11 @@ import time
 import typing as t
 from contextlib import contextmanager
 
+from loguru import logger
 from pydantic import BaseModel, field_validator
 from web3 import Web3
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
@@ -22,8 +24,8 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
-    private_key_to_public_key,
     send_function_on_contract_tx,
+    send_function_on_contract_tx_using_safe,
 )
 
 
@@ -96,18 +98,20 @@ class ContractBaseClass(BaseModel):
         """
         Used for changing a state (writing) to the contract.
         """
-        # with wait_until_nonce_changed(private_key_to_public_key(from_private_key)):
-        #     receipt = send_function_on_contract_tx(
-        #         web3=web3 or self.get_web3(),
-        #         contract_address=self.address,
-        #         contract_abi=self.abi,
-        #         from_private_key=from_private_key,
-        #         function_name=function_name,
-        #         function_params=function_params,
-        #         tx_params=tx_params,
-        #         timeout=timeout,
-        #     )
-        # return receipt
+
+        safe_address = self._safe_parse_safe_address()
+        if safe_address:
+            return send_function_on_contract_tx_using_safe(
+                web3=web3 or self.get_web3(),
+                contract_address=self.address,
+                contract_abi=self.abi,
+                from_private_key=from_private_key,
+                safe_address=safe_address,
+                function_name=function_name,
+                function_params=function_params,
+                tx_params=tx_params,
+                timeout=timeout,
+            )
         return send_function_on_contract_tx(
             web3=web3 or self.get_web3(),
             contract_address=self.address,
@@ -148,6 +152,14 @@ class ContractBaseClass(BaseModel):
     @classmethod
     def get_web3(cls) -> Web3:
         return Web3(Web3.HTTPProvider(cls.CHAIN_RPC_URL))
+
+    def _safe_parse_safe_address(self) -> ChecksumAddress | None:
+        keys = APIKeys()
+        try:
+            return Web3.to_checksum_address(keys.safe_address)
+        except Exception:
+            logger.info("Could not parse safe_address from env. Reverting to None.")
+            return None
 
 
 class ContractERC20BaseClass(ContractBaseClass):

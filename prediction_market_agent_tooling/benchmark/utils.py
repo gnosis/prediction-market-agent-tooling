@@ -55,7 +55,7 @@ class PredictionsCache(BaseModel):
 
     def save(self, path: str) -> None:
         with open(path, "w") as f:
-            json.dump(self.dict(), f, indent=2)
+            json.dump(self.model_dump(), f, indent=2)
 
     @staticmethod
     def load(path: str) -> "PredictionsCache":

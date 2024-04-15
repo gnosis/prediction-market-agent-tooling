@@ -1,3 +1,4 @@
+import json
 import os
 import typing as t
 from itertools import groupby
@@ -12,8 +13,14 @@ from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.gcp.kubernetes_models import (
+    KubernetesCronJob,
+)
 from prediction_market_agent_tooling.deploy.gcp.utils import (
+    gcp_get_secret_value,
+    get_gcp_configmap_data,
     get_gcp_function,
+    list_gcp_cronjobs,
     list_gcp_functions,
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
@@ -31,7 +38,9 @@ class MonitorSettings(BaseSettings):
         env_file=".env.monitor", env_file_encoding="utf-8", extra="ignore"
     )
 
-    LOAD_FROM_GCP: bool = False
+    LOAD_FROM_GCF: bool = False
+    LOAD_FROM_GCK: bool = False
+    LOAD_FROM_GCK_NAMESPACE: str = "agents"
     MANIFOLD_API_KEYS: list[str] = []
     OMEN_PUBLIC_KEYS: list[str] = []
     POLYMARKET_PUBLIC_KEYS: list[str] = []
@@ -56,9 +65,9 @@ class DeployedAgent(BaseModel):
     deployableagent_class_name: str
 
     start_time: DatetimeWithTimezone
-    end_time: t.Optional[
-        DatetimeWithTimezone
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[DatetimeWithTimezone] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -145,6 +154,47 @@ class DeployedAgent(BaseModel):
             except ValueError:
                 logger.warning(
                     f"Could not parse `{function.name}` into {cls.__name__}."
+                )
+
+        return agents
+
+    @classmethod
+    def from_gcp_cronjob(cls: t.Type[C], cronjob: KubernetesCronJob) -> C:
+        secret_env_name_to_env_value = {
+            e.name: json.loads(gcp_get_secret_value(e.valueFrom.secretKeyRef.name))[
+                e.valueFrom.secretKeyRef.key
+            ]
+            for e in cronjob.spec.jobTemplate.spec.template.spec.containers[0].env
+        }
+        configmap_env_name_to_env_value = {
+            key: value
+            for e in cronjob.spec.jobTemplate.spec.template.spec.containers[0].envFrom
+            for key, value in get_gcp_configmap_data(
+                cronjob.metadata.namespace, e.configMapRef.name
+            ).items()
+        }
+
+        return cls.from_env_vars(
+            env_vars=secret_env_name_to_env_value | configmap_env_name_to_env_value,
+        )
+
+    @classmethod
+    def from_all_gcp_cronjobs(
+        cls: t.Type[C],
+        filter_: t.Callable[[KubernetesCronJob], bool] = lambda x: True,
+        namespace: str = MonitorSettings().LOAD_FROM_GCK_NAMESPACE,
+    ) -> t.Sequence[C]:
+        agents: list[C] = []
+
+        for cronjob in list_gcp_cronjobs(namespace).items:
+            if not filter_(cronjob):
+                continue
+
+            try:
+                agents.append(cls.from_gcp_cronjob(cronjob))
+            except ValueError:
+                logger.warning(
+                    f"Could not parse `{cronjob.metadata.name}` into {cls.__name__}."
                 )
 
         return agents

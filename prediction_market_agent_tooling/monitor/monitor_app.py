@@ -50,8 +50,11 @@ def get_deployed_agents(
 
     agents: list[DeployedAgent] = []
 
-    if settings.LOAD_FROM_GCP:
+    if settings.LOAD_FROM_GCF:
         agents.extend(cls.from_all_gcp_functions())
+
+    if settings.LOAD_FROM_GCK:
+        agents.extend(cls.from_all_gcp_cronjobs())
 
     agents.extend(
         cls.from_monitor_settings(settings=settings, start_time=start_time or utcnow())

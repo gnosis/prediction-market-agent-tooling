@@ -30,6 +30,27 @@ class DeployedOmenAgent(DeployedAgent):
         )
         return [b.to_generic_resolved_bet() for b in bets]
 
+    @classmethod
+    def from_env_vars_without_prefix(
+        cls: t.Type["DeployedOmenAgent"],
+        env_vars: dict[str, t.Any] | None = None,
+        extra_vars: dict[str, t.Any] | None = None,
+    ) -> "DeployedOmenAgent":
+        # If omen_public_key is not provided, try to use it from APIKeys initialized from env_vars (will work in case that secret private key was in the env).
+        api_keys = APIKeys(**env_vars) if env_vars else None
+        if (
+            env_vars
+            and "omen_public_key" not in env_vars
+            and api_keys
+            and api_keys.bet_from_address is not None
+            and api_keys.bet_from_address
+            != APIKeys().bet_from_address  # Check that it didn't get if from the default env.
+        ):
+            env_vars["omen_public_key"] = api_keys.bet_from_address
+        return super().from_env_vars_without_prefix(
+            env_vars=env_vars, extra_vars=extra_vars
+        )
+
     @staticmethod
     def from_api_keys(
         name: str,

@@ -29,6 +29,27 @@ class DeployedManifoldAgent(DeployedAgent):
         )
         return [manifold_to_generic_resolved_bet(b, m) for b, m in zip(bets, markets)]
 
+    @classmethod
+    def from_env_vars_without_prefix(
+        cls: t.Type["DeployedManifoldAgent"],
+        env_vars: dict[str, t.Any] | None = None,
+        extra_vars: dict[str, t.Any] | None = None,
+    ) -> "DeployedManifoldAgent":
+        # If manifold_user_id is not provided, try to use it from APIKeys initialized from env_vars (will work in case that secret manifold api key was in the env).
+        api_keys = APIKeys(**env_vars) if env_vars else None
+        if (
+            env_vars
+            and "manifold_user_id" not in env_vars
+            and api_keys
+            and api_keys.manifold_user_id is not None
+            and api_keys.manifold_user_id
+            != APIKeys().manifold_user_id  # Check that it didn't get if from the default env.
+        ):
+            env_vars["manifold_user_id"] = api_keys.manifold_user_id
+        return super().from_env_vars_without_prefix(
+            env_vars=env_vars, extra_vars=extra_vars
+        )
+
     @staticmethod
     def from_api_keys(
         name: str,

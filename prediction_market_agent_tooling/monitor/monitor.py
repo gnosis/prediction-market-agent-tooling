@@ -144,6 +144,8 @@ class DeployedAgent(BaseModel):
         agents: list[C] = []
 
         for function in list_gcp_functions():
+            logger.info(f"Loading function: {function.name}")
+
             if not filter_(function):
                 continue
 
@@ -185,6 +187,8 @@ class DeployedAgent(BaseModel):
         agents: list[C] = []
 
         for cronjob in list_gcp_cronjobs(namespace).items:
+            logger.info(f"Loading cronjob: {cronjob.metadata.name}")
+
             if not filter_(cronjob):
                 continue
 

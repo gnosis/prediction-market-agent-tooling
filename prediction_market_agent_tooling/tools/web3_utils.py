@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Any, Optional, TypeVar
 
 import tenacity
@@ -34,7 +33,7 @@ def private_key_to_public_key(private_key: SecretStr) -> ChecksumAddress:
 
 
 def wei_to_xdai(wei: Wei) -> xDai:
-    return xDai(Decimal((Web3.from_wei(wei, "ether"))))
+    return xDai(float(Web3.from_wei(wei, "ether")))
 
 
 def xdai_to_wei(native: xDai) -> Wei:

@@ -1,6 +1,5 @@
 import typing as t
 from datetime import datetime
-from decimal import Decimal
 from math import ceil
 
 from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
@@ -32,7 +31,7 @@ class ManifoldAgentMarket(AgentMarket):
     base_url: t.ClassVar[str] = MANIFOLD_BASE_URL
 
     def get_tiny_bet_amount(self) -> BetAmount:
-        return BetAmount(amount=Decimal(1), currency=self.currency)
+        return BetAmount(amount=1, currency=self.currency)
 
     def get_minimum_bet_to_win(self, answer: bool, amount_to_win: float) -> Mana:
         # Manifold lowest bet is 1 Mana, so we need to ceil the result.

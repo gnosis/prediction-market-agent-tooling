@@ -1,6 +1,5 @@
 import typing as t
 from datetime import datetime
-from decimal import Decimal
 from typing import NewType, Union
 
 from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy importing with others from here.
@@ -23,23 +22,21 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import (  # noqa: F40
 )
 
 Wad = Wei  # Wei tends to be referred to as `wad` variable in contracts.
-USD = NewType(
-    "USD", Decimal
-)  # Decimals are more precise than floats, good for finances.
+USD = NewType("USD", float)
 PrivateKey = NewType("PrivateKey", SecretStr)
-xDai = NewType("xDai", Decimal)
-GNO = NewType("GNO", Decimal)
+xDai = NewType("xDai", float)
+GNO = NewType("GNO", float)
 ABI = NewType("ABI", str)
 OmenOutcomeToken = NewType("OmenOutcomeToken", int)
 Probability = NewType("Probability", float)
-Mana = NewType("Mana", Decimal)  # Manifold's "currency"
-USDC = NewType("USDC", Decimal)
+Mana = NewType("Mana", float)  # Manifold's "currency"
+USDC = NewType("USDC", float)
 DatetimeWithTimezone = NewType("DatetimeWithTimezone", datetime)
 ChainID = NewType("ChainID", int)
 
 
-def usd_type(amount: Union[str, int, float, Decimal]) -> USD:
-    return USD(Decimal(amount))
+def usd_type(amount: Union[str, int, float]) -> USD:
+    return USD(float(amount))
 
 
 def wei_type(amount: Union[str, int]) -> Wei:
@@ -50,16 +47,16 @@ def omen_outcome_type(amount: Union[str, int, Wei]) -> OmenOutcomeToken:
     return OmenOutcomeToken(wei_type(amount))
 
 
-def xdai_type(amount: Union[str, int, float, Decimal]) -> xDai:
-    return xDai(Decimal(amount))
+def xdai_type(amount: Union[str, int, float]) -> xDai:
+    return xDai(float(amount))
 
 
-def mana_type(amount: Union[str, int, float, Decimal]) -> Mana:
-    return Mana(Decimal(amount))
+def mana_type(amount: Union[str, int, float]) -> Mana:
+    return Mana(float(amount))
 
 
-def usdc_type(amount: Union[str, int, float, Decimal]) -> USDC:
-    return USDC(Decimal(amount))
+def usdc_type(amount: Union[str, int, float]) -> USDC:
+    return USDC(float(amount))
 
 
 def private_key_type(k: str) -> PrivateKey:

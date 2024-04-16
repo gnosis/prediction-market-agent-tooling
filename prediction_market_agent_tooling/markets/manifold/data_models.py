@@ -1,6 +1,5 @@
 import typing as t
 from datetime import datetime, timedelta
-from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
 
@@ -123,17 +122,17 @@ class ManifoldUser(BaseModel):
 class ManifoldBetFills(BaseModel):
     amount: Mana
     matchedBetId: t.Optional[str]
-    shares: Decimal
+    shares: float
     timestamp: int
 
 
 class ManifoldBetFees(BaseModel):
-    platformFee: Decimal
-    liquidityFee: Decimal
-    creatorFee: Decimal
+    platformFee: float
+    liquidityFee: float
+    creatorFee: float
 
-    def get_total(self) -> Decimal:
-        return Decimal(sum([self.platformFee, self.liquidityFee, self.creatorFee]))
+    def get_total(self) -> float:
+        return sum([self.platformFee, self.liquidityFee, self.creatorFee])
 
 
 class ManifoldBet(BaseModel):
@@ -141,7 +140,7 @@ class ManifoldBet(BaseModel):
     https://docs.manifold.markets/api#get-v0bets
     """
 
-    shares: Decimal
+    shares: float
     probBefore: Probability
     isFilled: t.Optional[bool] = None
     probAfter: Probability
@@ -187,13 +186,13 @@ class ManifoldContractMetric(BaseModel):
     hasNoShares: bool
     hasShares: bool
     hasYesShares: bool
-    invested: Decimal
-    loan: Decimal
+    invested: float
+    loan: float
     maxSharesOutcome: t.Optional[str]
-    payout: Decimal
-    profit: Decimal
-    profitPercent: Decimal
-    totalShares: dict[str, Decimal]
+    payout: float
+    profit: float
+    profitPercent: float
+    totalShares: dict[str, float]
     userId: str
     userUsername: str
     userName: str

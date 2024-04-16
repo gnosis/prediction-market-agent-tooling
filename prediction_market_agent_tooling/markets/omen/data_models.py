@@ -1,6 +1,5 @@
 import typing as t
 from datetime import datetime
-from decimal import Decimal
 
 from pydantic import BaseModel
 from web3 import Web3
@@ -338,9 +337,7 @@ class OmenBet(BaseModel):
             )
 
         return ResolvedBet(
-            amount=BetAmount(
-                amount=Decimal(self.collateralAmountUSD), currency=Currency.xDai
-            ),
+            amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
             market_question=self.title,

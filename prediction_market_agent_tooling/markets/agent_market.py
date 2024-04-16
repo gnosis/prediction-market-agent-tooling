@@ -1,6 +1,5 @@
 import typing as t
 from datetime import datetime
-from decimal import Decimal
 from enum import Enum
 
 from pydantic import BaseModel, field_validator
@@ -48,7 +47,7 @@ class AgentMarket(BaseModel):
     close_time: datetime | None
     p_yes: Probability
     url: str
-    volume: Decimal | None  # Should be in currency of `currency` above.
+    volume: float | None  # Should be in currency of `currency` above.
 
     _add_timezone_validator_created_time = field_validator("created_time")(
         add_utc_timezone_validator
@@ -62,20 +61,20 @@ class AgentMarket(BaseModel):
         return Probability(1 - self.p_yes)
 
     @property
-    def yes_outcome_price(self) -> Decimal:
+    def yes_outcome_price(self) -> float:
         """
         Price at prediction market is equal to the probability of given outcome.
         Keep as an extra property, in case it wouldn't be true for some prediction market platform.
         """
-        return Decimal(self.p_yes)
+        return self.p_yes
 
     @property
-    def no_outcome_price(self) -> Decimal:
+    def no_outcome_price(self) -> float:
         """
         Price at prediction market is equal to the probability of given outcome.
         Keep as an extra property, in case it wouldn't be true for some prediction market platform.
         """
-        return Decimal(self.p_no)
+        return self.p_no
 
     @property
     def probable_resolution(self) -> Resolution:
@@ -96,7 +95,7 @@ class AgentMarket(BaseModel):
                 return False
         should_not_happen(f"Market {self.id} does not have a successful resolution.")
 
-    def get_bet_amount(self, amount: Decimal) -> BetAmount:
+    def get_bet_amount(self, amount: float) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
 
     def get_tiny_bet_amount(self) -> BetAmount:

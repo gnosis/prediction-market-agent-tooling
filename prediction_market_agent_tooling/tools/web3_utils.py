@@ -2,7 +2,7 @@ from typing import Any, Optional, TypeVar
 
 import tenacity
 from eth_account import Account
-from eth_typing import URI, Address
+from eth_typing import URI
 from gnosis.eth import EthereumClient
 from gnosis.safe.safe import SafeV141
 from loguru import logger
@@ -128,11 +128,12 @@ def prepare_tx(
             "Cannot have both tx_params[`from`] and from_address not defined."
         )
 
-    if not tx_params_new["from"]:
-        tx_params_new["from"] = Address.fromhex(from_address)
+    if not tx_params_new["from"] and from_address:
+        tx_params_new["from"] = from_address
 
     if not tx_params_new["nonce"]:
-        tx_params_new["nonce"] = web3.eth.get_transaction_count(tx_params_new["from"])
+        from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
+        tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
     # Build the transaction.
     function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore

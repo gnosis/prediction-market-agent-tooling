@@ -7,10 +7,10 @@ from gnosis.safe.proxy_factory import ProxyFactoryV141
 from gnosis.safe.safe import SafeV141
 from loguru import logger
 from safe_cli.safe_addresses import (
+    get_default_fallback_handler_address,
+    get_proxy_factory_address,
     get_safe_contract_address,
     get_safe_l2_contract_address,
-    get_proxy_factory_address,
-    get_default_fallback_handler_address,
 )
 from web3.types import Wei
 

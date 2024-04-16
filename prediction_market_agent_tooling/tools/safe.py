@@ -4,7 +4,7 @@ from gnosis.eth import EthereumClient
 from gnosis.eth.constants import NULL_ADDRESS
 from gnosis.eth.contracts import get_safe_V1_4_1_contract
 from gnosis.safe.proxy_factory import ProxyFactoryV141
-from gnosis.safe.safe import SafeV141, Safe
+from gnosis.safe.safe import Safe
 from loguru import logger
 from safe_cli.safe_addresses import (
     get_default_fallback_handler_address,
@@ -12,7 +12,6 @@ from safe_cli.safe_addresses import (
     get_safe_contract_address,
     get_safe_l2_contract_address,
 )
-from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes

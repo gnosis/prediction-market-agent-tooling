@@ -186,7 +186,7 @@ def {entrypoint_function_name}(request) -> str:
 
         if market_type == MarketType.OMEN:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
-            redeem_from_all_user_positions(keys.bet_from_private_key)
+            redeem_from_all_user_positions(keys.bet_from_private_key, keys.SAFE_ADDRESS)
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """

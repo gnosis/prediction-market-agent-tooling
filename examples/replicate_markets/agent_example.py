@@ -43,18 +43,18 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             f"Finalising, resolving and claiming back xDai from existing markets replicated by {keys.bet_from_address}."
         )
         omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
-            from_private_key=keys.bet_from_private_key
+            from_private_key=keys.bet_from_private_key, safe_address=keys.SAFE_ADDRESS
         )
 
         logger.info(
             f"Unfunding soon to be known markets replicated by {keys.bet_from_address}."
         )
         omen_unfund_replicated_known_markets_tx(
-            keys.bet_from_private_key, saturation_above_threshold=0.9
+            keys.bet_from_private_key, keys.SAFE_ADDRESS, saturation_above_threshold=0.9
         )
 
         logger.info("Redeeming funds from previously unfunded markets.")
-        redeem_from_all_user_positions(keys.bet_from_private_key)
+        redeem_from_all_user_positions(keys.bet_from_private_key, keys.SAFE_ADDRESS)
 
         close_time_before = utcnow() + timedelta(days=settings.CLOSE_TIME_UP_TO_N_DAYS)
         initial_funds_per_market = xdai_type(settings.INITIAL_FUNDS)
@@ -65,6 +65,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             n_to_replicate=settings.N_TO_REPLICATE,
             initial_funds=initial_funds_per_market,
             from_private_key=keys.bet_from_private_key,
+            safe_address=keys.SAFE_ADDRESS,
             close_time_before=close_time_before,
             auto_deposit=True,
         )
@@ -74,6 +75,7 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
             n_to_replicate=settings.N_TO_REPLICATE,
             initial_funds=initial_funds_per_market,
             from_private_key=keys.bet_from_private_key,
+            safe_address=keys.SAFE_ADDRESS,
             close_time_before=close_time_before,
             auto_deposit=True,
         )

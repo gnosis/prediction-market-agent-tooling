@@ -42,6 +42,7 @@ def omen_replicate_from_tx(
     n_to_replicate: int,
     initial_funds: xDai,
     from_private_key: PrivateKey,
+    safe_address: ChecksumAddress | None,
     close_time_before: datetime | None = None,
     auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
@@ -127,6 +128,7 @@ def omen_replicate_from_tx(
             category=category,
             language="en",
             from_private_key=from_private_key,
+            safe_address=safe_address,
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
             auto_deposit=auto_deposit,
         )
@@ -146,6 +148,7 @@ def omen_replicate_from_tx(
 
 def omen_unfund_replicated_known_markets_tx(
     from_private_key: PrivateKey,
+    safe_address: ChecksumAddress | None,
     saturation_above_threshold: float | None = None,
 ) -> None:
     from_address = private_key_to_public_key(from_private_key)
@@ -186,4 +189,5 @@ def omen_unfund_replicated_known_markets_tx(
             market=OmenAgentMarket.from_data_model(market),
             shares=None,
             from_private_key=from_private_key,
+            safe_address=safe_address,
         )

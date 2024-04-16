@@ -14,7 +14,10 @@ from tests.utils import RUN_PAID_TESTS
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_ask_question() -> None:
-    realitio_contract = OmenRealitioContract()
+    keys = APIKeys()
+    realitio_contract = OmenRealitioContract.build_with_private_key_and_safe(
+        keys.bet_from_private_key, keys.SAFE_ADDRESS
+    )
     question_id = realitio_contract.askQuestion(
         question="Will GNO be above $1000 in 2 minutes from now?",
         category="cryptocurrency",
@@ -22,6 +25,5 @@ def test_ask_question() -> None:
         language="en",
         arbitrator=Arbitrator.KLEROS,
         opening=utcnow() + timedelta(minutes=2),
-        from_private_key=APIKeys().bet_from_private_key,
     )
     logger.info(question_id)

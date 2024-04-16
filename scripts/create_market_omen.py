@@ -2,6 +2,7 @@ from datetime import datetime
 
 import typer
 from loguru import logger
+from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -20,6 +21,7 @@ def main(
     category: str = typer.Option(),
     initial_funds: str = typer.Option(),
     from_private_key: str = typer.Option(),
+    safe_address: str = typer.Option(None),
     fee: float = typer.Option(OMEN_DEFAULT_MARKET_FEE),
     language: str = typer.Option("en"),
     outcomes: list[str] = typer.Option([OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]),
@@ -40,6 +42,9 @@ def main(
 
     Market can be created also on the web: https://aiomen.eth.limo/#/create
     """
+    safe_address_checksum = (
+        Web3.to_checksum_address(safe_address) if safe_address else None
+    )
     market_address = omen_create_market_tx(
         initial_funds=xdai_type(initial_funds),
         fee=fee,
@@ -48,6 +53,7 @@ def main(
         category=category,
         language=language,
         from_private_key=private_key_type(from_private_key),
+        safe_address=safe_address_checksum,
         outcomes=outcomes,
         auto_deposit=auto_deposit,
     )

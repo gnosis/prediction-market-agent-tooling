@@ -2,9 +2,11 @@ import json
 import time
 import typing as t
 from contextlib import contextmanager
+from typing import TypeVar, Type
 
+from eth_typing import HexAddress, HexStr
 from loguru import logger
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -22,6 +24,7 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
     GNOSIS_NETWORK_ID,
     GNOSIS_RPC_URL,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
@@ -33,6 +36,9 @@ def abi_field_validator(value: str) -> ABI:
     if value.endswith(".json"):
         with open(value) as f:
             value = f.read()
+
+    if "" == value:
+        raise ValueError(f"Invalid ABI: {value}")
 
     try:
         json.loads(value)  # Test if it's valid JSON content.
@@ -55,6 +61,9 @@ def wait_until_nonce_changed(
         time.sleep(sleep_time)
 
 
+T = TypeVar("T", bound="ContractBaseClass")
+
+
 class ContractBaseClass(BaseModel):
     """
     Base class holding the basic requirements and tools used for every contract.
@@ -62,11 +71,26 @@ class ContractBaseClass(BaseModel):
 
     CHAIN_ID: t.ClassVar[ChainID]
     CHAIN_RPC_URL: t.ClassVar[str]
-
-    abi: ABI
-    address: ChecksumAddress
+    signer_private_key: PrivateKey | None = (
+        None  # no private_key required for call methods (reading)
+    )
+    safe_address: ChecksumAddress | None = None  # no Safe address required, only signer_private_key suffices if not using Safe.
+    abi: ABI  # = Field(default=ABI(""))
+    address: ChecksumAddress  # = Field(default=ChecksumAddress(HexAddress(HexStr(""))))
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
+
+    @classmethod
+    def build_with_private_key_and_safe(
+        cls: Type[T],
+        signer_private_key: PrivateKey,
+        safe_address: ChecksumAddress | None,
+    ) -> T:
+        # Note that abi and signer are to be defined in the subclasses. If not, pydantic.ValidationError will be thrown.
+        return cls(
+            safe_address=safe_address,  # type: ignore
+            signer_private_key=signer_private_key,
+        )
 
     def call(
         self,
@@ -88,7 +112,6 @@ class ContractBaseClass(BaseModel):
 
     def send(
         self,
-        from_private_key: PrivateKey,
         function_name: str,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
         tx_params: t.Optional[TxParams] = None,
@@ -99,14 +122,18 @@ class ContractBaseClass(BaseModel):
         Used for changing a state (writing) to the contract.
         """
 
-        safe_address = self._safe_parse_safe_address()
-        if safe_address:
+        if not self.signer_private_key:
+            raise ValueError(
+                "Signer private key must be set for send functions to be called."
+            )
+
+        if self.safe_address:
             return send_function_on_contract_tx_using_safe(
                 web3=web3 or self.get_web3(),
                 contract_address=self.address,
                 contract_abi=self.abi,
-                from_private_key=from_private_key,
-                safe_address=safe_address,
+                from_private_key=self.signer_private_key,
+                safe_address=self.safe_address,
                 function_name=function_name,
                 function_params=function_params,
                 tx_params=tx_params,
@@ -116,7 +143,7 @@ class ContractBaseClass(BaseModel):
             web3=web3 or self.get_web3(),
             contract_address=self.address,
             contract_abi=self.abi,
-            from_private_key=from_private_key,
+            from_private_key=self.signer_private_key,
             function_name=function_name,
             function_params=function_params,
             tx_params=tx_params,
@@ -125,7 +152,6 @@ class ContractBaseClass(BaseModel):
 
     def send_with_value(
         self,
-        from_private_key: PrivateKey,
         function_name: str,
         amount_wei: Wei,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
@@ -137,7 +163,6 @@ class ContractBaseClass(BaseModel):
         Used for changing a state (writing) to the contract, including sending chain's native currency.
         """
         return self.send(
-            from_private_key=from_private_key,
             function_name=function_name,
             function_params=function_params,
             tx_params={"value": amount_wei, **(tx_params or {})},
@@ -153,17 +178,6 @@ class ContractBaseClass(BaseModel):
     def get_web3(cls) -> Web3:
         return Web3(Web3.HTTPProvider(cls.CHAIN_RPC_URL))
 
-    @staticmethod
-    def _safe_parse_safe_address() -> ChecksumAddress | None:
-        keys = APIKeys()
-        if not keys.safe_address:
-            return None
-        try:
-            return Web3.to_checksum_address(keys.safe_address)
-        except Exception:
-            logger.info("Could not parse safe_address from env. Reverting to None.")
-            return None
-
 
 class ContractERC20BaseClass(ContractBaseClass):
     """
@@ -174,12 +188,10 @@ class ContractERC20BaseClass(ContractBaseClass):
         self,
         for_address: ChecksumAddress,
         amount_wei: Wei,
-        from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            from_private_key=from_private_key,
             function_name="approve",
             function_params=[
                 for_address,
@@ -192,12 +204,10 @@ class ContractERC20BaseClass(ContractBaseClass):
     def deposit(
         self,
         amount_wei: Wei,
-        from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send_with_value(
-            from_private_key=from_private_key,
             function_name="deposit",
             amount_wei=amount_wei,
             tx_params=tx_params,
@@ -207,12 +217,10 @@ class ContractERC20BaseClass(ContractBaseClass):
     def withdraw(
         self,
         amount_wei: Wei,
-        from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            from_private_key=from_private_key,
             function_name="withdraw",
             function_params=[amount_wei],
             tx_params=tx_params,

@@ -23,7 +23,7 @@ class APIKeys(BaseSettings):
 
     MANIFOLD_API_KEY: t.Optional[SecretStr] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
-    SAFE_ADDRESS: t.Optional[HexAddress] = None
+    SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
@@ -48,10 +48,6 @@ class APIKeys(BaseSettings):
             self.BET_FROM_PRIVATE_KEY,
             "BET_FROM_PRIVATE_KEY missing in the environment.",
         )
-
-    @property
-    def safe_address(self) -> HexAddress | None:
-        return self.SAFE_ADDRESS
 
     @property
     def openai_api_key(self) -> SecretStr:

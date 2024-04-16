@@ -53,6 +53,7 @@ def test_omen_buy_and_sell_outcome() -> None:
         binary_omen_buy_outcome_tx(
             amount=buy_amount,
             from_private_key=keys.bet_from_private_key,
+            safe_address=keys.SAFE_ADDRESS,
             market=market,
             binary_outcome=True,
             auto_deposit=True,
@@ -61,6 +62,7 @@ def test_omen_buy_and_sell_outcome() -> None:
         binary_omen_sell_outcome_tx(
             amount=sell_amount,
             from_private_key=keys.bet_from_private_key,
+            safe_address=keys.SAFE_ADDRESS,
             market=market,
             binary_outcome=True,
             auto_withdraw=True,
@@ -78,6 +80,7 @@ def test_omen_create_market() -> None:
         category="cryptocurrency",
         language="en",
         from_private_key=keys.bet_from_private_key,
+        safe_address=keys.SAFE_ADDRESS,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         auto_deposit=True,
     )
@@ -100,6 +103,7 @@ def test_omen_fund_and_remove_fund_market() -> None:
             market=market,
             funds=funds,
             from_private_key=keys.bet_from_private_key,
+            safe_address=keys.SAFE_ADDRESS,
             auto_deposit=True,
         )
     with wait_until_nonce_changed(keys.bet_from_address):
@@ -107,6 +111,7 @@ def test_omen_fund_and_remove_fund_market() -> None:
             market=market,
             shares=remove_fund,
             from_private_key=keys.bet_from_private_key,
+            safe_address=keys.SAFE_ADDRESS,
         )
 
 
@@ -138,6 +143,7 @@ def test_omen_redeem_positions() -> None:
     omen_redeem_full_position_tx(
         market=market,
         from_private_key=keys.bet_from_private_key,
+        safe_address=keys.SAFE_ADDRESS,
     )
 
 

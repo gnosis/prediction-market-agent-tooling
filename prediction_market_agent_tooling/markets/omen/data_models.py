@@ -133,7 +133,7 @@ class OmenMarket(BaseModel):
     fee: t.Optional[Wei]
     resolutionTimestamp: t.Optional[int] = None
     answerFinalizedTimestamp: t.Optional[int] = None
-    currentAnswer: t.Optional[str] = None
+    currentAnswer: t.Optional[HexBytes] = None
     creationTimestamp: int
     condition: Condition
     question: Question
@@ -156,7 +156,7 @@ class OmenMarket(BaseModel):
 
     @property
     def answer_index(self) -> t.Optional[int]:
-        return int(self.currentAnswer, 16) if self.currentAnswer else None
+        return self.currentAnswer.as_int() if self.currentAnswer else None
 
     @property
     def has_valid_answer(self) -> bool:

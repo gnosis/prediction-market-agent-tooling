@@ -64,9 +64,9 @@ class DeployedAgent(BaseModel):
     name: str
 
     start_time: DatetimeWithTimezone
-    end_time: t.Optional[
-        DatetimeWithTimezone
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[DatetimeWithTimezone] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -100,6 +100,9 @@ class DeployedAgent(BaseModel):
         env_vars: dict[str, t.Any] | None = None,
         extra_vars: dict[str, t.Any] | None = None,
     ) -> C:
+        from pprint import pprint
+
+        pprint(env_vars)
         return cls.from_env_vars_without_prefix(
             env_vars={
                 k.replace(cls.PREFIX, ""): v

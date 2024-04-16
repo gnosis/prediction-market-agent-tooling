@@ -3,12 +3,17 @@ from concurrent.futures import Executor
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Callable, TypeVar
 
+# Max workers to 5 to avoid rate limiting on some APIs, create a custom executor if you need more workers.
+DEFAULT_THREADPOOL_EXECUTOR = ThreadPoolExecutor(max_workers=5)
+
 A = TypeVar("A")
 B = TypeVar("B")
 
 
 def par_map(
-    items: list[A], func: Callable[[A], B], executor: Executor = ThreadPoolExecutor()
+    items: list[A],
+    func: Callable[[A], B],
+    executor: Executor = DEFAULT_THREADPOOL_EXECUTOR,
 ) -> "list[B]":
     """Applies the function to each element using the specified executor. Awaits for all results.
     If executor is ProcessPoolExecutor, make sure the function passed is pickable, e.g. no lambda functions

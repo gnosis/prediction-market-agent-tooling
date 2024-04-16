@@ -10,7 +10,6 @@ import streamlit as st
 from google.cloud.functions_v2.types.functions import Function
 from loguru import logger
 from pydantic import BaseModel, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.kubernetes_models import (
@@ -32,29 +31,6 @@ from prediction_market_agent_tooling.tools.utils import (
     should_not_happen,
 )
 
-
-class MonitorSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env.monitor", env_file_encoding="utf-8", extra="ignore"
-    )
-
-    LOAD_FROM_GCF: bool = False
-    LOAD_FROM_GCK: bool = False
-    LOAD_FROM_GCK_NAMESPACE: str = "agents"
-    MANIFOLD_API_KEYS: list[str] = []
-    OMEN_PUBLIC_KEYS: list[str] = []
-    POLYMARKET_PUBLIC_KEYS: list[str] = []
-    PAST_N_WEEKS: int = 1
-
-    @property
-    def has_manual_agents(self) -> bool:
-        return bool(
-            self.MANIFOLD_API_KEYS
-            or self.OMEN_PUBLIC_KEYS
-            or self.POLYMARKET_PUBLIC_KEYS
-        )
-
-
 C = t.TypeVar("C", bound="DeployedAgent")
 
 
@@ -64,9 +40,9 @@ class DeployedAgent(BaseModel):
     name: str
 
     start_time: DatetimeWithTimezone
-    end_time: t.Optional[DatetimeWithTimezone] = (
-        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
-    )
+    end_time: t.Optional[
+        DatetimeWithTimezone
+    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -84,6 +60,10 @@ class DeployedAgent(BaseModel):
         }
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @property
+    def public_id(self) -> str:
         raise NotImplementedError("Subclasses must implement this method.")
 
     @classmethod
@@ -108,12 +88,6 @@ class DeployedAgent(BaseModel):
             },
             extra_vars=extra_vars,
         )
-
-    @staticmethod
-    def from_monitor_settings(
-        settings: MonitorSettings, start_time: DatetimeWithTimezone
-    ) -> list["DeployedAgent"]:
-        raise NotImplementedError("Subclasses must implement this method.")
 
     @staticmethod
     def from_api_keys(
@@ -181,8 +155,8 @@ class DeployedAgent(BaseModel):
     @classmethod
     def from_all_gcp_cronjobs(
         cls: t.Type[C],
+        namespace: str,
         filter_: t.Callable[[KubernetesCronJob], bool] = lambda x: True,
-        namespace: str = MonitorSettings().LOAD_FROM_GCK_NAMESPACE,
     ) -> t.Sequence[C]:
         agents: list[C] = []
 
@@ -203,6 +177,18 @@ class DeployedAgent(BaseModel):
 
 
 def monitor_agent(agent: DeployedAgent) -> None:
+    # Info
+    col1, col2, col3 = st.columns(3)
+    col1.markdown(f"Name: `{agent.name}`")
+    col2.markdown(f"Start Time: `{agent.start_time}`")
+    col3.markdown(f"Public ID: `{agent.public_id}`")
+
+    show_agent_bets = st.checkbox(
+        "Show resolved bets", value=False, key=f"{agent.name}_show_bets"
+    )
+    if not show_agent_bets:
+        return
+
     agent_bets = agent.get_resolved_bets()
     if not agent_bets:
         st.warning(f"No resolved bets found for {agent.name}.")
@@ -217,11 +203,6 @@ def monitor_agent(agent: DeployedAgent) -> None:
         "Profit": [round(bet.profit.amount, 2) for bet in agent_bets],
     }
     bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
-
-    # Info
-    col1, col2, col3 = st.columns(3)
-    col1.markdown(f"Name: `{agent.name}`")
-    col3.markdown(f"Start Time: `{agent.start_time}`")
 
     # Metrics
     col1, col2 = st.columns(2)

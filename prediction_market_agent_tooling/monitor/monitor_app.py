@@ -19,10 +19,10 @@ from prediction_market_agent_tooling.monitor.markets.polymarket import (
 )
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
-    MonitorSettings,
     monitor_agent,
     monitor_market,
 )
+from prediction_market_agent_tooling.monitor.monitor_settings import MonitorSettings
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
     add_utc_timezone_validator,
@@ -54,11 +54,19 @@ def get_deployed_agents(
         agents.extend(cls.from_all_gcp_functions())
 
     if settings.LOAD_FROM_GCK:
-        agents.extend(cls.from_all_gcp_cronjobs())
+        agents.extend(
+            cls.from_all_gcp_cronjobs(namespace=settings.LOAD_FROM_GCK_NAMESPACE)
+        )
 
-    agents.extend(
-        cls.from_monitor_settings(settings=settings, start_time=start_time or utcnow())
-    )
+    match market_type:
+        case MarketType.MANIFOLD:
+            agents += settings.MANIFOLD_AGENTS
+        case MarketType.OMEN:
+            agents += settings.OMEN_AGENTS
+        case MarketType.POLYMARKET:
+            agents += settings.POLYMARKET_AGENTS
+        case _:
+            raise ValueError(f"Unknown market type: {market_type}")
 
     return agents
 
@@ -134,6 +142,8 @@ def monitor_app(
     )
 
     st.header("Agent Info")
+    if st.button("Export agents"):
+        st.text("[" + ",".join(a.model_dump_json() for a in agents) + "]")
     for agent in agents:
         with st.expander(f"Agent: '{agent.name}'"):
             monitor_agent(agent)

@@ -17,7 +17,6 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldMarket,
     ManifoldUser,
 )
-from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import response_list_to_model
 
 """
@@ -140,12 +139,18 @@ def get_authenticated_user(api_key: str) -> ManifoldUser:
     headers = {
         "Authorization": f"Key {api_key}",
         "Content-Type": "application/json",
+        "Cache-Control": "private, no-store, max-age=0",
     }
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     return ManifoldUser.model_validate(response.json())
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_manifold_market failed, {x.attempt_number=}."),
+)
 def get_manifold_market(market_id: str) -> ManifoldMarket:
     url = f"{MANIFOLD_API_BASE_URL}/v0/market/{market_id}"
     response = requests.get(url)
@@ -153,6 +158,11 @@ def get_manifold_market(market_id: str) -> ManifoldMarket:
     return ManifoldMarket.model_validate(response.json())
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_manifold_bets failed, {x.attempt_number=}."),
+)
 def get_manifold_bets(
     user_id: str,
     start_time: datetime,
@@ -174,12 +184,14 @@ def get_resolved_manifold_bets(
     end_time: t.Optional[datetime],
 ) -> tuple[list[ManifoldBet], list[ManifoldMarket]]:
     bets = get_manifold_bets(user_id, start_time, end_time)
-    markets: list[ManifoldMarket] = par_map(
-        items=bets,
-        func=lambda bet: get_manifold_market(bet.contractId),
-    )
+    contract_id_to_market: dict[str, ManifoldMarket] = {}
     resolved_markets, resolved_bets = [], []
-    for bet, market in zip(bets, markets):
+    for bet in bets:
+        if bet.contractId not in contract_id_to_market:
+            market = get_manifold_market(bet.contractId)
+            contract_id_to_market[bet.contractId] = market
+        else:
+            market = contract_id_to_market[bet.contractId]
         if market.is_resolved_non_cancelled():
             resolved_markets.append(market)
             resolved_bets.append(bet)

@@ -13,7 +13,6 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
-    MonitorSettings,
     KubernetesCronJob,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone
@@ -21,6 +20,10 @@ from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone
 
 class DeployedManifoldAgent(DeployedAgent):
     manifold_user_id: str
+
+    @property
+    def public_id(self) -> str:
+        return self.manifold_user_id
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         bets, markets = get_resolved_manifold_bets(
@@ -65,19 +68,6 @@ class DeployedManifoldAgent(DeployedAgent):
             ).id,
         )
 
-    @staticmethod
-    def from_monitor_settings(
-        settings: MonitorSettings, start_time: DatetimeWithTimezone
-    ) -> list[DeployedAgent]:
-        return [
-            DeployedManifoldAgent(
-                name=f"ManifoldAgent-{idx}",
-                start_time=start_time,
-                manifold_user_id=get_authenticated_user(key).id,
-            )
-            for idx, key in enumerate(settings.MANIFOLD_API_KEYS)
-        ]
-
     @classmethod
     def from_all_gcp_functions(
         cls: t.Type["DeployedManifoldAgent"],
@@ -91,9 +81,10 @@ class DeployedManifoldAgent(DeployedAgent):
     @classmethod
     def from_all_gcp_cronjobs(
         cls: t.Type["DeployedManifoldAgent"],
+        namespace: str,
         filter_: t.Callable[
             [KubernetesCronJob], bool
         ] = lambda cronjob: cronjob.metadata.labels[MARKET_TYPE_KEY]
         == MarketType.MANIFOLD.value,
     ) -> t.Sequence["DeployedManifoldAgent"]:
-        return super().from_all_gcp_cronjobs(filter_=filter_)
+        return super().from_all_gcp_cronjobs(namespace=namespace, filter_=filter_)

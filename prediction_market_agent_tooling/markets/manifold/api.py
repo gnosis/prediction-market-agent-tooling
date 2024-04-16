@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldMarket,
     ManifoldUser,
 )
+from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import response_list_to_model
 
 """
@@ -184,14 +185,12 @@ def get_resolved_manifold_bets(
     end_time: t.Optional[datetime],
 ) -> tuple[list[ManifoldBet], list[ManifoldMarket]]:
     bets = get_manifold_bets(user_id, start_time, end_time)
-    contract_id_to_market: dict[str, ManifoldMarket] = {}
+    markets: list[ManifoldMarket] = par_map(
+        items=bets,
+        func=lambda bet: get_manifold_market(bet.contractId),
+    )
     resolved_markets, resolved_bets = [], []
-    for bet in bets:
-        if bet.contractId not in contract_id_to_market:
-            market = get_manifold_market(bet.contractId)
-            contract_id_to_market[bet.contractId] = market
-        else:
-            market = contract_id_to_market[bet.contractId]
+    for bet, market in zip(bets, markets):
         if market.is_resolved_non_cancelled():
             resolved_markets.append(market)
             resolved_bets.append(bet)

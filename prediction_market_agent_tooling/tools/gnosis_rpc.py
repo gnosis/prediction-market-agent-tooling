@@ -20,5 +20,5 @@ def get_balance(address: HexAddress) -> Wei:
         headers={"content-type": "application/json"},
     ).json()
     balance_bytes = HexBytes(response["result"])
-    balance = Wei(balance_bytes.as_int())  # Convert hex value to int.
+    balance = Wei(balance_bytes.as_int())
     return balance

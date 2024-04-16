@@ -65,3 +65,6 @@ class HexBytes(HexBytesBase, BaseHex):
         cls, value: t.Any, info: ValidationInfo | None = None
     ) -> HexBytesBase:
         return HexBytesBase(value)
+
+    def as_int(self) -> int:
+        return int(self.hex(), 16)

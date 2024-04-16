@@ -2,14 +2,11 @@ import json
 import time
 import typing as t
 from contextlib import contextmanager
-from typing import TypeVar, Type
+from typing import Type, TypeVar
 
-from eth_typing import HexAddress, HexStr
-from loguru import logger
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, field_validator
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
@@ -24,7 +21,6 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
     GNOSIS_NETWORK_ID,
     GNOSIS_RPC_URL,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,

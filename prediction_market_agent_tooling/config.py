@@ -1,6 +1,5 @@
 import typing as t
 
-from eth_typing import HexAddress
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

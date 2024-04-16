@@ -15,7 +15,7 @@ def create_safe_for_agent(
     salt_nonce: int = secrets.randbits(256),
 ) -> None:
     """
-        Helper script to create a market on Omen, usage:
+        Helper script to create a Safe for an agent, usage:
 
         ```bash
         python scripts/create_safe_for_agent.py \

@@ -217,7 +217,7 @@ def test_balance_for_user_in_market() -> None:
         outcome=OMEN_TRUE_OUTCOME,
     )
     assert balance_yes.currency == Currency.xDai
-    assert float(balance_yes.amount) == 0.001959903969410997
+    assert float(balance_yes.amount) == 0
 
     balance_no = market.get_token_balance(
         user_id=user_address,

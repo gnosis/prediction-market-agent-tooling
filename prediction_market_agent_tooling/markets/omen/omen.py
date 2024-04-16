@@ -75,6 +75,8 @@ class OmenAgentMarket(AgentMarket):
     market_maker_contract_address_checksummed: ChecksumAddress
     condition: Condition
     finalized_time: datetime | None
+    created_time: datetime
+    close_time: datetime
 
     INVALID_MARKET_ANSWER: HexStr = HexStr(
         "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"

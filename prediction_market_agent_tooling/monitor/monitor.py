@@ -100,9 +100,6 @@ class DeployedAgent(BaseModel):
         env_vars: dict[str, t.Any] | None = None,
         extra_vars: dict[str, t.Any] | None = None,
     ) -> C:
-        from pprint import pprint
-
-        pprint(env_vars)
         return cls.from_env_vars_without_prefix(
             env_vars={
                 k.replace(cls.PREFIX, ""): v
@@ -128,7 +125,7 @@ class DeployedAgent(BaseModel):
 
     @classmethod
     def from_gcp_function(cls: t.Type[C], function: Function) -> C:
-        return cls.from_env_vars(
+        return cls.from_env_vars_without_prefix(
             env_vars=dict(function.service_config.environment_variables),
             extra_vars={
                 "raw_labels": dict(function.labels),
@@ -147,16 +144,16 @@ class DeployedAgent(BaseModel):
         agents: list[C] = []
 
         for function in list_gcp_functions():
-            logger.info(f"Loading function: {function.name}")
-
             if not filter_(function):
                 continue
 
+            logger.info(f"Loading function: {function.name}")
+
             try:
                 agents.append(cls.from_gcp_function(function))
-            except ValueError:
+            except ValueError as e:
                 logger.warning(
-                    f"Could not parse `{function.name}` into {cls.__name__}."
+                    f"Could not parse `{function.name}` into {cls.__name__}: {e}."
                 )
 
         return agents
@@ -177,7 +174,7 @@ class DeployedAgent(BaseModel):
             ).items()
         }
 
-        return cls.from_env_vars(
+        return cls.from_env_vars_without_prefix(
             env_vars=secret_env_name_to_env_value | configmap_env_name_to_env_value,
         )
 
@@ -190,16 +187,16 @@ class DeployedAgent(BaseModel):
         agents: list[C] = []
 
         for cronjob in list_gcp_cronjobs(namespace).items:
-            logger.info(f"Loading cronjob: {cronjob.metadata.name}")
-
             if not filter_(cronjob):
                 continue
 
+            logger.info(f"Loading cronjob: {cronjob.metadata.name}")
+
             try:
                 agents.append(cls.from_gcp_cronjob(cronjob))
-            except ValueError:
+            except ValueError as e:
                 logger.warning(
-                    f"Could not parse `{cronjob.metadata.name}` into {cls.__name__}."
+                    f"Could not parse `{cronjob.metadata.name}` into {cls.__name__}: {e}."
                 )
 
         return agents

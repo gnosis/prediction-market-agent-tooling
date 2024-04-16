@@ -11,6 +11,7 @@ class Metadata(BaseModel):
     namespace: str
     resourceVersion: str
     uid: str
+    labels: dict[str, str]
 
 
 class Metadata1(BaseModel):

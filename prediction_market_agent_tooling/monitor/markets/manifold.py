@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
+    KubernetesCronJob,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone
 
@@ -41,9 +42,9 @@ class DeployedManifoldAgent(DeployedAgent):
             env_vars
             and "manifold_user_id" not in env_vars
             and api_keys
-            and api_keys.manifold_user_id is not None
-            and api_keys.manifold_user_id
-            != APIKeys().manifold_user_id  # Check that it didn't get if from the default env.
+            and api_keys.MANIFOLD_API_KEY is not None
+            and api_keys.MANIFOLD_API_KEY
+            != APIKeys().MANIFOLD_API_KEY  # Check that it didn't get if from the default env.
         ):
             env_vars["manifold_user_id"] = api_keys.manifold_user_id
         return super().from_env_vars_without_prefix(
@@ -86,3 +87,13 @@ class DeployedManifoldAgent(DeployedAgent):
         == MarketType.MANIFOLD.value,
     ) -> t.Sequence["DeployedManifoldAgent"]:
         return super().from_all_gcp_functions(filter_=filter_)
+
+    @classmethod
+    def from_all_gcp_cronjobs(
+        cls: t.Type["DeployedManifoldAgent"],
+        filter_: t.Callable[
+            [KubernetesCronJob], bool
+        ] = lambda cronjob: cronjob.metadata.labels[MARKET_TYPE_KEY]
+        == MarketType.MANIFOLD.value,
+    ) -> t.Sequence["DeployedManifoldAgent"]:
+        return super().from_all_gcp_cronjobs(filter_=filter_)

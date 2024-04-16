@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     MonitorSettings,
+    KubernetesCronJob,
 )
 
 
@@ -85,3 +86,13 @@ class DeployedOmenAgent(DeployedAgent):
         == MarketType.OMEN.value,
     ) -> t.Sequence["DeployedOmenAgent"]:
         return super().from_all_gcp_functions(filter_=filter_)
+
+    @classmethod
+    def from_all_gcp_cronjobs(
+        cls: t.Type["DeployedOmenAgent"],
+        filter_: t.Callable[
+            [KubernetesCronJob], bool
+        ] = lambda cronjob: cronjob.metadata.labels[MARKET_TYPE_KEY]
+        == MarketType.OMEN.value,
+    ) -> t.Sequence["DeployedOmenAgent"]:
+        return super().from_all_gcp_cronjobs(filter_=filter_)

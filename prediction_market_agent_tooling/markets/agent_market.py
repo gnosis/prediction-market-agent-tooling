@@ -45,7 +45,7 @@ class AgentMarket(BaseModel):
     outcomes: list[str]
     resolution: Resolution | None
     created_time: datetime | None
-    close_time: datetime
+    close_time: datetime | None
     p_yes: Probability
     url: str
     volume: Decimal | None  # Should be in currency of `currency` above.

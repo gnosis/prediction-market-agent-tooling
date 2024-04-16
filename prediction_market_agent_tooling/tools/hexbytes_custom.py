@@ -63,8 +63,8 @@ class HexBytes(HexBytesBase, BaseHex):
     @classmethod
     def __eth_pydantic_validate__(
         cls, value: t.Any, info: ValidationInfo | None = None
-    ) -> HexBytesBase:
-        return HexBytesBase(value)
+    ) -> "HexBytes":
+        return HexBytes(value)
 
     def as_int(self) -> int:
         return int(self.hex(), 16)

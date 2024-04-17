@@ -1,3 +1,4 @@
+import json
 import os
 import typing as t
 from itertools import groupby
@@ -9,11 +10,16 @@ import streamlit as st
 from google.cloud.functions_v2.types.functions import Function
 from loguru import logger
 from pydantic import BaseModel, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.gcp.kubernetes_models import (
+    KubernetesCronJob,
+)
 from prediction_market_agent_tooling.deploy.gcp.utils import (
+    gcp_get_secret_value,
+    get_gcp_configmap_data,
     get_gcp_function,
+    list_gcp_cronjobs,
     list_gcp_functions,
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
@@ -25,27 +31,6 @@ from prediction_market_agent_tooling.tools.utils import (
     should_not_happen,
 )
 
-
-class MonitorSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env.monitor", env_file_encoding="utf-8", extra="ignore"
-    )
-
-    LOAD_FROM_GCP: bool = False
-    MANIFOLD_API_KEYS: list[str] = []
-    OMEN_PUBLIC_KEYS: list[str] = []
-    POLYMARKET_PUBLIC_KEYS: list[str] = []
-    PAST_N_WEEKS: int = 1
-
-    @property
-    def has_manual_agents(self) -> bool:
-        return bool(
-            self.MANIFOLD_API_KEYS
-            or self.OMEN_PUBLIC_KEYS
-            or self.POLYMARKET_PUBLIC_KEYS
-        )
-
-
 C = t.TypeVar("C", bound="DeployedAgent")
 
 
@@ -53,7 +38,6 @@ class DeployedAgent(BaseModel):
     PREFIX: t.ClassVar["str"] = "deployedagent_var_"
 
     name: str
-    deployableagent_class_name: str
 
     start_time: DatetimeWithTimezone
     end_time: t.Optional[
@@ -76,6 +60,10 @@ class DeployedAgent(BaseModel):
         }
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @property
+    def public_id(self) -> str:
         raise NotImplementedError("Subclasses must implement this method.")
 
     @classmethod
@@ -102,15 +90,8 @@ class DeployedAgent(BaseModel):
         )
 
     @staticmethod
-    def from_monitor_settings(
-        settings: MonitorSettings, start_time: DatetimeWithTimezone
-    ) -> list["DeployedAgent"]:
-        raise NotImplementedError("Subclasses must implement this method.")
-
-    @staticmethod
     def from_api_keys(
         name: str,
-        deployableagent_class_name: str,
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedAgent":
@@ -118,7 +99,7 @@ class DeployedAgent(BaseModel):
 
     @classmethod
     def from_gcp_function(cls: t.Type[C], function: Function) -> C:
-        return cls.from_env_vars(
+        return cls.from_env_vars_without_prefix(
             env_vars=dict(function.service_config.environment_variables),
             extra_vars={
                 "raw_labels": dict(function.labels),
@@ -140,17 +121,74 @@ class DeployedAgent(BaseModel):
             if not filter_(function):
                 continue
 
+            logger.info(f"Loading function: {function.name}")
+
             try:
                 agents.append(cls.from_gcp_function(function))
-            except ValueError:
+            except ValueError as e:
                 logger.warning(
-                    f"Could not parse `{function.name}` into {cls.__name__}."
+                    f"Could not parse `{function.name}` into {cls.__name__}: {e}."
+                )
+
+        return agents
+
+    @classmethod
+    def from_gcp_cronjob(cls: t.Type[C], cronjob: KubernetesCronJob) -> C:
+        secret_env_name_to_env_value = {
+            e.name: json.loads(gcp_get_secret_value(e.valueFrom.secretKeyRef.name))[
+                e.valueFrom.secretKeyRef.key
+            ]
+            for e in cronjob.spec.jobTemplate.spec.template.spec.containers[0].env
+        }
+        configmap_env_name_to_env_value = {
+            key: value
+            for e in cronjob.spec.jobTemplate.spec.template.spec.containers[0].envFrom
+            for key, value in get_gcp_configmap_data(
+                cronjob.metadata.namespace, e.configMapRef.name
+            ).items()
+        }
+
+        return cls.from_env_vars_without_prefix(
+            env_vars=secret_env_name_to_env_value | configmap_env_name_to_env_value,
+        )
+
+    @classmethod
+    def from_all_gcp_cronjobs(
+        cls: t.Type[C],
+        namespace: str,
+        filter_: t.Callable[[KubernetesCronJob], bool] = lambda x: True,
+    ) -> t.Sequence[C]:
+        agents: list[C] = []
+
+        for cronjob in list_gcp_cronjobs(namespace).items:
+            if not filter_(cronjob):
+                continue
+
+            logger.info(f"Loading cronjob: {cronjob.metadata.name}")
+
+            try:
+                agents.append(cls.from_gcp_cronjob(cronjob))
+            except ValueError as e:
+                logger.warning(
+                    f"Could not parse `{cronjob.metadata.name}` into {cls.__name__}: {e}."
                 )
 
         return agents
 
 
 def monitor_agent(agent: DeployedAgent) -> None:
+    # Info
+    col1, col2, col3 = st.columns(3)
+    col1.markdown(f"Name: `{agent.name}`")
+    col2.markdown(f"Start Time: `{agent.start_time}`")
+    col3.markdown(f"Public ID: `{agent.public_id}`")
+
+    show_agent_bets = st.checkbox(
+        "Show resolved bets", value=False, key=f"{agent.name}_show_bets"
+    )
+    if not show_agent_bets:
+        return
+
     agent_bets = agent.get_resolved_bets()
     if not agent_bets:
         st.warning(f"No resolved bets found for {agent.name}.")
@@ -165,12 +203,6 @@ def monitor_agent(agent: DeployedAgent) -> None:
         "Profit": [round(bet.profit.amount, 2) for bet in agent_bets],
     }
     bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
-
-    # Info
-    col1, col2, col3 = st.columns(3)
-    col1.markdown(f"Name: `{agent.name}`")
-    col2.markdown(f"DeployableAgent Class: `{agent.deployableagent_class_name}`")
-    col3.markdown(f"Start Time: `{agent.start_time}`")
 
     # Metrics
     col1, col2 = st.columns(2)

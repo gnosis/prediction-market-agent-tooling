@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 
@@ -8,6 +9,9 @@ from google.cloud.functions_v2.types.functions import Function
 from google.cloud.secretmanager import SecretManagerServiceClient
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.gcp.kubernetes_models import (
+    KubernetesCronJobsModel,
+)
 
 
 def gcloud_deploy_cmd(
@@ -151,6 +155,33 @@ def list_gcp_functions() -> list[Function]:
     client = FunctionServiceClient()
     functions = list(client.list_functions(parent=get_gcloud_parent()))
     return functions
+
+
+def list_gcp_cronjobs(namespace: str) -> KubernetesCronJobsModel:
+    return KubernetesCronJobsModel.model_validate_json(
+        subprocess.run(
+            f"kubectl get cronjobs -o json -n {namespace}",
+            shell=True,
+            capture_output=True,
+            check=True,
+        )
+        .stdout.decode()
+        .strip()
+    )
+
+
+def get_gcp_configmap_data(namespace: str, name: str) -> dict[str, str]:
+    data: dict[str, str] = json.loads(
+        subprocess.run(
+            f"kubectl get configmap {name} -o json -n {namespace}",
+            shell=True,
+            capture_output=True,
+            check=True,
+        )
+        .stdout.decode()
+        .strip()
+    )["data"]
+    return data
 
 
 def get_gcp_function(fname: str) -> Function:

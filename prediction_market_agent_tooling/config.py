@@ -4,6 +4,7 @@ from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
+from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
@@ -29,6 +30,12 @@ class APIKeys(BaseSettings):
 
     ENABLE_CACHE: bool = True
     CACHE_DIR: str = "./.cache"
+
+    @property
+    def manifold_user_id(self) -> str:
+        return get_authenticated_user(
+            api_key=self.manifold_api_key.get_secret_value()
+        ).id
 
     @property
     def manifold_api_key(self) -> SecretStr:

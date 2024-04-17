@@ -13,13 +13,17 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
-    MonitorSettings,
+    KubernetesCronJob,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone
 
 
 class DeployedManifoldAgent(DeployedAgent):
     manifold_user_id: str
+
+    @property
+    def public_id(self) -> str:
+        return self.manifold_user_id
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         bets, markets = get_resolved_manifold_bets(
@@ -29,35 +33,40 @@ class DeployedManifoldAgent(DeployedAgent):
         )
         return [manifold_to_generic_resolved_bet(b, m) for b, m in zip(bets, markets)]
 
+    @classmethod
+    def from_env_vars_without_prefix(
+        cls: t.Type["DeployedManifoldAgent"],
+        env_vars: dict[str, t.Any] | None = None,
+        extra_vars: dict[str, t.Any] | None = None,
+    ) -> "DeployedManifoldAgent":
+        # If manifold_user_id is not provided, try to use it from APIKeys initialized from env_vars (will work in case that secret manifold api key was in the env).
+        api_keys = APIKeys(**env_vars) if env_vars else None
+        if (
+            env_vars
+            and "manifold_user_id" not in env_vars
+            and api_keys
+            and api_keys.MANIFOLD_API_KEY is not None
+            and api_keys.MANIFOLD_API_KEY
+            != APIKeys().MANIFOLD_API_KEY  # Check that it didn't get if from the default env.
+        ):
+            env_vars["manifold_user_id"] = api_keys.manifold_user_id
+        return super().from_env_vars_without_prefix(
+            env_vars=env_vars, extra_vars=extra_vars
+        )
+
     @staticmethod
     def from_api_keys(
         name: str,
-        deployableagent_class_name: str,
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedManifoldAgent":
         return DeployedManifoldAgent(
             name=name,
-            deployableagent_class_name=deployableagent_class_name,
             start_time=start_time,
             manifold_user_id=get_authenticated_user(
                 api_key=api_keys.manifold_api_key.get_secret_value()
             ).id,
         )
-
-    @staticmethod
-    def from_monitor_settings(
-        settings: MonitorSettings, start_time: DatetimeWithTimezone
-    ) -> list[DeployedAgent]:
-        return [
-            DeployedManifoldAgent(
-                name=f"ManifoldAgent-{idx}",
-                deployableagent_class_name="deployableagent_class_name",
-                start_time=start_time,
-                manifold_user_id=get_authenticated_user(key).id,
-            )
-            for idx, key in enumerate(settings.MANIFOLD_API_KEYS)
-        ]
 
     @classmethod
     def from_all_gcp_functions(
@@ -68,3 +77,14 @@ class DeployedManifoldAgent(DeployedAgent):
         == MarketType.MANIFOLD.value,
     ) -> t.Sequence["DeployedManifoldAgent"]:
         return super().from_all_gcp_functions(filter_=filter_)
+
+    @classmethod
+    def from_all_gcp_cronjobs(
+        cls: t.Type["DeployedManifoldAgent"],
+        namespace: str,
+        filter_: t.Callable[
+            [KubernetesCronJob], bool
+        ] = lambda cronjob: cronjob.metadata.labels[MARKET_TYPE_KEY]
+        == MarketType.MANIFOLD.value,
+    ) -> t.Sequence["DeployedManifoldAgent"]:
+        return super().from_all_gcp_cronjobs(namespace=namespace, filter_=filter_)

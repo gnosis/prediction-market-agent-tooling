@@ -122,7 +122,6 @@ def {entrypoint_function_name}(request) -> str:
 
         monitor_agent = MARKET_TYPE_TO_DEPLOYED_AGENT[market_type].from_api_keys(
             name=gcp_fname,
-            deployableagent_class_name=self.__class__.__name__,
             start_time=start_time or utcnow(),
             api_keys=gcp_resolve_api_keys_secrets(api_keys),
         )

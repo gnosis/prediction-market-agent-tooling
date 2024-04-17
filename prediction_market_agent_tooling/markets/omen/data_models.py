@@ -342,6 +342,11 @@ class OmenBet(BaseModel):
         # Marginal price is the probability of the outcome.
         return Probability(float(self.oldOutcomeTokenMarginalPrice))
 
+    @property
+    def probability(self) -> Probability:
+        # Marginal price is the probability of the outcome.
+        return Probability(float(self.outcomeTokenMarginalPrice))
+
     def get_profit(self) -> ProfitAmount:
         bet_amount_xdai = wei_to_xdai(self.collateralAmount)
         profit = (

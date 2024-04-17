@@ -750,10 +750,20 @@ def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability
         key=lambda x: x.creation_datetime,
     )
 
-    for bet in bets:
-        if bet.outcomeIndex == market.yes_index:
-            history.append(bet.old_probability)
-        else:
-            history.append(Probability(1 - bet.old_probability))
+    for index, bet in enumerate(bets):
+        # We need to append the old probability to have also the initial state of the market (before any bet placement).
+        history.append(
+            bet.old_probability
+            if bet.outcomeIndex == market.yes_index
+            else Probability(1 - bet.old_probability)
+        )
+
+        # At the last trade, we also need to append the new probability, to have the market latest state.
+        if index == len(bets) - 1:
+            history.append(
+                bet.probability
+                if bet.outcomeIndex == market.yes_index
+                else Probability(1 - bet.probability)
+            )
 
     return history

@@ -137,6 +137,8 @@ class OmenMarket(BaseModel):
     creationTimestamp: int
     condition: Condition
     question: Question
+    lastActiveDay: int
+    lastActiveHour: int
 
     @property
     def openingTimestamp(self) -> int:
@@ -224,11 +226,19 @@ class OmenMarket(BaseModel):
         )
 
     @property
-    def p_no(self) -> Probability:
-        return Probability(1 - self.p_yes)
+    def yes_index(self) -> int:
+        return self.outcomes.index(OMEN_TRUE_OUTCOME)
 
     @property
-    def p_yes(self) -> Probability:
+    def no_index(self) -> int:
+        return self.outcomes.index(OMEN_FALSE_OUTCOME)
+
+    @property
+    def p_no(self) -> Probability | None:
+        return Probability(1 - self.p_yes) if self.p_yes is not None else None
+
+    @property
+    def p_yes(self) -> Probability | None:
         """
         Calculate the probability of the outcomes from the relative token amounts.
 
@@ -240,21 +250,18 @@ class OmenMarket(BaseModel):
         the the lower the price of that token, and therefore the lower the
         probability of that outcome.
         """
-        if self.outcomeTokenAmounts is None:
-            raise ValueError(
-                f"Market with title {self.title} has no outcomeTokenAmounts."
-            )
         if len(self.outcomeTokenAmounts) != 2:
             raise ValueError(
                 f"Market with title {self.title} has {len(self.outcomeTokenAmounts)} outcomes."
             )
-        true_index = self.outcomes.index(OMEN_TRUE_OUTCOME)
 
         if sum(self.outcomeTokenAmounts) == 0:
-            return Probability(0.5)
+            # They are zeros for markest with no liquidity, so we can't compute the probabilities.
+            # Use `get_binary_market_p_yes_history` to get historical probabilities.
+            return None
 
         return Probability(
-            1 - self.outcomeTokenAmounts[true_index] / sum(self.outcomeTokenAmounts)
+            1 - self.outcomeTokenAmounts[self.yes_index] / sum(self.outcomeTokenAmounts)
         )
 
     def __repr__(self) -> str:

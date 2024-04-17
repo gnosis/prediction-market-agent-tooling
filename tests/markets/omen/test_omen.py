@@ -21,6 +21,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_redeem_full_position_tx,
     omen_remove_fund_market_tx,
     pick_binary_market,
+    get_binary_market_p_yes_history,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -225,3 +226,13 @@ def test_balance_for_user_in_market() -> None:
     )
     assert balance_no.currency == Currency.xDai
     assert float(balance_no.amount) == 0
+
+
+def test_get_binary_market_p_yes_history() -> None:
+    market = OmenSubgraphHandler().get_omen_market_by_market_id(
+        "0x934b9f379dd9d8850e468df707d58711da2966cd"
+    )
+    history = get_binary_market_p_yes_history(market)
+    assert len(history) > 0
+    assert all(0 <= 0 <= 1.0 for x in history)
+    assert history[0] == 0.5

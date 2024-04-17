@@ -704,3 +704,26 @@ def redeem_from_all_user_positions(
         logger.info(
             f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from position {user_position.id=}."
         )
+
+
+def get_binary_market_p_yes_history(market: OmenMarket) -> list[xDai]:
+    if not market.is_binary:
+        raise ValueError(f"Market {market.id} is not binary.")
+
+    history: list[xDai] = []
+    bets = sorted(
+        OmenSubgraphHandler().get_bets(
+            market_id=market.id,
+            type_=None,  # We need to look at price both after buying or selling.
+            end_time=market.close_time,  # Even after market is closed, there can be many `Sell` trades.
+        ),
+        key=lambda x: x.creation_datetime,
+    )
+
+    for bet in bets:
+        if bet.outcomeIndex == market.yes_index:
+            history.append(bet.oldOutcomeTokenMarginalPrice)
+        else:
+            history.append(1 - bet.oldOutcomeTokenMarginalPrice)
+
+    return history

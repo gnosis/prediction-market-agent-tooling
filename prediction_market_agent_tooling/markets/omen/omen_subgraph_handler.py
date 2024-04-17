@@ -121,6 +121,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             markets_field.outcomes,
             markets_field.outcomeTokenAmounts,
             markets_field.outcomeTokenMarginalPrices,
+            markets_field.lastActiveDay,
+            markets_field.lastActiveHour,
             markets_field.fee,
             markets_field.answerFinalizedTimestamp,
             markets_field.resolutionTimestamp,
@@ -421,22 +423,26 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def get_bets(
         self,
-        better_address: ChecksumAddress,
-        start_time: datetime,
+        better_address: ChecksumAddress | None = None,
+        start_time: datetime | None = None,
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[str] = None,
         filter_by_answer_finalized_not_null: bool = False,
+        type_: t.Literal["Buy", "Sell"] | None = "Buy",
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
 
         trade = self.trades_subgraph.FpmmTrade
-        where_stms = [
-            trade.type == "Buy",
-            trade.creator == better_address.lower(),
-            trade.creationTimestamp >= to_int_timestamp(start_time),
-            trade.creationTimestamp <= to_int_timestamp(end_time),
-        ]
+        where_stms = []
+        if start_time:
+            where_stms.append(trade.creationTimestamp >= to_int_timestamp(start_time))
+        if end_time:
+            where_stms.append(trade.creationTimestamp <= to_int_timestamp(end_time))
+        if type_:
+            where_stms.append(trade.type == type_)
+        if better_address:
+            where_stms.append(trade.creator == better_address.lower())
         if market_id:
             where_stms.append(trade.fpmm == market_id)
         if filter_by_answer_finalized_not_null:

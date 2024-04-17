@@ -426,7 +426,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         better_address: ChecksumAddress | None = None,
         start_time: datetime | None = None,
         end_time: t.Optional[datetime] = None,
-        market_id: t.Optional[str] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         type_: t.Literal["Buy", "Sell"] | None = "Buy",
     ) -> list[OmenBet]:
@@ -444,7 +444,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if better_address:
             where_stms.append(trade.creator == better_address.lower())
         if market_id:
-            where_stms.append(trade.fpmm == market_id)
+            where_stms.append(trade.fpmm == market_id.lower())
         if filter_by_answer_finalized_not_null:
             where_stms.append(trade.fpmm.answerFinalizedTimestamp != None)
 
@@ -461,7 +461,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         better_address: ChecksumAddress,
         start_time: datetime,
         end_time: t.Optional[datetime] = None,
-        market_id: t.Optional[str] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         omen_bets = self.get_bets(
             better_address=better_address,
@@ -477,7 +477,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         better_address: ChecksumAddress,
         start_time: datetime,
         end_time: t.Optional[datetime] = None,
-        market_id: t.Optional[str] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         bets = self.get_resolved_bets(
             better_address=better_address,

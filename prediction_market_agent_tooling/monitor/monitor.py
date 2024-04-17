@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
+from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
     add_utc_timezone_validator,
@@ -261,12 +262,17 @@ def monitor_brier_score(resolved_markets: t.Sequence[AgentMarket]) -> None:
 
     # We need to use `get_last_trade_p_yes` instead of `current_p_yes` because, for resolved markets, the probabilities can be fixed to 0 and 1 (for example, on Omen).
     # And for the brier score, we need the true market prediction, not its resolution after the outcome is known.
-    markets_to_squared_error = {
-        m.created_time: (m.get_last_trade_p_yes() - m.boolean_outcome) ** 2
-        for m in resolved_markets
-    }
+    # If no trades were made, take it as 0.5 because the platform didn't provide any valuable information.
+    squared_errors = par_map(
+        list(resolved_markets),
+        lambda m: (
+            (p_yes if (p_yes := m.get_last_trade_p_yes()) is not None else 0.5)
+            - m.boolean_outcome
+        )
+        ** 2,
+    )
     df = pd.DataFrame(
-        markets_to_squared_error.items(), columns=["Date", "Squared Error"]
+        zip(resolved_markets, squared_errors), columns=["Date", "Squared Error"]
     ).sort_values(by="Date")
 
     # Compute rolling mean squared error for last 30 markets

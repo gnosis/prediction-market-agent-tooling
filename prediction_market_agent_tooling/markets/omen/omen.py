@@ -98,13 +98,22 @@ class OmenAgentMarket(AgentMarket):
             self._binary_market_p_yes_history = get_binary_market_p_yes_history(self)
         return self._binary_market_p_yes_history
 
-    def get_last_trade_p_yes(self) -> Probability:
+    def get_last_trade_p_yes(self) -> Probability | None:
         """On Omen, probablities converge after the resolution, so we need to get market's predicted probability from the trade history."""
-        return self.get_p_yes_history_cached()[-1]
+        return (
+            self.get_p_yes_history_cached()[-1]
+            if self.get_p_yes_history_cached()
+            else None
+        )
 
-    def get_last_trade_p_no(self) -> Probability:
+    def get_last_trade_p_no(self) -> Probability | None:
         """On Omen, probablities converge after the resolution, so we need to get market's predicted probability from the trade history."""
-        return Probability(1.0 - self.get_last_trade_p_yes())
+        last_trade_p_yes = self.get_last_trade_p_yes()
+        return (
+            Probability(1.0 - last_trade_p_yes)
+            if last_trade_p_yes is not None
+            else None
+        )
 
     def get_liquidity(self) -> Wei:
         return self.get_contract().totalSupply()

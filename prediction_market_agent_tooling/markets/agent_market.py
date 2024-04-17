@@ -96,12 +96,18 @@ class AgentMarket(BaseModel):
                 return False
         should_not_happen(f"Market {self.id} does not have a successful resolution.")
 
-    def get_last_trade_p_yes(self) -> Probability:
-        """Get the last trade price for the YES outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1."""
+    def get_last_trade_p_yes(self) -> Probability | None:
+        """
+        Get the last trade price for the YES outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
+        Could be None if no trades were made.
+        """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def get_last_trade_p_no(self) -> Probability:
-        """Get the last trade price for the NO outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1."""
+    def get_last_trade_p_no(self) -> Probability | None:
+        """
+        Get the last trade price for the NO outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
+        Could be None if no trades were made.
+        """
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_bet_amount(self, amount: Decimal) -> BetAmount:

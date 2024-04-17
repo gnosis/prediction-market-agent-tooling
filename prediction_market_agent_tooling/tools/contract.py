@@ -33,9 +33,6 @@ def abi_field_validator(value: str) -> ABI:
         with open(value) as f:
             value = f.read()
 
-    if "" == value:
-        raise ValueError(f"Invalid ABI: {value}")
-
     try:
         json.loads(value)  # Test if it's valid JSON content.
         return ABI(value)
@@ -71,8 +68,8 @@ class ContractBaseClass(BaseModel):
         None  # no private_key required for call methods (reading)
     )
     safe_address: ChecksumAddress | None = None  # no Safe address required, only signer_private_key suffices if not using Safe.
-    abi: ABI  # = Field(default=ABI(""))
-    address: ChecksumAddress  # = Field(default=ChecksumAddress(HexAddress(HexStr(""))))
+    abi: ABI
+    address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
 
@@ -223,8 +220,8 @@ class ContractERC20BaseClass(ContractBaseClass):
             web3=web3,
         )
 
-    def balanceOf(self, for_address: ChecksumAddress) -> Wei:
-        balance: Wei = self.call("balanceOf", [for_address])
+    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
+        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
         return balance
 
 

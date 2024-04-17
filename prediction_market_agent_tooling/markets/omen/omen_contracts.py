@@ -67,10 +67,6 @@ class OmenOracleContract(ContractOnGnosisChain):
         )
 
 
-class DummyContract(ContractOnGnosisChain):
-    pass
-
-
 class OmenConditionalTokenContract(ContractOnGnosisChain):
     # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.
     abi: ABI = abi_field_validator(
@@ -255,16 +251,13 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         return balance
 
     def calcBuyAmount(
-        self,
-        investment_amount: Wei,
-        outcome_index: int,
+        self, investment_amount: Wei, outcome_index: int, web3: Web3 | None = None
     ) -> OmenOutcomeToken:
         """
         Returns amount of shares we will get for the given outcome_index for the given investment amount.
         """
         calculated_shares: OmenOutcomeToken = self.call(
-            "calcBuyAmount",
-            [investment_amount, outcome_index],
+            "calcBuyAmount", [investment_amount, outcome_index], web3=web3
         )
         return calculated_shares
 

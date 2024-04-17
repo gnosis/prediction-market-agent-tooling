@@ -4,7 +4,7 @@ import tenacity
 from eth_account import Account
 from eth_typing import URI
 from gnosis.eth import EthereumClient
-from gnosis.safe.safe import SafeV141
+from gnosis.safe.safe import Safe
 from loguru import logger
 from pydantic.types import SecretStr
 from web3 import Web3
@@ -123,20 +123,20 @@ def prepare_tx(
     if tx_params:
         tx_params_new.update(tx_params)
 
-    if not tx_params_new["from"] and not from_address:
+    if not tx_params_new.get("from", None) and not from_address:
         raise ValueError(
             "Cannot have both tx_params[`from`] and from_address not defined."
         )
 
-    if not tx_params_new["from"] and from_address:
+    if not tx_params_new.get("from", None) and from_address:
         tx_params_new["from"] = from_address
 
-    if not tx_params_new["nonce"]:
+    if not tx_params_new.get("nonce", None):
         from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
     # Build the transaction.
-    function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore
+    function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
     tx_params_new = function_call.build_transaction(tx_params_new)
     gas = web3.eth.estimate_gas(tx_params_new)
     tx_params_new["gas"] = gas
@@ -212,9 +212,6 @@ def send_function_on_contract_tx_using_safe(
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
 ) -> TxReceipt:
-    if not safe_address:
-        raise ValueError("Safe address not set.")
-
     tx_params = prepare_tx(
         web3=web3,
         contract_address=contract_address,
@@ -225,12 +222,10 @@ def send_function_on_contract_tx_using_safe(
         tx_params=tx_params,
     )
 
-    if not web3.HTTPProvider.endpoint_uri:
+    if not web3.provider.endpoint_uri:  # type: ignore
         raise EnvironmentError(f"RPC_URL not available in web3 object.")
-    ethereum_client = EthereumClient(
-        ethereum_node_url=URI(web3.HTTPProvider.endpoint_uri)
-    )
-    s = SafeV141(safe_address, ethereum_client)
+    ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
+    s = Safe(safe_address, ethereum_client)
     safe_tx = s.build_multisig_tx(
         to=Web3.to_checksum_address(tx_params["to"]),
         data=HexBytes(tx_params["data"]),

@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.tools.safe import create_safe
 def create_safe_for_agent(
     from_private_key: str = typer.Option(),
     rpc_url: str | None = None,
-    salt_nonce: int = secrets.randbits(256),
+    salt_nonce: int | None = None,
 ) -> None:
     """
         Helper script to create a Safe for an agent, usage:
@@ -25,6 +25,7 @@ def create_safe_for_agent(
         ```
         """
 
+    salt_nonce = salt_nonce or secrets.randbits(256)
     ethereum_client = EthereumClient(URI(GNOSIS_RPC_URL))
     if rpc_url:
         ethereum_client = EthereumClient(URI(rpc_url))

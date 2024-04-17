@@ -12,9 +12,11 @@ from safe_cli.safe_addresses import (
     get_safe_contract_address,
     get_safe_l2_contract_address,
 )
+from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 
 def create_safe(
@@ -62,19 +64,18 @@ def create_safe(
             f"does not exist on network {ethereum_network.name}"
         )
 
-    account_balance: int = ethereum_client.get_balance(account.address)
-    if not account_balance:
-        logger.info(
-            "Client does not have any funds. Let's try anyway in case it's a network without gas costs"
+    account_balance = ethereum_client.get_balance(account.address)
+    account_balance_xdai = wei_to_xdai(account_balance)
+    # We set a reasonable expected balance below for Safe deployment not to fail.
+    if account_balance_xdai < 0.01:
+        raise ValueError(
+            f"Client's balance is {account_balance_xdai} xDAI, too low for deploying a Safe."
         )
-    else:
-        ether_account_balance = round(
-            ethereum_client.w3.from_wei(account_balance, "ether"), 6
-        )
-        logger.info(
-            f"Network {ethereum_client.get_network().name} - Sender {account.address} - "
-            f"Balance: {ether_account_balance} xDAI"
-        )
+
+    logger.info(
+        f"Network {ethereum_client.get_network().name} - Sender {account.address} - "
+        f"Balance: {account_balance_xdai} xDAI"
+    )
 
     if not ethereum_client.w3.eth.get_code(
         safe_contract_address
@@ -85,7 +86,8 @@ def create_safe(
         f"Creating new Safe with owners={owners} threshold={threshold} salt-nonce={salt_nonce}"
     )
 
-    # We ignore mypy below because using the proper class SafeV141 yields an error.
+    # We ignore mypy below because using the proper class SafeV141 yields an error and mypy
+    # doesn't understand that there is a hacky factory method (__new__) on this abstract class.
     safe_version = Safe(safe_contract_address, ethereum_client).retrieve_version()  # type: ignore
     logger.info(
         f"Safe-master-copy={safe_contract_address} version={safe_version}\n"
@@ -93,6 +95,9 @@ def create_safe(
         f"Proxy factory={proxy_factory_address}"
     )
 
+    # Note that by default a safe contract instance of version 1.4.1 will be fetched (determined
+    # by safe_contract_address), but if a different address (corresponding to an older version, e.g. 1.3.0)
+    # is passed, it will also work, since older versions also have the setup method.
     safe_contract = get_safe_V1_4_1_contract(ethereum_client.w3, safe_contract_address)
     safe_creation_tx_data = HexBytes(
         safe_contract.functions.setup(

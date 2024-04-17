@@ -69,7 +69,6 @@ class OmenAgentMarket(AgentMarket):
     currency: t.ClassVar[Currency] = Currency.xDai
     base_url: t.ClassVar[str] = OMEN_BASE_URL
     creator: HexAddress
-    use_safe: bool = False
 
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
@@ -92,7 +91,11 @@ class OmenAgentMarket(AgentMarket):
         return BetAmount(amount=0.00001, currency=self.currency)
 
     def place_bet(
-        self, outcome: bool, amount: BetAmount, omen_auto_deposit: bool = True
+        self,
+        outcome: bool,
+        amount: BetAmount,
+        omen_auto_deposit: bool = True,
+        web3: Web3 | None = None,
     ) -> None:
         if amount.currency != self.currency:
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
@@ -105,6 +108,7 @@ class OmenAgentMarket(AgentMarket):
             market=self,
             binary_outcome=outcome,
             auto_deposit=omen_auto_deposit,
+            web3=web3,
         )
 
     def sell_tokens(
@@ -239,10 +243,12 @@ class OmenAgentMarket(AgentMarket):
     def get_index_set(self, outcome: str) -> int:
         return self.get_outcome_index(outcome) + 1
 
-    def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
+    def get_token_balance(
+        self, user_id: str, outcome: str, web3: Web3 | None = None
+    ) -> TokenAmount:
         index_set = self.get_index_set(outcome)
         balances = get_conditional_tokens_balance_for_market(
-            self, Web3.to_checksum_address(user_id)
+            self, Web3.to_checksum_address(user_id), web3=web3
         )
         return TokenAmount(
             amount=wei_to_xdai(balances[index_set]),
@@ -266,12 +272,16 @@ def omen_buy_outcome_tx(
     market: OmenAgentMarket,
     outcome: str,
     auto_deposit: bool,
+    web3: Web3 | None = None,
 ) -> None:
     """
     Bets the given amount of xDai for the given outcome in the given market.
     """
     amount_wei = xdai_to_wei(amount)
-    from_address_checksummed = private_key_to_public_key(from_private_key)
+    if safe_address:
+        from_address_checksummed = safe_address
+    else:
+        from_address_checksummed = private_key_to_public_key(from_private_key)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract(
         from_private_key, safe_address
@@ -287,28 +297,28 @@ def omen_buy_outcome_tx(
     outcome_index: int = market.get_outcome_index(outcome)
 
     # Calculate the amount of shares we will get for the given investment amount.
-    expected_shares = market_contract.calcBuyAmount(amount_wei, outcome_index)
+    expected_shares = market_contract.calcBuyAmount(
+        amount_wei, outcome_index, web3=web3
+    )
     # Allow 1% slippage.
     expected_shares = remove_fraction(expected_shares, 0.01)
     # Approve the market maker to withdraw our collateral token.
     collateral_token_contract.approve(
-        for_address=market_contract.address,
-        amount_wei=amount_wei,
+        for_address=market_contract.address, amount_wei=amount_wei, web3=web3
     )
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
     collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=from_address_checksummed,
+        for_address=from_address_checksummed, web3=web3
     )
     if auto_deposit and collateral_token_balance < amount_wei:
-        collateral_token_contract.deposit(
-            amount_wei=amount_wei,
-        )
+        collateral_token_contract.deposit(amount_wei=amount_wei, web3=web3)
     # Buy shares using the deposited xDai in the collateral token.
     market_contract.buy(
         amount_wei=amount_wei,
         outcome_index=outcome_index,
         min_outcome_tokens_to_buy=expected_shares,
+        web3=web3,
     )
 
 
@@ -319,6 +329,7 @@ def binary_omen_buy_outcome_tx(
     market: OmenAgentMarket,
     binary_outcome: bool,
     auto_deposit: bool,
+    web3: Web3 | None = None,
 ) -> None:
     omen_buy_outcome_tx(
         amount=amount,
@@ -327,6 +338,7 @@ def binary_omen_buy_outcome_tx(
         market=market,
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
         auto_deposit=auto_deposit,
+        web3=web3,
     )
 
 

@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, field_validator
+from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
@@ -101,11 +102,15 @@ class AgentMarket(BaseModel):
     def get_tiny_bet_amount(self) -> BetAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def place_bet(self, outcome: bool, amount: BetAmount) -> None:
+    def place_bet(
+        self, outcome: bool, amount: BetAmount, web3: Web3 | None = None
+    ) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def buy_tokens(self, outcome: bool, amount: TokenAmount) -> None:
-        return self.place_bet(outcome=outcome, amount=amount)
+    def buy_tokens(
+        self, outcome: bool, amount: TokenAmount, web3: Web3 | None = None
+    ) -> None:
+        return self.place_bet(outcome=outcome, amount=amount, web3=web3)
 
     def sell_tokens(self, outcome: bool, amount: TokenAmount) -> None:
         raise NotImplementedError("Subclasses must implement this method")

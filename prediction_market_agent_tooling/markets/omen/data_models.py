@@ -339,12 +339,12 @@ class OmenBet(BaseModel):
 
     @property
     def old_probability(self) -> Probability:
-        # Marginal price is the probability of the outcome.
+        # Old marginal price is the probability of the outcome before placing this bet.
         return Probability(float(self.oldOutcomeTokenMarginalPrice))
 
     @property
     def probability(self) -> Probability:
-        # Marginal price is the probability of the outcome.
+        # Marginal price is the probability of the outcome after placing this bet.
         return Probability(float(self.outcomeTokenMarginalPrice))
 
     def get_profit(self) -> ProfitAmount:

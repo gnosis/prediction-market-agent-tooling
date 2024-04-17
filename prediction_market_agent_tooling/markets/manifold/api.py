@@ -5,8 +5,7 @@ import requests
 import tenacity
 from loguru import logger
 
-from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Mana
+from prediction_market_agent_tooling.gtypes import Mana, SecretStr
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
@@ -107,7 +106,9 @@ def get_one_manifold_binary_market() -> ManifoldMarket:
     wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(f"place_bet failed, {x.attempt_number=}."),
 )
-def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
+def place_bet(
+    amount: Mana, market_id: str, outcome: bool, manifold_api_key: SecretStr
+) -> None:
     outcome_str = "YES" if outcome else "NO"
     url = f"{MANIFOLD_API_BASE_URL}/v0/bet"
     params = {
@@ -117,7 +118,7 @@ def place_bet(amount: Mana, market_id: str, outcome: bool) -> None:
     }
 
     headers = {
-        "Authorization": f"Key {APIKeys().manifold_api_key.get_secret_value()}",
+        "Authorization": f"Key {manifold_api_key.get_secret_value()}",
         "Content-Type": "application/json",
     }
     response = requests.post(url, json=params, headers=headers)
@@ -139,12 +140,18 @@ def get_authenticated_user(api_key: str) -> ManifoldUser:
     headers = {
         "Authorization": f"Key {api_key}",
         "Content-Type": "application/json",
+        "Cache-Control": "private, no-store, max-age=0",
     }
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     return ManifoldUser.model_validate(response.json())
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_manifold_market failed, {x.attempt_number=}."),
+)
 def get_manifold_market(market_id: str) -> ManifoldMarket:
     url = f"{MANIFOLD_API_BASE_URL}/v0/market/{market_id}"
     response = requests.get(url)
@@ -152,6 +159,11 @@ def get_manifold_market(market_id: str) -> ManifoldMarket:
     return ManifoldMarket.model_validate(response.json())
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_manifold_bets failed, {x.attempt_number=}."),
+)
 def get_manifold_bets(
     user_id: str,
     start_time: datetime,

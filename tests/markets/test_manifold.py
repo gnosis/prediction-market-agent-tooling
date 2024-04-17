@@ -4,6 +4,7 @@ import pytest
 import pytz
 from loguru import logger
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import mana_type
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_bets,
@@ -25,7 +26,7 @@ def a_user_id() -> str:
 def test_manifold() -> None:
     market = get_one_manifold_binary_market()
     logger.info("Placing bet on market:", market.question)
-    place_bet(mana_type(1), market.id, True)
+    place_bet(mana_type(1), market.id, True, APIKeys().manifold_api_key)
 
 
 def test_manifold_markets() -> None:

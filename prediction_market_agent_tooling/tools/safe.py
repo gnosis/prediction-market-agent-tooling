@@ -12,7 +12,6 @@ from safe_cli.safe_addresses import (
     get_safe_contract_address,
     get_safe_l2_contract_address,
 )
-from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes

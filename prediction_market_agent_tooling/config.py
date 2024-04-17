@@ -1,5 +1,6 @@
 import typing as t
 
+from pydantic import BaseModel
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -81,3 +82,15 @@ class APIKeys(BaseSettings):
             for k, v in self.model_dump().items()
             if APIKeys.model_fields[k].annotation in SECRET_TYPES and v is not None
         }
+
+
+class PrivateCredentials(BaseModel):
+    private_key: PrivateKey
+    safe_address: ChecksumAddress | None
+
+    @staticmethod
+    def from_api_keys(api_keys: APIKeys) -> "PrivateCredentials":
+        return PrivateCredentials(
+            private_key=api_keys.bet_from_private_key,
+            safe_address=api_keys.SAFE_ADDRESS,
+        )

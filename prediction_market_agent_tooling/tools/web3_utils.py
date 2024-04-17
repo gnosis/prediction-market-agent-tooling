@@ -225,7 +225,7 @@ def send_function_on_contract_tx_using_safe(
     if not web3.provider.endpoint_uri:  # type: ignore
         raise EnvironmentError(f"RPC_URL not available in web3 object.")
     ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
-    s = Safe(safe_address, ethereum_client)
+    s = Safe(safe_address, ethereum_client)  # type: ignore
     safe_tx = s.build_multisig_tx(
         to=Web3.to_checksum_address(tx_params["to"]),
         data=HexBytes(tx_params["data"]),

@@ -4,11 +4,11 @@ from loguru import logger
 from pydantic import BaseModel
 from web3 import Web3
 
+from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
-    PrivateKey,
     Wei,
     xDai,
 )
@@ -50,10 +50,9 @@ class FinalizeAndResolveResult(BaseModel):
 
 
 def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
-    from_private_key: PrivateKey,
-    safe_address: ChecksumAddress | None,
+    private_credentials: PrivateCredentials,
 ) -> FinalizeAndResolveResult:
-    public_key = private_key_to_public_key(from_private_key)
+    public_key = private_key_to_public_key(private_credentials.private_key)
     balances_start = get_balances(public_key)
     logger.info(f"{balances_start=}")
 
@@ -69,7 +68,8 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
     )
     # Finalize them (set answer on Realitio).
     finalized_markets = finalize_markets(
-        created_opened_markets, from_private_key=from_private_key
+        private_credentials,
+        created_opened_markets,
     )
     balances_after_finalization = get_balances(public_key)
     logger.info(f"{balances_after_finalization=}")
@@ -83,9 +83,8 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
     )
     # Resolve them (resolve them on Oracle).
     resolved_markets = resolve_markets(
+        private_credentials,
         created_finalized_markets,
-        from_private_key=from_private_key,
-        safe_address=safe_address,
     )
     balances_after_resolution = get_balances(public_key)
     logger.info(f"{balances_after_resolution=}")
@@ -99,9 +98,8 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         current_answer_before=before - timedelta(hours=24),
     )
     claimed_question_ids = claim_bonds_on_realitio_quetions(
+        private_credentials,
         created_not_claimed_questions,
-        from_private_key,
-        safe_address,
         auto_withdraw=True,
     )
     balances_after_claiming = get_balances(public_key)
@@ -115,9 +113,8 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
 
 
 def claim_bonds_on_realitio_quetions(
+    private_credentials: PrivateCredentials,
     questions: list[RealityQuestion],
-    from_private_key: PrivateKey,
-    safe_address: ChecksumAddress | None,
     auto_withdraw: bool,
 ) -> list[HexBytes]:
     claimed_questions: list[HexBytes] = []
@@ -127,7 +124,7 @@ def claim_bonds_on_realitio_quetions(
             f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=} {question.url=}"
         )
         claim_bonds_on_realitio_question(
-            question, from_private_key, safe_address, auto_withdraw=auto_withdraw
+            private_credentials, question, auto_withdraw=auto_withdraw
         )
         claimed_questions.append(question.questionId)
 
@@ -135,15 +132,12 @@ def claim_bonds_on_realitio_quetions(
 
 
 def claim_bonds_on_realitio_question(
+    private_credentials: PrivateCredentials,
     question: RealityQuestion,
-    from_private_key: PrivateKey,
-    safe_address: ChecksumAddress | None,
     auto_withdraw: bool,
 ) -> None:
-    public_key = private_key_to_public_key(from_private_key)
-    realitio_contract = OmenRealitioContract.build_with_private_key_and_safe(
-        from_private_key, safe_address
-    )
+    public_key = private_key_to_public_key(private_credentials.private_key)
+    realitio_contract = OmenRealitioContract()
 
     # Get all answers for the question.
     answers_objects = OmenSubgraphHandler().get_answers(question_id=question.questionId)
@@ -187,6 +181,7 @@ def claim_bonds_on_realitio_question(
         answers.append(answer.answer)
 
     realitio_contract.claimWinnings(
+        private_credentials=private_credentials,
         question_id=question.questionId,
         history_hashes=history_hashes,
         addresses=addresses,
@@ -198,11 +193,12 @@ def claim_bonds_on_realitio_question(
     # Keeping balance on Realitio is not useful, so it's recommended to just withdraw it.
     if current_balance > 0 and auto_withdraw:
         logger.info(f"Withdrawing remaining balance {current_balance=}")
-        realitio_contract.withdraw()
+        realitio_contract.withdraw(private_credentials)
 
 
 def finalize_markets(
-    markets: list[OmenMarket], from_private_key: PrivateKey
+    private_credentials: PrivateCredentials,
+    markets: list[OmenMarket],
 ) -> list[HexAddress]:
     finalized_markets: list[HexAddress] = []
 
@@ -218,7 +214,10 @@ def finalize_markets(
         elif resolution in (Resolution.YES, Resolution.NO):
             logger.info(f"Found resolution {resolution.value=} for {market.url=}")
             omen_submit_answer_market_tx(
-                market, resolution, OMEN_DEFAULT_REALITIO_BOND_VALUE, from_private_key
+                private_credentials,
+                market,
+                resolution,
+                OMEN_DEFAULT_REALITIO_BOND_VALUE,
             )
             finalized_markets.append(market.id)
             logger.info(f"Finalized {market.url=}")
@@ -230,9 +229,8 @@ def finalize_markets(
 
 
 def resolve_markets(
+    private_credentials: PrivateCredentials,
     markets: list[OmenMarket],
-    from_private_key: PrivateKey,
-    safe_address: ChecksumAddress | None,
 ) -> list[HexAddress]:
     resolved_markets: list[HexAddress] = []
 
@@ -240,17 +238,17 @@ def resolve_markets(
         logger.info(
             f"[{idx+1} / {len(markets)}] Resolving {market.url=} {market.question_title=}"
         )
-        omen_resolve_market_tx(market, from_private_key, safe_address)
+        omen_resolve_market_tx(private_credentials, market)
         resolved_markets.append(market.id)
 
     return resolved_markets
 
 
 def omen_submit_answer_market_tx(
+    private_credentials: PrivateCredentials,
     market: OmenMarket,
     resolution: Resolution,
     bond: xDai,
-    from_private_key: PrivateKey,
 ) -> None:
     """
     After the answer is submitted, there is 24h waiting period where the answer can be challenged by others.
@@ -258,26 +256,24 @@ def omen_submit_answer_market_tx(
     """
     realitio_contract = OmenRealitioContract()
     realitio_contract.submitAnswer(
+        private_credentials=private_credentials,
         question_id=market.question.id,
         answer=resolution.value,
         outcomes=market.question.outcomes,
         bond=xdai_to_wei(bond),
-        from_private_key=from_private_key,
     )
 
 
 def omen_resolve_market_tx(
+    private_credentials: PrivateCredentials,
     market: OmenMarket,
-    from_private_key: PrivateKey,
-    safe_address: ChecksumAddress | None,
 ) -> None:
     """
     Market can be resolved 24h after last answer was submitted via `omen_submit_answer_market_tx`.
     """
-    oracle_contract = OmenOracleContract.build_with_private_key_and_safe(
-        from_private_key, safe_address
-    )
+    oracle_contract = OmenOracleContract()
     oracle_contract.resolve(
+        private_credentials=private_credentials,
         question_id=market.question.id,
         template_id=market.question.templateId,
         question_raw=market.question.question_raw,

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
     REPOSITORY_KEY,
@@ -182,11 +182,11 @@ def {entrypoint_function_name}(request) -> str:
         """
         Executes actions that occur before bets are placed.
         """
-        keys = APIKeys()
+        private_credentials = PrivateCredentials.from_api_keys(APIKeys())
 
         if market_type == MarketType.OMEN:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
-            redeem_from_all_user_positions(keys.bet_from_private_key, keys.SAFE_ADDRESS)
+            redeem_from_all_user_positions(private_credentials)
 
     def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
         """

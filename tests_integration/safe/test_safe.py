@@ -3,10 +3,10 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
-from web3.gas_strategies.time_based import fast_gas_price_strategy
 from web3 import Web3
+from web3.gas_strategies.time_based import fast_gas_price_strategy
 
-from prediction_market_agent_tooling.markets.data_models import TokenAmount, Currency
+from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (

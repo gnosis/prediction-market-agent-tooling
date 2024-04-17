@@ -6,7 +6,7 @@ from eth_typing import HexAddress, HexStr
 from loguru import logger
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, xdai_type
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
@@ -49,20 +49,19 @@ def test_omen_buy_and_sell_outcome() -> None:
         buy_amount / 2
     )  # There will be some fees, so this has to be lower.
     keys = APIKeys()
+    private_credentials = PrivateCredentials.from_api_keys(keys)
     with wait_until_nonce_changed(keys.bet_from_address):
         binary_omen_buy_outcome_tx(
+            private_credentials=private_credentials,
             amount=buy_amount,
-            from_private_key=keys.bet_from_private_key,
-            safe_address=keys.SAFE_ADDRESS,
             market=market,
             binary_outcome=True,
             auto_deposit=True,
         )
     with wait_until_nonce_changed(keys.bet_from_address):
         binary_omen_sell_outcome_tx(
+            private_credentials=private_credentials,
             amount=sell_amount,
-            from_private_key=keys.bet_from_private_key,
-            safe_address=keys.SAFE_ADDRESS,
             market=market,
             binary_outcome=True,
             auto_withdraw=True,
@@ -73,14 +72,14 @@ def test_omen_buy_and_sell_outcome() -> None:
 def test_omen_create_market() -> None:
     # You can double check on https://aiomen.eth.limo/#/newest afterwards.
     keys = APIKeys()
+    private_credentials = PrivateCredentials.from_api_keys(keys)
     omen_create_market_tx(
+        private_credentials=private_credentials,
         initial_funds=xdai_type(0.001),
         question="Will GNO hit $1000 in 2 minutes from creation of this market?",
         closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
         language="en",
-        from_private_key=keys.bet_from_private_key,
-        safe_address=keys.SAFE_ADDRESS,
         outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         auto_deposit=True,
     )
@@ -98,20 +97,19 @@ def test_omen_fund_and_remove_fund_market() -> None:
     funds = xdai_to_wei(xdai_type(0.1))
     remove_fund = xdai_to_wei(xdai_type(0.01))
     keys = APIKeys()
+    private_credentials = PrivateCredentials.from_api_keys(keys)
     with wait_until_nonce_changed(keys.bet_from_address):
         omen_fund_market_tx(
+            private_credentials=private_credentials,
             market=market,
             funds=funds,
-            from_private_key=keys.bet_from_private_key,
-            safe_address=keys.SAFE_ADDRESS,
             auto_deposit=True,
         )
     with wait_until_nonce_changed(keys.bet_from_address):
         omen_remove_fund_market_tx(
+            private_credentials=private_credentials,
             market=market,
             shares=remove_fund,
-            from_private_key=keys.bet_from_private_key,
-            safe_address=keys.SAFE_ADDRESS,
         )
 
 
@@ -140,11 +138,8 @@ def test_omen_redeem_positions() -> None:
     )
     market = OmenAgentMarket.from_data_model(market_data_model)
     keys = APIKeys()
-    omen_redeem_full_position_tx(
-        market=market,
-        from_private_key=keys.bet_from_private_key,
-        safe_address=keys.SAFE_ADDRESS,
-    )
+    private_credentials = PrivateCredentials.from_api_keys(keys)
+    omen_redeem_full_position_tx(private_credentials=private_credentials, market=market)
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")

@@ -268,18 +268,23 @@ def monitor_brier_score(resolved_markets: t.Sequence[AgentMarket]) -> None:
         lambda m: (
             m.created_time,
             (
-                (p_yes if (p_yes := m.get_last_trade_p_yes()) is not None else 0.5)
-                - m.boolean_outcome
-            )
-            ** 2,
+                (p_yes - m.boolean_outcome) ** 2
+                if (p_yes := m.get_last_trade_p_yes()) is not None
+                else None
+            ),
         ),
     )
+    created_time_and_squared_errors_with_trades = [
+        x for x in created_time_and_squared_errors if x[1] is not None
+    ]
     df = pd.DataFrame(
-        created_time_and_squared_errors, columns=["Date", "Squared Error"]
+        created_time_and_squared_errors_with_trades, columns=["Date", "Squared Error"]
     ).sort_values(by="Date")
 
     # Compute rolling mean squared error for last 30 markets
     df["Rolling Mean Squared Error"] = df["Squared Error"].rolling(window=30).mean()
+
+    st.write(f"Based on {len(df)} markets with at least one trade.")
 
     col1, col2 = st.columns(2)
     col1.metric(label="Overall", value=f"{df['Squared Error'].mean():.3f}")

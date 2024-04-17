@@ -2,7 +2,7 @@ import os
 
 import requests
 
-from prediction_market_agent_tooling.gtypes import ChainID, HexAddress, Wei
+from prediction_market_agent_tooling.gtypes import ChainID, HexAddress, HexBytes, Wei
 
 GNOSIS_NETWORK_ID = ChainID(100)  # xDai network.
 GNOSIS_RPC_URL = os.getenv("GNOSIS_RPC_URL", "https://gnosis-rpc.publicnode.com")
@@ -19,5 +19,6 @@ def get_balance(address: HexAddress) -> Wei:
         },
         headers={"content-type": "application/json"},
     ).json()
-    balance = Wei(int(response["result"], 16))  # Convert hex value to int.
+    balance_bytes = HexBytes(response["result"])
+    balance = Wei(balance_bytes.as_int())
     return balance

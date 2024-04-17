@@ -1,6 +1,5 @@
 import typing as t
 from datetime import datetime
-from decimal import Decimal
 
 from loguru import logger
 from web3 import Web3
@@ -122,7 +121,7 @@ class OmenAgentMarket(AgentMarket):
         return wei_to_xdai(self.get_liquidity())
 
     def get_tiny_bet_amount(self) -> BetAmount:
-        return BetAmount(amount=Decimal(0.00001), currency=self.currency)
+        return BetAmount(amount=0.00001, currency=self.currency)
 
     def place_bet(
         self, outcome: bool, amount: BetAmount, omen_auto_deposit: bool = True
@@ -266,7 +265,7 @@ class OmenAgentMarket(AgentMarket):
             self, Web3.to_checksum_address(user_id)
         )
         return TokenAmount(
-            amount=Decimal(wei_to_xdai(balances[index_set])),
+            amount=wei_to_xdai(balances[index_set]),
             currency=Currency.xDai,
         )
 

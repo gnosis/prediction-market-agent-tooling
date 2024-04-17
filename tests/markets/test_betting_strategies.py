@@ -7,9 +7,11 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     HexBytes,
+    Mana,
     OmenOutcomeToken,
     Probability,
     Wei,
+    mana_type,
     usd_type,
     wei_type,
     xDai,
@@ -127,15 +129,15 @@ def test_minimum_bet_to_win(
 @pytest.mark.parametrize(
     "outcome, market_p_yes, amount_to_win, expected_min_bet",
     [
-        (True, 0.68, 1, 3),
-        (False, 0.68, 1, 1),
+        (True, 0.68, 1, mana_type(3)),
+        (False, 0.68, 1, mana_type(1)),
     ],
 )
 def test_minimum_bet_to_win_manifold(
     outcome: bool,
     market_p_yes: Probability,
     amount_to_win: float,
-    expected_min_bet: int,
+    expected_min_bet: Mana,
 ) -> None:
     min_bet = ManifoldAgentMarket(
         id="id",

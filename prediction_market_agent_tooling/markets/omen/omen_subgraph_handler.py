@@ -2,7 +2,9 @@ import sys
 import typing as t
 from datetime import datetime
 
+import tenacity
 from eth_typing import ChecksumAddress
+from loguru import logger
 from subgrounds import FieldPath, Subgrounds
 
 from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
@@ -39,6 +41,14 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def __init__(self) -> None:
         self.sg = Subgrounds()
+
+        # Patch the query_json method to retry on failure.
+        self.sg.query_json = tenacity.retry(
+            stop=tenacity.stop_after_attempt(3),
+            wait=tenacity.wait_fixed(1),
+            after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
+        )(self.sg.query_json)
+
         # Load the subgraph
         self.trades_subgraph = self.sg.load_subgraph(self.OMEN_TRADES_SUBGRAPH)
         self.conditional_tokens_subgraph = self.sg.load_subgraph(

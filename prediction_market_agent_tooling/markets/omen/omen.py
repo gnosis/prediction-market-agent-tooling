@@ -1,7 +1,6 @@
 import typing as t
 from datetime import datetime
 from decimal import Decimal
-from functools import cache
 
 from loguru import logger
 from web3 import Web3
@@ -84,6 +83,8 @@ class OmenAgentMarket(AgentMarket):
         "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     )
 
+    _binary_market_p_yes_history: list[Probability] | None = None
+
     @property
     def yes_index(self) -> int:
         return self.outcomes.index(OMEN_TRUE_OUTCOME)
@@ -92,9 +93,10 @@ class OmenAgentMarket(AgentMarket):
     def no_index(self) -> int:
         return self.outcomes.index(OMEN_FALSE_OUTCOME)
 
-    @cache
     def get_p_yes_history_cached(self) -> list[Probability]:
-        return get_binary_market_p_yes_history(self)
+        if self._binary_market_p_yes_history is None:
+            self._binary_market_p_yes_history = get_binary_market_p_yes_history(self)
+        return self._binary_market_p_yes_history
 
     def get_last_trade_p_yes(self) -> Probability:
         """On Omen, probablities converge after the resolution, so we need to get market's predicted probability from the trade history."""

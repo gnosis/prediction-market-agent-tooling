@@ -33,7 +33,7 @@ class PolymarketAgentMarket(AgentMarket):
             question=model.question,
             outcomes=[x.outcome for x in model.tokens],
             resolution=model.resolution,
-            p_yes=model.p_yes,
+            current_p_yes=model.p_yes,
             created_time=None,
             close_time=model.end_date_iso,
             url=model.url,

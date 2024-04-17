@@ -40,9 +40,9 @@ class DeployedAgent(BaseModel):
     name: str
 
     start_time: DatetimeWithTimezone
-    end_time: t.Optional[
-        DatetimeWithTimezone
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[DatetimeWithTimezone] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -259,8 +259,11 @@ def monitor_brier_score(resolved_markets: t.Sequence[AgentMarket]) -> None:
     """
     st.subheader("Brier Score (0-1, lower is better)")
 
+    # We need to use `get_last_trade_p_yes` instead of `current_p_yes` because, for resolved markets, the probabilities can be fixed to 0 and 1 (for example, on Omen).
+    # And for the brier score, we need the true market prediction, not its resolution after the outcome is known.
     markets_to_squared_error = {
-        m.created_time: m.get_squared_error() for m in resolved_markets
+        m.created_time: (m.get_last_trade_p_yes() - m.boolean_outcome) ** 2
+        for m in resolved_markets
     }
     df = pd.DataFrame(
         markets_to_squared_error.items(), columns=["Date", "Squared Error"]
@@ -293,27 +296,14 @@ def monitor_market_outcome_bias(
     st.subheader("Market Outcome Bias")
 
     date_to_open_yes_proportion = {
-        d: np.mean([int(m.p_yes > 0.5) for m in markets])
+        d: np.mean([int(m.current_p_yes > 0.5) for m in markets])
         for d, markets in groupby(
             open_markets,
             lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
         )
     }
     date_to_resolved_yes_proportion = {
-        d: np.mean(
-            [
-                (
-                    1
-                    if m.resolution == Resolution.YES
-                    else (
-                        0
-                        if m.resolution == Resolution.NO
-                        else should_not_happen(f"Unexpected resolution: {m.resolution}")
-                    )
-                )
-                for m in markets
-            ]
-        )
+        d: np.mean([int(m.boolean_outcome) for m in markets])
         for d, markets in groupby(
             resolved_markets,
             lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
@@ -349,7 +339,9 @@ def monitor_market_outcome_bias(
             use_container_width=True,
         )
 
-    all_open_markets_yes_mean = np.mean([int(m.p_yes > 0.5) for m in open_markets])
+    all_open_markets_yes_mean = np.mean(
+        [int(m.current_p_yes > 0.5) for m in open_markets]
+    )
     all_resolved_markets_yes_mean = np.mean(
         [
             (

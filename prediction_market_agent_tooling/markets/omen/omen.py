@@ -1,6 +1,7 @@
 import typing as t
 from datetime import datetime
 from decimal import Decimal
+from functools import cache
 
 from loguru import logger
 from web3 import Web3
@@ -12,6 +13,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexStr,
     PrivateKey,
+    Probability,
     Wei,
     wei_type,
     xDai,
@@ -81,6 +83,26 @@ class OmenAgentMarket(AgentMarket):
     INVALID_MARKET_ANSWER: HexStr = HexStr(
         "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     )
+
+    @property
+    def yes_index(self) -> int:
+        return self.outcomes.index(OMEN_TRUE_OUTCOME)
+
+    @property
+    def no_index(self) -> int:
+        return self.outcomes.index(OMEN_FALSE_OUTCOME)
+
+    @cache
+    def get_p_yes_history_cached(self) -> list[Probability]:
+        return get_binary_market_p_yes_history(self)
+
+    def get_last_trade_p_yes(self) -> Probability:
+        """On Omen, probablities converge after the resolution, so we need to get market's predicted probability from the trade history."""
+        return self.get_p_yes_history_cached()[-1]
+
+    def get_last_trade_p_no(self) -> Probability:
+        """On Omen, probablities converge after the resolution, so we need to get market's predicted probability from the trade history."""
+        return Probability(1.0 - self.get_last_trade_p_yes())
 
     def get_liquidity(self) -> Wei:
         return self.get_contract().totalSupply()
@@ -185,7 +207,7 @@ class OmenAgentMarket(AgentMarket):
             resolution=model.get_resolution_enum(),
             created_time=model.creation_datetime,
             finalized_time=model.finalized_datetime,
-            p_yes=model.p_yes,
+            current_p_yes=model.current_p_yes,
             condition=model.condition,
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
@@ -706,24 +728,21 @@ def redeem_from_all_user_positions(
         )
 
 
-def get_binary_market_p_yes_history(market: OmenMarket) -> list[xDai]:
-    if not market.is_binary:
-        raise ValueError(f"Market {market.id} is not binary.")
-
-    history: list[xDai] = []
+def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability]:
+    history: list[Probability] = []
     bets = sorted(
         OmenSubgraphHandler().get_bets(
-            market_id=market.id,
+            market_id=market.market_maker_contract_address_checksummed,
             type_=None,  # We need to look at price both after buying or selling.
-            end_time=market.close_time,  # Even after market is closed, there can be many `Sell` trades.
+            end_time=market.close_time,  # Even after market is closed, there can be many `Sell` trades which will converge the probability to the true one.
         ),
         key=lambda x: x.creation_datetime,
     )
 
     for bet in bets:
         if bet.outcomeIndex == market.yes_index:
-            history.append(bet.oldOutcomeTokenMarginalPrice)
+            history.append(bet.old_probability)
         else:
-            history.append(1 - bet.oldOutcomeTokenMarginalPrice)
+            history.append(Probability(1 - bet.old_probability))
 
     return history

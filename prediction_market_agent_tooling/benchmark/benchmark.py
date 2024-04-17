@@ -208,7 +208,7 @@ class Benchmarker:
             return None
         mse = sum(
             [
-                (check_not_none(p.outcome_prediction).p_yes - m.p_yes) ** 2
+                (check_not_none(p.outcome_prediction).p_yes - m.current_p_yes) ** 2
                 for p, m in zip(predictions, markets)
             ]
         ) / len(predictions)
@@ -262,7 +262,10 @@ class Benchmarker:
 
         within_range_count = 0
         for p, m in zip(predictions, markets):
-            if abs(check_not_none(p.outcome_prediction).p_yes - m.p_yes) <= tolerance:
+            if (
+                abs(check_not_none(p.outcome_prediction).p_yes - m.current_p_yes)
+                <= tolerance
+            ):
                 within_range_count += 1
 
         return (100 * within_range_count) / len(predictions)
@@ -330,7 +333,7 @@ class Benchmarker:
             return None
 
         p_yes_errors = [
-            abs(check_not_none(p.outcome_prediction).p_yes - m.p_yes)
+            abs(check_not_none(p.outcome_prediction).p_yes - m.current_p_yes)
             for p, m in zip(predictions, markets)
         ]
         confidences = [
@@ -420,7 +423,7 @@ class Benchmarker:
                 for p in agent_predictions
             ]
         markets_summary[f"reference p_yes"] = [
-            f"{m.p_yes:.2f} [{m.probable_resolution}]" for m in self.markets
+            f"{m.current_p_yes:.2f} [{m.probable_resolution}]" for m in self.markets
         ]
         return markets_summary
 
@@ -475,7 +478,9 @@ class Benchmarker:
             return None
 
         expected_value = (
-            yes_shares * market.p_yes + no_shares * (1 - market.p_yes) - bet_units
+            yes_shares * market.current_p_yes
+            + no_shares * (1 - market.current_p_yes)
+            - bet_units
         )
         expected_returns_perc = 100 * expected_value / bet_units
 

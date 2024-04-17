@@ -171,12 +171,12 @@ def omen_unfund_replicated_known_markets_tx(
             saturation_above_threshold is not None
             and not market.is_resolved
             and not (
-                market.p_yes > saturation_above_threshold
-                or market.p_no > saturation_above_threshold
+                market.current_p_yes > saturation_above_threshold
+                or market.current_p_no > saturation_above_threshold
             )
         ):
             logger.info(
-                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityParameter=} {market.question=}  {market.url=}`, because it's not saturated yet, `{market.p_yes=}`."
+                f"[{idx+1}/{len(markets)}] Skipping unfunding of `{market.liquidityParameter=} {market.question=}  {market.url=}`, because it's not saturated yet, `{market.current_p_yes=}`."
             )
             continue
         logger.info(

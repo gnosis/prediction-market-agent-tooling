@@ -16,12 +16,12 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
+    get_binary_market_p_yes_history,
     omen_create_market_tx,
     omen_fund_market_tx,
     omen_redeem_full_position_tx,
     omen_remove_fund_market_tx,
     pick_binary_market,
-    get_binary_market_p_yes_history,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -122,7 +122,9 @@ def test_p_yes() -> None:
             market = m
             break
     assert market is not None, "No market found with outcomeTokenProbabilities."
-    assert np.isclose(market.p_yes, check_not_none(market.outcomeTokenProbabilities)[0])
+    assert np.isclose(
+        market.current_p_yes, check_not_none(market.outcomeTokenProbabilities)[0]
+    )
 
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
@@ -230,9 +232,10 @@ def test_balance_for_user_in_market() -> None:
 
 def test_get_binary_market_p_yes_history() -> None:
     market = OmenSubgraphHandler().get_omen_market_by_market_id(
-        "0x934b9f379dd9d8850e468df707d58711da2966cd"
+        HexAddress(HexStr("0x934b9f379dd9d8850e468df707d58711da2966cd"))
     )
-    history = get_binary_market_p_yes_history(market)
+    agent_market = OmenAgentMarket.from_data_model(market)
+    history = get_binary_market_p_yes_history(agent_market)
     assert len(history) > 0
     assert all(0 <= 0 <= 1.0 for x in history)
     assert history[0] == 0.5

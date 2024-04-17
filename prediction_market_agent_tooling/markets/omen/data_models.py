@@ -22,7 +22,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
     ResolvedBet,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    should_not_happen,
+)
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 OMEN_TRUE_OUTCOME = "Yes"
@@ -234,11 +237,11 @@ class OmenMarket(BaseModel):
         return self.outcomes.index(OMEN_FALSE_OUTCOME)
 
     @property
-    def p_no(self) -> Probability | None:
-        return Probability(1 - self.p_yes) if self.p_yes is not None else None
+    def current_p_no(self) -> Probability:
+        return Probability(1 - self.current_p_yes)
 
     @property
-    def p_yes(self) -> Probability | None:
+    def current_p_yes(self) -> Probability:
         """
         Calculate the probability of the outcomes from the relative token amounts.
 
@@ -256,9 +259,18 @@ class OmenMarket(BaseModel):
             )
 
         if sum(self.outcomeTokenAmounts) == 0:
-            # They are zeros for markest with no liquidity, so we can't compute the probabilities.
-            # Use `get_binary_market_p_yes_history` to get historical probabilities.
-            return None
+            # If there are no outcome tokens, it should mean that market is closed and without liquidity, so we need to infer the probabilities based on the answer.
+            return (
+                Probability(1.0)
+                if self.yes_index == self.answer_index
+                else (
+                    Probability(0.0)
+                    if self.no_index == self.answer_index
+                    else should_not_happen(
+                        "Market has no outcome tokens and neither the answer, please debug."
+                    )
+                )
+            )
 
         return Probability(
             1 - self.outcomeTokenAmounts[self.yes_index] / sum(self.outcomeTokenAmounts)
@@ -324,6 +336,11 @@ class OmenBet(BaseModel):
     @property
     def boolean_outcome(self) -> bool:
         return get_boolean_outcome(self.fpmm.outcomes[self.outcomeIndex])
+
+    @property
+    def old_probability(self) -> Probability:
+        # Marginal price is the probability of the outcome.
+        return Probability(float(self.oldOutcomeTokenMarginalPrice))
 
     def get_profit(self) -> ProfitAmount:
         bet_amount_xdai = wei_to_xdai(self.collateralAmount)

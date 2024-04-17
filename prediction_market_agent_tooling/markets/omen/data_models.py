@@ -266,8 +266,13 @@ class OmenMarket(BaseModel):
                 else (
                     Probability(0.0)
                     if self.no_index == self.answer_index
-                    else should_not_happen(
-                        "Market has no outcome tokens and neither the answer, please debug."
+                    else (
+                        Probability(0.5)
+                        if self.answer_index
+                        == INVALID_ANSWER  # Invalid markets show as 50:50 on Omen: https://aiomen.eth.limo/#/0x59975b067b0716fef6f561e1e30e44f606b08803/finalize
+                        else should_not_happen(
+                            "Market has no outcome tokens and neither the answer, please debug."
+                        )
                     )
                 )
             )

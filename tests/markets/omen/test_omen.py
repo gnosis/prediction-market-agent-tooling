@@ -228,23 +228,6 @@ def test_balance_for_user_in_market() -> None:
     assert float(balance_no.amount) == 0
 
 
-"""
-
-def test_get_omen_markets_by_condition_ids(
-    omen_subgraph_handler: OmenSubgraphHandler,
-) -> None:
-    condition_ids = [
-        HexBytes("0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b")
-    ]
-    expected_market_title = (
-        "Will the Federal Reserve cut interest rates on 28 March 2024?"
-    )
-    markets = omen_subgraph_handler.get_omen_markets_by_condition_ids(condition_ids)
-    assert len(markets) == 1
-    assert markets[0].title == expected_market_title
-"""
-
-
 def test_get_positions_0() -> None:
     """
     Create a new account and verify that there are no positions for the account
@@ -254,35 +237,29 @@ def test_get_positions_0() -> None:
     assert len(positions) == 0
 
 
-# @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
-# def test_get_positions_1() -> None:
-#     """
-#     Create a new account, place a bet and verify that the position is returned
-#     """
-#     account = Account.create()
-#     keys = APIKeys(BET_FROM_PRIVATE_KEY=account.key.hex())
-#     market = OmenAgentMarket.get_binary_markets(
-#         limit=1,
-#         sort_by=SortBy.CLOSING_SOONEST,
-#         filter_by=FilterBy.OPEN,
-#     )[0]
+def test_get_positions_1() -> None:
+    """
+    Check the user's positions against 'market.get_token_balance'
+    """
+    # Pick a user that has active positions
+    user_address = Web3.to_checksum_address(
+        "0x2DD9f5678484C1F59F97eD334725858b938B4102"
+    )
+    positions = OmenAgentMarket.get_positions(user_id=user_address)
+    assert len(positions)
 
-#     yes_bet_amount = market.get_tiny_bet_amount()
-#     no_bet_amount = market.get_tiny_bet_amount()
-#     no_bet_amount.amount = no_bet_amount.amount * 2
+    # Pick a single position to test, otherwise it can be very slow
+    position = positions[0]
 
-#     market.place_bet(outcome=True, amount=yes_bet_amount)
-#     market.place_bet(outcome=False, amount=yes_bet_amount)
-#     yes_token_balance = market.get_token_balance(
-#         user_id=account.address, outcome=OMEN_TRUE_OUTCOME
-#     )
-#     no_token_balance = market.get_token_balance(
-#         user_id=account.address, outcome=OMEN_FALSE_OUTCOME
-#     )
+    market = OmenAgentMarket.get_binary_market(position.market_id)
+    for outcome_str in market.outcomes:
+        token_balance = market.get_token_balance(
+            user_id=user_address,
+            outcome=outcome_str,
+        )
+        if token_balance.amount == 0:
+            # The user has no position in this outcome
+            continue
+        assert token_balance.amount == position.amounts[outcome_str].amount
 
-#     breakpoint()
-#     positions = OmenAgentMarket.get_positions(user_id=account.address)
-#     assert len(positions) == 1
-#     assert positions[0].market_id == market.id
-#     assert positions[0].amounts[OMEN_TRUE_OUTCOME].amount == yes_token_balance
-#     assert positions[0].amounts[OMEN_FALSE_OUTCOME].amount == no_token_balance
+    print(position)  # For extra test coverage

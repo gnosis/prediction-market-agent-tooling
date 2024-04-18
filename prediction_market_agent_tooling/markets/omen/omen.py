@@ -393,6 +393,7 @@ def omen_create_market_tx(
     outcomes: list[str],
     auto_deposit: bool,
     fee: float = OMEN_DEFAULT_MARKET_FEE,
+    web3: Web3 | None = None,
 ) -> ChecksumAddress:
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308

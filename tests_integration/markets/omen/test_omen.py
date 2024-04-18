@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import pytest
 from loguru import logger
+from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
@@ -30,6 +31,7 @@ from tests.utils import RUN_PAID_TESTS
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_create_bet_withdraw_resolve_market(
+    local_web3: Web3,
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
     wait_time = 60

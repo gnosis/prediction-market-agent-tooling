@@ -1,15 +1,24 @@
 import os
 
-from eth_typing import ChecksumAddress
-from web3 import Web3
+import requests
 
-from prediction_market_agent_tooling.gtypes import ChainID, Wei
-from prediction_market_agent_tooling.tools.contract import ContractBaseClass
+from prediction_market_agent_tooling.gtypes import ChainID, HexAddress, HexBytes, Wei
 
 GNOSIS_NETWORK_ID = ChainID(100)  # xDai network.
 GNOSIS_RPC_URL = os.getenv("GNOSIS_RPC_URL", "https://gnosis-rpc.publicnode.com")
 
 
-def get_balance(address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
-    web3 = web3 or ContractBaseClass.get_web3()
-    return Wei(web3.eth.get_balance(address))
+def get_balance(address: HexAddress) -> Wei:
+    response = requests.post(
+        GNOSIS_RPC_URL,
+        json={
+            "jsonrpc": "2.0",
+            "method": "eth_getBalance",
+            "params": [address, "latest"],
+            "id": 1,
+        },
+        headers={"content-type": "application/json"},
+    ).json()
+    balance_bytes = HexBytes(response["result"])
+    balance = Wei(balance_bytes.as_int())
+    return balance

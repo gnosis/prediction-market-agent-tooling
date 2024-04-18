@@ -1,6 +1,8 @@
 import typer
 from eth_typing import HexAddress, HexStr
+from web3 import Web3
 
+from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -18,6 +20,7 @@ app = typer.Typer()
 def buy(
     amount: str = typer.Option(),
     from_private_key: str = typer.Option(),
+    safe_address: str = typer.Option(default=None),
     market_id: str = typer.Option(),
     outcome: str = typer.Option(),
     auto_deposit: bool = typer.Option(False),
@@ -35,10 +38,17 @@ def buy(
 
     Market ID can be found easily in the URL: https://aiomen.eth.limo/#/0x86376012a5185f484ec33429cadfa00a8052d9d4
     """
+    safe_address_checksum = (
+        Web3.to_checksum_address(safe_address) if safe_address else None
+    )
+    private_credentials = PrivateCredentials(
+        private_key=private_key_type(from_private_key),
+        safe_address=safe_address_checksum,
+    )
     market = build_omen_agent_market(market_id)
     omen_buy_outcome_tx(
+        private_credentials=private_credentials,
         amount=xdai_type(amount),
-        from_private_key=private_key_type(from_private_key),
         market=market,
         outcome=outcome,
         auto_deposit=auto_deposit,
@@ -49,6 +59,7 @@ def buy(
 def sell(
     amount: str = typer.Option(),
     from_private_key: str = typer.Option(),
+    safe_address: str = typer.Option(default=None),
     market_id: str = typer.Option(),
     outcome: str = typer.Option(),
     auto_withdraw: bool = typer.Option(False),
@@ -66,10 +77,18 @@ def sell(
 
     Market ID can be found easily in the URL: https://aiomen.eth.limo/#/0x86376012a5185f484ec33429cadfa00a8052d9d4
     """
+    safe_address_checksum = (
+        Web3.to_checksum_address(safe_address) if safe_address else None
+    )
+    private_credentials = PrivateCredentials(
+        private_key=private_key_type(from_private_key),
+        safe_address=safe_address_checksum,
+    )
+
     market = build_omen_agent_market(market_id)
     omen_sell_outcome_tx(
+        private_credentials,
         amount=xdai_type(amount),
-        from_private_key=private_key_type(from_private_key),
         market=market,
         outcome=outcome,
         auto_withdraw=auto_withdraw,

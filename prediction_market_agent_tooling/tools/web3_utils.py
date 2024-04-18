@@ -2,6 +2,9 @@ from typing import Any, Optional, TypeVar
 
 import tenacity
 from eth_account import Account
+from eth_typing import URI
+from gnosis.eth import EthereumClient
+from gnosis.safe.safe import Safe
 from loguru import logger
 from pydantic.types import SecretStr
 from web3 import Web3
@@ -104,6 +107,42 @@ def call_function_on_contract(
     return output
 
 
+def prepare_tx(
+    web3: Web3,
+    contract_address: ChecksumAddress,
+    contract_abi: ABI,
+    from_address: ChecksumAddress | None,
+    function_name: str,
+    function_params: Optional[list[Any] | dict[str, Any]] = None,
+    tx_params: Optional[TxParams] = None,
+) -> TxParams:
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+    # Fill in required defaults, if not provided.
+    tx_params_new = TxParams()
+    if tx_params:
+        tx_params_new.update(tx_params)
+
+    if not tx_params_new.get("from") and not from_address:
+        raise ValueError(
+            "Cannot have both tx_params[`from`] and from_address not defined."
+        )
+
+    if not tx_params_new.get("from") and from_address:
+        tx_params_new["from"] = from_address
+
+    if not tx_params_new.get("nonce"):
+        from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
+        tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
+
+    # Build the transaction.
+    function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
+    tx_params_new = function_call.build_transaction(tx_params_new)
+    gas = web3.eth.estimate_gas(tx_params_new)
+    tx_params_new["gas"] = gas
+    return tx_params_new
+
+
 @tenacity.retry(
     # Retry only for the transaction errors that match the given patterns,
     # add other retrieable errors gradually to be safe.
@@ -118,7 +157,6 @@ def call_function_on_contract(
 )
 def send_function_on_contract_tx(
     web3: Web3,
-    *,
     contract_address: ChecksumAddress,
     contract_abi: ABI,
     from_private_key: PrivateKey,
@@ -127,28 +165,75 @@ def send_function_on_contract_tx(
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
 ) -> TxReceipt:
-    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+    public_key = private_key_to_public_key(from_private_key)
 
-    from_address = private_key_to_public_key(from_private_key)
-
-    # Fill in required defaults, if not provided.
-    tx_params = tx_params or {}
-    tx_params["nonce"] = tx_params.get(
-        "nonce", web3.eth.get_transaction_count(from_address)
+    tx_params = prepare_tx(
+        web3=web3,
+        contract_address=contract_address,
+        contract_abi=contract_abi,
+        from_address=public_key,
+        function_name=function_name,
+        function_params=function_params,
+        tx_params=tx_params,
     )
-    tx_params["from"] = tx_params.get("from", from_address)
-
-    # Build the transaction.
-    function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
-    tx = function_call.build_transaction(tx_params)
     # Sign with the private key.
     signed_tx = web3.eth.account.sign_transaction(
-        tx, private_key=from_private_key.get_secret_value()
+        tx_params, private_key=from_private_key.get_secret_value()
     )
     # Send the signed transaction.
     send_tx = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
     # And wait for the receipt.
     receipt_tx = web3.eth.wait_for_transaction_receipt(send_tx, timeout=timeout)
     # Verify it didn't fail.
+    check_tx_receipt(receipt_tx)
+    return receipt_tx
+
+
+@tenacity.retry(
+    # Retry only for the transaction errors that match the given patterns,
+    # add other retrieable errors gradually to be safe.
+    retry=tenacity.retry_if_exception_message(
+        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)"
+    ),
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
+    stop=tenacity.stop_after_attempt(9),
+    after=lambda x: logger.debug(
+        f"send_function_on_contract_tx_using_safe failed, {x.attempt_number=}."
+    ),
+)
+def send_function_on_contract_tx_using_safe(
+    web3: Web3,
+    contract_address: ChecksumAddress,
+    contract_abi: ABI,
+    from_private_key: PrivateKey,
+    safe_address: ChecksumAddress,
+    function_name: str,
+    function_params: Optional[list[Any] | dict[str, Any]] = None,
+    tx_params: Optional[TxParams] = None,
+    timeout: int = 180,
+) -> TxReceipt:
+    tx_params = prepare_tx(
+        web3=web3,
+        contract_address=contract_address,
+        contract_abi=contract_abi,
+        from_address=safe_address,
+        function_name=function_name,
+        function_params=function_params,
+        tx_params=tx_params,
+    )
+
+    if not web3.provider.endpoint_uri:  # type: ignore
+        raise EnvironmentError(f"RPC_URL not available in web3 object.")
+    ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
+    s = Safe(safe_address, ethereum_client)  # type: ignore
+    safe_tx = s.build_multisig_tx(
+        to=Web3.to_checksum_address(tx_params["to"]),
+        data=HexBytes(tx_params["data"]),
+        value=tx_params["value"],
+    )
+    safe_tx.sign(from_private_key.get_secret_value())
+    safe_tx.call()  # simulate call
+    tx_hash, tx = safe_tx.execute(from_private_key.get_secret_value())
+    receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
     check_tx_receipt(receipt_tx)
     return receipt_tx

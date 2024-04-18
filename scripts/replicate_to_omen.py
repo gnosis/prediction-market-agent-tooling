@@ -1,5 +1,7 @@
 import typer
+from web3 import Web3
 
+from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen_replicate import (
@@ -12,6 +14,7 @@ def main(
     n: int = typer.Option(),
     initial_funds: str = typer.Option(),
     from_private_key: str = typer.Option(),
+    safe_address: str = typer.Option(default=None),
     auto_deposit: bool = True,
 ) -> None:
     """
@@ -26,11 +29,18 @@ def main(
         --from-private-key your-private-key
     ```
     """
+    safe_address_checksum = (
+        Web3.to_checksum_address(safe_address) if safe_address else None
+    )
+    private_credentials = PrivateCredentials(
+        private_key=private_key_type(from_private_key),
+        safe_address=safe_address_checksum,
+    )
     omen_replicate_from_tx(
+        private_credentials=private_credentials,
         market_type=market_type,
         n_to_replicate=n,
         initial_funds=xdai_type(initial_funds),
-        from_private_key=private_key_type(from_private_key),
         auto_deposit=auto_deposit,
     )
 

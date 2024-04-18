@@ -2,7 +2,6 @@ import json
 import time
 import typing as t
 from contextlib import contextmanager
-from typing import TypeVar
 
 from pydantic import BaseModel, field_validator
 from web3 import Web3
@@ -54,9 +53,6 @@ def wait_until_nonce_changed(
         time.sleep(sleep_time)
 
 
-T = TypeVar("T", bound="ContractBaseClass")
-
-
 class ContractBaseClass(BaseModel):
     """
     Base class holding the basic requirements and tools used for every contract.
@@ -64,6 +60,7 @@ class ContractBaseClass(BaseModel):
 
     CHAIN_ID: t.ClassVar[ChainID]
     CHAIN_RPC_URL: t.ClassVar[str]
+
     abi: ABI
     address: ChecksumAddress
 

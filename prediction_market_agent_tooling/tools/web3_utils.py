@@ -123,15 +123,15 @@ def prepare_tx(
     if tx_params:
         tx_params_new.update(tx_params)
 
-    if not tx_params_new.get("from", None) and not from_address:
+    if not tx_params_new.get("from") and not from_address:
         raise ValueError(
             "Cannot have both tx_params[`from`] and from_address not defined."
         )
 
-    if not tx_params_new.get("from", None) and from_address:
+    if not tx_params_new.get("from") and from_address:
         tx_params_new["from"] = from_address
 
-    if not tx_params_new.get("nonce", None):
+    if not tx_params_new.get("nonce"):
         from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
@@ -198,7 +198,7 @@ def send_function_on_contract_tx(
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
     stop=tenacity.stop_after_attempt(9),
     after=lambda x: logger.debug(
-        f"send_function_on_contract_tx failed, {x.attempt_number=}."
+        f"send_function_on_contract_tx_using_safe failed, {x.attempt_number=}."
     ),
 )
 def send_function_on_contract_tx_using_safe(

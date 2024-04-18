@@ -4,6 +4,8 @@ from typing import TypeAlias
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.gtypes import OutcomeStr
+
 
 class Currency(str, Enum):
     xDai = "xDai"
@@ -42,3 +44,15 @@ class ResolvedBet(Bet):
     @property
     def is_correct(self) -> bool:
         return self.outcome == self.market_outcome
+
+
+class Position(BaseModel):
+    market_id: str
+    amounts: dict[OutcomeStr, TokenAmount]
+
+    def __str__(self) -> str:
+        amounts_str = ", ".join(
+            f"{amount.amount} '{outcome}' tokens"
+            for outcome, amount in self.amounts.items()
+        )
+        return f"Position for market id {self.market_id}: {amounts_str}"

@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import numpy as np
 import pytest
+from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from loguru import logger
 from web3 import Web3
@@ -225,3 +226,63 @@ def test_balance_for_user_in_market() -> None:
     )
     assert balance_no.currency == Currency.xDai
     assert float(balance_no.amount) == 0
+
+
+"""
+
+def test_get_omen_markets_by_condition_ids(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    condition_ids = [
+        HexBytes("0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b")
+    ]
+    expected_market_title = (
+        "Will the Federal Reserve cut interest rates on 28 March 2024?"
+    )
+    markets = omen_subgraph_handler.get_omen_markets_by_condition_ids(condition_ids)
+    assert len(markets) == 1
+    assert markets[0].title == expected_market_title
+"""
+
+
+def test_get_positions_0() -> None:
+    """
+    Create a new account and verify that there are no positions for the account
+    """
+    user_id = Account.create().address
+    positions = OmenAgentMarket.get_positions(user_id=user_id)
+    assert len(positions) == 0
+
+
+# @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
+# def test_get_positions_1() -> None:
+#     """
+#     Create a new account, place a bet and verify that the position is returned
+#     """
+#     account = Account.create()
+#     keys = APIKeys(BET_FROM_PRIVATE_KEY=account.key.hex())
+#     market = OmenAgentMarket.get_binary_markets(
+#         limit=1,
+#         sort_by=SortBy.CLOSING_SOONEST,
+#         filter_by=FilterBy.OPEN,
+#     )[0]
+
+#     yes_bet_amount = market.get_tiny_bet_amount()
+#     no_bet_amount = market.get_tiny_bet_amount()
+#     no_bet_amount.amount = no_bet_amount.amount * 2
+
+#     market.place_bet(outcome=True, amount=yes_bet_amount)
+#     market.place_bet(outcome=False, amount=yes_bet_amount)
+#     yes_token_balance = market.get_token_balance(
+#         user_id=account.address, outcome=OMEN_TRUE_OUTCOME
+#     )
+#     no_token_balance = market.get_token_balance(
+#         user_id=account.address, outcome=OMEN_FALSE_OUTCOME
+#     )
+
+#     breakpoint()
+#     positions = OmenAgentMarket.get_positions(user_id=account.address)
+#     assert len(positions) == 1
+#     assert positions[0].market_id == market.id
+#     assert positions[0].amounts[OMEN_TRUE_OUTCOME].amount == yes_token_balance
+#     assert positions[0].amounts[OMEN_FALSE_OUTCOME].amount == no_token_balance

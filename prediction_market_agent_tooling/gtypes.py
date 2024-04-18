@@ -28,6 +28,7 @@ xDai = NewType("xDai", float)
 GNO = NewType("GNO", float)
 ABI = NewType("ABI", str)
 OmenOutcomeToken = NewType("OmenOutcomeToken", int)
+OutcomeStr = NewType("OutcomeStr", str)
 Probability = NewType("Probability", float)
 Mana = NewType("Mana", float)  # Manifold's "currency"
 USDC = NewType("USDC", float)

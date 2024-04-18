@@ -46,10 +46,10 @@ class FinalizeAndResolveResult(BaseModel):
 
 
 def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
-    private_credentials: PrivateCredentials,
+    private_credentials: PrivateCredentials, web3: Web3 | None = None
 ) -> FinalizeAndResolveResult:
     public_key = private_credentials.public_key
-    balances_start = get_balances(public_key)
+    balances_start = get_balances(public_key, web3)
     logger.info(f"{balances_start=}")
 
     # Just to be friendly with timezones.
@@ -67,7 +67,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         private_credentials,
         created_opened_markets,
     )
-    balances_after_finalization = get_balances(public_key)
+    balances_after_finalization = get_balances(public_key, web3)
     logger.info(f"{balances_after_finalization=}")
 
     # Fetch markets created by us that are already open, and we already submitted an answer more than a day ago, but they aren't resolved yet.
@@ -82,7 +82,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         private_credentials,
         created_finalized_markets,
     )
-    balances_after_resolution = get_balances(public_key)
+    balances_after_resolution = get_balances(public_key, web3)
     logger.info(f"{balances_after_resolution=}")
 
     # Fetch questions that are already finalised (last answer is older than 24 hours), but we didn't claim the bonded xDai yet.
@@ -98,7 +98,7 @@ def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
         created_not_claimed_questions,
         auto_withdraw=True,
     )
-    balances_after_claiming = get_balances(public_key)
+    balances_after_claiming = get_balances(public_key, web3)
     logger.info(f"{balances_after_claiming=}")
 
     return FinalizeAndResolveResult(

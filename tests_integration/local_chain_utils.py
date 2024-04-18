@@ -13,6 +13,7 @@ import time
 import pytest
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
+from loguru import logger
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractLogicError
 from web3.types import TxReceipt
@@ -34,8 +35,6 @@ RUN_LOCAL_NODE = os.environ.get("RR_RUN_LOCAL_NODE", False)
 ETH_LOCAL_NODE_URL = f"http://127.0.0.1:{ETH_LOCAL_NODE_PORT}"
 GC_LOCAL_NODE_URL = f"http://127.0.0.1:{GC_LOCAL_NODE_PORT}"
 DIR_OF_THIS_FILE = os.path.dirname(os.path.abspath(__file__))
-
-logger = logging.getLogger(__name__)
 
 
 def gen_test_accounts() -> list[LocalAccount]:
@@ -163,14 +162,13 @@ def run_hardhat():
     return node
 
 
-def run_anvil(url, block, port):
+def run_anvil(url: str, block: int | None, port: int = 8545):
     """Run anvil node in the background"""
-    log_filename = f"/tmp/rr_fork_node_{port}_log.txt"
-    logger.info(f"Writing Anvil log to {log_filename}")
-    log = open(log_filename, "w")
+    cmd = f"anvil --accounts 10 -f '{url}' --port {port}"
+    if block:
+        cmd += f" --fork-block-number {block}"
     node = SimpleDaemonRunner(
-        # cmd=f"anvil --accounts 15 -f '{url}' --fork-block-number {block} --port {port}",
-        cmd=f"anvil --accounts 10 -f '{url}' --port {port}",
+        cmd=cmd,
         popen_kwargs={"stdout": sys.stdout, "stderr": sys.stderr},
     )
 
@@ -179,7 +177,9 @@ def run_anvil(url, block, port):
 
 
 class LocalNode:
-    def __init__(self, remote_url: str, port: int, default_block: int | None = None):
+    def __init__(
+        self, remote_url: str, port: int = 8545, default_block: int | None = None
+    ):
         self.remote_url = remote_url
         self.port = port
         self.url = f"http://127.0.0.1:{port}"

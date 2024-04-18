@@ -86,11 +86,13 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         question_id: HexBytes,
         oracle_address: ChecksumAddress,
         outcomes_slot_count: int,
+        web3: Web3 | None = None,
     ) -> HexBytes:
         id_ = HexBytes(
             self.call(
                 "getConditionId",
                 [oracle_address, question_id, outcomes_slot_count],
+                web3=web3,
             )
         )
         return id_
@@ -177,34 +179,29 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         )
 
     def getOutcomeSlotCount(
-        self,
-        condition_id: HexBytes,
+        self, condition_id: HexBytes, web3: Web3 | None = None
     ) -> int:
-        count: int = self.call(
-            "getOutcomeSlotCount",
-            [condition_id],
-        )
+        count: int = self.call("getOutcomeSlotCount", [condition_id], web3=web3)
         return count
 
     def does_condition_exists(
-        self,
-        condition_id: HexBytes,
+        self, condition_id: HexBytes, web3: Web3 | None = None
     ) -> bool:
-        return self.getOutcomeSlotCount(condition_id) > 0
+        return self.getOutcomeSlotCount(condition_id, web3=web3) > 0
 
     def is_condition_resolved(
-        self,
-        condition_id: HexBytes,
+        self, condition_id: HexBytes, web3: Web3 | None = None
     ) -> bool:
         # from ConditionalTokens.redeemPositions:
         # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
-        payout_for_condition = self.payoutDenominator(condition_id)
+        payout_for_condition = self.payoutDenominator(condition_id, web3=web3)
         return payout_for_condition > 0
 
-    def payoutDenominator(self, condition_id: HexBytes) -> int:
+    def payoutDenominator(
+        self, condition_id: HexBytes, web3: Web3 | None = None
+    ) -> int:
         payoutForCondition: int = self.call(
-            "payoutDenominator",
-            [condition_id],
+            "payoutDenominator", [condition_id], web3=web3
         )
         return payoutForCondition
 
@@ -214,6 +211,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         for_address: ChecksumAddress,
         approve: bool,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             private_credentials=private_credentials,
@@ -223,6 +221,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
                 approve,
             ],
             tx_params=tx_params,
+            web3=web3,
         )
 
     def prepareCondition(
@@ -232,6 +231,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         question_id: HexBytes,
         outcomes_slot_count: int,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             private_credentials=private_credentials,
@@ -242,6 +242,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
                 outcomes_slot_count,
             ],
             tx_params=tx_params,
+            web3=web3,
         )
 
 
@@ -272,25 +273,18 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         return calculated_shares
 
     def calcSellAmount(
-        self,
-        return_amount: Wei,
-        outcome_index: int,
+        self, return_amount: Wei, outcome_index: int, web3: Web3 | None = None
     ) -> OmenOutcomeToken:
         """
         Returns amount of shares we will sell for the requested wei.
         """
         calculated_shares: OmenOutcomeToken = self.call(
-            "calcSellAmount",
-            [return_amount, outcome_index],
+            "calcSellAmount", [return_amount, outcome_index], web3=web3
         )
         return calculated_shares
 
-    def conditionalTokens(
-        self,
-    ) -> HexAddress:
-        address: HexAddress = self.call(
-            "conditionalTokens",
-        )
+    def conditionalTokens(self, web3: Web3 | None = None) -> HexAddress:
+        address: HexAddress = self.call("conditionalTokens", web3=web3)
         return address
 
     def buy(
@@ -321,6 +315,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         outcome_index: int,
         max_outcome_tokens_to_sell: OmenOutcomeToken,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             private_credentials=private_credentials,
@@ -331,6 +326,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
                 max_outcome_tokens_to_sell,
             ],
             tx_params=tx_params,
+            web3=web3,
         )
 
     def addFunding(
@@ -338,6 +334,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         private_credentials: PrivateCredentials,
         add_funding: Wei,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         """
         Funding is added in Weis (xDai) and then converted to shares.
@@ -349,6 +346,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
             function_name="addFunding",
             function_params=[add_funding, distribution_hint],
             tx_params=tx_params,
+            web3=web3,
         )
 
     def removeFunding(
@@ -369,9 +367,9 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
             web3=web3,
         )
 
-    def totalSupply(self) -> Wei:
+    def totalSupply(self, web3: Web3 | None = None) -> Wei:
         # This is the liquidity you seen on the Omen website (but in Wei).
-        total_supply: Wei = self.call("totalSupply")
+        total_supply: Wei = self.call("totalSupply", web3=web3)
         return total_supply
 
 
@@ -412,6 +410,7 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
         initial_funds_wei: Wei,
         fee: float = OMEN_DEFAULT_MARKET_FEE,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         fee_wei = xdai_to_wei(
             xdai_type(fee)
@@ -431,6 +430,7 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
                 distributionHint=[],
             ),
             tx_params=tx_params,
+            web3=web3,
         )
 
 
@@ -498,6 +498,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         opening: datetime,
         nonce: int | None = None,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> HexBytes:
         """
         After the question is created, you can find it at https://reality.eth.link/app/#!/creator/{from_address}.
@@ -528,6 +529,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
                 ),  # Two equal questions need to have different nonces.
             ),
             tx_params=tx_params,
+            web3=web3,
         )
         question_id = HexBytes(
             receipt_tx["logs"][0]["topics"][1]

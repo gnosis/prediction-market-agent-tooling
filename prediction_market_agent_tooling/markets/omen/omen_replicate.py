@@ -25,7 +25,6 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
 # According to Omen's recommendation, closing time of the market should be at least 6 days after the outcome is known.
 # That is because at the closing time, the question will open on Realitio, and we don't want it to be resolved as unknown/invalid.
@@ -41,7 +40,7 @@ def omen_replicate_from_tx(
     close_time_before: datetime | None = None,
     auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
-    from_address = private_key_to_public_key(private_credentials.private_key)
+    from_address = private_credentials.public_key
     already_created_markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         creator=from_address,
@@ -144,7 +143,7 @@ def omen_unfund_replicated_known_markets_tx(
     private_credentials: PrivateCredentials,
     saturation_above_threshold: float | None = None,
 ) -> None:
-    from_address = private_key_to_public_key(private_credentials.private_key)
+    from_address = private_credentials.public_key
 
     now = utcnow()
     # We want to unfund markets ~1 day before the resolution should be known.

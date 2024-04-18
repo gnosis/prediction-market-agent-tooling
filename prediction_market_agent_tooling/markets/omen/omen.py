@@ -50,7 +50,6 @@ from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
-    private_key_to_public_key,
     remove_fraction,
     wei_to_xdai,
     xdai_to_wei,
@@ -171,7 +170,7 @@ class OmenAgentMarket(AgentMarket):
         self,
         private_credentials: PrivateCredentials,
     ) -> None:
-        for_public_key = private_key_to_public_key(private_credentials.private_key)
+        for_public_key = private_credentials.public_key
         market_is_redeemable = self.market_redeemable_by(user=for_public_key)
         if not market_is_redeemable:
             logger.debug(
@@ -273,12 +272,7 @@ def omen_buy_outcome_tx(
     Bets the given amount of xDai for the given outcome in the given market.
     """
     amount_wei = xdai_to_wei(amount)
-    if private_credentials.safe_address is not None:
-        from_address_checksummed = private_credentials.safe_address
-    else:
-        from_address_checksummed = private_key_to_public_key(
-            private_credentials.private_key
-        )
+    from_address_checksummed = private_credentials.public_key
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
 
@@ -424,7 +418,7 @@ def omen_create_market_tx(
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
-    from_address = private_key_to_public_key(private_credentials.private_key)
+    from_address = private_credentials.public_key
     initial_funds_wei = xdai_to_wei(initial_funds)
 
     realitio_contract = OmenRealitioContract()
@@ -514,7 +508,7 @@ def omen_fund_market_tx(
     funds: Wei,
     auto_deposit: bool,
 ) -> None:
-    from_address = private_key_to_public_key(private_credentials.private_key)
+    from_address = private_credentials.public_key
     market_contract = market.get_contract()
     collateral_token_contract = OmenCollateralTokenContract()
 
@@ -552,7 +546,7 @@ def omen_redeem_full_position_tx(
     to be redeemed before sending the transaction.
     """
 
-    from_address = private_key_to_public_key(private_credentials.private_key)
+    from_address = private_credentials.public_key
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
@@ -636,7 +630,7 @@ def omen_remove_fund_market_tx(
     After we remove funding, using the `mergePositions` we get `min(shares per index)` of wxDai back, but the remaining shares can be converted back only after the market is resolved.
     That can be done using the `redeem_from_all_user_positions` function below.
     """
-    from_address = private_key_to_public_key(private_credentials.private_key)
+    from_address = private_credentials.public_key
     market_contract = market.get_contract()
     original_balances = get_balances(from_address)
 
@@ -689,7 +683,7 @@ def redeem_from_all_user_positions(
     """
     Redeems from all user positions where the user didn't redeem yet.
     """
-    public_key = private_key_to_public_key(private_credentials.private_key)
+    public_key = private_credentials.public_key
 
     conditional_token_contract = OmenConditionalTokenContract()
     user_positions = OmenSubgraphHandler().get_user_positions(

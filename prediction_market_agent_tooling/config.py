@@ -95,6 +95,19 @@ class PrivateCredentials(BaseModel):
     private_key: PrivateKey
     safe_address: ChecksumAddress | None
 
+    @property
+    def public_key(self) -> ChecksumAddress:
+        """If the SAFE is available, we always route transactions via SAFE. Otherwise we use the EOA."""
+        return (
+            self.safe_address
+            if self.safe_address is not None
+            else private_key_to_public_key(self.private_key)
+        )
+
+    @property
+    def has_safe_address(self) -> bool:
+        return self.safe_address is not None
+
     @staticmethod
     def from_api_keys(api_keys: APIKeys) -> "PrivateCredentials":
         return PrivateCredentials(

@@ -36,11 +36,7 @@ from prediction_market_agent_tooling.markets.polymarket.utils import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import (
-    ZERO_BYTES,
-    private_key_to_public_key,
-    xdai_to_wei,
-)
+from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
 
 
 class FinalizeAndResolveResult(BaseModel):
@@ -52,7 +48,7 @@ class FinalizeAndResolveResult(BaseModel):
 def omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
     private_credentials: PrivateCredentials,
 ) -> FinalizeAndResolveResult:
-    public_key = private_key_to_public_key(private_credentials.private_key)
+    public_key = private_credentials.public_key
     balances_start = get_balances(public_key)
     logger.info(f"{balances_start=}")
 
@@ -136,7 +132,7 @@ def claim_bonds_on_realitio_question(
     question: RealityQuestion,
     auto_withdraw: bool,
 ) -> None:
-    public_key = private_key_to_public_key(private_credentials.private_key)
+    public_key = private_credentials.public_key
     realitio_contract = OmenRealitioContract()
 
     # Get all answers for the question.

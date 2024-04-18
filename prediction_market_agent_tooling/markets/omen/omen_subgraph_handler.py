@@ -431,14 +431,14 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         items = self._parse_items_from_json(result)
         return [OmenUserPosition.model_validate(i) for i in items]
 
-    def get_bets(
+    def get_trades(
         self,
         better_address: ChecksumAddress | None = None,
         start_time: datetime | None = None,
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
-        type_: t.Literal["Buy", "Sell"] | None = "Buy",
+        type_: t.Literal["Buy", "Sell"] | None = None,
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
@@ -465,6 +465,23 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [OmenBet.model_validate(i) for i in items]
+
+    def get_bets(
+        self,
+        better_address: ChecksumAddress | None = None,
+        start_time: datetime | None = None,
+        end_time: t.Optional[datetime] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
+        filter_by_answer_finalized_not_null: bool = False,
+    ) -> list[OmenBet]:
+        return self.get_trades(
+            better_address=better_address,
+            start_time=start_time,
+            end_time=end_time,
+            market_id=market_id,
+            filter_by_answer_finalized_not_null=filter_by_answer_finalized_not_null,
+            type_="Buy",  # We consider `bet` to be only the `Buy` trade types.
+        )
 
     def get_resolved_bets(
         self,

@@ -740,29 +740,28 @@ def redeem_from_all_user_positions(
 
 def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability]:
     history: list[Probability] = []
-    bets = sorted(
-        OmenSubgraphHandler().get_bets(
+    trades = sorted(
+        OmenSubgraphHandler().get_trades(  # We need to look at price both after buying or selling, so get trades, not bets.
             market_id=market.market_maker_contract_address_checksummed,
-            type_=None,  # We need to look at price both after buying or selling.
             end_time=market.close_time,  # Even after market is closed, there can be many `Sell` trades which will converge the probability to the true one.
         ),
         key=lambda x: x.creation_datetime,
     )
 
-    for index, bet in enumerate(bets):
+    for index, trade in enumerate(trades):
         # We need to append the old probability to have also the initial state of the market (before any bet placement).
         history.append(
-            bet.old_probability
-            if bet.outcomeIndex == market.yes_index
-            else Probability(1 - bet.old_probability)
+            trade.old_probability
+            if trade.outcomeIndex == market.yes_index
+            else Probability(1 - trade.old_probability)
         )
 
         # At the last trade, we also need to append the new probability, to have the market latest state.
-        if index == len(bets) - 1:
+        if index == len(trades) - 1:
             history.append(
-                bet.probability
-                if bet.outcomeIndex == market.yes_index
-                else Probability(1 - bet.probability)
+                trade.probability
+                if trade.outcomeIndex == market.yes_index
+                else Probability(1 - trade.probability)
             )
 
     return history

@@ -2,7 +2,7 @@ import typing as t
 
 from google.cloud.functions_v2.types.functions import Function
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
 from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, DatetimeWithTimezone
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
@@ -28,10 +28,11 @@ class DeployedPolymarketAgent(DeployedAgent):
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedPolymarketAgent":
+        private_credentials = PrivateCredentials.from_api_keys(api_keys)
         return DeployedPolymarketAgent(
             name=name,
             start_time=start_time,
-            polymarket_public_key=api_keys.bet_from_address,
+            polymarket_public_key=private_credentials.public_key,
         )
 
     @classmethod

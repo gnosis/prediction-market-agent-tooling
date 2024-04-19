@@ -56,7 +56,7 @@ def test_omen_buy_and_sell_outcome() -> None:
     )  # There will be some fees, so this has to be lower.
     keys = APIKeys()
     private_credentials = PrivateCredentials.from_api_keys(keys)
-    with wait_until_nonce_changed(keys.bet_from_address):
+    with wait_until_nonce_changed(private_credentials.public_key):
         binary_omen_buy_outcome_tx(
             private_credentials=private_credentials,
             amount=buy_amount,
@@ -64,7 +64,7 @@ def test_omen_buy_and_sell_outcome() -> None:
             binary_outcome=True,
             auto_deposit=True,
         )
-    with wait_until_nonce_changed(keys.bet_from_address):
+    with wait_until_nonce_changed(private_credentials.public_key):
         binary_omen_sell_outcome_tx(
             private_credentials=private_credentials,
             amount=sell_amount,
@@ -104,14 +104,14 @@ def test_omen_fund_and_remove_fund_market() -> None:
     remove_fund = xdai_to_wei(xdai_type(0.01))
     keys = APIKeys()
     private_credentials = PrivateCredentials.from_api_keys(keys)
-    with wait_until_nonce_changed(keys.bet_from_address):
+    with wait_until_nonce_changed(private_credentials.public_key):
         omen_fund_market_tx(
             private_credentials=private_credentials,
             market=market,
             funds=funds,
             auto_deposit=True,
         )
-    with wait_until_nonce_changed(keys.bet_from_address):
+    with wait_until_nonce_changed(private_credentials.public_key):
         omen_remove_fund_market_tx(
             private_credentials=private_credentials,
             market=market,

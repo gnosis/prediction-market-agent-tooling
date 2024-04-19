@@ -12,7 +12,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexStr,
     OutcomeStr,
-    PrivateKey,
     Probability,
     Wei,
     wei_type,

@@ -1,6 +1,7 @@
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain_openai import ChatOpenAI
+from pydantic.v1.types import SecretStr as SecretStrV1
 
 from prediction_market_agent_tooling.config import APIKeys
 
@@ -21,7 +22,7 @@ Write only the category itself, nothing else.
         prompt
         | ChatOpenAI(
             model=model,
-            api_key=APIKeys().openai_api_key.get_secret_value(),
+            api_key=SecretStrV1(APIKeys().openai_api_key.get_secret_value()),
         )
         | StrOutputParser()
     )

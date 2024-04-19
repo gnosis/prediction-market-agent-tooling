@@ -2,7 +2,7 @@ import typing as t
 
 from google.cloud.functions_v2.types.functions import Function
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
 from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, DatetimeWithTimezone
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
@@ -49,7 +49,8 @@ class DeployedOmenAgent(DeployedAgent):
             and api_keys.BET_FROM_PRIVATE_KEY
             != APIKeys().BET_FROM_PRIVATE_KEY  # Check that it didn't get if from the default env.
         ):
-            env_vars["omen_public_key"] = api_keys.bet_from_address
+            private_credentials = PrivateCredentials.from_api_keys(api_keys)
+            env_vars["omen_public_key"] = private_credentials.public_key
         return super().from_env_vars_without_prefix(
             env_vars=env_vars, extra_vars=extra_vars
         )
@@ -60,10 +61,11 @@ class DeployedOmenAgent(DeployedAgent):
         start_time: DatetimeWithTimezone,
         api_keys: APIKeys,
     ) -> "DeployedOmenAgent":
+        private_credentials = PrivateCredentials.from_api_keys(api_keys)
         return DeployedOmenAgent(
             name=name,
             start_time=start_time,
-            omen_public_key=api_keys.bet_from_address,
+            omen_public_key=private_credentials.public_key,
         )
 
     @classmethod

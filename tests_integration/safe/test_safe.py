@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
@@ -17,6 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.safe import create_safe
 from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 from tests_integration.conftest import local_web3_at_block
+from tests_integration.local_chain_utils import fork_reset_state
 
 
 def test_create_safe(
@@ -48,12 +51,22 @@ def print_current_block(web3: Web3) -> None:
 
 def test_send_function_on_contract_tx_using_safe(
     request: pytest.FixtureRequest,
+    local_web3: Web3,
     test_credentials: PrivateCredentials,
 ) -> None:
+    web3 = local_web3
+    RPC_URL = os.getenv("GNOSIS_RPC_URL")
     historical_block = 33527254
-    port = 8546
-    web3 = local_web3_at_block(request, historical_block, port)
-    local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
+    # port = 8546
+    # web3 = local_web3_at_block(request, historical_block, port)
+    fork_reset_state(
+        web3,
+        url=RPC_URL,
+        block=historical_block,
+    )
+    print_current_block(web3)
+    # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
+    local_ethereum_client = EthereumClient()
     print(f"is connected {web3.is_connected()} {web3.provider}")
     # local_ethereum_client = EthereumClient(URI(RPC_URL))
     print_current_block(web3)

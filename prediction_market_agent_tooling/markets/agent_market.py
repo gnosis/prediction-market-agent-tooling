@@ -46,7 +46,7 @@ class AgentMarket(BaseModel):
     resolution: Resolution | None
     created_time: datetime | None
     close_time: datetime | None
-    p_yes: Probability
+    current_p_yes: Probability
     url: str
     volume: float | None  # Should be in currency of `currency` above.
 
@@ -58,8 +58,8 @@ class AgentMarket(BaseModel):
     )
 
     @property
-    def p_no(self) -> Probability:
-        return Probability(1 - self.p_yes)
+    def current_p_no(self) -> Probability:
+        return Probability(1 - self.current_p_yes)
 
     @property
     def yes_outcome_price(self) -> float:
@@ -67,7 +67,7 @@ class AgentMarket(BaseModel):
         Price at prediction market is equal to the probability of given outcome.
         Keep as an extra property, in case it wouldn't be true for some prediction market platform.
         """
-        return self.p_yes
+        return self.current_p_yes
 
     @property
     def no_outcome_price(self) -> float:
@@ -75,7 +75,7 @@ class AgentMarket(BaseModel):
         Price at prediction market is equal to the probability of given outcome.
         Keep as an extra property, in case it wouldn't be true for some prediction market platform.
         """
-        return self.p_no
+        return self.current_p_no
 
     @property
     def probable_resolution(self) -> Resolution:
@@ -85,7 +85,7 @@ class AgentMarket(BaseModel):
             else:
                 raise ValueError(f"Unknown resolution: {self.resolution}")
         else:
-            return Resolution.YES if self.p_yes > 0.5 else Resolution.NO
+            return Resolution.YES if self.current_p_yes > 0.5 else Resolution.NO
 
     @property
     def boolean_outcome(self) -> bool:
@@ -95,6 +95,20 @@ class AgentMarket(BaseModel):
             elif self.resolution == Resolution.NO:
                 return False
         should_not_happen(f"Market {self.id} does not have a successful resolution.")
+
+    def get_last_trade_p_yes(self) -> Probability | None:
+        """
+        Get the last trade price for the YES outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
+        Could be None if no trades were made.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def get_last_trade_p_no(self) -> Probability | None:
+        """
+        Get the last trade price for the NO outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
+        Could be None if no trades were made.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
 
     def get_bet_amount(self, amount: float) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
@@ -147,9 +161,6 @@ class AgentMarket(BaseModel):
             return self.outcomes.index(outcome)
         except ValueError:
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
-
-    def get_squared_error(self) -> float:
-        return (self.p_yes - self.boolean_outcome) ** 2
 
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         raise NotImplementedError("Subclasses must implement this method")

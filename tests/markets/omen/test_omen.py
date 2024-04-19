@@ -8,7 +8,11 @@ from loguru import logger
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, xdai_type
+from prediction_market_agent_tooling.gtypes import (
+    DatetimeWithTimezone,
+    OutcomeStr,
+    xdai_type,
+)
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.omen import (
@@ -260,6 +264,6 @@ def test_get_positions_1() -> None:
         if token_balance.amount == 0:
             # The user has no position in this outcome
             continue
-        assert token_balance.amount == position.amounts[outcome_str].amount
+        assert token_balance.amount == position.amounts[OutcomeStr(outcome_str)].amount
 
     print(position)  # For extra test coverage

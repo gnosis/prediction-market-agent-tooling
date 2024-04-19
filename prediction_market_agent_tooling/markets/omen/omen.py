@@ -233,8 +233,10 @@ class OmenAgentMarket(AgentMarket):
     def index_set_to_outcome_index(cls, index_set: int) -> int:
         return index_set - 1
 
-    def index_set_to_outcome_str(cls, index_set: int) -> str:
-        return cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
+    def index_set_to_outcome_str(cls, index_set: int) -> OutcomeStr:
+        return OutcomeStr(
+            cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
+        )
 
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         index_set = self.get_index_set(outcome)

@@ -99,20 +99,20 @@ def test_send_function_on_contract_tx_using_safe(
     omen_agent_market = OmenAgentMarket.from_data_model(omen_market)
     amount = TokenAmount(amount=5, currency=Currency.xDai)
     initial_yes_token_balance = omen_agent_market.get_token_balance(
-        safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
+        safe.address, OMEN_TRUE_OUTCOME, web3=web3
     )
     print_current_block(web3)
+    mine_block(web3)
+    print_current_block(web3)
     logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
-    bet_tx_hash = omen_agent_market.place_bet(
-        True, amount, web3=local_ethereum_client.w3
-    )
+    bet_tx_hash = omen_agent_market.place_bet(True, amount, web3=web3)
     print_current_block(web3)
     mine_block(web3)
     print_current_block(web3)
     logger.debug(f"placed bet tx hash {bet_tx_hash}")
 
     final_yes_token_balance = omen_agent_market.get_token_balance(
-        safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
+        safe.address, OMEN_TRUE_OUTCOME, web3=web3
     )
     logger.debug(f"final Yes token balance {final_yes_token_balance}")
     print_current_block(web3)

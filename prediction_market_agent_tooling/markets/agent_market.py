@@ -154,7 +154,8 @@ class AgentMarket(BaseModel):
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def get_positions(self, user_id: str) -> list[Position]:
+    @classmethod
+    def get_positions(cls, user_id: str) -> list[Position]:
         """
         Get all non-zero positions a user has in any market.
         """

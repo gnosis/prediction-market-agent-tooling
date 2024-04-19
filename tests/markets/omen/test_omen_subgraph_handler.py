@@ -144,7 +144,7 @@ def test_get_user_positions_1(
     agent0_address: str, omen_subgraph_handler: OmenSubgraphHandler
 ) -> None:
     user_positions = omen_subgraph_handler.get_user_positions(
-        better_address=agent0_address
+        better_address=Web3.to_checksum_address(agent0_address)
     )
     # Assert 3 conditionIds are included
     expected_condition_ids = [

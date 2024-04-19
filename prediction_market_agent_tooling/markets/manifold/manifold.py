@@ -31,6 +31,14 @@ class ManifoldAgentMarket(AgentMarket):
     currency: t.ClassVar[Currency] = Currency.Mana
     base_url: t.ClassVar[str] = MANIFOLD_BASE_URL
 
+    def get_last_trade_p_yes(self) -> Probability:
+        """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
+        return self.current_p_yes
+
+    def get_last_trade_p_no(self) -> Probability:
+        """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
+        return self.current_p_no
+
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=1, currency=self.currency)
 
@@ -57,7 +65,7 @@ class ManifoldAgentMarket(AgentMarket):
             resolution=model.resolution,
             created_time=model.createdTime,
             close_time=model.closeTime,
-            p_yes=Probability(model.probability),
+            current_p_yes=model.probability,
             url=model.url,
             volume=model.volume,
         )

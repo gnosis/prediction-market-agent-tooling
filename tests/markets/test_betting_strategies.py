@@ -82,6 +82,8 @@ def omen_market() -> OmenMarket:
         ),
         liquidityParameter=Wei(10),
         creationTimestamp=int(utcnow().timestamp()),
+        lastActiveDay=42,
+        lastActiveHour=42,
     )
 
 
@@ -104,7 +106,7 @@ def test_minimum_bet_to_win(
             question="question",
             creator=GANACHE_ADDRESS_NR_1,
             outcomes=["Yes", "No"],
-            p_yes=market_p_yes,
+            current_p_yes=market_p_yes,
             collateral_token_contract_address_checksummed=OmenCollateralTokenContract().address,
             market_maker_contract_address_checksummed=Web3.to_checksum_address(
                 "0xf3318C420e5e30C12786C4001D600e9EE1A7eBb1"
@@ -141,7 +143,7 @@ def test_minimum_bet_to_win_manifold(
         id="id",
         question="question",
         outcomes=["Yes", "No"],
-        p_yes=market_p_yes,
+        current_p_yes=market_p_yes,
         created_time=utcnow() - timedelta(days=1),
         close_time=utcnow(),
         resolution=None,

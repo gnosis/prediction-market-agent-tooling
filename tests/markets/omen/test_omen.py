@@ -2,12 +2,17 @@ from datetime import timedelta
 
 import numpy as np
 import pytest
+from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from loguru import logger
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, xdai_type
+from prediction_market_agent_tooling.gtypes import (
+    DatetimeWithTimezone,
+    OutcomeStr,
+    xdai_type,
+)
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.omen import (
@@ -225,3 +230,40 @@ def test_balance_for_user_in_market() -> None:
     )
     assert balance_no.currency == Currency.xDai
     assert float(balance_no.amount) == 0
+
+
+def test_get_positions_0() -> None:
+    """
+    Create a new account and verify that there are no positions for the account
+    """
+    user_id = Account.create().address
+    positions = OmenAgentMarket.get_positions(user_id=user_id)
+    assert len(positions) == 0
+
+
+def test_get_positions_1() -> None:
+    """
+    Check the user's positions against 'market.get_token_balance'
+    """
+    # Pick a user that has active positions
+    user_address = Web3.to_checksum_address(
+        "0x2DD9f5678484C1F59F97eD334725858b938B4102"
+    )
+    positions = OmenAgentMarket.get_positions(user_id=user_address)
+    assert len(positions)
+
+    # Pick a single position to test, otherwise it can be very slow
+    position = positions[0]
+
+    market = OmenAgentMarket.get_binary_market(position.market_id)
+    for outcome_str in market.outcomes:
+        token_balance = market.get_token_balance(
+            user_id=user_address,
+            outcome=outcome_str,
+        )
+        if token_balance.amount == 0:
+            # The user has no position in this outcome
+            continue
+        assert token_balance.amount == position.amounts[OutcomeStr(outcome_str)].amount
+
+    print(position)  # For extra test coverage

@@ -1,3 +1,4 @@
+import sys
 import typing as t
 from datetime import datetime
 
@@ -10,6 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexStr,
+    OutcomeStr,
     PrivateKey,
     Wei,
     wei_type,
@@ -24,6 +26,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
+    Position,
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -33,6 +36,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     Condition,
     OmenBet,
     OmenMarket,
+    OmenUserPosition,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
@@ -48,6 +52,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -57,7 +62,6 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     xdai_to_wei,
 )
 
-MAX_NUMBER_OF_MARKETS_FOR_SUBGRAPH_RETRIEVAL = 1000
 OMEN_DEFAULT_REALITIO_BOND_VALUE = xdai_type(0.01)
 
 
@@ -226,6 +230,14 @@ class OmenAgentMarket(AgentMarket):
     def get_index_set(self, outcome: str) -> int:
         return self.get_outcome_index(outcome) + 1
 
+    def index_set_to_outcome_index(cls, index_set: int) -> int:
+        return index_set - 1
+
+    def index_set_to_outcome_str(cls, index_set: int) -> OutcomeStr:
+        return OutcomeStr(
+            cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
+        )
+
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         index_set = self.get_index_set(outcome)
         balances = get_conditional_tokens_balance_for_market(
@@ -235,6 +247,56 @@ class OmenAgentMarket(AgentMarket):
             amount=wei_to_xdai(balances[index_set]),
             currency=Currency.xDai,
         )
+
+    @classmethod
+    def get_positions(cls, user_id: str) -> list[Position]:
+        sgh = OmenSubgraphHandler()
+        omen_positions = sgh.get_user_positions(
+            better_address=Web3.to_checksum_address(user_id),
+            total_balance_bigger_than=wei_type(0),
+        )
+
+        # Sort positions and corresponding markets by condition_id
+        omen_positions_dict: dict[HexBytes, list[OmenUserPosition]] = {}
+        for omen_position in omen_positions:
+            condition_id = omen_position.position.condition_id
+            omen_positions_dict.setdefault(condition_id, []).append(omen_position)
+
+        omen_markets: dict[HexBytes, OmenMarket] = {
+            m.condition.id: m
+            for m in sgh.get_omen_binary_markets(
+                limit=sys.maxsize,
+                condition_id_in=list(omen_positions_dict.keys()),
+            )
+        }
+        if len(omen_markets) != len(omen_positions_dict):
+            raise ValueError(
+                f"Number of condition ids for markets {len(omen_markets)} and positions {len(omen_positions_dict)} are not equal."
+            )
+
+        positions = []
+        for condition_id, omen_positions in omen_positions_dict.items():
+            market = cls.from_data_model(omen_markets[condition_id])
+            amounts: dict[OutcomeStr, TokenAmount] = {}
+            for omen_position in omen_positions:
+                outecome_str = market.index_set_to_outcome_str(
+                    omen_position.position.index_set
+                )
+
+                # Validate that outcomes are unique for a given condition_id.
+                if outecome_str in amounts:
+                    raise ValueError(
+                        f"Outcome {outecome_str} already exists in {amounts=}"
+                    )
+
+                amounts[outecome_str] = TokenAmount(
+                    amount=wei_to_xdai(omen_position.totalBalance),
+                    currency=Currency.xDai,
+                )
+
+            positions.append(Position(market_id=market.id, amounts=amounts))
+
+        return positions
 
 
 def pick_binary_market(
@@ -672,12 +734,7 @@ def redeem_from_all_user_positions(
     )
 
     for index, user_position in enumerate(user_positions):
-        # I didn't find any example where this wouldn't hold, but keeping this double-check here in case something changes in the future.
-        if len(user_position.position.conditionIds) != 1:
-            raise ValueError(
-                f"Bug in the logic, please investigate why zero or multiple conditions are returned for {user_position.id=}"
-            )
-        condition_id = user_position.position.conditionIds[0]
+        condition_id = user_position.position.condition_id
 
         if not conditional_token_contract.is_condition_resolved(condition_id):
             logger.info(

@@ -8,6 +8,7 @@ from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
+    Position,
     Resolution,
     TokenAmount,
 )
@@ -162,4 +163,10 @@ class AgentMarket(BaseModel):
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
 
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def get_positions(self, user_id: str) -> list[Position]:
+        """
+        Get all non-zero positions a user has in any market.
+        """
         raise NotImplementedError("Subclasses must implement this method")

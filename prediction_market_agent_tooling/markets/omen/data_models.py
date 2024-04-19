@@ -93,6 +93,24 @@ class OmenPosition(BaseModel):
     indexSets: list[int]
 
     @property
+    def condition_id(self) -> HexBytes:
+        # I didn't find any example where this wouldn't hold, but keeping this double-check here in case something changes in the future.
+        # May be the case if the market is created with multiple oracles.
+        if len(self.conditionIds) != 1:
+            raise ValueError(
+                f"Bug in the logic, please investigate why zero or multiple conditions are returned for position {self.id=}"
+            )
+        return self.conditionIds[0]
+
+    @property
+    def index_set(self) -> int:
+        if len(self.indexSets) != 1:
+            raise ValueError(
+                f"Bug in the logic, please investigate why zero or multiple index sets are returned for position {self.id=}"
+            )
+        return self.indexSets[0]
+
+    @property
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:
         return Web3.to_checksum_address(self.collateralTokenAddress)
 

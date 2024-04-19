@@ -21,7 +21,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
     ResolvedBet,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    should_not_happen,
+)
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 OMEN_TRUE_OUTCOME = "Yes"
@@ -90,6 +93,24 @@ class OmenPosition(BaseModel):
     indexSets: list[int]
 
     @property
+    def condition_id(self) -> HexBytes:
+        # I didn't find any example where this wouldn't hold, but keeping this double-check here in case something changes in the future.
+        # May be the case if the market is created with multiple oracles.
+        if len(self.conditionIds) != 1:
+            raise ValueError(
+                f"Bug in the logic, please investigate why zero or multiple conditions are returned for position {self.id=}"
+            )
+        return self.conditionIds[0]
+
+    @property
+    def index_set(self) -> int:
+        if len(self.indexSets) != 1:
+            raise ValueError(
+                f"Bug in the logic, please investigate why zero or multiple index sets are returned for position {self.id=}"
+            )
+        return self.indexSets[0]
+
+    @property
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:
         return Web3.to_checksum_address(self.collateralTokenAddress)
 
@@ -136,6 +157,8 @@ class OmenMarket(BaseModel):
     creationTimestamp: int
     condition: Condition
     question: Question
+    lastActiveDay: int
+    lastActiveHour: int
 
     @property
     def openingTimestamp(self) -> int:
@@ -223,11 +246,19 @@ class OmenMarket(BaseModel):
         )
 
     @property
-    def p_no(self) -> Probability:
-        return Probability(1 - self.p_yes)
+    def yes_index(self) -> int:
+        return self.outcomes.index(OMEN_TRUE_OUTCOME)
 
     @property
-    def p_yes(self) -> Probability:
+    def no_index(self) -> int:
+        return self.outcomes.index(OMEN_FALSE_OUTCOME)
+
+    @property
+    def current_p_no(self) -> Probability:
+        return Probability(1 - self.current_p_yes)
+
+    @property
+    def current_p_yes(self) -> Probability:
         """
         Calculate the probability of the outcomes from the relative token amounts.
 
@@ -239,21 +270,29 @@ class OmenMarket(BaseModel):
         the the lower the price of that token, and therefore the lower the
         probability of that outcome.
         """
-        if self.outcomeTokenAmounts is None:
-            raise ValueError(
-                f"Market with title {self.title} has no outcomeTokenAmounts."
-            )
         if len(self.outcomeTokenAmounts) != 2:
             raise ValueError(
                 f"Market with title {self.title} has {len(self.outcomeTokenAmounts)} outcomes."
             )
-        true_index = self.outcomes.index(OMEN_TRUE_OUTCOME)
 
         if sum(self.outcomeTokenAmounts) == 0:
-            return Probability(0.5)
+            # If there are no outcome tokens, it should mean that market is closed and without liquidity, so we need to infer the probabilities based on the answer.
+            return (
+                Probability(1.0)
+                if self.yes_index == self.answer_index
+                else (
+                    Probability(0.0)
+                    if self.no_index == self.answer_index
+                    else (
+                        Probability(0.5)
+                        if not self.has_valid_answer  # Invalid market or closed market without resolution.
+                        else should_not_happen("Unknown condition.")
+                    )
+                )
+            )
 
         return Probability(
-            1 - self.outcomeTokenAmounts[true_index] / sum(self.outcomeTokenAmounts)
+            1 - self.outcomeTokenAmounts[self.yes_index] / sum(self.outcomeTokenAmounts)
         )
 
     def __repr__(self) -> str:
@@ -316,6 +355,16 @@ class OmenBet(BaseModel):
     @property
     def boolean_outcome(self) -> bool:
         return get_boolean_outcome(self.fpmm.outcomes[self.outcomeIndex])
+
+    @property
+    def old_probability(self) -> Probability:
+        # Old marginal price is the probability of the outcome before placing this bet.
+        return Probability(float(self.oldOutcomeTokenMarginalPrice))
+
+    @property
+    def probability(self) -> Probability:
+        # Marginal price is the probability of the outcome after placing this bet.
+        return Probability(float(self.outcomeTokenMarginalPrice))
 
     def get_profit(self) -> ProfitAmount:
         bet_amount_xdai = wei_to_xdai(self.collateralAmount)

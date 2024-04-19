@@ -2,7 +2,9 @@ import sys
 import typing as t
 from datetime import datetime
 
+import tenacity
 from eth_typing import ChecksumAddress
+from loguru import logger
 from subgrounds import FieldPath, Subgrounds
 
 from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
@@ -39,6 +41,14 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def __init__(self) -> None:
         self.sg = Subgrounds()
+
+        # Patch the query_json method to retry on failure.
+        self.sg.query_json = tenacity.retry(
+            stop=tenacity.stop_after_attempt(3),
+            wait=tenacity.wait_fixed(1),
+            after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
+        )(self.sg.query_json)
+
         # Load the subgraph
         self.trades_subgraph = self.sg.load_subgraph(self.OMEN_TRADES_SUBGRAPH)
         self.conditional_tokens_subgraph = self.sg.load_subgraph(
@@ -121,6 +131,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             markets_field.outcomes,
             markets_field.outcomeTokenAmounts,
             markets_field.outcomeTokenMarginalPrices,
+            markets_field.lastActiveDay,
+            markets_field.lastActiveHour,
             markets_field.fee,
             markets_field.answerFinalizedTimestamp,
             markets_field.resolutionTimestamp,
@@ -419,26 +431,30 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         items = self._parse_items_from_json(result)
         return [OmenUserPosition.model_validate(i) for i in items]
 
-    def get_bets(
+    def get_trades(
         self,
-        better_address: ChecksumAddress,
-        start_time: datetime,
+        better_address: ChecksumAddress | None = None,
+        start_time: datetime | None = None,
         end_time: t.Optional[datetime] = None,
-        market_id: t.Optional[str] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
+        type_: t.Literal["Buy", "Sell"] | None = None,
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
 
         trade = self.trades_subgraph.FpmmTrade
-        where_stms = [
-            trade.type == "Buy",
-            trade.creator == better_address.lower(),
-            trade.creationTimestamp >= to_int_timestamp(start_time),
-            trade.creationTimestamp <= to_int_timestamp(end_time),
-        ]
+        where_stms = []
+        if start_time:
+            where_stms.append(trade.creationTimestamp >= to_int_timestamp(start_time))
+        if end_time:
+            where_stms.append(trade.creationTimestamp <= to_int_timestamp(end_time))
+        if type_:
+            where_stms.append(trade.type == type_)
+        if better_address:
+            where_stms.append(trade.creator == better_address.lower())
         if market_id:
-            where_stms.append(trade.fpmm == market_id)
+            where_stms.append(trade.fpmm == market_id.lower())
         if filter_by_answer_finalized_not_null:
             where_stms.append(trade.fpmm.answerFinalizedTimestamp != None)
 
@@ -450,12 +466,29 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         items = self._parse_items_from_json(result)
         return [OmenBet.model_validate(i) for i in items]
 
+    def get_bets(
+        self,
+        better_address: ChecksumAddress | None = None,
+        start_time: datetime | None = None,
+        end_time: t.Optional[datetime] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
+        filter_by_answer_finalized_not_null: bool = False,
+    ) -> list[OmenBet]:
+        return self.get_trades(
+            better_address=better_address,
+            start_time=start_time,
+            end_time=end_time,
+            market_id=market_id,
+            filter_by_answer_finalized_not_null=filter_by_answer_finalized_not_null,
+            type_="Buy",  # We consider `bet` to be only the `Buy` trade types.
+        )
+
     def get_resolved_bets(
         self,
         better_address: ChecksumAddress,
         start_time: datetime,
         end_time: t.Optional[datetime] = None,
-        market_id: t.Optional[str] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         omen_bets = self.get_bets(
             better_address=better_address,
@@ -471,7 +504,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         better_address: ChecksumAddress,
         start_time: datetime,
         end_time: t.Optional[datetime] = None,
-        market_id: t.Optional[str] = None,
+        market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         bets = self.get_resolved_bets(
             better_address=better_address,

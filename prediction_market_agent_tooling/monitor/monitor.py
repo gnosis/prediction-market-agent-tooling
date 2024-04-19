@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
+from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
     add_utc_timezone_validator,
@@ -259,15 +260,31 @@ def monitor_brier_score(resolved_markets: t.Sequence[AgentMarket]) -> None:
     """
     st.subheader("Brier Score (0-1, lower is better)")
 
-    markets_to_squared_error = {
-        m.created_time: m.get_squared_error() for m in resolved_markets
-    }
+    # We need to use `get_last_trade_p_yes` instead of `current_p_yes` because, for resolved markets, the probabilities can be fixed to 0 and 1 (for example, on Omen).
+    # And for the brier score, we need the true market prediction, not its resolution after the outcome is known.
+    # If no trades were made, take it as 0.5 because the platform didn't provide any valuable information.
+    created_time_and_squared_errors = par_map(
+        list(resolved_markets),
+        lambda m: (
+            m.created_time,
+            (
+                (p_yes - m.boolean_outcome) ** 2
+                if (p_yes := m.get_last_trade_p_yes()) is not None
+                else None
+            ),
+        ),
+    )
+    created_time_and_squared_errors_with_trades = [
+        x for x in created_time_and_squared_errors if x[1] is not None
+    ]
     df = pd.DataFrame(
-        markets_to_squared_error.items(), columns=["Date", "Squared Error"]
+        created_time_and_squared_errors_with_trades, columns=["Date", "Squared Error"]
     ).sort_values(by="Date")
 
     # Compute rolling mean squared error for last 30 markets
     df["Rolling Mean Squared Error"] = df["Squared Error"].rolling(window=30).mean()
+
+    st.write(f"Based on {len(df)} markets with at least one trade.")
 
     col1, col2 = st.columns(2)
     col1.metric(label="Overall", value=f"{df['Squared Error'].mean():.3f}")
@@ -293,27 +310,14 @@ def monitor_market_outcome_bias(
     st.subheader("Market Outcome Bias")
 
     date_to_open_yes_proportion = {
-        d: np.mean([int(m.p_yes > 0.5) for m in markets])
+        d: np.mean([int(m.current_p_yes > 0.5) for m in markets])
         for d, markets in groupby(
             open_markets,
             lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
         )
     }
     date_to_resolved_yes_proportion = {
-        d: np.mean(
-            [
-                (
-                    1
-                    if m.resolution == Resolution.YES
-                    else (
-                        0
-                        if m.resolution == Resolution.NO
-                        else should_not_happen(f"Unexpected resolution: {m.resolution}")
-                    )
-                )
-                for m in markets
-            ]
-        )
+        d: np.mean([int(m.boolean_outcome) for m in markets])
         for d, markets in groupby(
             resolved_markets,
             lambda x: check_not_none(x.created_time, "Only markets with created time can be used here.").date(),  # type: ignore # Bug, it says `Never has no attribute "date"  [attr-defined]` with Mypy, but in VSCode it works correctly.
@@ -349,7 +353,9 @@ def monitor_market_outcome_bias(
             use_container_width=True,
         )
 
-    all_open_markets_yes_mean = np.mean([int(m.p_yes > 0.5) for m in open_markets])
+    all_open_markets_yes_mean = np.mean(
+        [int(m.current_p_yes > 0.5) for m in open_markets]
+    )
     all_resolved_markets_yes_mean = np.mean(
         [
             (

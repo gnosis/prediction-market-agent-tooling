@@ -46,10 +46,6 @@ class APIKeys(BaseSettings):
         )
 
     @property
-    def bet_from_address(self) -> ChecksumAddress:
-        return private_key_to_public_key(self.bet_from_private_key)
-
-    @property
     def bet_from_private_key(self) -> PrivateKey:
         return check_not_none(
             self.BET_FROM_PRIVATE_KEY,

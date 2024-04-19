@@ -41,14 +41,14 @@ class DeployableReplicateToOmenAgent(DeployableAgent):
         settings = ReplicateSettings()
 
         logger.info(
-            f"Finalising, resolving and claiming back xDai from existing markets replicated by {keys.bet_from_address}."
+            f"Finalising, resolving and claiming back xDai from existing markets replicated by {private_credentials.public_key}."
         )
         omen_finalize_and_resolve_and_claim_back_all_markets_based_on_others_tx(
             private_credentials=private_credentials
         )
 
         logger.info(
-            f"Unfunding soon to be known markets replicated by {keys.bet_from_address}."
+            f"Unfunding soon to be known markets replicated by {private_credentials.public_key}."
         )
         omen_unfund_replicated_known_markets_tx(
             private_credentials, saturation_above_threshold=0.9

@@ -10,6 +10,8 @@ from web3.types import TxReceipt
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import xdai_type, xDai
 from prediction_market_agent_tooling.markets.data_models import TokenAmount, Currency
+from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
+from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,

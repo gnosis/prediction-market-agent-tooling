@@ -42,21 +42,30 @@ def create_test_safe(ethereum_client: EthereumClient, deployer: LocalAccount):
     return deployed_safe
 
 
+def print_current_block(web3: Web3) -> None:
+    logger.debug(f"current block {web3.eth.block_number}")
+
+
 def test_send_function_on_contract_tx_using_safe(
     request: pytest.FixtureRequest,
     test_credentials: PrivateCredentials,
 ) -> None:
-    RPC_URL = "https://rpc.tenderly.co/fork/5efbc1e0-8b54-4497-b200-8a2fb5470f6e"
-    # historical_block = 33527254
-    # port = 8546
-    # local_web3_at_block(request, historical_block, port)
-    # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
-    local_ethereum_client = EthereumClient(URI(RPC_URL))
+    historical_block = 33527254
+    port = 8546
+    web3 = local_web3_at_block(request, historical_block, port)
+    local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
+    print(f"is connected {web3.is_connected()} {web3.provider}")
+    # local_ethereum_client = EthereumClient(URI(RPC_URL))
+    print_current_block(web3)
+    logger.debug(
+        f"provider {web3.provider.endpoint_uri} connected {web3.is_connected()}"
+    )
 
     # Deploy safe
     account = Account.from_key(test_credentials.private_key.get_secret_value())
     safe = create_test_safe(local_ethereum_client, account)
     # Fund safe if needed
+    print_current_block(web3)
     initial_safe_balance = local_ethereum_client.get_balance(safe.address)
     if initial_safe_balance < xdai_to_wei(10):
         send_xdai_to(
@@ -66,6 +75,7 @@ def test_send_function_on_contract_tx_using_safe(
             xdai_to_wei(10),
         )
 
+    print_current_block(web3)
     safe_balance = local_ethereum_client.get_balance(safe.address)
     logger.debug(f"safe balance {safe_balance} xDai")
     # Bet on Omen market
@@ -77,13 +87,16 @@ def test_send_function_on_contract_tx_using_safe(
     initial_yes_token_balance = omen_agent_market.get_token_balance(
         safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
     )
+    print_current_block(web3)
     logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
     bet_tx_hash = omen_agent_market.place_bet(
         True, amount, web3=local_ethereum_client.w3
     )
+    print_current_block(web3)
     logger.debug(f"placed bet tx hash {bet_tx_hash}")
     final_yes_token_balance = omen_agent_market.get_token_balance(
         safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
     )
     logger.debug(f"final Yes token balance {final_yes_token_balance}")
+    print_current_block(web3)
     assert initial_yes_token_balance.amount < final_yes_token_balance.amount

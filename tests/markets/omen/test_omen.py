@@ -235,7 +235,6 @@ def test_balance_for_user_in_market() -> None:
     assert float(balance_no.amount) == 0
 
 
-
 def test_get_binary_market_p_yes_history() -> None:
     market = OmenSubgraphHandler().get_omen_market_by_market_id(
         HexAddress(HexStr("0x934b9f379dd9d8850e468df707d58711da2966cd"))

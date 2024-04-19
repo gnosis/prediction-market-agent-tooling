@@ -9,7 +9,7 @@ from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
-from prediction_market_agent_tooling.markets.data_models import TokenAmount, Currency
+from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -18,12 +18,12 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
-    omen_create_market_tx,
-    omen_redeem_full_position_tx,
-    pick_binary_market,
-    omen_fund_market_tx,
-    omen_remove_fund_market_tx,
     binary_omen_sell_outcome_tx,
+    omen_create_market_tx,
+    omen_fund_market_tx,
+    omen_redeem_full_position_tx,
+    omen_remove_fund_market_tx,
+    pick_binary_market,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,

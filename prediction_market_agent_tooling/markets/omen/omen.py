@@ -433,7 +433,7 @@ def omen_sell_outcome_tx(
     market: OmenAgentMarket,
     outcome: str,
     auto_withdraw: bool,
-    web3: Web3 | None,
+    web3: Web3 | None = None,
 ) -> TxReceipt:
     """
     Sells the given xDai value of shares corresponding to the given outcome in
@@ -653,7 +653,7 @@ def omen_redeem_full_position_tx(
     private_credentials: PrivateCredentials,
     market: OmenAgentMarket,
     web3: Web3 | None = None,
-) -> None:
+) -> TxReceipt | None:
     """
     Redeems position from a given Omen market. Note that we check if there is a balance
     to be redeemed before sending the transaction.
@@ -674,7 +674,7 @@ def omen_redeem_full_position_tx(
 
     if not market.is_resolved():
         logger.debug("Cannot redeem winnings if market is not yet resolved. Exiting.")
-        return
+        return None
 
     amount_per_index = get_conditional_tokens_balance_for_market(
         market, from_address, web3
@@ -682,11 +682,11 @@ def omen_redeem_full_position_tx(
     amount_wei = sum(amount_per_index.values())
     if amount_wei == 0:
         logger.debug("No balance to claim. Exiting.")
-        return
+        return None
 
     if not conditional_token_contract.is_condition_resolved(market.condition.id):
         logger.debug("Market not yet resolved, not possible to claim")
-        return
+        return None
 
     return conditional_token_contract.redeemPositions(
         private_credentials=private_credentials,
@@ -734,7 +734,7 @@ def omen_remove_fund_market_tx(
     market: OmenAgentMarket,
     shares: Wei | None,
     web3: Web3 | None = None,
-) -> TxReceipt:
+) -> TxReceipt | None:
     """
     Removes funding from a given OmenMarket (moving the funds from the OmenMarket to the
     ConditionalTokens contract), and finally calls the `mergePositions` method which transfers collateralToken from the ConditionalTokens contract to the address corresponding to `from_private_key`.
@@ -750,7 +750,7 @@ def omen_remove_fund_market_tx(
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
         logger.info("No shares to remove.")
-        return
+        return None
 
     if shares is None or shares > total_shares:
         logger.debug(

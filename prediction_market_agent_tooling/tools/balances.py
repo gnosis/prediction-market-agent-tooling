@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
@@ -6,7 +7,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
-from web3 import Web3
 
 
 class Balances(BaseModel):

@@ -4,14 +4,10 @@ import pytest
 from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
+from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from pydantic import SecretStr
 from web3 import Web3
 
-from local_chain_utils import (
-    LocalNode,
-    _local_node,
-    get_anvil_test_accounts,
-)
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import PrivateKey
 from prediction_market_agent_tooling.tools.utils import check_not_none

@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
+from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     Arbitrator,
     OmenRealitioContract,

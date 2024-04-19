@@ -65,6 +65,14 @@ class DeployableCoinFlipAgent(DeployableAgent):
 DeployableCoinFlipAgent().deploy_gcp(...)
 ```
 
+For deploying a Safe manually for a given agent, run the script below:
+
+```commandline
+poetry run python scripts/create_safe_for_agent.py  --from-private-key <YOUR_AGENT_PRIVATE_KEY> --salt-nonce 42
+```
+This will output the newly created Safe in the terminal, and it can then be copied over to the deployment part (e.g. Terraform).
+Note that `salt_nonce` can be passed so that the created safe is deterministically created for each agent, so that, if the same `salt_nonce` is used, the script will not create a new Safe for the agent, instead it will output the previously existent Safe.
+
 ## Monitoring
 
 Monitor the performance of the agents deployed to GCP, as well as meta-metrics of the prediction market platforms they are deployed to.

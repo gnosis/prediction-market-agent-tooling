@@ -1,5 +1,6 @@
 import typing as t
 
+from pydantic import BaseModel
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,6 +24,7 @@ class APIKeys(BaseSettings):
 
     MANIFOLD_API_KEY: t.Optional[SecretStr] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
+    SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
@@ -42,10 +44,6 @@ class APIKeys(BaseSettings):
         return check_not_none(
             self.MANIFOLD_API_KEY, "MANIFOLD_API_KEY missing in the environment."
         )
-
-    @property
-    def bet_from_address(self) -> ChecksumAddress:
-        return private_key_to_public_key(self.bet_from_private_key)
 
     @property
     def bet_from_private_key(self) -> PrivateKey:
@@ -87,3 +85,28 @@ class APIKeys(BaseSettings):
             for k, v in self.model_dump().items()
             if APIKeys.model_fields[k].annotation in SECRET_TYPES and v is not None
         }
+
+
+class PrivateCredentials(BaseModel):
+    private_key: PrivateKey
+    safe_address: ChecksumAddress | None
+
+    @property
+    def public_key(self) -> ChecksumAddress:
+        """If the SAFE is available, we always route transactions via SAFE. Otherwise we use the EOA."""
+        return (
+            self.safe_address
+            if self.safe_address is not None
+            else private_key_to_public_key(self.private_key)
+        )
+
+    @property
+    def has_safe_address(self) -> bool:
+        return self.safe_address is not None
+
+    @staticmethod
+    def from_api_keys(api_keys: APIKeys) -> "PrivateCredentials":
+        return PrivateCredentials(
+            private_key=api_keys.bet_from_private_key,
+            safe_address=api_keys.SAFE_ADDRESS,
+        )

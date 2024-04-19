@@ -4,8 +4,8 @@ from datetime import timedelta
 import pytest
 from loguru import logger
 
-from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
+from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -34,19 +34,20 @@ def test_create_bet_withdraw_resolve_market(
 ) -> None:
     wait_time = 60
     keys = APIKeys()
+    private_credentials = PrivateCredentials.from_api_keys(keys)
 
     # Create a market with a very soon to be resolved question that will most probably be No.
     question = f"Will GNO be above $10000 in {wait_time} seconds from now?"
     closing_time = utcnow() + timedelta(seconds=wait_time)
-    with wait_until_nonce_changed(for_address=keys.bet_from_address):
+    with wait_until_nonce_changed(for_address=private_credentials.public_key):
         market_address = omen_create_market_tx(
+            private_credentials=private_credentials,
             initial_funds=xdai_type(0.001),
             fee=OMEN_DEFAULT_MARKET_FEE,
             question=question,
             closing_time=closing_time,
             category="cryptocurrency",
             language="en",
-            from_private_key=keys.bet_from_private_key,
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
             auto_deposit=True,
         )
@@ -59,10 +60,10 @@ def test_create_bet_withdraw_resolve_market(
     # Bet on the false outcome.
     logger.debug("Betting on the false outcome.")
     agent_market = OmenAgentMarket.from_data_model(market)
-    with wait_until_nonce_changed(for_address=keys.bet_from_address):
+    with wait_until_nonce_changed(for_address=private_credentials.public_key):
         binary_omen_buy_outcome_tx(
+            private_credentials=private_credentials,
             amount=xdai_type(0.001),
-            from_private_key=keys.bet_from_private_key,
             market=agent_market,
             binary_outcome=False,
             auto_deposit=True,
@@ -76,13 +77,13 @@ def test_create_bet_withdraw_resolve_market(
 
     # Submit the answer and verify it was successfully submitted.
     logger.debug(f"Submitting the answer to {market.question.id=}.")
-    with wait_until_nonce_changed(for_address=keys.bet_from_address):
+    with wait_until_nonce_changed(for_address=private_credentials.public_key):
         OmenRealitioContract().submitAnswer(
+            private_credentials=private_credentials,
             question_id=market.question.id,
             answer=OMEN_FALSE_OUTCOME,
             outcomes=market.question.outcomes,
-            bond=xdai_to_wei(0.001),
-            from_private_key=APIKeys().bet_from_private_key,
+            bond=xdai_to_wei(xDai(0.001)),
         )
 
     answers = omen_subgraph_handler.get_answers(market.question.id)

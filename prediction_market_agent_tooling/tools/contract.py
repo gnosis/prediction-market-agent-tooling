@@ -6,12 +6,12 @@ from contextlib import contextmanager
 from pydantic import BaseModel, field_validator
 from web3 import Web3
 
+from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
     ChecksumAddress,
     Nonce,
-    PrivateKey,
     TxParams,
     TxReceipt,
     Wei,
@@ -22,8 +22,8 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
-    private_key_to_public_key,
     send_function_on_contract_tx,
+    send_function_on_contract_tx_using_safe,
 )
 
 
@@ -86,7 +86,7 @@ class ContractBaseClass(BaseModel):
 
     def send(
         self,
-        from_private_key: PrivateKey,
+        private_credentials: PrivateCredentials,
         function_name: str,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
         tx_params: t.Optional[TxParams] = None,
@@ -96,22 +96,33 @@ class ContractBaseClass(BaseModel):
         """
         Used for changing a state (writing) to the contract.
         """
-        with wait_until_nonce_changed(private_key_to_public_key(from_private_key)):
-            receipt = send_function_on_contract_tx(
+
+        if private_credentials.safe_address is not None:
+            return send_function_on_contract_tx_using_safe(
                 web3=web3 or self.get_web3(),
                 contract_address=self.address,
                 contract_abi=self.abi,
-                from_private_key=from_private_key,
+                from_private_key=private_credentials.private_key,
+                safe_address=private_credentials.safe_address,
                 function_name=function_name,
                 function_params=function_params,
                 tx_params=tx_params,
                 timeout=timeout,
             )
-        return receipt
+        return send_function_on_contract_tx(
+            web3=web3 or self.get_web3(),
+            contract_address=self.address,
+            contract_abi=self.abi,
+            from_private_key=private_credentials.private_key,
+            function_name=function_name,
+            function_params=function_params,
+            tx_params=tx_params,
+            timeout=timeout,
+        )
 
     def send_with_value(
         self,
-        from_private_key: PrivateKey,
+        private_credentials: PrivateCredentials,
         function_name: str,
         amount_wei: Wei,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
@@ -123,7 +134,7 @@ class ContractBaseClass(BaseModel):
         Used for changing a state (writing) to the contract, including sending chain's native currency.
         """
         return self.send(
-            from_private_key=from_private_key,
+            private_credentials=private_credentials,
             function_name=function_name,
             function_params=function_params,
             tx_params={"value": amount_wei, **(tx_params or {})},
@@ -147,51 +158,55 @@ class ContractERC20BaseClass(ContractBaseClass):
 
     def approve(
         self,
+        private_credentials: PrivateCredentials,
         for_address: ChecksumAddress,
         amount_wei: Wei,
-        from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            from_private_key=from_private_key,
+            private_credentials=private_credentials,
             function_name="approve",
             function_params=[
                 for_address,
                 amount_wei,
             ],
             tx_params=tx_params,
+            web3=web3,
         )
 
     def deposit(
         self,
+        private_credentials: PrivateCredentials,
         amount_wei: Wei,
-        from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send_with_value(
-            from_private_key=from_private_key,
+            private_credentials=private_credentials,
             function_name="deposit",
             amount_wei=amount_wei,
             tx_params=tx_params,
+            web3=web3,
         )
 
     def withdraw(
         self,
+        private_credentials: PrivateCredentials,
         amount_wei: Wei,
-        from_private_key: PrivateKey,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            from_private_key=from_private_key,
+            private_credentials=private_credentials,
             function_name="withdraw",
             function_params=[amount_wei],
             tx_params=tx_params,
             web3=web3,
         )
 
-    def balanceOf(self, for_address: ChecksumAddress) -> Wei:
-        balance: Wei = self.call("balanceOf", [for_address])
+    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
+        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
         return balance
 
 

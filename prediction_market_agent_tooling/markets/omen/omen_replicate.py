@@ -2,12 +2,8 @@ from datetime import datetime, timedelta
 
 from loguru import logger
 
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    PrivateKey,
-    wei_type,
-    xDai,
-)
+from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, wei_type, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.categorize import infer_category
 from prediction_market_agent_tooling.markets.markets import (
@@ -29,7 +25,6 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
 # According to Omen's recommendation, closing time of the market should be at least 6 days after the outcome is known.
 # That is because at the closing time, the question will open on Realitio, and we don't want it to be resolved as unknown/invalid.
@@ -38,14 +33,14 @@ EXTEND_CLOSING_TIME_DELTA = timedelta(days=6)
 
 
 def omen_replicate_from_tx(
+    private_credentials: PrivateCredentials,
     market_type: MarketType,
     n_to_replicate: int,
     initial_funds: xDai,
-    from_private_key: PrivateKey,
     close_time_before: datetime | None = None,
     auto_deposit: bool = False,
 ) -> list[ChecksumAddress]:
-    from_address = private_key_to_public_key(from_private_key)
+    from_address = private_credentials.public_key
     already_created_markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         creator=from_address,
@@ -120,13 +115,13 @@ def omen_replicate_from_tx(
             continue
 
         market_address = omen_create_market_tx(
+            private_credentials=private_credentials,
             initial_funds=initial_funds,
             fee=OMEN_DEFAULT_MARKET_FEE,
             question=market.question,
             closing_time=safe_closing_time,
             category=category,
             language="en",
-            from_private_key=from_private_key,
             outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
             auto_deposit=auto_deposit,
         )
@@ -145,10 +140,10 @@ def omen_replicate_from_tx(
 
 
 def omen_unfund_replicated_known_markets_tx(
-    from_private_key: PrivateKey,
+    private_credentials: PrivateCredentials,
     saturation_above_threshold: float | None = None,
 ) -> None:
-    from_address = private_key_to_public_key(from_private_key)
+    from_address = private_credentials.public_key
 
     now = utcnow()
     # We want to unfund markets ~1 day before the resolution should be known.
@@ -183,7 +178,7 @@ def omen_unfund_replicated_known_markets_tx(
             f"[{idx+1}/{len(markets)}] Unfunding market `{market.liquidityParameter=} {market.question=} {market.url=}`."
         )
         omen_remove_fund_market_tx(
+            private_credentials=private_credentials,
             market=OmenAgentMarket.from_data_model(market),
             shares=None,
-            from_private_key=from_private_key,
         )

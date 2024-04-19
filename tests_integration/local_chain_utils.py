@@ -37,7 +37,7 @@ GC_LOCAL_NODE_URL = f"http://127.0.0.1:{GC_LOCAL_NODE_PORT}"
 DIR_OF_THIS_FILE = os.path.dirname(os.path.abspath(__file__))
 
 
-def gen_test_accounts() -> list[LocalAccount]:
+def get_anvil_test_accounts() -> list[LocalAccount]:
     # test accounts are generated using the mnemonic:
     #   "test test test test test test test test test test test junk" and derivation path "m/44'/60'/0'/0"
     keys = [
@@ -55,7 +55,7 @@ def gen_test_accounts() -> list[LocalAccount]:
     return [Account.from_key(key) for key in keys]
 
 
-TEST_ACCOUNTS = gen_test_accounts()
+TEST_ACCOUNTS = get_anvil_test_accounts()
 SCRAPE_ACCOUNT = Account.from_key(
     "0xf214f2b2cd398c806f84e317254e0f0b801d0643303237d97a22a48e01628897"
 )

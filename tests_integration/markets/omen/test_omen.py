@@ -8,10 +8,8 @@ from web3 import Web3
 from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import PrivateCredentials
-from prediction_market_agent_tooling.gtypes import xdai_type, xDai
-from prediction_market_agent_tooling.markets.data_models import TokenAmount, Currency
-from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
+from prediction_market_agent_tooling.markets.data_models import TokenAmount, Currency
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -224,7 +222,6 @@ def test_omen_fund_and_remove_fund_market(
     assert_transaction_successful(tx_receipt_removal, local_web3)
 
 
-# @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_omen_buy_and_sell_outcome(
     local_web3: Web3,
     test_credentials: PrivateCredentials,

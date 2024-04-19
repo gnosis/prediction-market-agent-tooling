@@ -4,6 +4,7 @@ from eth_account.signers.local import LocalAccount
 from eth_typing import URI
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
+from loguru import logger
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
@@ -63,6 +64,8 @@ def test_send_function_on_contract_tx_using_safe(
             xdai_to_wei(10),
         )
 
+    safe_balance = local_ethereum_client.get_balance(safe.address)
+    logger.debug(f"safe balance {safe_balance} xDai")
     # Bet on Omen market
     market_id = Web3.to_checksum_address("0x753d3b31bf1038d5b5aa81015b7b3a6a71e3a6e4")
     subgraph = OmenSubgraphHandler()
@@ -72,8 +75,13 @@ def test_send_function_on_contract_tx_using_safe(
     initial_yes_token_balance = omen_agent_market.get_token_balance(
         safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
     )
-    omen_agent_market.place_bet(True, amount, web3=local_ethereum_client.w3)
+    logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
+    bet_tx_hash = omen_agent_market.place_bet(
+        True, amount, web3=local_ethereum_client.w3
+    )
+    logger.debug(f"placed bet tx hash {bet_tx_hash}")
     final_yes_token_balance = omen_agent_market.get_token_balance(
         safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
     )
+    logger.debug(f"final Yes token balance {final_yes_token_balance}")
     assert initial_yes_token_balance.amount < final_yes_token_balance.amount

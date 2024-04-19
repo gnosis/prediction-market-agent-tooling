@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_typing import URI
@@ -19,7 +20,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.safe import create_safe
 from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 from tests_integration.conftest import local_web3_at_block
-from tests_integration.local_chain_utils import fork_reset_state
+from tests_integration.local_chain_utils import fork_reset_state, mine_block
 
 
 def test_create_safe(
@@ -106,7 +107,10 @@ def test_send_function_on_contract_tx_using_safe(
         True, amount, web3=local_ethereum_client.w3
     )
     print_current_block(web3)
+    mine_block(web3)
+    print_current_block(web3)
     logger.debug(f"placed bet tx hash {bet_tx_hash}")
+
     final_yes_token_balance = omen_agent_market.get_token_balance(
         safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
     )

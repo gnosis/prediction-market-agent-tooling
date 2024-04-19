@@ -135,6 +135,11 @@ def fork_reset_state(w3: Web3, url: str, block: int | str = "latest"):
     )
 
 
+def mine_block(w3: Web3):
+    print("mining block")
+    return w3.provider.make_request("anvil_mine", [])
+
+
 def run_hardhat():
     """Run hardhat node in the background."""
     try:

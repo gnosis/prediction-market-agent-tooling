@@ -3,6 +3,7 @@ import os
 import pytest
 from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
+from gnosis.eth import EthereumClient
 from pydantic import SecretStr
 from web3 import Web3
 
@@ -43,15 +44,9 @@ def local_web3_at_block(
     return node.w3
 
 
-# ToDo - Turn this pattern into way to initialize chain with a block number
-@pytest.fixture()
-def my_chain():
-    def _user_creds(block: int):
-        # initialize chain
-        return {"block": block}
-
-    yield _user_creds
-    print("finished")
+@pytest.fixture(scope="session")
+def local_ethereum_client(local_web3: Web3) -> EthereumClient:
+    return EthereumClient()
 
 
 def is_contract(web3: Web3, contract_address: ChecksumAddress) -> bool:

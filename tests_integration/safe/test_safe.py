@@ -46,10 +46,12 @@ def test_send_function_on_contract_tx_using_safe(
     request: pytest.FixtureRequest,
     test_credentials: PrivateCredentials,
 ) -> None:
-    historical_block = 33527254
-    port = 8546
-    local_web3_at_block(request, historical_block, port)
-    local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
+    RPC_URL = "https://rpc.tenderly.co/fork/5efbc1e0-8b54-4497-b200-8a2fb5470f6e"
+    # historical_block = 33527254
+    # port = 8546
+    # local_web3_at_block(request, historical_block, port)
+    # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
+    local_ethereum_client = EthereumClient(URI(RPC_URL))
 
     # Deploy safe
     account = Account.from_key(test_credentials.private_key.get_secret_value())

@@ -242,7 +242,12 @@ def send_function_on_contract_tx_using_safe(
 def send_xdai_to(
     web3: Web3, from_address: ChecksumAddress, to_address: ChecksumAddress, value: Wei
 ) -> None:
-    tx_hash = web3.eth.send_transaction(
-        {"from": from_address, "to": to_address, "value": value}
-    )
-    web3.eth.get_transaction(tx_hash)
+    tx_params = {
+        "from": from_address,
+        "to": to_address,
+        "value": value,
+    }
+    gas = web3.eth.estimate_gas(tx_params)
+    tx_params["gas"] = int(gas * 1.5)
+    tx_hash = web3.eth.send_transaction(tx_params)
+    web3.eth.wait_for_transaction_receipt(tx_hash)

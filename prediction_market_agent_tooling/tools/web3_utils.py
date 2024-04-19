@@ -237,3 +237,12 @@ def send_function_on_contract_tx_using_safe(
     receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
     check_tx_receipt(receipt_tx)
     return receipt_tx
+
+
+def send_xdai_to(
+    web3: Web3, from_address: ChecksumAddress, to_address: ChecksumAddress, value: Wei
+) -> None:
+    tx_hash = web3.eth.send_transaction(
+        {"from": from_address, "to": to_address, "value": value}
+    )
+    web3.eth.get_transaction(tx_hash)

@@ -3,7 +3,6 @@ from eth_account.signers.local import LocalAccount
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
 from web3 import Web3
-from web3.gas_strategies.time_based import fast_gas_price_strategy
 
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
@@ -13,7 +12,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.safe import create_safe
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 
 
 def test_create_safe(
@@ -40,24 +39,23 @@ def create_test_safe(ethereum_client: EthereumClient, deployer: LocalAccount):
 
 
 def test_send_function_on_contract_tx_using_safe(
-    local_ethereum_client: EthereumClient, test_credentials: PrivateCredentials
+    local_ethereum_client: EthereumClient,
+    test_credentials: PrivateCredentials,
 ) -> None:
     # Deploy safe
-
     account = Account.from_key(test_credentials.private_key.get_secret_value())
     safe = create_test_safe(local_ethereum_client, account)
-    # Fund safe
-    local_ethereum_client.w3.eth.set_gas_price_strategy(fast_gas_price_strategy)
-    gas_price = local_ethereum_client.w3.eth.generate_gas_price()
-
+    # Fund safe if needed
     initial_safe_balance = local_ethereum_client.get_balance(safe.address)
     if initial_safe_balance < xdai_to_wei(2):
-        local_ethereum_client.send_eth_to(
-            account.key.hex(), safe.address, gas_price, xdai_to_wei(2)
+        send_xdai_to(
+            local_ethereum_client.w3,
+            Web3.to_checksum_address(account.address),
+            safe.address,
+            xdai_to_wei(2),
         )
 
     # Bet on Omen market
-
     market_id = Web3.to_checksum_address("0x753d3b31bf1038d5b5aa81015b7b3a6a71e3a6e4")
     subgraph = OmenSubgraphHandler()
     omen_market = subgraph.get_omen_market_by_market_id(market_id)
@@ -71,4 +69,3 @@ def test_send_function_on_contract_tx_using_safe(
         safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
     )
     assert initial_yes_token_balance.amount < final_yes_token_balance.amount
-    print("done")

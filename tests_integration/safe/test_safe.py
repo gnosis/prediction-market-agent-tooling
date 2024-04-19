@@ -1,5 +1,7 @@
+import pytest
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
+from eth_typing import URI
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
 from web3 import Web3
@@ -13,6 +15,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.safe import create_safe
 from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
+from tests_integration.conftest import local_web3_at_block
 
 
 def test_create_safe(
@@ -39,20 +42,25 @@ def create_test_safe(ethereum_client: EthereumClient, deployer: LocalAccount):
 
 
 def test_send_function_on_contract_tx_using_safe(
-    local_ethereum_client: EthereumClient,
+    request: pytest.FixtureRequest,
     test_credentials: PrivateCredentials,
 ) -> None:
+    historical_block = 33527254
+    port = 8546
+    local_web3_at_block(request, historical_block, port)
+    local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
+
     # Deploy safe
     account = Account.from_key(test_credentials.private_key.get_secret_value())
     safe = create_test_safe(local_ethereum_client, account)
     # Fund safe if needed
     initial_safe_balance = local_ethereum_client.get_balance(safe.address)
-    if initial_safe_balance < xdai_to_wei(2):
+    if initial_safe_balance < xdai_to_wei(10):
         send_xdai_to(
             local_ethereum_client.w3,
             Web3.to_checksum_address(account.address),
             safe.address,
-            xdai_to_wei(2),
+            xdai_to_wei(10),
         )
 
     # Bet on Omen market
@@ -60,7 +68,7 @@ def test_send_function_on_contract_tx_using_safe(
     subgraph = OmenSubgraphHandler()
     omen_market = subgraph.get_omen_market_by_market_id(market_id)
     omen_agent_market = OmenAgentMarket.from_data_model(omen_market)
-    amount = TokenAmount(amount=1, currency=Currency.xDai)
+    amount = TokenAmount(amount=5, currency=Currency.xDai)
     initial_yes_token_balance = omen_agent_market.get_token_balance(
         safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
     )

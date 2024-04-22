@@ -3,6 +3,7 @@ import os
 import pytest
 from eth_account import Account
 from gnosis.eth import EthereumClient
+from gnosis.safe import Safe
 from loguru import logger
 from web3 import Web3
 
@@ -18,14 +19,14 @@ from tests_integration.local_chain_utils import fork_reset_state, mine_block
 
 
 def test_create_safe(
-    local_ethereum_client: EthereumClient, test_credentials: PrivateCredentials
+    local_ethereum_client: EthereumClient, test_credentials: PrivateCredentials,
+        test_safe: Safe
 ) -> None:
     account = Account.from_key(test_credentials.private_key.get_secret_value())
-    deployed_safe = create_test_safe(local_ethereum_client, account)
-    version = deployed_safe.retrieve_version()
+    version = test_safe.retrieve_version()
     assert version == "1.4.1"
-    assert local_ethereum_client.is_contract(deployed_safe.address)
-    assert deployed_safe.retrieve_owners() == [account.address]
+    assert local_ethereum_client.is_contract(test_safe.address)
+    assert test_safe.retrieve_owners() == [account.address]
 
 
 

@@ -138,8 +138,8 @@ def prepare_tx(
     # Build the transaction.
     function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
     tx_params_new = function_call.build_transaction(tx_params_new)
-    gas = web3.eth.estimate_gas(tx_params_new)
-    tx_params_new["gas"] = gas
+    #gas = web3.eth.estimate_gas(tx_params_new)
+    #tx_params_new["gas"] = gas
     return tx_params_new
 
 

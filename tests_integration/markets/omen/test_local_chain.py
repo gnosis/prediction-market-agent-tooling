@@ -14,3 +14,4 @@ def test_connect_local_chain_at_block(load_env, request: pytest.FixtureRequest) 
     web3 = local_web3_at_block(request, historical_block, 8546)
     assert web3.is_connected()
     assert web3.eth.get_block_number() == historical_block
+

@@ -17,15 +17,6 @@ def print_current_block(web3: Web3) -> None:
 def test_safe(local_web3: Web3, test_credentials:PrivateCredentials) -> Safe:
 
     web3 = local_web3
-    # RPC_URL = os.getenv("GNOSIS_RPC_URL")
-    # historical_block = 33527254
-    # # port = 8546
-    # # web3 = local_web3_at_block(request, historical_block, port)
-    # fork_reset_state(
-    #     web3,
-    #     url=RPC_URL,
-    #     block=historical_block,
-    # )
     print_current_block(web3)
     # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
     local_ethereum_client = EthereumClient()
@@ -46,3 +37,4 @@ def test_safe(local_web3: Web3, test_credentials:PrivateCredentials) -> Safe:
     )
     deployed_safe = Safe(safe_address, local_ethereum_client)
     return deployed_safe
+

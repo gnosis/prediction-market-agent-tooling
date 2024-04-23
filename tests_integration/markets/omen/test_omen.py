@@ -5,7 +5,6 @@ import pytest
 from eth_typing import HexAddress, HexStr
 from loguru import logger
 from web3 import Web3
-from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
@@ -184,12 +183,6 @@ def test_balance_for_user_in_market() -> None:
     assert float(balance_no.amount) == 0
 
 
-def assert_transaction_successful(tx_receipt: TxReceipt, web3: Web3) -> None:
-    assert tx_receipt["status"] == 1
-    tx = web3.eth.wait_for_transaction_receipt(tx_receipt["transactionHash"])
-    assert tx is not None
-
-
 def test_omen_fund_and_remove_fund_market(
     local_web3: Web3,
     test_credentials: PrivateCredentials,
@@ -204,22 +197,20 @@ def test_omen_fund_and_remove_fund_market(
     funds = xdai_to_wei(xdai_type(0.1))
     remove_fund = xdai_to_wei(xdai_type(0.01))
 
-    tx_receipt_funding = omen_fund_market_tx(
+    omen_fund_market_tx(
         private_credentials=test_credentials,
         market=market,
         funds=funds,
         auto_deposit=True,
         web3=local_web3,
     )
-    assert_transaction_successful(tx_receipt_funding, local_web3)
 
-    tx_receipt_removal = omen_remove_fund_market_tx(
+    omen_remove_fund_market_tx(
         private_credentials=test_credentials,
         market=market,
         shares=remove_fund,
         web3=local_web3,
     )
-    assert_transaction_successful(tx_receipt_removal, local_web3)
 
 
 def test_omen_buy_and_sell_outcome(
@@ -234,7 +225,7 @@ def test_omen_buy_and_sell_outcome(
         buy_amount / 2
     )  # There will be some fees, so this has to be lower.
 
-    tx_receipt_buy = binary_omen_buy_outcome_tx(
+    binary_omen_buy_outcome_tx(
         private_credentials=test_credentials,
         amount=buy_amount,
         market=market,
@@ -242,9 +233,8 @@ def test_omen_buy_and_sell_outcome(
         auto_deposit=True,
         web3=local_web3,
     )
-    assert_transaction_successful(tx_receipt_buy, local_web3)
 
-    tx_receipt_sell = binary_omen_sell_outcome_tx(
+    binary_omen_sell_outcome_tx(
         private_credentials=test_credentials,
         amount=sell_amount,
         market=market,
@@ -252,4 +242,3 @@ def test_omen_buy_and_sell_outcome(
         auto_withdraw=True,
         web3=local_web3,
     )
-    assert_transaction_successful(tx_receipt_sell, local_web3)

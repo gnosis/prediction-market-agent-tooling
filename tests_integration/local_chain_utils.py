@@ -7,8 +7,10 @@ import time
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
+from eth_typing import ChecksumAddress
 from loguru import logger
 from web3 import HTTPProvider, Web3
+from web3.types import TxParams, Wei
 
 # Local chain setup for tests.
 # Heavily inspired by Kartpatkey's Roles Royce (https://github.com/karpatkey/roles_royce/blob/main/tests/utils.py)
@@ -140,3 +142,15 @@ def _local_node(
 
     wait_for_port(node.port, timeout=20)
     return node_daemon
+
+
+def send_xdai_to(
+    web3: Web3, from_address: ChecksumAddress, to_address: ChecksumAddress, value: Wei
+) -> None:
+    tx_params: TxParams = {
+        "from": from_address,
+        "to": to_address,
+        "value": value,
+    }
+    tx_hash = web3.eth.send_transaction(tx_params)
+    web3.eth.wait_for_transaction_receipt(tx_hash)

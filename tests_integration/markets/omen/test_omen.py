@@ -150,7 +150,7 @@ def test_omen_redeem_positions(
 
 
 @pytest.mark.skip(reason=DEFAULT_REASON)
-def create_market_fund_market_remove_funding() -> None:
+def test_create_market_fund_market_remove_funding() -> None:
     """
     ToDo - Once we have tests running in an isolated blockchain, write this test as follows:
         - Create a new market

@@ -18,7 +18,8 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from tests_integration.local_chain_utils import send_xdai_to
 from tests_integration.safe.conftest import print_current_block
 
 
@@ -34,7 +35,6 @@ def test_create_safe(
     assert test_safe.retrieve_owners() == [account.address]
 
 
-# @pytest.mark.skip(reason="not yet working on Github CI/CD pipeline")
 def test_send_function_on_contract_tx_using_safe(
     local_ethereum_client: EthereumClient,
     local_web3: Web3,

@@ -7,8 +7,14 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
-from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME, OmenMarket
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket, binary_omen_buy_outcome_tx
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_TRUE_OUTCOME,
+    OmenMarket,
+)
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
+    binary_omen_buy_outcome_tx,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
@@ -17,8 +23,9 @@ from tests_integration.safe.conftest import print_current_block
 
 
 def test_create_safe(
-    local_ethereum_client: EthereumClient, test_credentials: PrivateCredentials,
-        test_safe: Safe
+    local_ethereum_client: EthereumClient,
+    test_credentials: PrivateCredentials,
+    test_safe: Safe,
 ) -> None:
     account = Account.from_key(test_credentials.private_key.get_secret_value())
     version = test_safe.retrieve_version()
@@ -27,26 +34,20 @@ def test_create_safe(
     assert test_safe.retrieve_owners() == [account.address]
 
 
-
-
-
-#@pytest.mark.skip(reason="not yet working on Github CI/CD pipeline")
+# @pytest.mark.skip(reason="not yet working on Github CI/CD pipeline")
 def test_send_function_on_contract_tx_using_safe(
-        local_ethereum_client: EthereumClient,
+    local_ethereum_client: EthereumClient,
     local_web3: Web3,
     test_credentials: PrivateCredentials,
-        test_safe: Safe
+    test_safe: Safe,
 ) -> None:
-
     print_current_block(local_web3)
-
 
     print(f"is connected {local_web3.is_connected()} {local_web3.provider}")
     print_current_block(local_web3)
     logger.debug(
         f"provider {local_web3.provider.endpoint_uri} connected {local_web3.is_connected()}"
     )
-
 
     account = Account.from_key(test_credentials.private_key.get_secret_value())
     # Fund safe with xDAI if needed
@@ -75,9 +76,9 @@ def test_send_function_on_contract_tx_using_safe(
     initial_yes_token_balance = omen_agent_market.get_token_balance(
         test_safe.address, OMEN_TRUE_OUTCOME, web3=local_web3
     )
-    #print_current_block(web3)
-    #mine_block(web3)
-    #print_current_block(web3)
+    # print_current_block(web3)
+    # mine_block(web3)
+    # print_current_block(web3)
     logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
     bet_tx_hash = binary_omen_buy_outcome_tx(
         private_credentials=test_credentials,
@@ -88,9 +89,9 @@ def test_send_function_on_contract_tx_using_safe(
         web3=local_web3,
     )
 
-    #bet_tx_hash = omen_agent_market.place_bet(True, amount, web3=web3)
-    #print_current_block(web3)
-    #mine_block(web3)
+    # bet_tx_hash = omen_agent_market.place_bet(True, amount, web3=web3)
+    # print_current_block(web3)
+    # mine_block(web3)
     print_current_block(local_web3)
     logger.debug(f"placed bet tx hash {bet_tx_hash}")
 
@@ -101,9 +102,10 @@ def test_send_function_on_contract_tx_using_safe(
     print_current_block(local_web3)
     assert initial_yes_token_balance.amount < final_yes_token_balance.amount
 
-def fetch_omen_open_binary_market_with_enough_liquidity(limit=1,
-                                                        liquidity_bigger_than = xdai_to_wei(xDai(5))) -> list[OmenMarket]:
-    return OmenSubgraphHandler().get_omen_binary_markets(limit=limit,
-                                         resolved=False,
-                                         liquidity_bigger_than=liquidity_bigger_than)
 
+def fetch_omen_open_binary_market_with_enough_liquidity(
+    limit=1, liquidity_bigger_than=xdai_to_wei(xDai(5))
+) -> list[OmenMarket]:
+    return OmenSubgraphHandler().get_omen_binary_markets(
+        limit=limit, resolved=False, liquidity_bigger_than=liquidity_bigger_than
+    )

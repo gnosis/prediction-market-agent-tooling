@@ -2,12 +2,8 @@ import os
 
 import pytest
 from dotenv import load_dotenv
-from eth_account import Account
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
-from gnosis.safe import Safe
-from loguru import logger
-
 from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from pydantic import SecretStr
 from web3 import Web3
@@ -47,7 +43,6 @@ def local_web3_at_block(
 @pytest.fixture(scope="session")
 def local_ethereum_client(local_web3: Web3) -> EthereumClient:
     return EthereumClient()
-
 
 
 def is_contract(web3: Web3, contract_address: ChecksumAddress) -> bool:

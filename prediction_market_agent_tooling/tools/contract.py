@@ -193,8 +193,8 @@ class ContractERC20BaseClass(ContractBaseClass):
     def transferFrom(
         self,
         private_credentials: PrivateCredentials,
-            sender: ChecksumAddress,
-            recipient: ChecksumAddress,
+        sender: ChecksumAddress,
+        recipient: ChecksumAddress,
         amount_wei: Wei,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,

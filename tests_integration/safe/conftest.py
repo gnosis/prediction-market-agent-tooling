@@ -14,8 +14,7 @@ def print_current_block(web3: Web3) -> None:
 
 
 @pytest.fixture(scope="session")
-def test_safe(local_web3: Web3, test_credentials:PrivateCredentials) -> Safe:
-
+def test_safe(local_web3: Web3, test_credentials: PrivateCredentials) -> Safe:
     web3 = local_web3
     print_current_block(web3)
     # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
@@ -37,4 +36,3 @@ def test_safe(local_web3: Web3, test_credentials:PrivateCredentials) -> Safe:
     )
     deployed_safe = Safe(safe_address, local_ethereum_client)
     return deployed_safe
-

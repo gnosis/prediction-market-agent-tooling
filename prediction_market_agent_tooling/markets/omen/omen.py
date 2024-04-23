@@ -132,13 +132,13 @@ class OmenAgentMarket(AgentMarket):
         amount: BetAmount,
         omen_auto_deposit: bool = True,
         web3: Web3 | None = None,
-    ) -> TxReceipt:
+    ) -> None:
         if amount.currency != self.currency:
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
         amount_xdai = xDai(amount.amount)
         keys = APIKeys()
         private_credentials = PrivateCredentials.from_api_keys(keys)
-        return binary_omen_buy_outcome_tx(
+        binary_omen_buy_outcome_tx(
             private_credentials=private_credentials,
             amount=amount_xdai,
             market=self,

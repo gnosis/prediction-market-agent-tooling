@@ -14,7 +14,6 @@ class Balances(BaseModel):
     wxdai: xDai
 
 
-# ToDo - To be refactored https://github.com/gnosis/prediction-market-agent-tooling/issues/204
 def get_balances(address: ChecksumAddress, web3: Web3 | None) -> Balances:
     if not web3:
         web3 = WrappedxDaiContract().get_web3()

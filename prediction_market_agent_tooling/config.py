@@ -30,6 +30,10 @@ class APIKeys(BaseSettings):
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
     GOOGLE_SEARCH_ENGINE_ID: t.Optional[SecretStr] = None
 
+    LANGFUSE_SECRET_KEY: t.Optional[SecretStr] = None
+    LANGFUSE_PUBLIC_KEY: t.Optional[SecretStr] = None
+    LANGFUSE_HOST: t.Optional[str] = None
+
     ENABLE_CACHE: bool = True
     CACHE_DIR: str = "./.cache"
 
@@ -70,6 +74,24 @@ class APIKeys(BaseSettings):
         return check_not_none(
             self.GOOGLE_SEARCH_ENGINE_ID,
             "GOOGLE_SEARCH_ENGINE_ID missing in the environment.",
+        )
+
+    @property
+    def langfuse_secret_key(self) -> SecretStr:
+        return check_not_none(
+            self.LANGFUSE_SECRET_KEY, "LANGFUSE_SECRET_KEY missing in the environment."
+        )
+
+    @property
+    def langfuse_public_key(self) -> SecretStr:
+        return check_not_none(
+            self.LANGFUSE_PUBLIC_KEY, "LANGFUSE_PUBLIC_KEY missing in the environment."
+        )
+
+    @property
+    def langfuse_host(self) -> str:
+        return check_not_none(
+            self.LANGFUSE_HOST, "LANGFUSE_HOST missing in the environment."
         )
 
     def model_dump_public(self) -> dict[str, t.Any]:

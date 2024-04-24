@@ -127,6 +127,7 @@ class Benchmarker:
         return self.predictions.get_prediction(agent_name=agent_name, question=question)
 
     def run_agents(self, enable_timing: bool = True) -> None:
+        agent: AbstractBenchmarkedAgent  # Fix for mypy issue with tqdm.
         for agent in tqdm(self.registered_agents, desc="Running agents"):
             # Filter out cached predictions
             markets_to_run = [
@@ -144,9 +145,13 @@ class Benchmarker:
                     prediction = (
                         agent.check_and_predict(market_question=market.question)
                         if not market.is_resolved()
-                        else agent.check_and_predict_restricted(
-                            market_question=market.question,
-                            time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
+                        else (
+                            agent.check_and_predict_restricted(
+                                market_question=market.question,
+                                time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
+                            )
+                            if market.created_time is not None
+                            else should_not_happen()
                         )
                     )
                     prediction.time = costs.time

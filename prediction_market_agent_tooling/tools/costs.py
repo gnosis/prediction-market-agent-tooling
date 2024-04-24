@@ -14,13 +14,13 @@ class Costs(BaseModel):
 
 
 @contextmanager
-def openai_costs(model: str) -> t.Generator[Costs, None, None]:
+def openai_costs(model: str | None = None) -> t.Generator[Costs, None, None]:
     costs = Costs(time=0, cost=0)
     start_time = time()
 
     with get_openai_callback() as cb:
         yield costs
-        if cb.total_tokens > 0 and cb.total_cost == 0:
+        if cb.total_tokens > 0 and cb.total_cost == 0 and model is not None:
             # TODO: this is a hack to get the cost for an unsupported model
             cb.total_cost = get_llm_api_call_cost(
                 model=model,

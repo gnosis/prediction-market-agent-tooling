@@ -31,6 +31,9 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
     redeem_from_all_user_positions,
 )
+from prediction_market_agent_tooling.monitor.langfuse.langfuse_wrapper import (
+    LangfuseWrapper,
+)
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
@@ -41,6 +44,7 @@ MAX_AVAILABLE_MARKETS = 20
 
 class DeployableAgent:
     def __init__(self) -> None:
+        self.langfuse_wrapper = LangfuseWrapper(agent_name=self.__class__.__name__)
         self.load()
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:

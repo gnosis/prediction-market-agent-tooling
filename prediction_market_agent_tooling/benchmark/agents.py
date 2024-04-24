@@ -9,7 +9,13 @@ from prediction_market_agent_tooling.benchmark.utils import (
 
 
 class AbstractBenchmarkedAgent:
-    def __init__(self, agent_name: str, max_workers: t.Optional[int] = None):
+    def __init__(
+        self,
+        agent_name: str,
+        max_workers: t.Optional[int] = None,
+        model: str | None = None,
+    ):
+        self.model = model
         self.agent_name = agent_name
         self.max_workers = max_workers  # Limit the number of workers that can run this worker in parallel threads
 

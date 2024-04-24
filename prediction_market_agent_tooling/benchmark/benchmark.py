@@ -1,12 +1,10 @@
 import concurrent.futures
 import os
-import time
 import typing as t
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from langchain_community.callbacks import get_openai_callback
 from sklearn.metrics import precision_score, recall_score
 from tqdm import tqdm
 
@@ -15,9 +13,9 @@ from prediction_market_agent_tooling.benchmark.utils import (
     Prediction,
     PredictionsCache,
     Resolution,
-    get_llm_api_call_cost,
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.tools.costs import openai_costs
 from prediction_market_agent_tooling.tools.utils import (
     check_not_none,
     should_not_happen,
@@ -129,6 +127,7 @@ class Benchmarker:
         return self.predictions.get_prediction(agent_name=agent_name, question=question)
 
     def run_agents(self, enable_timing: bool = True) -> None:
+        agent: AbstractBenchmarkedAgent  # Fix for mypy issue with tqdm.
         for agent in tqdm(self.registered_agents, desc="Running agents"):
             # Filter out cached predictions
             markets_to_run = [
@@ -142,27 +141,21 @@ class Benchmarker:
             def get_prediction_result(
                 market: AgentMarket,
             ) -> tuple[str, Prediction]:
-                with get_openai_callback() as cb:
-                    start = time.time()
+                with openai_costs(model=agent.model) as costs:
                     prediction = (
                         agent.check_and_predict(market_question=market.question)
                         if not market.is_resolved()
-                        else agent.check_and_predict_restricted(
-                            market_question=market.question,
-                            time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
+                        else (
+                            agent.check_and_predict_restricted(
+                                market_question=market.question,
+                                time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
+                            )
+                            if market.created_time is not None
+                            else should_not_happen()
                         )
                     )
-
-                    prediction.time = time.time() - start if enable_timing else None
-
-                    if cb.total_tokens > 0 and cb.total_cost == 0:
-                        # TODO: this is a hack to get the cost for an unsupported model
-                        cb.total_cost = get_llm_api_call_cost(
-                            model=agent.model,
-                            prompt_tokens=cb.prompt_tokens,
-                            completion_tokens=cb.completion_tokens,
-                        )
-                    prediction.cost = cb.total_cost
+                    prediction.time = costs.time
+                    prediction.cost = costs.cost
                 return market.question, prediction
 
             # Run agents in parallel

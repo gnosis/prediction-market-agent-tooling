@@ -80,6 +80,10 @@ def get_llm_api_call_cost(
             "prompt_tokens": 0.01,
             "completion_tokens": 0.03,
         },
+        "gpt-4-turbo-2024-04-09": {
+            "prompt_tokens": 0.01,
+            "completion_tokens": 0.03,
+        },
         "gpt-3.5-turbo-0125": {
             "prompt_tokens": 0.0005,
             "completion_tokens": 0.0015,

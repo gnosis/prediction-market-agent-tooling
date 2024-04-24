@@ -1,4 +1,3 @@
-import os
 
 import pytest
 from dotenv import load_dotenv
@@ -10,7 +9,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import PrivateKey
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -21,8 +20,7 @@ def load_env():
 @pytest.fixture(scope="session")
 def local_web3(load_env) -> Web3:
     # if not available, throw error since we need an RPC with historical state for almost all tests
-    RPC_URL = check_not_none(os.getenv("GNOSIS_RPC_URL"))
-    node = LocalNode(RPC_URL)
+    node = LocalNode(GNOSIS_RPC_URL)
     node_daemon = _local_node(node, True)
     yield node.w3
     if node_daemon:
@@ -32,8 +30,7 @@ def local_web3(load_env) -> Web3:
 def local_web3_at_block(
     request: pytest.FixtureRequest, block: int, port: int = 8546
 ) -> Web3:
-    RPC_URL = check_not_none(os.getenv("GNOSIS_RPC_URL"))
-    node = LocalNode(RPC_URL, port=port, default_block=block)
+    node = LocalNode(GNOSIS_RPC_URL, port=port, default_block=block)
     node_daemon = _local_node(node, True)
     # for auto-closing connection
     request.addfinalizer(node_daemon.stop)

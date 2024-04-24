@@ -43,7 +43,7 @@ def test_send_function_on_contract_tx_using_safe(
 ) -> None:
     print_current_block(local_web3)
 
-    print(f"is connected {local_web3.is_connected()} {local_web3.provider}")
+    logger.debug(f"is connected {local_web3.is_connected()} {local_web3.provider}")
     print_current_block(local_web3)
     logger.debug(
         f"provider {local_web3.provider.endpoint_uri} connected {local_web3.is_connected()}"
@@ -63,7 +63,6 @@ def test_send_function_on_contract_tx_using_safe(
     print_current_block(local_web3)
     safe_balance = local_ethereum_client.get_balance(test_safe.address)
     logger.debug(f"safe balance {safe_balance} xDai")
-    # Bet on Omen market
     # Fetch existing market with enough liquidity
     min_liquidity_wei = xdai_to_wei(xDai(5))
     markets = fetch_omen_open_binary_market_with_enough_liquidity(1, min_liquidity_wei)
@@ -76,9 +75,6 @@ def test_send_function_on_contract_tx_using_safe(
     initial_yes_token_balance = omen_agent_market.get_token_balance(
         test_safe.address, OMEN_TRUE_OUTCOME, web3=local_web3
     )
-    # print_current_block(web3)
-    # mine_block(web3)
-    # print_current_block(web3)
     logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
     bet_tx_hash = binary_omen_buy_outcome_tx(
         private_credentials=test_credentials,
@@ -88,10 +84,6 @@ def test_send_function_on_contract_tx_using_safe(
         auto_deposit=True,
         web3=local_web3,
     )
-
-    # bet_tx_hash = omen_agent_market.place_bet(True, amount, web3=web3)
-    # print_current_block(web3)
-    # mine_block(web3)
     print_current_block(local_web3)
     logger.debug(f"placed bet tx hash {bet_tx_hash}")
 

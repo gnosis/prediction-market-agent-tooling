@@ -19,7 +19,7 @@ def test_safe(local_web3: Web3, test_credentials: PrivateCredentials) -> Safe:
     print_current_block(web3)
     # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
     local_ethereum_client = EthereumClient()
-    print(f"is connected {web3.is_connected()} {web3.provider}")
+    logger.debug(f"is connected {web3.is_connected()} {web3.provider}")
     print_current_block(web3)
     logger.debug(
         f"provider {web3.provider.endpoint_uri} connected {web3.is_connected()}"

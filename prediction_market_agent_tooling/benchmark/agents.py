@@ -6,9 +6,6 @@ from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
-from prediction_market_agent_tooling.monitor.langfuse.langfuse_wrapper import (
-    LangfuseWrapper,
-)
 
 
 class AbstractBenchmarkedAgent:
@@ -21,7 +18,6 @@ class AbstractBenchmarkedAgent:
         self.model = model
         self.agent_name = agent_name
         self.max_workers = max_workers  # Limit the number of workers that can run this worker in parallel threads
-        self.langfuse_wrapper = LangfuseWrapper(agent_name=self.__class__.__name__)
 
     def is_predictable(self, market_question: str) -> bool:
         """

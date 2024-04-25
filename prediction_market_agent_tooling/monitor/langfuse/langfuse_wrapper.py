@@ -1,5 +1,7 @@
+from functools import cached_property
+
 from langfuse.callback import CallbackHandler
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -8,8 +10,9 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 class LangfuseWrapper(BaseModel):
     agent_name: str
 
-    @property
-    def session_id(self) -> str | None:
+    @computed_field  # type: ignore
+    @cached_property
+    def session_id(self) -> str:
         return f"{self.agent_name} - {utcnow()}"
 
     def get_langfuse_handler(self) -> CallbackHandler:

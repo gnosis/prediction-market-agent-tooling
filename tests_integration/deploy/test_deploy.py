@@ -2,6 +2,7 @@ from prediction_market_agent_tooling.deploy.agent_example import DeployableCoinF
 from prediction_market_agent_tooling.markets.markets import MarketType
 
 
+# Note that this test can trigger redeeming of funds, which costs money to run.
 def test_local_deployment() -> None:
     DeployableCoinFlipAgent().deploy_local(
         sleep_time=0.001,

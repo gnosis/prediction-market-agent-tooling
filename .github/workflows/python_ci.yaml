@@ -13,6 +13,7 @@ env:
   BET_FROM_ADDRESS: ${{ secrets.BET_FROM_ADDRESS }}
   BET_FROM_PRIVATE_KEY: ${{ secrets.BET_FROM_PRIVATE_KEY }}
   GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+  GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
 
 jobs:
   mypy:
@@ -32,6 +33,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/python_prepare
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
       - name: 'Google Cloud Auth'
         uses: ./.github/actions/gcp_prepare
         with:
@@ -40,31 +43,6 @@ jobs:
         run: poetry run python -m pytest tests/
       - name: Run pytest integration tests
         run: poetry run python -m pytest tests_integration/
-
-  pytest-paid:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ '3.10.x', '3.11.x', '3.12.x' ]
-    name: pytest-paid - Python ${{ matrix.python-version }}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/python_prepare
-      - name: 'Google Cloud Auth'
-        uses: ./.github/actions/gcp_prepare
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-      - name: Run pytest unit tests
-        run: poetry run python -m pytest tests/
-        env:
-          RUN_PAID_TESTS: '1'
-      - name: Run pytest integration tests
-        run: poetry run python -m pytest tests_integration/
-        env:
-          RUN_PAID_TESTS: '1'
-    if: github.event_name == 'workflow_dispatch'
-    # TODO: Remove once the environment variables are fixed in the new repository.
-    continue-on-error: true
 
   black:
     runs-on: ubuntu-latest

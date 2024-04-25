@@ -190,6 +190,23 @@ class ContractERC20BaseClass(ContractBaseClass):
             web3=web3,
         )
 
+    def transferFrom(
+        self,
+        private_credentials: PrivateCredentials,
+        sender: ChecksumAddress,
+        recipient: ChecksumAddress,
+        amount_wei: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            private_credentials=private_credentials,
+            function_name="transferFrom",
+            function_params=[sender, recipient, amount_wei],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
     def withdraw(
         self,
         private_credentials: PrivateCredentials,

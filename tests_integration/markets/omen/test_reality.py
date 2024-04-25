@@ -1,29 +1,25 @@
 from datetime import timedelta
 
-import pytest
-from loguru import logger
+from web3 import Web3
 
-from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
+from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     Arbitrator,
     OmenRealitioContract,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
-from tests.utils import RUN_PAID_TESTS
 
 
-@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
-def test_ask_question() -> None:
-    keys = APIKeys()
-    private_credentials = PrivateCredentials.from_api_keys(keys)
+def test_ask_question(local_web3: Web3, test_credentials: PrivateCredentials) -> None:
     realitio_contract = OmenRealitioContract()
     question_id = realitio_contract.askQuestion(
-        private_credentials=private_credentials,
+        private_credentials=test_credentials,
         question="Will GNO be above $1000 in 2 minutes from now?",
         category="cryptocurrency",
         outcomes=["Yes", "No"],
         language="en",
         arbitrator=Arbitrator.KLEROS,
         opening=utcnow() + timedelta(minutes=2),
+        web3=local_web3,
     )
-    logger.info(question_id)
+    assert question_id is not None

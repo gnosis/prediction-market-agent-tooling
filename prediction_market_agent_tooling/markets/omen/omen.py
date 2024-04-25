@@ -432,6 +432,7 @@ def omen_sell_outcome_tx(
     market: OmenAgentMarket,
     outcome: str,
     auto_withdraw: bool,
+    web3: Web3 | None = None,
 ) -> None:
     """
     Sells the given xDai value of shares corresponding to the given outcome in
@@ -447,7 +448,10 @@ def omen_sell_outcome_tx(
     collateral_token = OmenCollateralTokenContract()
 
     # Verify, that markets uses conditional tokens that we expect.
-    if market_contract.conditionalTokens() != conditional_token_contract.address:
+    if (
+        market_contract.conditionalTokens(web3=web3)
+        != conditional_token_contract.address
+    ):
         raise ValueError(
             f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
         )
@@ -457,7 +461,7 @@ def omen_sell_outcome_tx(
 
     # Calculate the amount of shares we will sell for the given selling amount of xdai.
     max_outcome_tokens_to_sell = market_contract.calcSellAmount(
-        amount_wei, outcome_index
+        amount_wei, outcome_index, web3=web3
     )
     # Allow 1% slippage.
     max_outcome_tokens_to_sell = add_fraction(max_outcome_tokens_to_sell, 0.01)
@@ -467,6 +471,7 @@ def omen_sell_outcome_tx(
         private_credentials=private_credentials,
         for_address=market_contract.address,
         approve=True,
+        web3=web3,
     )
     # Sell the shares.
     market_contract.sell(
@@ -474,12 +479,12 @@ def omen_sell_outcome_tx(
         amount_wei,
         outcome_index,
         max_outcome_tokens_to_sell,
+        web3=web3,
     )
     if auto_withdraw:
         # Optionally, withdraw from the collateral token back to the `from_address` wallet.
         collateral_token.withdraw(
-            private_credentials=private_credentials,
-            amount_wei=amount_wei,
+            private_credentials=private_credentials, amount_wei=amount_wei, web3=web3
         )
 
 
@@ -489,6 +494,7 @@ def binary_omen_sell_outcome_tx(
     market: OmenAgentMarket,
     binary_outcome: bool,
     auto_withdraw: bool,
+    web3: Web3 | None = None,
 ) -> None:
     omen_sell_outcome_tx(
         private_credentials=private_credentials,
@@ -496,6 +502,7 @@ def binary_omen_sell_outcome_tx(
         market=market,
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
         auto_withdraw=auto_withdraw,
+        web3=web3,
     )
 
 
@@ -509,6 +516,7 @@ def omen_create_market_tx(
     outcomes: list[str],
     auto_deposit: bool,
     fee: float = OMEN_DEFAULT_MARKET_FEE,
+    web3: Web3 | None = None,
 ) -> ChecksumAddress:
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
@@ -539,19 +547,22 @@ def omen_create_market_tx(
         private_credentials=private_credentials,
         for_address=factory_contract.address,
         amount_wei=initial_funds_wei,
+        web3=web3,
     )
 
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
     collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=from_address,
+        for_address=from_address, web3=web3
     )
     if (
         auto_deposit
         and initial_funds_wei > 0
         and collateral_token_balance < initial_funds_wei
     ):
-        collateral_token_contract.deposit(private_credentials, initial_funds_wei)
+        collateral_token_contract.deposit(
+            private_credentials, initial_funds_wei, web3=web3
+        )
 
     # Create the question on Realitio.
     question_id = realitio_contract.askQuestion(
@@ -562,6 +573,7 @@ def omen_create_market_tx(
         language=language,
         arbitrator=Arbitrator.KLEROS,
         opening=closing_time,  # The question is opened at the closing time of the market.
+        web3=web3,
     )
 
     # Construct the condition id.
@@ -569,13 +581,15 @@ def omen_create_market_tx(
         question_id=question_id,
         oracle_address=oracle_contract.address,
         outcomes_slot_count=len(outcomes),
+        web3=web3,
     )
-    if not conditional_token_contract.does_condition_exists(condition_id):
+    if not conditional_token_contract.does_condition_exists(condition_id, web3=web3):
         conditional_token_contract.prepareCondition(
             private_credentials=private_credentials,
             question_id=question_id,
             oracle_address=oracle_contract.address,
             outcomes_slot_count=len(outcomes),
+            web3=web3,
         )
 
     # Create the market.
@@ -584,6 +598,7 @@ def omen_create_market_tx(
         condition_id=condition_id,
         fee=fee,
         initial_funds_wei=initial_funds_wei,
+        web3=web3,
     )
 
     # Note: In the Omen's Typescript code, there is futher a creation of `stakingRewardsFactoryAddress`,
@@ -602,6 +617,7 @@ def omen_fund_market_tx(
     market: OmenAgentMarket,
     funds: Wei,
     auto_deposit: bool,
+    web3: Web3 | None = None,
 ) -> None:
     from_address = private_credentials.public_key
     market_contract = market.get_contract()
@@ -611,20 +627,19 @@ def omen_fund_market_tx(
     # this can be skipped, if we know we already have enough collateral tokens.
     if (
         auto_deposit
-        and collateral_token_contract.balanceOf(
-            for_address=from_address,
-        )
+        and collateral_token_contract.balanceOf(for_address=from_address, web3=web3)
         < funds
     ):
-        collateral_token_contract.deposit(private_credentials, funds)
+        collateral_token_contract.deposit(private_credentials, funds, web3=web3)
 
     collateral_token_contract.approve(
         private_credentials=private_credentials,
         for_address=market_contract.address,
         amount_wei=funds,
+        web3=web3,
     )
 
-    market_contract.addFunding(private_credentials, funds)
+    market_contract.addFunding(private_credentials, funds, web3=web3)
 
 
 def build_parent_collection_id() -> HexStr:
@@ -727,7 +742,7 @@ def omen_remove_fund_market_tx(
     """
     from_address = private_credentials.public_key
     market_contract = market.get_contract()
-    original_balances = get_balances(from_address)
+    original_balances = get_balances(from_address, web3=web3)
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -763,7 +778,8 @@ def omen_remove_fund_market_tx(
         amount=amount_to_merge,
         web3=web3,
     )
-    new_balances = get_balances(from_address)
+
+    new_balances = get_balances(from_address, web3)
 
     logger.debug(f"Result from merge positions {result}")
     logger.info(
@@ -800,7 +816,7 @@ def redeem_from_all_user_positions(
             f"[{index+1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
         )
 
-        original_balances = get_balances(public_key)
+        original_balances = get_balances(public_key, web3)
         conditional_token_contract.redeemPositions(
             private_credentials=private_credentials,
             collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
@@ -809,7 +825,7 @@ def redeem_from_all_user_positions(
             index_sets=user_position.position.indexSets,
             web3=web3,
         )
-        new_balances = get_balances(public_key)
+        new_balances = get_balances(public_key, web3)
 
         logger.info(
             f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from position {user_position.id=}."

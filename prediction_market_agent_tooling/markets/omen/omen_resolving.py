@@ -38,6 +38,7 @@ def claim_bonds_on_realitio_questions(
     private_credentials: PrivateCredentials,
     questions: list[RealityQuestion],
     auto_withdraw: bool,
+    web3: Web3 | None = None,
 ) -> list[HexBytes]:
     claimed_questions: list[HexBytes] = []
 
@@ -46,7 +47,7 @@ def claim_bonds_on_realitio_questions(
             f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=} {question.url=}"
         )
         claim_bonds_on_realitio_question(
-            private_credentials, question, auto_withdraw=auto_withdraw
+            private_credentials, question, auto_withdraw=auto_withdraw, web3=web3
         )
         claimed_questions.append(question.questionId)
 
@@ -57,6 +58,7 @@ def claim_bonds_on_realitio_question(
     private_credentials: PrivateCredentials,
     question: RealityQuestion,
     auto_withdraw: bool,
+    web3: Web3 | None = None,
 ) -> None:
     public_key = private_credentials.public_key
     realitio_contract = OmenRealitioContract()
@@ -109,18 +111,20 @@ def claim_bonds_on_realitio_question(
         addresses=addresses,
         bonds=bonds,
         answers=answers,
+        web3=web3,
     )
 
-    current_balance = realitio_contract.balanceOf(public_key)
+    current_balance = realitio_contract.balanceOf(public_key, web3=web3)
     # Keeping balance on Realitio is not useful, so it's recommended to just withdraw it.
     if current_balance > 0 and auto_withdraw:
         logger.info(f"Withdrawing remaining balance {current_balance=}")
-        realitio_contract.withdraw(private_credentials)
+        realitio_contract.withdraw(private_credentials, web3=web3)
 
 
 def finalize_markets(
     private_credentials: PrivateCredentials,
     markets_with_resolutions: list[tuple[OmenMarket, Resolution | None]],
+    web3: Web3 | None = None,
 ) -> list[HexAddress]:
     finalized_markets: list[HexAddress] = []
 
@@ -139,6 +143,7 @@ def finalize_markets(
                 market,
                 resolution,
                 OMEN_DEFAULT_REALITIO_BOND_VALUE,
+                web3=web3,
             )
             finalized_markets.append(market.id)
             logger.info(f"Finalized {market.url=}")
@@ -152,6 +157,7 @@ def finalize_markets(
 def resolve_markets(
     private_credentials: PrivateCredentials,
     markets: list[OmenMarket],
+    web3: Web3 | None = None,
 ) -> list[HexAddress]:
     resolved_markets: list[HexAddress] = []
 
@@ -159,7 +165,7 @@ def resolve_markets(
         logger.info(
             f"[{idx+1} / {len(markets)}] Resolving {market.url=} {market.question_title=}"
         )
-        omen_resolve_market_tx(private_credentials, market)
+        omen_resolve_market_tx(private_credentials, market, web3=web3)
         resolved_markets.append(market.id)
 
     return resolved_markets
@@ -170,6 +176,7 @@ def omen_submit_answer_market_tx(
     market: OmenMarket,
     resolution: Resolution,
     bond: xDai,
+    web3: Web3 | None = None,
 ) -> None:
     """
     After the answer is submitted, there is 24h waiting period where the answer can be challenged by others.
@@ -182,12 +189,14 @@ def omen_submit_answer_market_tx(
         answer=resolution.value,
         outcomes=market.question.outcomes,
         bond=xdai_to_wei(bond),
+        web3=web3,
     )
 
 
 def omen_resolve_market_tx(
     private_credentials: PrivateCredentials,
     market: OmenMarket,
+    web3: Web3 | None = None,
 ) -> None:
     """
     Market can be resolved 24h after last answer was submitted via `omen_submit_answer_market_tx`.
@@ -199,6 +208,7 @@ def omen_resolve_market_tx(
         template_id=market.question.templateId,
         question_raw=market.question.question_raw,
         n_outcomes=market.question.n_outcomes,
+        web3=web3,
     )
 
 

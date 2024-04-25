@@ -19,7 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
-from tests_integration.local_chain_utils import send_xdai_to
+from tests_integration.local_chain_utils import send_xdai_to_for_tests
 from tests_integration.safe.conftest import print_current_block
 
 
@@ -53,11 +53,11 @@ def test_send_function_on_contract_tx_using_safe(
     # Fund safe with xDAI if needed
     initial_safe_balance = local_ethereum_client.get_balance(test_safe.address)
     if initial_safe_balance < xdai_to_wei(10):
-        send_xdai_to(
-            local_ethereum_client.w3,
-            Web3.to_checksum_address(account.address),
-            test_safe.address,
-            xdai_to_wei(10),
+        send_xdai_to_for_tests(
+            web3=local_ethereum_client.w3,
+            from_address=Web3.to_checksum_address(account.address),
+            to_address=test_safe.address,
+            value=xdai_to_wei(10),
         )
 
     print_current_block(local_web3)

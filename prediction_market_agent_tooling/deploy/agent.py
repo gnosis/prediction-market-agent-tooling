@@ -44,7 +44,7 @@ MAX_AVAILABLE_MARKETS = 20
 class Answer(BaseModel):
     decision: bool  # Warning: p_yes > 0.5 doesn't necessarily mean decision is True! For example, if our p_yes is 55%, but market's p_yes is 80%, then it might be profitable to bet on False.
     p_yes: Probability
-    confidence: float | None = None
+    confidence: float
     reasoning: str | None = None
 
     @property

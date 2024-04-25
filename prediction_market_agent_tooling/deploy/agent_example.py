@@ -18,6 +18,7 @@ class DeployableCoinFlipAgent(DeployableAgent):
         return Answer(
             decision=decision,
             p_yes=Probability(float(decision)),
+            confidence=0.5,
             reasoning="I flipped a coin to decide.",
         )
 

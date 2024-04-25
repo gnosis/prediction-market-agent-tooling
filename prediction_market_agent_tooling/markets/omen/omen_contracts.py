@@ -56,6 +56,7 @@ class OmenOracleContract(ContractOnGnosisChain):
         template_id: int,
         question_raw: str,
         n_outcomes: int,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             private_credentials=private_credentials,
@@ -66,6 +67,7 @@ class OmenOracleContract(ContractOnGnosisChain):
                 question=question_raw,
                 numOutcomes=n_outcomes,
             ),
+            web3=web3,
         )
 
 
@@ -544,6 +546,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         outcomes: list[str],
         bond: Wei,
         max_previous: Wei | None = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         if max_previous is None:
             # If not provided, defaults to 0, which means no checking,
@@ -565,6 +568,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
                 max_previous=max_previous,
             ),
             amount_wei=bond,
+            web3=web3,
         )
 
     def claimWinnings(
@@ -576,6 +580,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         bonds: list[Wei],
         answers: list[HexBytes],
         tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             private_credentials=private_credentials,
@@ -588,17 +593,22 @@ class OmenRealitioContract(ContractOnGnosisChain):
                 answers=answers,
             ),
             tx_params=tx_params,
+            web3=web3,
         )
 
-    def balanceOf(self, from_address: ChecksumAddress) -> Wei:
-        balance = wei_type(self.call("balanceOf", [from_address]))
+    def balanceOf(
+        self,
+        from_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> Wei:
+        balance = wei_type(self.call("balanceOf", [from_address], web3=web3))
         return balance
 
     def withdraw(
         self,
         private_credentials: PrivateCredentials,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            private_credentials=private_credentials,
-            function_name="withdraw",
+            private_credentials=private_credentials, function_name="withdraw", web3=web3
         )

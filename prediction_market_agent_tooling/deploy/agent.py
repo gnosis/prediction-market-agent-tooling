@@ -6,6 +6,8 @@ import typing as t
 from datetime import datetime
 
 from loguru import logger
+from pydantic import BaseModel, BeforeValidator
+from typing_extensions import Annotated
 
 from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
 from prediction_market_agent_tooling.deploy.constants import (
@@ -21,6 +23,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
+from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -37,6 +40,40 @@ from prediction_market_agent_tooling.monitor.monitor_app import (
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
 
 MAX_AVAILABLE_MARKETS = 20
+
+
+def to_boolean_outcome(value: str | bool) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    elif isinstance(value, str):
+        value = value.lower().strip()
+
+        if value in {"true", "yes", "y", "1"}:
+            return True
+
+        elif value in {"false", "no", "n", "0"}:
+            return False
+
+        else:
+            raise ValueError(f"Expected a boolean string, but got {value}")
+
+    else:
+        raise ValueError(f"Expected a boolean or a string, but got {value}")
+
+
+Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
+
+
+class Answer(BaseModel):
+    decision: Decision  # Warning: p_yes > 0.5 doesn't necessarily mean decision is True! For example, if our p_yes is 55%, but market's p_yes is 80%, then it might be profitable to bet on False.
+    p_yes: Probability
+    confidence: float
+    reasoning: str | None = None
+
+    @property
+    def p_no(self) -> Probability:
+        return Probability(1 - self.p_yes)
 
 
 class DeployableAgent:
@@ -58,7 +95,7 @@ class DeployableAgent:
         """
         return markets[:1]
 
-    def answer_binary_market(self, market: AgentMarket) -> bool | None:
+    def answer_binary_market(self, market: AgentMarket) -> Answer | None:
         """
         Answer the binary market. This method must be implemented by the subclass.
         """
@@ -157,7 +194,7 @@ def {entrypoint_function_name}(request) -> str:
         if cron_schedule:
             schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
 
-    def calculate_bet_amount(self, answer: bool, market: AgentMarket) -> BetAmount:
+    def calculate_bet_amount(self, answer: Answer, market: AgentMarket) -> BetAmount:
         """
         Calculate the bet amount. By default, it returns the minimum bet amount.
         """
@@ -205,7 +242,7 @@ def {entrypoint_function_name}(request) -> str:
                 )
                 market.place_bet(
                     amount=amount,
-                    outcome=result,
+                    outcome=result.decision,
                 )
 
     def after(self, market_type: MarketType) -> None:

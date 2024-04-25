@@ -34,7 +34,7 @@ from prediction_market_agent_tooling.markets.polymarket.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
 
 
-def claim_bonds_on_realitio_quetions(
+def claim_bonds_on_realitio_questions(
     private_credentials: PrivateCredentials,
     questions: list[RealityQuestion],
     auto_withdraw: bool,

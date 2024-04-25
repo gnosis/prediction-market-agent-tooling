@@ -6,7 +6,8 @@ import typing as t
 from datetime import datetime
 
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator
+from typing_extensions import Annotated
 
 from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
 from prediction_market_agent_tooling.deploy.constants import (
@@ -41,8 +42,31 @@ from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, ut
 MAX_AVAILABLE_MARKETS = 20
 
 
+def to_boolean_outcome(value: str | bool) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    elif isinstance(value, str):
+        value = value.lower().strip()
+
+        if value in {"true", "yes", "y", "1"}:
+            return True
+
+        elif value in {"false", "no", "n", "0"}:
+            return False
+
+        else:
+            raise ValueError(f"Expected a boolean string, but got {value}")
+
+    else:
+        raise ValueError(f"Expected a boolean or a string, but got {value}")
+
+
+Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
+
+
 class Answer(BaseModel):
-    decision: bool  # Warning: p_yes > 0.5 doesn't necessarily mean decision is True! For example, if our p_yes is 55%, but market's p_yes is 80%, then it might be profitable to bet on False.
+    decision: Decision  # Warning: p_yes > 0.5 doesn't necessarily mean decision is True! For example, if our p_yes is 55%, but market's p_yes is 80%, then it might be profitable to bet on False.
     p_yes: Probability
     confidence: float
     reasoning: str | None = None

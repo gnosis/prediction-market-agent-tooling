@@ -10,7 +10,7 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 class LangfuseWrapper(BaseModel):
     agent_name: str
 
-    @computed_field  # type: ignore
+    @computed_field  # type: ignore[misc] # Mypy issue: https://github.com/python/mypy/issues/14461
     @cached_property
     def session_id(self) -> str:
         return f"{self.agent_name} - {utcnow()}"

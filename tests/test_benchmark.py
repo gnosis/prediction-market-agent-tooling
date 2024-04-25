@@ -23,7 +23,8 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
         return bm.Prediction(
             is_predictable=True,
             outcome_prediction=OutcomePrediction(
-                p_yes=0.6,
+                decision=True,
+                p_yes=Probability(0.6),
                 confidence=0.8,
                 info_utility=0.9,
             ),
@@ -88,7 +89,10 @@ def test_cache() -> None:
             "bar": {
                 "foo": bm.Prediction(
                     outcome_prediction=OutcomePrediction(
-                        p_yes=0.6, confidence=0.8, info_utility=0.9
+                        decision=True,
+                        p_yes=Probability(0.6),
+                        confidence=0.8,
+                        info_utility=0.9,
                     )
                 )
             }
@@ -126,8 +130,9 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         )
         prediction = bm.Prediction(
             outcome_prediction=OutcomePrediction(
+                decision=False,
                 info_utility=0.3333,
-                p_yes=0.00001,
+                p_yes=Probability(0.00001),
                 confidence=0.22222,
             ),
         )

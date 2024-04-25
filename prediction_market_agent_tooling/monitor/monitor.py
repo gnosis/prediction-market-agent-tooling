@@ -258,27 +258,31 @@ def monitor_brier_score(resolved_markets: t.Sequence[AgentMarket]) -> None:
     - the overall brier score
     - the brier score for the last 30 markets
     """
-    st.subheader("Brier Score (0-1, lower is better)")
+    st.subheader("Brier Score (0-2, lower is better)")
 
     # We need to use `get_last_trade_p_yes` instead of `current_p_yes` because, for resolved markets, the probabilities can be fixed to 0 and 1 (for example, on Omen).
     # And for the brier score, we need the true market prediction, not its resolution after the outcome is known.
     # If no trades were made, take it as 0.5 because the platform didn't provide any valuable information.
-    created_time_and_squared_errors = par_map(
+    created_time_and_squared_errors_summed_across_outcomes = par_map(
         list(resolved_markets),
         lambda m: (
             m.created_time,
             (
                 (p_yes - m.boolean_outcome) ** 2
+                + ((1 - p_yes) - (1 - m.boolean_outcome)) ** 2
                 if (p_yes := m.get_last_trade_p_yes()) is not None
                 else None
             ),
         ),
     )
-    created_time_and_squared_errors_with_trades = [
-        x for x in created_time_and_squared_errors if x[1] is not None
+    created_time_and_squared_errors_summed_across_outcomes_with_trades = [
+        x
+        for x in created_time_and_squared_errors_summed_across_outcomes
+        if x[1] is not None
     ]
     df = pd.DataFrame(
-        created_time_and_squared_errors_with_trades, columns=["Date", "Squared Error"]
+        created_time_and_squared_errors_summed_across_outcomes_with_trades,
+        columns=["Date", "Squared Error"],
     ).sort_values(by="Date")
 
     # Compute rolling mean squared error for last 30 markets

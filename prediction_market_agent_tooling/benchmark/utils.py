@@ -3,12 +3,11 @@ import typing as t
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.deploy.agent import Answer
 from prediction_market_agent_tooling.markets.data_models import Resolution
 
 
-class OutcomePrediction(BaseModel):
-    p_yes: float
-    confidence: float
+class OutcomePrediction(Answer):
     info_utility: t.Optional[float]
 
     @property
@@ -77,6 +76,10 @@ def get_llm_api_call_cost(
     """
     model_costs = {
         "gpt-4-1106-preview": {
+            "prompt_tokens": 0.01,
+            "completion_tokens": 0.03,
+        },
+        "gpt-4-turbo-2024-04-09": {
             "prompt_tokens": 0.01,
             "completion_tokens": 0.03,
         },

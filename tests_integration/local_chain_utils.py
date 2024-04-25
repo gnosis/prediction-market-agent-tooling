@@ -10,12 +10,9 @@ from eth_account.signers.local import LocalAccount
 from eth_typing import ChecksumAddress
 from loguru import logger
 from web3 import HTTPProvider, Web3
-from web3.types import TxParams, Wei, TxReceipt
+from web3.types import TxParams, Wei
 
-from prediction_market_agent_tooling.config import PrivateCredentials
-from prediction_market_agent_tooling.gtypes import PrivateKey
 from prediction_market_agent_tooling.tools.web3_utils import check_tx_receipt
-
 
 # Local chain setup for tests.
 # Heavily inspired by Kartpatkey's Roles Royce (https://github.com/karpatkey/roles_royce/blob/main/tests/utils.py)

@@ -183,16 +183,10 @@ def send_function_on_contract_tx(
         function_params=function_params,
         tx_params=tx_params,
     )
-    # Sign with the private key.
-    signed_tx = web3.eth.account.sign_transaction(
-        tx_params, private_key=from_private_key.get_secret_value()
+
+    receipt_tx = sign_send_and_get_receipt_tx(
+        web3, tx_params, from_private_key, timeout
     )
-    # Send the signed transaction.
-    send_tx = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-    # And wait for the receipt.
-    receipt_tx = web3.eth.wait_for_transaction_receipt(send_tx, timeout=timeout)
-    # Verify it didn't fail.
-    check_tx_receipt(receipt_tx)
     return receipt_tx
 
 
@@ -246,31 +240,12 @@ def send_function_on_contract_tx_using_safe(
     return receipt_tx
 
 
-def send_xdai_to(
+def sign_send_and_get_receipt_tx(
     web3: Web3,
+    tx_params_new: TxParams,
     from_private_key: PrivateKey,
-    to_address: ChecksumAddress,
-    value: Wei,
-    tx_params: Optional[TxParams] = None,
     timeout: int = 180,
 ) -> TxReceipt:
-    from_address = private_key_to_public_key(from_private_key)
-
-    # 1. Build a new tx
-    tx_params_new: TxParams = {"value": value, "to": to_address}
-    if tx_params:
-        tx_params_new.update(tx_params)
-    tx_params_new = _prepare_tx_params(web3, from_address, tx_params_new)
-
-    # We need gas and gasPrice here (and not elsewhere) because we are not calling
-    # contract.functions.myFunction().build_transaction, which auto-fills some params
-    # with defaults, incl. gas and gasPrice.
-    gas = web3.eth.estimate_gas(tx_params_new)
-    tx_params_new["gas"] = int(
-        gas * 1.5
-    )  # We conservatively overestimate gas here, knowing it will be returned if unused
-    tx_params_new["gasPrice"] = web3.eth.gas_price
-
     # Sign with the private key.
     signed_tx = web3.eth.account.sign_transaction(
         tx_params_new, private_key=from_private_key.get_secret_value()
@@ -281,4 +256,34 @@ def send_xdai_to(
     receipt_tx = web3.eth.wait_for_transaction_receipt(send_tx, timeout=timeout)
     # Verify it didn't fail.
     check_tx_receipt(receipt_tx)
+    return receipt_tx
+
+
+def send_xdai_to(
+    web3: Web3,
+    from_private_key: PrivateKey,
+    to_address: ChecksumAddress,
+    value: Wei,
+    tx_params: Optional[TxParams] = None,
+    timeout: int = 180,
+) -> TxReceipt:
+    from_address = private_key_to_public_key(from_private_key)
+
+    tx_params_new: TxParams = {"value": value, "to": to_address}
+    if tx_params:
+        tx_params_new.update(tx_params)
+    tx_params_new = _prepare_tx_params(web3, from_address, tx_params_new)
+
+    # We need gas and gasPrice here (and not elsewhere) because we are not calling
+    # contract.functions.myFunction().build_transaction, which autofills some params
+    # with defaults, incl. gas and gasPrice.
+    gas = web3.eth.estimate_gas(tx_params_new)
+    tx_params_new["gas"] = int(
+        gas * 1.5
+    )  # We conservatively overestimate gas here, knowing it will be returned if unused
+    tx_params_new["gasPrice"] = web3.eth.gas_price
+
+    receipt_tx = sign_send_and_get_receipt_tx(
+        web3, tx_params_new, from_private_key, timeout
+    )
     return receipt_tx

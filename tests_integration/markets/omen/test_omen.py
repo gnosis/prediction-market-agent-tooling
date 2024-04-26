@@ -187,9 +187,6 @@ def test_omen_fund_and_remove_fund_market(
     local_web3: Web3,
     test_credentials: PrivateCredentials,
 ) -> None:
-    RPC_URL = "https://rpc.tenderly.co/fork/cf1e2dea-03a0-4c4a-8607-b8c362499000"
-    local_web3 = Web3(Web3.HTTPProvider(RPC_URL))
-
     # You can double check your address at https://gnosisscan.io/ afterwards or at the market's address.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     logger.debug(

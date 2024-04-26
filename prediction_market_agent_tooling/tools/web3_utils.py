@@ -147,11 +147,6 @@ def _prepare_tx_params(
         from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
-    # gas
-    if not tx_params_new.get("gas"):
-        gas = web3.eth.estimate_gas(tx_params_new)
-        tx_params_new["gas"] = gas
-
     return tx_params_new
 
 
@@ -271,7 +266,9 @@ def send_xdai_to(
     # contract.functions.myFunction().build_transaction, which auto-fills some params
     # with defaults, incl. gas and gasPrice.
     gas = web3.eth.estimate_gas(tx_params_new)
-    tx_params_new["gas"] = gas
+    tx_params_new["gas"] = int(
+        gas * 1.5
+    )  # We conservatively overestimate gas here, knowing it will be returned if unused
     tx_params_new["gasPrice"] = web3.eth.gas_price
 
     # Sign with the private key.

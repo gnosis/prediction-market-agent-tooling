@@ -7,12 +7,8 @@ import time
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from eth_typing import ChecksumAddress
 from loguru import logger
 from web3 import HTTPProvider, Web3
-from web3.types import TxParams, Wei
-
-from prediction_market_agent_tooling.tools.web3_utils import check_tx_receipt
 
 # Local chain setup for tests.
 # Heavily inspired by Kartpatkey's Roles Royce (https://github.com/karpatkey/roles_royce/blob/main/tests/utils.py)
@@ -144,25 +140,3 @@ def _local_node(
 
     wait_for_port(node.port, timeout=20)
     return node_daemon
-
-
-def send_xdai_to_for_tests(
-    web3: Web3,
-    from_address: ChecksumAddress,
-    to_address: ChecksumAddress,
-    value: Wei,
-) -> None:
-    """Please note that this method is intended solely for testing purposes. This is because the method
-    `sendTransaction` is used, which assumes that web3 has access to the private_key of the signing account.
-    Ways to load an account to web3 involve web3.eth.account.from_key() or using middleware (see
-    https://web3py.readthedocs.io/en/stable/web3.eth.account.html#reading-a-private-key-from-an-environment-variable)
-    For production use, the suggested way is to split send_transaction into `sign_transaction` and `send_raw_transaction`.
-    """
-    tx_params: TxParams = {
-        "from": from_address,
-        "to": to_address,
-        "value": value,
-    }
-    tx_hash = web3.eth.send_transaction(tx_params)
-    receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash)
-    check_tx_receipt(receipt_tx)

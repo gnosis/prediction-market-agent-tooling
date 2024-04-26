@@ -4,15 +4,23 @@ import typer
 from eth_account import Account
 from eth_typing import URI
 from gnosis.eth import EthereumClient
+from loguru import logger
+from pydantic import SecretStr
+from web3 import Web3
 
+from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.safe import create_safe
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 
 
 def create_safe_for_agent(
     from_private_key: str = typer.Option(),
     rpc_url: str | None = None,
     salt_nonce: int | None = None,
+    fund_safe: bool = True,
+    fund_amount_xdai: int = 1,
 ) -> None:
     """
         Helper script to create a Safe for an agent, usage:
@@ -22,6 +30,8 @@ def create_safe_for_agent(
             --from-private-key your-private-key
             --rpc_url RPC URL [Optional, defaults to Gnosis Mainnet]
             --salt_nonce SALT_NONCE for reproducible Safe creation [Optional, defaults to random value]
+            --fund_safe FUND_SAFE [Optional, defaults to true]
+            --fund_amount FUND_AMOUNT [Optional, defaults to 1 xDAI]
         ```
         """
 
@@ -30,13 +40,30 @@ def create_safe_for_agent(
     if rpc_url:
         ethereum_client = EthereumClient(URI(rpc_url))
     account = Account.from_key(from_private_key)
-    create_safe(
+    safe_address = create_safe(
         ethereum_client=ethereum_client,
         account=account,
         owners=[account.address],
         salt_nonce=salt_nonce,
         threshold=1,
     )
+
+    if not safe_address:
+        logger.error("Could not deploy safe. Aborting.")
+        return
+
+    if fund_safe:
+        send_xdai_to(
+            web3=ethereum_client.w3,
+            from_private_key=PrivateKey(SecretStr(from_private_key)),
+            to_address=safe_address,
+            value=xdai_to_wei(xDai(fund_amount_xdai)),
+        )
+
+    safe_balance = get_balances(
+        Web3.to_checksum_address(safe_address), ethereum_client.w3
+    )
+    logger.info(f"Safe balance {safe_balance}")
 
 
 if __name__ == "__main__":

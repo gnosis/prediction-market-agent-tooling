@@ -2,10 +2,11 @@ from eth_account import Account
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
 from loguru import logger
+from pydantic import SecretStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
-from prediction_market_agent_tooling.gtypes import xDai
+from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
@@ -18,8 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
-from tests_integration.local_chain_utils import send_xdai_to_for_tests
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 from tests_integration.safe.conftest import print_current_block
 
 
@@ -32,6 +32,9 @@ def test_create_safe(
     version = test_safe.retrieve_version()
     assert version == "1.4.1"
     assert local_ethereum_client.is_contract(test_safe.address)
+    test_credentials.safe_address = test_safe.address
+    is_owner = test_credentials.check_if_is_safe_owner(local_ethereum_client)
+    assert is_owner
     assert test_safe.retrieve_owners() == [account.address]
 
 
@@ -53,9 +56,9 @@ def test_send_function_on_contract_tx_using_safe(
     # Fund safe with xDAI if needed
     initial_safe_balance = local_ethereum_client.get_balance(test_safe.address)
     if initial_safe_balance < xdai_to_wei(10):
-        send_xdai_to_for_tests(
-            web3=local_ethereum_client.w3,
-            from_address=Web3.to_checksum_address(account.address),
+        send_xdai_to(
+            web3=local_web3,
+            from_private_key=PrivateKey(SecretStr(account.key.hex())),
             to_address=test_safe.address,
             value=xdai_to_wei(10),
         )

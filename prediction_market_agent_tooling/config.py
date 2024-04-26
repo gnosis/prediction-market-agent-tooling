@@ -1,5 +1,7 @@
 import typing as t
 
+from gnosis.eth import EthereumClient
+from gnosis.safe import Safe
 from pydantic import BaseModel
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -132,3 +134,11 @@ class PrivateCredentials(BaseModel):
             private_key=api_keys.bet_from_private_key,
             safe_address=api_keys.SAFE_ADDRESS,
         )
+
+    def check_if_is_safe_owner(self, ethereum_client: EthereumClient) -> bool:
+        if not self.safe_address:
+            raise ValueError("Cannot check ownership if safe_address is not defined.")
+
+        s = Safe(self.safe_address, ethereum_client)  # type: ignore[abstract]
+        public_key_from_signer = private_key_to_public_key(self.private_key)
+        return s.retrieve_is_owner(public_key_from_signer)

@@ -40,7 +40,7 @@ safe-eth-py = "^6.0.0b14"
 eth-account = "^0.8.0"
 prompt-toolkit = "^3.0.43"
 safe-cli = "^1.0.0"
-mech-client = "^0.2.13"
+mech-client = { git = "https://github.com/valory-xyz/mech-client.git", branch = "main" } # TODO replace with ^0.2.14 release when available
 langfuse = "^2.27.1"
 
 [tool.poetry.extras]

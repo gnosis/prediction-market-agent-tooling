@@ -3,7 +3,7 @@ import os
 import tempfile
 import time
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from loguru import logger
 from pydantic import BaseModel, BeforeValidator
@@ -30,7 +30,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.markets import (
+    MarketType,
+    have_bet_on_market_since,
+)
 from prediction_market_agent_tooling.markets.omen.omen import (
     redeem_from_all_user_positions,
 )
@@ -40,6 +43,7 @@ from prediction_market_agent_tooling.monitor.langfuse.langfuse_wrapper import (
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
+from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
 
 MAX_AVAILABLE_MARKETS = 20
@@ -80,6 +84,8 @@ class Answer(BaseModel):
 
 
 class DeployableAgent:
+    bet_on_n_markets_per_run: int = 1
+
     def __init__(self) -> None:
         self.langfuse_wrapper = LangfuseWrapper(agent_name=self.__class__.__name__)
         self.load()
@@ -93,11 +99,30 @@ class DeployableAgent:
     def load(self) -> None:
         pass
 
+    def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
+        return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
+
     def pick_markets(self, markets: t.Sequence[AgentMarket]) -> t.Sequence[AgentMarket]:
         """
-        This method should be implemented by the subclass to pick the markets to bet on. By default, it picks only the first market.
+        Subclasses can implement their own logic instead of this one, or on top of this one.
+        By default, it picks only the first {n_markets_per_run} markets where user didn't bet recently and it's a reasonable question.
         """
-        return markets[:1]
+        picked: list[AgentMarket] = []
+
+        for market in markets:
+            if len(picked) >= self.bet_on_n_markets_per_run:
+                break
+
+            if self.have_bet_on_market_since(market, since=timedelta(hours=24)):
+                continue
+
+            # Do as a last check, as it uses paid OpenAI API.
+            if not is_predictable_binary(market.question):
+                continue
+
+            picked.append(market)
+
+        return picked
 
     def answer_binary_market(self, market: AgentMarket) -> Answer | None:
         """

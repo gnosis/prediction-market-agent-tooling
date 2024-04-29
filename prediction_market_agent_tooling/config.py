@@ -1,5 +1,7 @@
 import typing as t
 
+from gnosis.eth import EthereumClient
+from gnosis.safe import Safe
 from pydantic import BaseModel
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,6 +31,10 @@ class APIKeys(BaseSettings):
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
     GOOGLE_SEARCH_ENGINE_ID: t.Optional[SecretStr] = None
+
+    LANGFUSE_SECRET_KEY: t.Optional[SecretStr] = None
+    LANGFUSE_PUBLIC_KEY: t.Optional[SecretStr] = None
+    LANGFUSE_HOST: t.Optional[str] = None
 
     ENABLE_CACHE: bool = True
     CACHE_DIR: str = "./.cache"
@@ -72,6 +78,24 @@ class APIKeys(BaseSettings):
             "GOOGLE_SEARCH_ENGINE_ID missing in the environment.",
         )
 
+    @property
+    def langfuse_secret_key(self) -> SecretStr:
+        return check_not_none(
+            self.LANGFUSE_SECRET_KEY, "LANGFUSE_SECRET_KEY missing in the environment."
+        )
+
+    @property
+    def langfuse_public_key(self) -> SecretStr:
+        return check_not_none(
+            self.LANGFUSE_PUBLIC_KEY, "LANGFUSE_PUBLIC_KEY missing in the environment."
+        )
+
+    @property
+    def langfuse_host(self) -> str:
+        return check_not_none(
+            self.LANGFUSE_HOST, "LANGFUSE_HOST missing in the environment."
+        )
+
     def model_dump_public(self) -> dict[str, t.Any]:
         return {
             k: v
@@ -110,3 +134,11 @@ class PrivateCredentials(BaseModel):
             private_key=api_keys.bet_from_private_key,
             safe_address=api_keys.SAFE_ADDRESS,
         )
+
+    def check_if_is_safe_owner(self, ethereum_client: EthereumClient) -> bool:
+        if not self.safe_address:
+            raise ValueError("Cannot check ownership if safe_address is not defined.")
+
+        s = Safe(self.safe_address, ethereum_client)  # type: ignore[abstract]
+        public_key_from_signer = private_key_to_public_key(self.private_key)
+        return s.retrieve_is_owner(public_key_from_signer)

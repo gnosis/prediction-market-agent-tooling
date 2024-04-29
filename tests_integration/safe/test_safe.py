@@ -1,89 +1,106 @@
-import pytest
 from eth_account import Account
-from eth_account.signers.local import LocalAccount
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
+from loguru import logger
+from pydantic import SecretStr
 from web3 import Web3
-from web3.gas_strategies.time_based import fast_gas_price_strategy
 
+from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
-from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_TRUE_OUTCOME,
+    OmenMarket,
+)
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
+    binary_omen_buy_outcome_tx,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.safe import create_safe
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
-from tests.utils import RUN_PAID_TESTS
-from tests_integration.safe.test_constants import ANVIL_PKEY1
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
+from tests_integration.safe.conftest import print_current_block
 
 
-@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
-def test_create_safe(local_ethereum_client: EthereumClient) -> None:
-    # ToDo - Implement this when this issue has been merged (https://github.com/gnosis/prediction-market-agent-tooling/issues/99)
-    #  Start local chain (fork Gnosis)
-    #  Call create safe - for inspiration -> https://github.com/karpatkey/roles_royce/blob/2529d244ed8502d34f9daa9f70fa80e7b1123937/tests/utils.py#L77
-    # create_safe(from_private_key=private_key_anvil1)
-    #  Assert safe is valid, safe version 1.4.1
-    #  Stop local chain
-
-    account = Account.from_key(ANVIL_PKEY1)
-    deployed_safe = create_test_safe(local_ethereum_client, account)
-    version = deployed_safe.retrieve_version()
+def test_create_safe(
+    local_ethereum_client: EthereumClient,
+    test_credentials: PrivateCredentials,
+    test_safe: Safe,
+) -> None:
+    account = Account.from_key(test_credentials.private_key.get_secret_value())
+    version = test_safe.retrieve_version()
     assert version == "1.4.1"
-    assert local_ethereum_client.is_contract(deployed_safe.address)
-    assert deployed_safe.retrieve_owners() == [account.address]
+    assert local_ethereum_client.is_contract(test_safe.address)
+    test_credentials.safe_address = test_safe.address
+    is_owner = test_credentials.check_if_is_safe_owner(local_ethereum_client)
+    assert is_owner
+    assert test_safe.retrieve_owners() == [account.address]
 
 
-def create_test_safe(ethereum_client: EthereumClient, deployer: LocalAccount):
-    safe_address = create_safe(
-        ethereum_client=ethereum_client,
-        account=deployer,
-        owners=[deployer.address],
-        salt_nonce=42,
-        threshold=1,
-    )
-    deployed_safe = Safe(safe_address, ethereum_client)
-    return deployed_safe
-
-
-@pytest.fixture()
-def local_ethereum_client():
-    return EthereumClient()
-
-
-@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_send_function_on_contract_tx_using_safe(
     local_ethereum_client: EthereumClient,
+    local_web3: Web3,
+    test_credentials: PrivateCredentials,
+    test_safe: Safe,
 ) -> None:
-    # Deploy safe
-    account = Account.from_key(ANVIL_PKEY1)
-    safe = create_test_safe(local_ethereum_client, account)
-    # Fund safe
-    local_ethereum_client.w3.eth.set_gas_price_strategy(fast_gas_price_strategy)
-    gas_price = local_ethereum_client.w3.eth.generate_gas_price()
+    print_current_block(local_web3)
 
-    initial_safe_balance = local_ethereum_client.get_balance(safe.address)
-    if initial_safe_balance < xdai_to_wei(2):
-        local_ethereum_client.send_eth_to(
-            account.key.hex(), safe.address, gas_price, xdai_to_wei(2)
+    logger.debug(f"is connected {local_web3.is_connected()} {local_web3.provider}")
+    print_current_block(local_web3)
+    logger.debug(
+        f"provider {local_web3.provider.endpoint_uri} connected {local_web3.is_connected()}"
+    )
+
+    account = Account.from_key(test_credentials.private_key.get_secret_value())
+    # Fund safe with xDAI if needed
+    initial_safe_balance = local_ethereum_client.get_balance(test_safe.address)
+    if initial_safe_balance < xdai_to_wei(10):
+        send_xdai_to(
+            web3=local_web3,
+            from_private_key=PrivateKey(SecretStr(account.key.hex())),
+            to_address=test_safe.address,
+            value=xdai_to_wei(10),
         )
 
-    # Bet on Omen market
-
-    market_id = Web3.to_checksum_address("0x753d3b31bf1038d5b5aa81015b7b3a6a71e3a6e4")
-    subgraph = OmenSubgraphHandler()
-    omen_market = subgraph.get_omen_market_by_market_id(market_id)
+    print_current_block(local_web3)
+    safe_balance = local_ethereum_client.get_balance(test_safe.address)
+    logger.debug(f"safe balance {safe_balance} xDai")
+    # Fetch existing market with enough liquidity
+    min_liquidity_wei = xdai_to_wei(xDai(5))
+    markets = fetch_omen_open_binary_market_with_enough_liquidity(1, min_liquidity_wei)
+    # Check that there is a market with enough liquidity
+    assert len(markets) == 1
+    omen_market = markets[0]
     omen_agent_market = OmenAgentMarket.from_data_model(omen_market)
-    amount = TokenAmount(amount=1, currency=Currency.xDai)
+    amount = TokenAmount(amount=2, currency=Currency.xDai)
+    test_credentials.safe_address = test_safe.address
     initial_yes_token_balance = omen_agent_market.get_token_balance(
-        safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
+        test_safe.address, OMEN_TRUE_OUTCOME, web3=local_web3
     )
-    omen_agent_market.buy_tokens(True, amount, web3=local_ethereum_client.w3)
-    # assert balance is smaller
-    # ToDo - Check if outcome token amount increased
+    logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
+    bet_tx_hash = binary_omen_buy_outcome_tx(
+        private_credentials=test_credentials,
+        amount=xDai(amount.amount),
+        market=omen_agent_market,
+        binary_outcome=True,
+        auto_deposit=True,
+        web3=local_web3,
+    )
+    print_current_block(local_web3)
+    logger.debug(f"placed bet tx hash {bet_tx_hash}")
+
     final_yes_token_balance = omen_agent_market.get_token_balance(
-        safe.address, OMEN_TRUE_OUTCOME, web3=local_ethereum_client.w3
+        test_safe.address, OMEN_TRUE_OUTCOME, web3=local_web3
     )
+    logger.debug(f"final Yes token balance {final_yes_token_balance}")
+    print_current_block(local_web3)
     assert initial_yes_token_balance.amount < final_yes_token_balance.amount
-    print("done")
+
+
+def fetch_omen_open_binary_market_with_enough_liquidity(
+    limit=1, liquidity_bigger_than=xdai_to_wei(xDai(5))
+) -> list[OmenMarket]:
+    return OmenSubgraphHandler().get_omen_binary_markets(
+        limit=limit, resolved=False, liquidity_bigger_than=liquidity_bigger_than
+    )

@@ -6,10 +6,17 @@ from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
+from prediction_market_agent_tooling.gtypes import Probability
 
 
 class AbstractBenchmarkedAgent:
-    def __init__(self, agent_name: str, max_workers: t.Optional[int] = None):
+    def __init__(
+        self,
+        agent_name: str,
+        max_workers: t.Optional[int] = None,
+        model: str | None = None,
+    ):
+        self.model = model
         self.agent_name = agent_name
         self.max_workers = max_workers  # Limit the number of workers that can run this worker in parallel threads
 
@@ -80,7 +87,8 @@ class RandomAgent(AbstractBenchmarkedAgent):
         p_yes, confidence = random.random(), random.random()
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                p_yes=p_yes,
+                decision=p_yes > 0.5,
+                p_yes=Probability(p_yes),
                 confidence=confidence,
                 info_utility=None,
             ),
@@ -103,7 +111,8 @@ class FixedAgent(AbstractBenchmarkedAgent):
         p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                p_yes=p_yes,
+                decision=self.fixed_answer,
+                p_yes=Probability(p_yes),
                 confidence=confidence,
                 info_utility=None,
             ),

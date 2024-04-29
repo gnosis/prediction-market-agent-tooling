@@ -15,6 +15,6 @@ def agent0_address() -> str:
     return "0x2DD9f5678484C1F59F97eD334725858b938B4102"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def omen_subgraph_handler() -> OmenSubgraphHandler:
     return OmenSubgraphHandler()

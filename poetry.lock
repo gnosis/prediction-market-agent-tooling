@@ -4902,9 +4902,9 @@ multidict = ">=4.0"
 [extras]
 google = ["google-api-python-client"]
 langchain = ["langchain", "langchain-openai"]
-mech = ["mech-client"]
+mech-client = ["mech-client"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "2ce182a3ce14fb2d31ef46bff0f0ed7c8e43c17fa6b919df3a7ecc87232c5d42"
+content-hash = "a3d4136355c5f6eb6f5d3ac45f56b96d8593cadd8cd93316a15263ed9de10670"

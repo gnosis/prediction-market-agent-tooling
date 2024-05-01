@@ -40,7 +40,7 @@ def is_predictable_binary(
     try:
         from langchain.prompts import ChatPromptTemplate
         from langchain_openai import ChatOpenAI
-    except ImportError as e:
+    except ImportError:
         logger.info("langchain not installed, skipping is_predictable_binary")
         return True
 

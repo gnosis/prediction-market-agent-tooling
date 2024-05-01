@@ -1,5 +1,4 @@
-from langchain.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from loguru import logger
 
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
 
@@ -38,6 +37,13 @@ def is_predictable_binary(
     """
     Evaluate if the question is actually answerable.
     """
+    try:
+        from langchain.prompts import ChatPromptTemplate
+        from langchain_openai import ChatOpenAI
+    except ImportError as e:
+        logger.info("langchain not installed, skipping is_predictable_binary")
+        return True
+
     llm = ChatOpenAI(model=engine, temperature=0.0)
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)

@@ -1,7 +1,8 @@
 import sys
 from enum import Enum
 
-from loguru import Logger, logger
+from loguru import logger
+from loguru._logger import Logger
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -42,7 +43,7 @@ def patch_logger(logger: Logger) -> None:
             colorize=True,
         )
 
-    logger.info(f"Patched for {config.LOG_FORMAT=}.")
+    logger.info(f"Patched logger for {config.LOG_FORMAT.value} format.")
 
 
 if not getattr(logger, "_patched", False):

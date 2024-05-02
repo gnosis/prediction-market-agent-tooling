@@ -1,9 +1,12 @@
 import sys
+import typing as t
 from enum import Enum
 
 from loguru import logger
-from loguru._logger import Logger
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if t.TYPE_CHECKING:
+    from loguru import Logger
 
 
 class LogFormat(str, Enum):
@@ -22,7 +25,7 @@ class LogConfig(BaseSettings):
 GCP_LOG_FORMAT = "{level:<.1}{time:MMDD HH:mm:ss.SSSSSS} {process} {name}:{line}] {message} | {extra}"
 
 
-def patch_logger(logger: Logger) -> None:
+def patch_logger(logger: "Logger") -> None:
     config = LogConfig()
 
     if config.LOG_FORMAT == LogFormat.GCP:

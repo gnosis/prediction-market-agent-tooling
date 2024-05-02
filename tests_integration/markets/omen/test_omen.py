@@ -3,11 +3,11 @@ from datetime import timedelta
 
 import pytest
 from eth_typing import HexAddress, HexStr
-from loguru import logger
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
+from prediction_market_agent_tooling.loggers.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,

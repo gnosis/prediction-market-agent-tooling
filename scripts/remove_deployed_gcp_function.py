@@ -1,9 +1,9 @@
 import typer
-from loguru import logger
 
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
     remove_deployed_gcp_function,
 )
+from prediction_market_agent_tooling.loggers.loggers import logger
 
 
 def main(names: list[str]) -> None:

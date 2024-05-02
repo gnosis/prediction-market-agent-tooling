@@ -7,8 +7,9 @@ import time
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from loguru import logger
 from web3 import HTTPProvider, Web3
+
+from prediction_market_agent_tooling.loggers.loggers import logger
 
 # Local chain setup for tests.
 # Heavily inspired by Kartpatkey's Roles Royce (https://github.com/karpatkey/roles_royce/blob/main/tests/utils.py)

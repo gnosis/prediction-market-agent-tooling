@@ -6,7 +6,6 @@ from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
 import pytz
 import requests
-from loguru import logger
 from pydantic import BaseModel, ValidationError
 from scipy.stats import entropy
 
@@ -15,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
     SecretStr,
 )
+from prediction_market_agent_tooling.loggers.loggers import logger
 
 T = TypeVar("T")
 

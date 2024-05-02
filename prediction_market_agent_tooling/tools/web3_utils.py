@@ -5,7 +5,6 @@ from eth_account import Account
 from eth_typing import URI
 from gnosis.eth import EthereumClient
 from gnosis.safe.safe import Safe
-from loguru import logger
 from pydantic.types import SecretStr
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -21,6 +20,7 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xdai_type,
 )
+from prediction_market_agent_tooling.loggers.loggers import logger
 
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)

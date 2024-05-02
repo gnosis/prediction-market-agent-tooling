@@ -5,7 +5,6 @@ import time
 import typing as t
 from datetime import datetime, timedelta
 
-from loguru import logger
 from pydantic import BaseModel, BeforeValidator
 from typing_extensions import Annotated
 
@@ -24,6 +23,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_resolve_api_keys_secrets,
 )
 from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.loggers.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,

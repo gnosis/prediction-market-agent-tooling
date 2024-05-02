@@ -5,7 +5,7 @@ from gnosis.safe import Safe
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.safe import create_safe
 
 

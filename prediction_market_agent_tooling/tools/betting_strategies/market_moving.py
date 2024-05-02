@@ -4,7 +4,7 @@ from functools import reduce
 import numpy as np
 
 from prediction_market_agent_tooling.gtypes import Probability, wei_type, xDai
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.utils import check_not_none

@@ -5,7 +5,7 @@ import requests
 import tenacity
 
 from prediction_market_agent_tooling.gtypes import Mana, SecretStr
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,

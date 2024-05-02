@@ -4,7 +4,7 @@ import tenacity
 from googleapiclient.discovery import build
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
 
 

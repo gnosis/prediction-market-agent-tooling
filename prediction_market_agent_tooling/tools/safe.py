@@ -13,7 +13,7 @@ from safe_cli.safe_addresses import (
 )
 from web3.types import Wei
 
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 

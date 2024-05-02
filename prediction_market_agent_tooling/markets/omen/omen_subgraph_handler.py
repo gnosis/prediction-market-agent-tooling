@@ -7,7 +7,7 @@ from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
 
 from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,

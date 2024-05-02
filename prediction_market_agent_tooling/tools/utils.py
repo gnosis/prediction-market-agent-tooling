@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
     SecretStr,
 )
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 
 T = TypeVar("T")
 

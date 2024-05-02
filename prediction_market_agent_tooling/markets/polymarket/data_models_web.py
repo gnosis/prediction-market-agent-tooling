@@ -13,7 +13,7 @@ import requests
 from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import USDC, HexAddress
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
 
 POLYMARKET_BASE_URL = "https://polymarket.com"

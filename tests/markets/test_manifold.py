@@ -5,7 +5,7 @@ import pytz
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import mana_type
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_bets,
     get_manifold_binary_markets,

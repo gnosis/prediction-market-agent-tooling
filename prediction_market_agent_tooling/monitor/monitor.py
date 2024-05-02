@@ -21,7 +21,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     list_gcp_cronjobs,
     list_gcp_functions,
 )
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.tools.parallelism import par_map

@@ -23,7 +23,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_resolve_api_keys_secrets,
 )
 from prediction_market_agent_tooling.gtypes import Probability
-from prediction_market_agent_tooling.loggers.loggers import logger
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,

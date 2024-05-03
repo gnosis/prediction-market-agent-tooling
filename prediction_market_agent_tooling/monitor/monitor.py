@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from google.cloud.functions_v2.types.functions import Function
-from loguru import logger
 from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -22,6 +21,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     list_gcp_cronjobs,
     list_gcp_functions,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.tools.parallelism import par_map

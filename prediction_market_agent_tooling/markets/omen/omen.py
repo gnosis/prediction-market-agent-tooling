@@ -2,7 +2,6 @@ import sys
 import typing as t
 from datetime import datetime
 
-from loguru import logger
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
@@ -18,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xdai_type,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,

@@ -4,11 +4,11 @@ import typer
 from eth_account import Account
 from eth_typing import URI
 from gnosis.eth import EthereumClient
-from loguru import logger
 from pydantic import SecretStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.safe import create_safe

@@ -1,12 +1,12 @@
 from eth_account import Account
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
-from loguru import logger
 from pydantic import SecretStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,

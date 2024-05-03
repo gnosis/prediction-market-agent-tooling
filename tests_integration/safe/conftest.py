@@ -2,10 +2,10 @@ import pytest
 from eth_account import Account
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
-from loguru import logger
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.safe import create_safe
 
 

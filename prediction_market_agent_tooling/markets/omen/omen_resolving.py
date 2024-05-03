@@ -1,4 +1,3 @@
-from loguru import logger
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import PrivateCredentials
@@ -9,6 +8,7 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     xDai,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.manifold.utils import (
     find_resolution_on_manifold,

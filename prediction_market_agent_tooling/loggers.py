@@ -42,11 +42,6 @@ def patch_logger() -> None:
     else:
         raise ValueError(f"Unknown log format: {config.LOG_FORMAT}")
 
-    # Use logging module for warnings.
-    logging.captureWarnings(True)
-    # Change warning formatting to a simpler one (no source code in a new line).
-    warnings.formatwarning = simple_warning_format
-
     # Change built-in logging.
     if format_logging is not None:
         logging.basicConfig(
@@ -63,11 +58,16 @@ def patch_logger() -> None:
             colorize=True,
         )
 
+    # Change warning formatting to a simpler one (no source code in a new line).
+    warnings.formatwarning = simple_warning_format
+    # Use logging module for warnings.
+    logging.captureWarnings(True)
+
     logger.info(f"Patched logger for {config.LOG_FORMAT.value} format.")
 
 
 def simple_warning_format(message, category, filename, lineno, line=None):  # type: ignore[no-untyped-def] # Not typed in the standard library neither.
-    return f"{category.__name__}: {message}\n"
+    return f"{category.__name__}: {message}"
 
 
 if not getattr(logger, "_patched", False):

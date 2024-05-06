@@ -1,6 +1,5 @@
 import logging
 import sys
-import typing as t
 import warnings
 from enum import Enum
 

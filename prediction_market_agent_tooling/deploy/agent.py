@@ -89,12 +89,11 @@ class DeployableRunAgent:
         self.load()
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
-        if (
-            cls.__init__ is not DeployableRunAgent.__init__
-            and cls.__init__ is not DeployableBetAgent.__init__
-        ):
+        if "DeployableRunAgent" not in str(
+            cls.__init__
+        ) and "DeployableBetAgent" not in str(cls.__init__):
             raise TypeError(
-                "Cannot override __init__ method of DeployableAgent class, please override the `load` method to set up the agent."
+                "Cannot override __init__ method of deployable agent class, please override the `load` method to set up the agent."
             )
 
     def load(self) -> None:

@@ -83,15 +83,15 @@ class Answer(BaseModel):
         return Probability(1 - self.p_yes)
 
 
-class DeployableRunAgent:
+class DeployableAgent:
     def __init__(self) -> None:
         self.langfuse_wrapper = LangfuseWrapper(agent_name=self.__class__.__name__)
         self.load()
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
-        if "DeployableRunAgent" not in str(
+        if "DeployableAgent" not in str(
             cls.__init__
-        ) and "DeployableBetAgent" not in str(cls.__init__):
+        ) and "DeployableTraderAgent" not in str(cls.__init__):
             raise TypeError(
                 "Cannot override __init__ method of deployable agent class, please override the `load` method to set up the agent."
             )
@@ -198,7 +198,7 @@ def {entrypoint_function_name}(request) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"
 
 
-class DeployableBetAgent(DeployableRunAgent):
+class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
 
     def __init__(self, place_bet: bool = True) -> None:

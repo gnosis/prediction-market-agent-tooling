@@ -7,8 +7,8 @@ import typer
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
     DeployableAlwaysRaiseAgent,
-    DeployableBetAgent,
     DeployableCoinFlipAgent,
+    DeployableTraderAgent,
 )
 from prediction_market_agent_tooling.deploy.constants import OWNER_KEY
 from prediction_market_agent_tooling.gtypes import SecretStr, private_key_type
@@ -34,7 +34,7 @@ def main(
     secrets: str | None = None,
     timeout: int = 180,
 ) -> None:
-    agent: DeployableBetAgent = {
+    agent: DeployableTraderAgent = {
         AgentName.coin_flip: DeployableCoinFlipAgent,
         AgentName.always_raise: DeployableAlwaysRaiseAgent,
     }[agent_name]()

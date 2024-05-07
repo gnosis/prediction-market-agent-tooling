@@ -84,62 +84,30 @@ class Answer(BaseModel):
 
 
 class DeployableAgent:
-    bet_on_n_markets_per_run: int = 1
-
     def __init__(self) -> None:
         self.langfuse_wrapper = LangfuseWrapper(agent_name=self.__class__.__name__)
         self.load()
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
-        if cls.__init__ is not DeployableAgent.__init__:
+        if "DeployableAgent" not in str(
+            cls.__init__
+        ) and "DeployableTraderAgent" not in str(cls.__init__):
             raise TypeError(
-                "Cannot override __init__ method of DeployableAgent class, please override the `load` method to set up the agent."
+                "Cannot override __init__ method of deployable agent class, please override the `load` method to set up the agent."
             )
 
     def load(self) -> None:
         pass
-
-    def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
-        return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
-
-    def pick_markets(self, markets: t.Sequence[AgentMarket]) -> t.Sequence[AgentMarket]:
-        """
-        Subclasses can implement their own logic instead of this one, or on top of this one.
-        By default, it picks only the first {n_markets_per_run} markets where user didn't bet recently and it's a reasonable question.
-        """
-        picked: list[AgentMarket] = []
-
-        for market in markets:
-            if len(picked) >= self.bet_on_n_markets_per_run:
-                break
-
-            if self.have_bet_on_market_since(market, since=timedelta(hours=24)):
-                continue
-
-            # Do as a last check, as it uses paid OpenAI API.
-            if not is_predictable_binary(market.question):
-                continue
-
-            picked.append(market)
-
-        return picked
-
-    def answer_binary_market(self, market: AgentMarket) -> Answer | None:
-        """
-        Answer the binary market. This method must be implemented by the subclass.
-        """
-        raise NotImplementedError("This method must be implemented by the subclass")
 
     def deploy_local(
         self,
         market_type: MarketType,
         sleep_time: float,
         timeout: float,
-        place_bet: bool,
     ) -> None:
         start_time = time.time()
         while True:
-            self.run(market_type=market_type, _place_bet=place_bet)
+            self.run(market_type=market_type)
             time.sleep(sleep_time)
             if time.time() - start_time > timeout:
                 break
@@ -223,6 +191,51 @@ def {entrypoint_function_name}(request) -> str:
         if cron_schedule:
             schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
 
+    def run(self, market_type: MarketType) -> None:
+        raise NotImplementedError("This method must be implemented by the subclass.")
+
+    def get_gcloud_fname(self, market_type: MarketType) -> str:
+        return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"
+
+
+class DeployableTraderAgent(DeployableAgent):
+    bet_on_n_markets_per_run: int = 1
+
+    def __init__(self, place_bet: bool = True) -> None:
+        super().__init__()
+        self.place_bet = place_bet
+
+    def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
+        return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
+
+    def pick_markets(self, markets: t.Sequence[AgentMarket]) -> t.Sequence[AgentMarket]:
+        """
+        Subclasses can implement their own logic instead of this one, or on top of this one.
+        By default, it picks only the first {n_markets_per_run} markets where user didn't bet recently and it's a reasonable question.
+        """
+        picked: list[AgentMarket] = []
+
+        for market in markets:
+            if len(picked) >= self.bet_on_n_markets_per_run:
+                break
+
+            if self.have_bet_on_market_since(market, since=timedelta(hours=24)):
+                continue
+
+            # Do as a last check, as it uses paid OpenAI API.
+            if not is_predictable_binary(market.question):
+                continue
+
+            picked.append(market)
+
+        return picked
+
+    def answer_binary_market(self, market: AgentMarket) -> Answer | None:
+        """
+        Answer the binary market. This method must be implemented by the subclass.
+        """
+        raise NotImplementedError("This method must be implemented by the subclass")
+
     def calculate_bet_amount(self, answer: Answer, market: AgentMarket) -> BetAmount:
         """
         Calculate the bet amount. By default, it returns the minimum bet amount.
@@ -253,7 +266,7 @@ def {entrypoint_function_name}(request) -> str:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
             redeem_from_all_user_positions(private_credentials)
 
-    def process_bets(self, market_type: MarketType, _place_bet: bool = True) -> None:
+    def process_bets(self, market_type: MarketType) -> None:
         """
         Processes bets placed by agents on a given market.
         """
@@ -264,7 +277,7 @@ def {entrypoint_function_name}(request) -> str:
             if result is None:
                 logger.debug(f"Skipping market {market} as no answer was provided")
                 continue
-            if _place_bet:
+            if self.place_bet:
                 amount = self.calculate_bet_amount(result, market)
                 logger.debug(
                     f"Placing bet on {market} with result {result} and amount {amount}"
@@ -277,10 +290,7 @@ def {entrypoint_function_name}(request) -> str:
     def after(self, market_type: MarketType) -> None:
         pass
 
-    def run(self, market_type: MarketType, _place_bet: bool = True) -> None:
+    def run(self, market_type: MarketType) -> None:
         self.before(market_type)
-        self.process_bets(market_type, _place_bet)
+        self.process_bets(market_type)
         self.after(market_type)
-
-    def get_gcloud_fname(self, market_type: MarketType) -> str:
-        return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"

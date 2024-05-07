@@ -6,8 +6,8 @@ import typer
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent_example import (
-    DeployableAgent,
     DeployableAlwaysRaiseAgent,
+    DeployableBetAgent,
     DeployableCoinFlipAgent,
 )
 from prediction_market_agent_tooling.deploy.constants import OWNER_KEY
@@ -34,7 +34,7 @@ def main(
     secrets: str | None = None,
     timeout: int = 180,
 ) -> None:
-    agent: DeployableAgent = {
+    agent: DeployableBetAgent = {
         AgentName.coin_flip: DeployableCoinFlipAgent,
         AgentName.always_raise: DeployableAlwaysRaiseAgent,
     }[agent_name]()

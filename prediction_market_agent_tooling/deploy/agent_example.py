@@ -3,13 +3,13 @@ import typing as t
 
 from prediction_market_agent_tooling.deploy.agent import (
     Answer,
-    DeployableAgent,
+    DeployableBetAgent,
     Probability,
 )
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 
 
-class DeployableCoinFlipAgent(DeployableAgent):
+class DeployableCoinFlipAgent(DeployableBetAgent):
     def pick_markets(self, markets: t.Sequence[AgentMarket]) -> t.Sequence[AgentMarket]:
         return random.sample(markets, 1)
 
@@ -23,6 +23,6 @@ class DeployableCoinFlipAgent(DeployableAgent):
         )
 
 
-class DeployableAlwaysRaiseAgent(DeployableAgent):
+class DeployableAlwaysRaiseAgent(DeployableBetAgent):
     def answer_binary_market(self, market: AgentMarket) -> Answer | None:
         raise RuntimeError("I always raise!")

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.24.0"
+version = "0.25.0"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"

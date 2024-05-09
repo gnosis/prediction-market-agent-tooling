@@ -24,11 +24,11 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
     BetAmount,
     Currency,
     Position,
     TokenAmount,
-    Bet,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BASE_URL,

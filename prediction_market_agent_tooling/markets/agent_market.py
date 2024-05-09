@@ -7,12 +7,12 @@ from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
     BetAmount,
     Currency,
     Position,
     Resolution,
     TokenAmount,
-    Bet,
 )
 from prediction_market_agent_tooling.tools.utils import (
     add_utc_timezone_validator,

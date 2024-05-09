@@ -15,12 +15,12 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
     BetAmount,
     Currency,
     ProfitAmount,
     Resolution,
     ResolvedBet,
-    Bet,
 )
 from prediction_market_agent_tooling.tools.utils import (
     check_not_none,

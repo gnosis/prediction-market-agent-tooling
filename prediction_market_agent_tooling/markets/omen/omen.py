@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     Position,
     TokenAmount,
+    Bet,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BASE_URL,
@@ -268,7 +269,7 @@ class OmenAgentMarket(AgentMarket):
     @staticmethod
     def get_latest_bets(
         better_address: ChecksumAddress, start_time: datetime
-    ) -> list[OmenBet]:
+    ) -> list[Bet]:
         bets = OmenSubgraphHandler().get_bets(
             better_address=better_address, start_time=start_time
         )
@@ -276,7 +277,7 @@ class OmenAgentMarket(AgentMarket):
         seen_titles = {bet.title: bet for bet in bets}
         bets = list(seen_titles.values())
         bets.sort(key=lambda x: x.creation_datetime)
-        return bets
+        return [b.to_bet() for b in bets]
 
     def get_contract(
         self,

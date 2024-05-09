@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
     BetAmount,
     Currency,
     Position,
@@ -264,6 +265,19 @@ class OmenAgentMarket(AgentMarket):
                 market_id=HexAddress(HexStr(id))
             )
         )
+
+    @staticmethod
+    def get_bets_made_since(
+        better_address: ChecksumAddress, start_time: datetime
+    ) -> list[Bet]:
+        bets = OmenSubgraphHandler().get_bets(
+            better_address=better_address, start_time=start_time
+        )
+        # get unique titles
+        seen_titles = {bet.title: bet for bet in bets}
+        bets = list(seen_titles.values())
+        bets.sort(key=lambda x: x.creation_datetime)
+        return [b.to_bet() for b in bets]
 
     def get_contract(
         self,

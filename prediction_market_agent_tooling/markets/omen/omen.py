@@ -267,7 +267,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_latest_bets(
+    def get_bets_made_since(
         better_address: ChecksumAddress, start_time: datetime
     ) -> list[Bet]:
         bets = OmenSubgraphHandler().get_bets(

@@ -2,6 +2,7 @@ import typing as t
 from datetime import datetime
 from enum import Enum
 
+from eth_typing import ChecksumAddress
 from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import Probability
@@ -137,6 +138,10 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_binary_market(id: str) -> "AgentMarket":
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def get_latest_bets(better_address: ChecksumAddress, start_time: datetime) -> t.Any:
         raise NotImplementedError("Subclasses must implement this method")
 
     def is_resolved(self) -> bool:

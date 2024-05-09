@@ -265,11 +265,24 @@ class OmenAgentMarket(AgentMarket):
             )
         )
 
+    @staticmethod
+    def get_latest_bets(
+        better_address: ChecksumAddress, start_time: datetime
+    ) -> list[OmenBet]:
+        bets = OmenSubgraphHandler().get_bets(
+            better_address=better_address, start_time=start_time
+        )
+        # get unique titles
+        seen_titles = {bet.title: bet for bet in bets}
+        bets = list(seen_titles.values())
+        bets.sort(key=lambda x: x.creation_datetime)
+        return bets
+
     def get_contract(
         self,
     ) -> OmenFixedProductMarketMakerContract:
         return OmenFixedProductMarketMakerContract(
-            address=self.market_maker_contract_address_checksummed,
+            address=self.market_maker_contract_address_checksummed
         )
 
     def get_index_set(self, outcome: str) -> int:

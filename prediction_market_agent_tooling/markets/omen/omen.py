@@ -148,7 +148,6 @@ class OmenAgentMarket(AgentMarket):
     def sell_tokens(
         self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
     ) -> None:
-        keys = APIKeys()
         binary_omen_sell_outcome_tx(
             api_keys=APIKeys(),
             amount=xDai(amount.amount),

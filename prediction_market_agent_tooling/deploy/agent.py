@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel, BeforeValidator
 from typing_extensions import Annotated
 
-from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
     REPOSITORY_KEY,
@@ -260,11 +260,9 @@ class DeployableTraderAgent(DeployableAgent):
         """
         Executes actions that occur before bets are placed.
         """
-        private_credentials = PrivateCredentials.from_api_keys(APIKeys())
-
         if market_type == MarketType.OMEN:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
-            redeem_from_all_user_positions(private_credentials)
+            redeem_from_all_user_positions(APIKeys())
 
     def process_bets(self, market_type: MarketType) -> None:
         """

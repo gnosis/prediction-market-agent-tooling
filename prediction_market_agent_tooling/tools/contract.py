@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from pydantic import BaseModel, field_validator
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
@@ -86,7 +86,7 @@ class ContractBaseClass(BaseModel):
 
     def send(
         self,
-        private_credentials: PrivateCredentials,
+        api_keys: APIKeys,
         function_name: str,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
         tx_params: t.Optional[TxParams] = None,
@@ -97,13 +97,13 @@ class ContractBaseClass(BaseModel):
         Used for changing a state (writing) to the contract.
         """
 
-        if private_credentials.safe_address is not None:
+        if api_keys.SAFE_ADDRESS:
             return send_function_on_contract_tx_using_safe(
                 web3=web3 or self.get_web3(),
                 contract_address=self.address,
                 contract_abi=self.abi,
-                from_private_key=private_credentials.private_key,
-                safe_address=private_credentials.safe_address,
+                from_private_key=api_keys.bet_from_private_key,
+                safe_address=api_keys.SAFE_ADDRESS,
                 function_name=function_name,
                 function_params=function_params,
                 tx_params=tx_params,
@@ -113,7 +113,7 @@ class ContractBaseClass(BaseModel):
             web3=web3 or self.get_web3(),
             contract_address=self.address,
             contract_abi=self.abi,
-            from_private_key=private_credentials.private_key,
+            from_private_key=api_keys.bet_from_private_key,
             function_name=function_name,
             function_params=function_params,
             tx_params=tx_params,
@@ -122,7 +122,7 @@ class ContractBaseClass(BaseModel):
 
     def send_with_value(
         self,
-        private_credentials: PrivateCredentials,
+        api_keys: APIKeys,
         function_name: str,
         amount_wei: Wei,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
@@ -134,7 +134,7 @@ class ContractBaseClass(BaseModel):
         Used for changing a state (writing) to the contract, including sending chain's native currency.
         """
         return self.send(
-            private_credentials=private_credentials,
+            api_keys=api_keys,
             function_name=function_name,
             function_params=function_params,
             tx_params={"value": amount_wei, **(tx_params or {})},
@@ -158,14 +158,14 @@ class ContractERC20BaseClass(ContractBaseClass):
 
     def approve(
         self,
-        private_credentials: PrivateCredentials,
+        api_keys: APIKeys,
         for_address: ChecksumAddress,
         amount_wei: Wei,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            private_credentials=private_credentials,
+            api_keys=api_keys,
             function_name="approve",
             function_params=[
                 for_address,
@@ -177,13 +177,13 @@ class ContractERC20BaseClass(ContractBaseClass):
 
     def deposit(
         self,
-        private_credentials: PrivateCredentials,
+        api_keys: APIKeys,
         amount_wei: Wei,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send_with_value(
-            private_credentials=private_credentials,
+            api_keys=APIKeys(),
             function_name="deposit",
             amount_wei=amount_wei,
             tx_params=tx_params,
@@ -192,7 +192,7 @@ class ContractERC20BaseClass(ContractBaseClass):
 
     def transferFrom(
         self,
-        private_credentials: PrivateCredentials,
+        api_keys: APIKeys,
         sender: ChecksumAddress,
         recipient: ChecksumAddress,
         amount_wei: Wei,
@@ -200,7 +200,7 @@ class ContractERC20BaseClass(ContractBaseClass):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            private_credentials=private_credentials,
+            api_keys=api_keys,
             function_name="transferFrom",
             function_params=[sender, recipient, amount_wei],
             tx_params=tx_params,
@@ -209,13 +209,13 @@ class ContractERC20BaseClass(ContractBaseClass):
 
     def withdraw(
         self,
-        private_credentials: PrivateCredentials,
+        api_keys: APIKeys,
         amount_wei: Wei,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
-            private_credentials=private_credentials,
+            api_keys=api_keys,
             function_name="withdraw",
             function_params=[amount_wei],
             tx_params=tx_params,

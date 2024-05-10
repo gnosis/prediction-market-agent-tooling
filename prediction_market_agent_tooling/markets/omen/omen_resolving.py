@@ -1,6 +1,6 @@
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
@@ -35,7 +35,7 @@ from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to
 
 
 def claim_bonds_on_realitio_questions(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     questions: list[RealityQuestion],
     auto_withdraw: bool,
     web3: Web3 | None = None,
@@ -47,7 +47,7 @@ def claim_bonds_on_realitio_questions(
             f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=} {question.url=}"
         )
         claim_bonds_on_realitio_question(
-            private_credentials, question, auto_withdraw=auto_withdraw, web3=web3
+            api_keys, question, auto_withdraw=auto_withdraw, web3=web3
         )
         claimed_questions.append(question.questionId)
 
@@ -55,12 +55,12 @@ def claim_bonds_on_realitio_questions(
 
 
 def claim_bonds_on_realitio_question(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     question: RealityQuestion,
     auto_withdraw: bool,
     web3: Web3 | None = None,
 ) -> None:
-    public_key = private_credentials.public_key
+    public_key = api_keys.bet_from_address
     realitio_contract = OmenRealitioContract()
 
     # Get all answers for the question.
@@ -105,7 +105,7 @@ def claim_bonds_on_realitio_question(
         answers.append(answer.answer)
 
     realitio_contract.claimWinnings(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         question_id=question.questionId,
         history_hashes=history_hashes,
         addresses=addresses,
@@ -118,11 +118,11 @@ def claim_bonds_on_realitio_question(
     # Keeping balance on Realitio is not useful, so it's recommended to just withdraw it.
     if current_balance > 0 and auto_withdraw:
         logger.info(f"Withdrawing remaining balance {current_balance=}")
-        realitio_contract.withdraw(private_credentials, web3=web3)
+        realitio_contract.withdraw(api_keys, web3=web3)
 
 
 def finalize_markets(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     markets_with_resolutions: list[tuple[OmenMarket, Resolution | None]],
     web3: Web3 | None = None,
 ) -> list[HexAddress]:
@@ -139,7 +139,7 @@ def finalize_markets(
         elif resolution in (Resolution.YES, Resolution.NO):
             logger.info(f"Found resolution {resolution.value=} for {market.url=}")
             omen_submit_answer_market_tx(
-                private_credentials,
+                api_keys,
                 market,
                 resolution,
                 OMEN_DEFAULT_REALITIO_BOND_VALUE,
@@ -155,7 +155,7 @@ def finalize_markets(
 
 
 def resolve_markets(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     markets: list[OmenMarket],
     web3: Web3 | None = None,
 ) -> list[HexAddress]:
@@ -165,14 +165,14 @@ def resolve_markets(
         logger.info(
             f"[{idx+1} / {len(markets)}] Resolving {market.url=} {market.question_title=}"
         )
-        omen_resolve_market_tx(private_credentials, market, web3=web3)
+        omen_resolve_market_tx(api_keys, market, web3=web3)
         resolved_markets.append(market.id)
 
     return resolved_markets
 
 
 def omen_submit_answer_market_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     market: OmenMarket,
     resolution: Resolution,
     bond: xDai,
@@ -184,7 +184,7 @@ def omen_submit_answer_market_tx(
     """
     realitio_contract = OmenRealitioContract()
     realitio_contract.submitAnswer(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         question_id=market.question.id,
         answer=resolution.value,
         outcomes=market.question.outcomes,
@@ -194,7 +194,7 @@ def omen_submit_answer_market_tx(
 
 
 def omen_resolve_market_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     market: OmenMarket,
     web3: Web3 | None = None,
 ) -> None:
@@ -203,7 +203,7 @@ def omen_resolve_market_tx(
     """
     oracle_contract = OmenOracleContract()
     oracle_contract.resolve(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         question_id=market.question.id,
         template_id=market.question.templateId,
         question_raw=market.question.question_raw,

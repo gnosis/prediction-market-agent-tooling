@@ -3,11 +3,9 @@ from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
 from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
-from pydantic import SecretStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
-from prediction_market_agent_tooling.gtypes import PrivateKey
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 
 
@@ -47,11 +45,8 @@ def is_contract(web3: Web3, contract_address: ChecksumAddress) -> bool:
 
 
 @pytest.fixture(scope="session")
-def test_credentials() -> PrivateCredentials:
+def test_keys() -> APIKeys:
     account = get_anvil_test_accounts()[0]
 
     # Using a standard Anvil account with enough xDAI.
-    private_credentials = PrivateCredentials(
-        private_key=PrivateKey(SecretStr(account.key.hex())), safe_address=None
-    )
-    return private_credentials
+    return APIKeys(BET_FROM_PRIVATE_KEY=account.key.hex(), SAFE_ADDRESS=None)

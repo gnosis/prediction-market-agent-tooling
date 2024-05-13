@@ -12,6 +12,6 @@ Installation instructions from [here](https://book.getfoundry.sh/getting-started
 # Download foundry installer
 curl -L https://foundry.paradigm.xyz | bash 
 
-# Follow instrictions on-screen, and run the installer
+# Follow instructions on-screen, and run the installer
 foundryup
 ```

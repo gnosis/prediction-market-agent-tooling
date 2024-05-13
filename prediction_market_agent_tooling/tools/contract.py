@@ -183,7 +183,7 @@ class ContractERC20BaseClass(ContractBaseClass):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send_with_value(
-            api_keys=APIKeys(),
+            api_keys=api_keys,
             function_name="deposit",
             amount_wei=amount_wei,
             tx_params=tx_params,

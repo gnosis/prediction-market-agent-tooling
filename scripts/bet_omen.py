@@ -3,7 +3,7 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     omen_buy_outcome_tx,
@@ -43,7 +43,10 @@ def buy(
     )
     market = build_omen_agent_market(market_id)
     omen_buy_outcome_tx(
-        api_keys=APIKeys(),
+        api_keys=APIKeys(
+            SAFE_ADDRESS=safe_address_checksum,
+            BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
+        ),
         amount=xdai_type(amount),
         market=market,
         outcome=outcome,
@@ -79,7 +82,10 @@ def sell(
 
     market = build_omen_agent_market(market_id)
     omen_sell_outcome_tx(
-        api_keys=APIKeys(),
+        api_keys=APIKeys(
+            SAFE_ADDRESS=safe_address_checksum,
+            BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
+        ),
         amount=xdai_type(amount),
         market=market,
         outcome=outcome,

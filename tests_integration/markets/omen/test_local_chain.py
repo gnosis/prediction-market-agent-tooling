@@ -5,7 +5,7 @@ from pydantic import SecretStr
 from web3 import Web3
 from web3.types import Wei
 
-from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.web3_utils import (
@@ -56,9 +56,9 @@ def test_send_xdai(local_web3: Web3) -> None:
 
 def test_send_xdai_from_locked_account(
     local_web3: Web3,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
 ):
-    from_account = Account.from_key(test_credentials.private_key.get_secret_value())
+    from_account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     fund_value = xdai_to_wei(xDai(10))
     transfer_back_value = xdai_to_wei(xDai(5))
     random_locked_account = local_web3.eth.account.create()

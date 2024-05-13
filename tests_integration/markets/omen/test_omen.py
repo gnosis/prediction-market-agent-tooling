@@ -5,7 +5,7 @@ import pytest
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
@@ -40,7 +40,7 @@ DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see 
 @pytest.mark.skip(reason=DEFAULT_REASON)
 def test_create_bet_withdraw_resolve_market(
     local_web3: Web3,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
 ) -> None:
     omen_subgraph_handler = OmenSubgraphHandler()
     wait_time = 60
@@ -50,7 +50,7 @@ def test_create_bet_withdraw_resolve_market(
     closing_time = utcnow() + timedelta(seconds=wait_time)
 
     market_address = omen_create_market_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         initial_funds=xdai_type(0.001),
         fee=OMEN_DEFAULT_MARKET_FEE,
         question=question,
@@ -73,7 +73,7 @@ def test_create_bet_withdraw_resolve_market(
     agent_market = OmenAgentMarket.from_data_model(market)
 
     binary_omen_buy_outcome_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         amount=xdai_type(0.001),
         market=agent_market,
         binary_outcome=False,
@@ -90,7 +90,7 @@ def test_create_bet_withdraw_resolve_market(
     logger.debug(f"Submitting the answer to {market.question.id=}.")
 
     OmenRealitioContract().submitAnswer(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         question_id=market.question.id,
         answer=OMEN_FALSE_OUTCOME,
         outcomes=market.question.outcomes,
@@ -108,10 +108,10 @@ def test_create_bet_withdraw_resolve_market(
 
 def test_omen_create_market(
     local_web3: Web3,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
 ) -> None:
     market_address = omen_create_market_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         initial_funds=xdai_type(0.001),
         question="Will GNO hit $1000 in 2 minutes from creation of this market?",
         closing_time=utcnow() + timedelta(minutes=2),
@@ -128,10 +128,10 @@ def test_omen_create_market(
 @pytest.mark.skip(reason=DEFAULT_REASON)
 def test_omen_redeem_positions(
     local_web3: Web3,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
 ) -> None:
     # ToDo - create local chain with a given block B, where B is a block where a given agent had funds in the market.
-    #  Then, create credentials for that agent instead of relying on test_credentials.
+    #  Then, create keys for that agent instead of relying on test_keys.
     market_id = (
         "0x6469da5478e5b2ddf9f6b7fba365e5670b7880f4".lower()
     )  # Market on which agent previously betted on
@@ -142,7 +142,7 @@ def test_omen_redeem_positions(
     market = OmenAgentMarket.from_data_model(market_data_model)
 
     tx_receipt = omen_redeem_full_position_tx(
-        private_credentials=test_credentials, market=market, web3=local_web3
+        api_keys=test_keys, market=market, web3=local_web3
     )
 
     assert tx_receipt
@@ -185,7 +185,7 @@ def test_balance_for_user_in_market() -> None:
 
 def test_omen_fund_and_remove_fund_market(
     local_web3: Web3,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
 ) -> None:
     # You can double check your address at https://gnosisscan.io/ afterwards or at the market's address.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
@@ -198,7 +198,7 @@ def test_omen_fund_and_remove_fund_market(
     remove_fund = xdai_to_wei(xdai_type(0.01))
 
     omen_fund_market_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         market=market,
         funds=funds,
         auto_deposit=True,
@@ -206,7 +206,7 @@ def test_omen_fund_and_remove_fund_market(
     )
 
     omen_remove_fund_market_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         market=market,
         shares=remove_fund,
         web3=local_web3,
@@ -215,7 +215,7 @@ def test_omen_fund_and_remove_fund_market(
 
 def test_omen_buy_and_sell_outcome(
     local_web3: Web3,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
 ) -> None:
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
     # You can double check your address at https://gnosisscan.io/ afterwards.
@@ -226,7 +226,7 @@ def test_omen_buy_and_sell_outcome(
     )  # There will be some fees, so this has to be lower.
 
     binary_omen_buy_outcome_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         amount=buy_amount,
         market=market,
         binary_outcome=True,
@@ -235,7 +235,7 @@ def test_omen_buy_and_sell_outcome(
     )
 
     binary_omen_sell_outcome_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         amount=sell_amount,
         market=market,
         binary_outcome=True,

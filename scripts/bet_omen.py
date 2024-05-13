@@ -2,7 +2,7 @@ import typer
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -41,13 +41,12 @@ def buy(
     safe_address_checksum = (
         Web3.to_checksum_address(safe_address) if safe_address else None
     )
-    private_credentials = PrivateCredentials(
-        private_key=private_key_type(from_private_key),
-        safe_address=safe_address_checksum,
-    )
     market = build_omen_agent_market(market_id)
     omen_buy_outcome_tx(
-        private_credentials=private_credentials,
+        api_keys=APIKeys(
+            SAFE_ADDRESS=safe_address_checksum,
+            BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
+        ),
         amount=xdai_type(amount),
         market=market,
         outcome=outcome,
@@ -80,14 +79,13 @@ def sell(
     safe_address_checksum = (
         Web3.to_checksum_address(safe_address) if safe_address else None
     )
-    private_credentials = PrivateCredentials(
-        private_key=private_key_type(from_private_key),
-        safe_address=safe_address_checksum,
-    )
 
     market = build_omen_agent_market(market_id)
     omen_sell_outcome_tx(
-        private_credentials,
+        api_keys=APIKeys(
+            SAFE_ADDRESS=safe_address_checksum,
+            BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
+        ),
         amount=xdai_type(amount),
         market=market,
         outcome=outcome,

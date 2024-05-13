@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
     BetAmount,
     Currency,
     ProfitAmount,
@@ -377,6 +378,14 @@ class OmenBet(BaseModel):
         return ProfitAmount(
             amount=profit,
             currency=Currency.xDai,
+        )
+
+    def to_bet(self) -> Bet:
+        return Bet(
+            amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
+            outcome=self.boolean_outcome,
+            created_time=self.creation_datetime,
+            market_question=self.title,
         )
 
     def to_generic_resolved_bet(self) -> ResolvedBet:

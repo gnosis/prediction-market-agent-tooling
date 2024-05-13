@@ -4,7 +4,7 @@ from gnosis.safe import Safe
 from pydantic import SecretStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
@@ -25,15 +25,15 @@ from tests_integration.safe.conftest import print_current_block
 
 def test_create_safe(
     local_ethereum_client: EthereumClient,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
     test_safe: Safe,
 ) -> None:
-    account = Account.from_key(test_credentials.private_key.get_secret_value())
+    account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     version = test_safe.retrieve_version()
     assert version == "1.4.1"
     assert local_ethereum_client.is_contract(test_safe.address)
-    test_credentials.safe_address = test_safe.address
-    is_owner = test_credentials.check_if_is_safe_owner(local_ethereum_client)
+    test_keys.SAFE_ADDRESS = test_safe.address
+    is_owner = test_keys.check_if_is_safe_owner(local_ethereum_client)
     assert is_owner
     assert test_safe.retrieve_owners() == [account.address]
 
@@ -41,7 +41,7 @@ def test_create_safe(
 def test_send_function_on_contract_tx_using_safe(
     local_ethereum_client: EthereumClient,
     local_web3: Web3,
-    test_credentials: PrivateCredentials,
+    test_keys: APIKeys,
     test_safe: Safe,
 ) -> None:
     print_current_block(local_web3)
@@ -52,7 +52,7 @@ def test_send_function_on_contract_tx_using_safe(
         f"provider {local_web3.provider.endpoint_uri} connected {local_web3.is_connected()}"
     )
 
-    account = Account.from_key(test_credentials.private_key.get_secret_value())
+    account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     # Fund safe with xDAI if needed
     initial_safe_balance = local_ethereum_client.get_balance(test_safe.address)
     if initial_safe_balance < xdai_to_wei(10):
@@ -74,13 +74,13 @@ def test_send_function_on_contract_tx_using_safe(
     omen_market = markets[0]
     omen_agent_market = OmenAgentMarket.from_data_model(omen_market)
     amount = TokenAmount(amount=2, currency=Currency.xDai)
-    test_credentials.safe_address = test_safe.address
+    test_keys.SAFE_ADDRESS = test_safe.address
     initial_yes_token_balance = omen_agent_market.get_token_balance(
         test_safe.address, OMEN_TRUE_OUTCOME, web3=local_web3
     )
     logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
     bet_tx_hash = binary_omen_buy_outcome_tx(
-        private_credentials=test_credentials,
+        api_keys=test_keys,
         amount=xDai(amount.amount),
         market=omen_agent_market,
         binary_outcome=True,

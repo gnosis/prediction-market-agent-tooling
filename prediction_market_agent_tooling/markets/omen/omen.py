@@ -273,9 +273,6 @@ class OmenAgentMarket(AgentMarket):
         bets = OmenSubgraphHandler().get_bets(
             better_address=better_address, start_time=start_time
         )
-        # get unique titles
-        seen_titles = {bet.title: bet for bet in bets}
-        bets = list(seen_titles.values())
         bets.sort(key=lambda x: x.creation_datetime)
         return [b.to_bet() for b in bets]
 

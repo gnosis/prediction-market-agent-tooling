@@ -315,7 +315,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @classmethod
-    def get_liquid_positions(cls, user_id: str, liquid_only: bool) -> list[Position]:
+    def get_positions(cls, user_id: str, liquid_only: bool = False) -> list[Position]:
         sgh = OmenSubgraphHandler()
         omen_positions = sgh.get_user_positions(
             better_address=Web3.to_checksum_address(user_id),

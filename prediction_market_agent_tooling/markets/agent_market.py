@@ -158,7 +158,7 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def has_liquidity(self) -> bool:
-        return self.get_liquidity() > 0
+        return self.get_liquidity().amount > 0
 
     def has_successful_resolution(self) -> bool:
         return self.resolution in [Resolution.YES, Resolution.NO]
@@ -184,7 +184,7 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     @classmethod
-    def get_positions(cls, user_id: str, liquid_only: bool) -> list[Position]:
+    def get_positions(cls, user_id: str, liquid_only: bool = False) -> list[Position]:
         """
         Get all non-zero positions a user has in any market.
 

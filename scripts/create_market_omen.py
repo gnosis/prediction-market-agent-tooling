@@ -1,11 +1,11 @@
 from datetime import datetime
 
 import typer
-from loguru import logger
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -46,12 +46,8 @@ def main(
     safe_address_checksum = (
         Web3.to_checksum_address(safe_address) if safe_address else None
     )
-    private_credentials = PrivateCredentials(
-        private_key=private_key_type(from_private_key),
-        safe_address=safe_address_checksum,
-    )
     market_address = omen_create_market_tx(
-        private_credentials=private_credentials,
+        api_keys=APIKeys(),
         initial_funds=xdai_type(initial_funds),
         fee=fee,
         question=question,

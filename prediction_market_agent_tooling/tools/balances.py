@@ -14,7 +14,7 @@ class Balances(BaseModel):
     wxdai: xDai
 
 
-def get_balances(address: ChecksumAddress, web3: Web3 | None) -> Balances:
+def get_balances(address: ChecksumAddress, web3: Web3 | None = None) -> Balances:
     if not web3:
         web3 = WrappedxDaiContract().get_web3()
     xdai_balance = Wei(web3.eth.get_balance(address))

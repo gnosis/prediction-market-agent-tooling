@@ -2,11 +2,10 @@ import sys
 import typing as t
 from datetime import datetime
 
-from loguru import logger
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
-from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
@@ -18,12 +17,14 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xdai_type,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
     BetAmount,
     Currency,
     Position,
@@ -135,10 +136,8 @@ class OmenAgentMarket(AgentMarket):
         if amount.currency != self.currency:
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
         amount_xdai = xDai(amount.amount)
-        keys = APIKeys()
-        private_credentials = PrivateCredentials.from_api_keys(keys)
         binary_omen_buy_outcome_tx(
-            private_credentials=private_credentials,
+            api_keys=APIKeys(),
             amount=amount_xdai,
             market=self,
             binary_outcome=outcome,
@@ -149,10 +148,8 @@ class OmenAgentMarket(AgentMarket):
     def sell_tokens(
         self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
     ) -> None:
-        keys = APIKeys()
-        private_credentials = PrivateCredentials.from_api_keys(keys)
         binary_omen_sell_outcome_tx(
-            private_credentials=private_credentials,
+            api_keys=APIKeys(),
             amount=xDai(amount.amount),
             market=self,
             binary_outcome=outcome,
@@ -205,9 +202,9 @@ class OmenAgentMarket(AgentMarket):
 
     def redeem_positions(
         self,
-        private_credentials: PrivateCredentials,
+        api_keys: APIKeys,
     ) -> None:
-        for_public_key = private_credentials.public_key
+        for_public_key = api_keys.bet_from_address
         market_is_redeemable = self.market_redeemable_by(user=for_public_key)
         if not market_is_redeemable:
             logger.debug(
@@ -215,9 +212,7 @@ class OmenAgentMarket(AgentMarket):
             )
             return None
 
-        omen_redeem_full_position_tx(
-            private_credentials=private_credentials, market=self
-        )
+        omen_redeem_full_position_tx(api_keys=api_keys, market=self)
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -264,6 +259,16 @@ class OmenAgentMarket(AgentMarket):
                 market_id=HexAddress(HexStr(id))
             )
         )
+
+    @staticmethod
+    def get_bets_made_since(
+        better_address: ChecksumAddress, start_time: datetime
+    ) -> list[Bet]:
+        bets = OmenSubgraphHandler().get_bets(
+            better_address=better_address, start_time=start_time
+        )
+        bets.sort(key=lambda x: x.creation_datetime)
+        return [b.to_bet() for b in bets]
 
     def get_contract(
         self,
@@ -356,7 +361,7 @@ def pick_binary_market(
 
 
 def omen_buy_outcome_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     amount: xDai,
     market: OmenAgentMarket,
     outcome: str,
@@ -367,7 +372,7 @@ def omen_buy_outcome_tx(
     Bets the given amount of xDai for the given outcome in the given market.
     """
     amount_wei = xdai_to_wei(amount)
-    from_address_checksummed = private_credentials.public_key
+    from_address_checksummed = api_keys.bet_from_address
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
 
@@ -384,7 +389,7 @@ def omen_buy_outcome_tx(
     expected_shares = remove_fraction(expected_shares, 0.01)
     # Approve the market maker to withdraw our collateral token.
     collateral_token_contract.approve(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         for_address=market_contract.address,
         amount_wei=amount_wei,
         web3=web3,
@@ -396,11 +401,11 @@ def omen_buy_outcome_tx(
     )
     if auto_deposit and collateral_token_balance < amount_wei:
         collateral_token_contract.deposit(
-            private_credentials=private_credentials, amount_wei=amount_wei, web3=web3
+            api_keys=api_keys, amount_wei=amount_wei, web3=web3
         )
     # Buy shares using the deposited xDai in the collateral token.
     market_contract.buy(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         amount_wei=amount_wei,
         outcome_index=outcome_index,
         min_outcome_tokens_to_buy=expected_shares,
@@ -409,7 +414,7 @@ def omen_buy_outcome_tx(
 
 
 def binary_omen_buy_outcome_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     amount: xDai,
     market: OmenAgentMarket,
     binary_outcome: bool,
@@ -417,7 +422,7 @@ def binary_omen_buy_outcome_tx(
     web3: Web3 | None = None,
 ) -> None:
     omen_buy_outcome_tx(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         amount=amount,
         market=market,
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
@@ -427,7 +432,7 @@ def binary_omen_buy_outcome_tx(
 
 
 def omen_sell_outcome_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     amount: xDai,  # The xDai value of shares to sell.
     market: OmenAgentMarket,
     outcome: str,
@@ -468,14 +473,14 @@ def omen_sell_outcome_tx(
 
     # Approve the market maker to move our (all) conditional tokens.
     conditional_token_contract.setApprovalForAll(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         for_address=market_contract.address,
         approve=True,
         web3=web3,
     )
     # Sell the shares.
     market_contract.sell(
-        private_credentials,
+        api_keys,
         amount_wei,
         outcome_index,
         max_outcome_tokens_to_sell,
@@ -483,13 +488,11 @@ def omen_sell_outcome_tx(
     )
     if auto_withdraw:
         # Optionally, withdraw from the collateral token back to the `from_address` wallet.
-        collateral_token.withdraw(
-            private_credentials=private_credentials, amount_wei=amount_wei, web3=web3
-        )
+        collateral_token.withdraw(api_keys=api_keys, amount_wei=amount_wei, web3=web3)
 
 
 def binary_omen_sell_outcome_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     amount: xDai,
     market: OmenAgentMarket,
     binary_outcome: bool,
@@ -497,7 +500,7 @@ def binary_omen_sell_outcome_tx(
     web3: Web3 | None = None,
 ) -> None:
     omen_sell_outcome_tx(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         amount=amount,
         market=market,
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
@@ -507,7 +510,7 @@ def binary_omen_sell_outcome_tx(
 
 
 def omen_create_market_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     initial_funds: xDai,
     question: str,
     closing_time: datetime,
@@ -521,7 +524,7 @@ def omen_create_market_tx(
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
-    from_address = private_credentials.public_key
+    from_address = api_keys.bet_from_address
     initial_funds_wei = xdai_to_wei(initial_funds)
 
     realitio_contract = OmenRealitioContract()
@@ -544,7 +547,7 @@ def omen_create_market_tx(
 
     # Approve the market maker to withdraw our collateral token.
     collateral_token_contract.approve(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         for_address=factory_contract.address,
         amount_wei=initial_funds_wei,
         web3=web3,
@@ -560,13 +563,11 @@ def omen_create_market_tx(
         and initial_funds_wei > 0
         and collateral_token_balance < initial_funds_wei
     ):
-        collateral_token_contract.deposit(
-            private_credentials, initial_funds_wei, web3=web3
-        )
+        collateral_token_contract.deposit(api_keys, initial_funds_wei, web3=web3)
 
     # Create the question on Realitio.
     question_id = realitio_contract.askQuestion(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         question=question,
         category=category,
         outcomes=outcomes,
@@ -585,7 +586,7 @@ def omen_create_market_tx(
     )
     if not conditional_token_contract.does_condition_exists(condition_id, web3=web3):
         conditional_token_contract.prepareCondition(
-            private_credentials=private_credentials,
+            api_keys=api_keys,
             question_id=question_id,
             oracle_address=oracle_contract.address,
             outcomes_slot_count=len(outcomes),
@@ -594,7 +595,7 @@ def omen_create_market_tx(
 
     # Create the market.
     create_market_receipt_tx = factory_contract.create2FixedProductMarketMaker(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         condition_id=condition_id,
         fee=fee,
         initial_funds_wei=initial_funds_wei,
@@ -613,13 +614,13 @@ def omen_create_market_tx(
 
 
 def omen_fund_market_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     market: OmenAgentMarket,
     funds: Wei,
     auto_deposit: bool,
     web3: Web3 | None = None,
 ) -> None:
-    from_address = private_credentials.public_key
+    from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
     collateral_token_contract = OmenCollateralTokenContract()
 
@@ -630,16 +631,16 @@ def omen_fund_market_tx(
         and collateral_token_contract.balanceOf(for_address=from_address, web3=web3)
         < funds
     ):
-        collateral_token_contract.deposit(private_credentials, funds, web3=web3)
+        collateral_token_contract.deposit(api_keys, funds, web3=web3)
 
     collateral_token_contract.approve(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         for_address=market_contract.address,
         amount_wei=funds,
         web3=web3,
     )
 
-    market_contract.addFunding(private_credentials, funds, web3=web3)
+    market_contract.addFunding(api_keys, funds, web3=web3)
 
 
 def build_parent_collection_id() -> HexStr:
@@ -647,7 +648,7 @@ def build_parent_collection_id() -> HexStr:
 
 
 def omen_redeem_full_position_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     market: OmenAgentMarket,
     web3: Web3 | None = None,
 ) -> None:
@@ -656,7 +657,7 @@ def omen_redeem_full_position_tx(
     to be redeemed before sending the transaction.
     """
 
-    from_address = private_credentials.public_key
+    from_address = api_keys.bet_from_address
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
@@ -686,7 +687,7 @@ def omen_redeem_full_position_tx(
         return
 
     conditional_token_contract.redeemPositions(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
         condition_id=market.condition.id,
         parent_collection_id=parent_collection_id,
@@ -727,7 +728,7 @@ def get_conditional_tokens_balance_for_market(
 
 
 def omen_remove_fund_market_tx(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     market: OmenAgentMarket,
     shares: Wei | None,
     web3: Web3 | None = None,
@@ -740,7 +741,7 @@ def omen_remove_fund_market_tx(
     After we remove funding, using the `mergePositions` we get `min(shares per index)` of wxDai back, but the remaining shares can be converted back only after the market is resolved.
     That can be done using the `redeem_from_all_user_positions` function below.
     """
-    from_address = private_credentials.public_key
+    from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
     original_balances = get_balances(from_address, web3=web3)
 
@@ -755,9 +756,7 @@ def omen_remove_fund_market_tx(
         )
         shares = total_shares
 
-    market_contract.removeFunding(
-        private_credentials=private_credentials, remove_funding=shares, web3=web3
-    )
+    market_contract.removeFunding(api_keys=api_keys, remove_funding=shares, web3=web3)
 
     conditional_tokens = OmenConditionalTokenContract()
     parent_collection_id = build_parent_collection_id()
@@ -770,7 +769,7 @@ def omen_remove_fund_market_tx(
     amount_to_merge = min(amount_per_index_set.values())
 
     result = conditional_tokens.mergePositions(
-        private_credentials=private_credentials,
+        api_keys=api_keys,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
         parent_collection_id=parent_collection_id,
         conditionId=market.condition.id,
@@ -788,13 +787,13 @@ def omen_remove_fund_market_tx(
 
 
 def redeem_from_all_user_positions(
-    private_credentials: PrivateCredentials,
+    api_keys: APIKeys,
     web3: Web3 | None = None,
 ) -> None:
     """
     Redeems from all user positions where the user didn't redeem yet.
     """
-    public_key = private_credentials.public_key
+    public_key = api_keys.bet_from_address
 
     conditional_token_contract = OmenConditionalTokenContract()
     user_positions = OmenSubgraphHandler().get_user_positions(
@@ -818,7 +817,7 @@ def redeem_from_all_user_positions(
 
         original_balances = get_balances(public_key, web3)
         conditional_token_contract.redeemPositions(
-            private_credentials=private_credentials,
+            api_keys=api_keys,
             collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
             condition_id=condition_id,
             parent_collection_id=build_parent_collection_id(),

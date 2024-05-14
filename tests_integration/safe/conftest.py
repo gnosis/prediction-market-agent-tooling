@@ -2,10 +2,10 @@ import pytest
 from eth_account import Account
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
-from loguru import logger
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.safe import create_safe
 
 
@@ -14,7 +14,7 @@ def print_current_block(web3: Web3) -> None:
 
 
 @pytest.fixture(scope="session")
-def test_safe(local_web3: Web3, test_credentials: PrivateCredentials) -> Safe:
+def test_safe(local_web3: Web3, test_keys: APIKeys) -> Safe:
     web3 = local_web3
     print_current_block(web3)
     # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
@@ -26,7 +26,7 @@ def test_safe(local_web3: Web3, test_credentials: PrivateCredentials) -> Safe:
     )
 
     # Deploy safe
-    account = Account.from_key(test_credentials.private_key.get_secret_value())
+    account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     safe_address = create_safe(
         ethereum_client=local_ethereum_client,
         account=account,

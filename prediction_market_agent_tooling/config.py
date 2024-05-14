@@ -2,7 +2,6 @@ import typing as t
 
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
-from pydantic import BaseModel
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -59,6 +58,15 @@ class APIKeys(BaseSettings):
         )
 
     @property
+    def bet_from_address(self) -> ChecksumAddress:
+        """If the SAFE is available, we always route transactions via SAFE. Otherwise we use the EOA."""
+        return (
+            self.SAFE_ADDRESS
+            if self.SAFE_ADDRESS
+            else private_key_to_public_key(self.bet_from_private_key)
+        )
+
+    @property
     def openai_api_key(self) -> SecretStr:
         return check_not_none(
             self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."
@@ -110,35 +118,10 @@ class APIKeys(BaseSettings):
             if APIKeys.model_fields[k].annotation in SECRET_TYPES and v is not None
         }
 
-
-class PrivateCredentials(BaseModel):
-    private_key: PrivateKey
-    safe_address: ChecksumAddress | None
-
-    @property
-    def public_key(self) -> ChecksumAddress:
-        """If the SAFE is available, we always route transactions via SAFE. Otherwise we use the EOA."""
-        return (
-            self.safe_address
-            if self.safe_address is not None
-            else private_key_to_public_key(self.private_key)
-        )
-
-    @property
-    def has_safe_address(self) -> bool:
-        return self.safe_address is not None
-
-    @staticmethod
-    def from_api_keys(api_keys: APIKeys) -> "PrivateCredentials":
-        return PrivateCredentials(
-            private_key=api_keys.bet_from_private_key,
-            safe_address=api_keys.SAFE_ADDRESS,
-        )
-
     def check_if_is_safe_owner(self, ethereum_client: EthereumClient) -> bool:
-        if not self.safe_address:
+        if not self.SAFE_ADDRESS:
             raise ValueError("Cannot check ownership if safe_address is not defined.")
 
-        s = Safe(self.safe_address, ethereum_client)  # type: ignore[abstract]
-        public_key_from_signer = private_key_to_public_key(self.private_key)
+        s = Safe(self.SAFE_ADDRESS, ethereum_client)  # type: ignore[abstract]
+        public_key_from_signer = private_key_to_public_key(self.bet_from_private_key)
         return s.retrieve_is_owner(public_key_from_signer)

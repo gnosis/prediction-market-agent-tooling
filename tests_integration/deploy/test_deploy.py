@@ -4,9 +4,8 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 
 # Note that this test can trigger redeeming of funds, which costs money to run.
 def test_local_deployment() -> None:
-    DeployableCoinFlipAgent().deploy_local(
+    DeployableCoinFlipAgent(place_bet=False).deploy_local(
         sleep_time=0.001,
         market_type=MarketType.OMEN,
         timeout=0.01,
-        place_bet=False,
     )

@@ -2,7 +2,7 @@ import typing as t
 from datetime import datetime, timedelta
 from enum import Enum
 
-from prediction_market_agent_tooling.config import APIKeys, PrivateCredentials
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -68,7 +68,6 @@ def have_bet_on_market_since(
     keys: APIKeys, market: AgentMarket, since: timedelta
 ) -> bool:
     start_time = utcnow() - since
-    credentials = PrivateCredentials.from_api_keys(keys)
     recently_betted_questions = (
         set(
             get_manifold_market(b.contractId).question
@@ -85,7 +84,7 @@ def have_bet_on_market_since(
             set(
                 b.title
                 for b in OmenSubgraphHandler().get_bets(
-                    better_address=credentials.public_key,
+                    better_address=keys.bet_from_address,
                     start_time=start_time,
                 )
             )

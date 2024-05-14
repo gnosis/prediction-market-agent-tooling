@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.tools.utils import (
     add_utc_timezone_validator,
     check_not_none,
     should_not_happen,
+    utcnow,
 )
 
 
@@ -147,8 +148,17 @@ class AgentMarket(BaseModel):
     ) -> list[Bet]:
         raise NotImplementedError("Subclasses must implement this method")
 
+    def is_closed(self) -> bool:
+        return self.close_time is not None and self.close_time <= utcnow()
+
     def is_resolved(self) -> bool:
         return self.resolution is not None
+
+    def get_liquidity(self) -> TokenAmount:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def has_liquidity(self) -> bool:
+        return self.get_liquidity() > 0
 
     def has_successful_resolution(self) -> bool:
         return self.resolution in [Resolution.YES, Resolution.NO]
@@ -174,8 +184,15 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     @classmethod
-    def get_positions(cls, user_id: str) -> list[Position]:
+    def get_positions(cls, user_id: str, liquid_only: bool) -> list[Position]:
         """
         Get all non-zero positions a user has in any market.
+
+        If `liquid_only` is True, only return positions that can be sold.
         """
         raise NotImplementedError("Subclasses must implement this method")
+
+    def can_be_traded(self) -> bool:
+        if self.is_closed() or not self.has_liquidity():
+            return False
+        return True

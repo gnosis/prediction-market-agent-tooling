@@ -34,8 +34,8 @@ google-cloud-secret-manager = "^2.18.2"
 langchain = { version = "^0.1.9", optional = true}
 langchain-openai = { version = "^0.0.5", optional = true}
 google-api-python-client = { version = "2.95.0", optional = true}
-#subgrounds = {git = "https://github.com/gabrielfior/subgrounds", branch="main"}
-subgrounds = "^1.8.1"
+subgrounds = {git = "https://github.com/gabrielfior/subgrounds", branch="main"}
+#subgrounds = "^1.8.1"
 loguru = "^0.7.2"
 safe-eth-py = "^6.0.0b14"
 eth-account = "^0.8.0"

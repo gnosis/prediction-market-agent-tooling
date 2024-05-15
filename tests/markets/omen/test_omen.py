@@ -80,9 +80,13 @@ def test_market_liquidity() -> None:
     )
     for market in markets:
         assert type(market) == OmenAgentMarket
-        assert (
-            market.get_liquidity_in_xdai() > 0
-        ), "Market liquidity should be greater than 0."
+        assert market.has_liquidity()
+
+
+def test_can_be_traded() -> None:
+    id = "0x0020d13c89140b47e10db54cbd53852b90bc1391"  # A known resolved market
+    market = OmenAgentMarket.get_binary_market(id)
+    assert not market.can_be_traded()
 
 
 def test_get_binary_market() -> None:
@@ -120,7 +124,11 @@ def test_get_positions_1() -> None:
         "0x2DD9f5678484C1F59F97eD334725858b938B4102"
     )
     positions = OmenAgentMarket.get_positions(user_id=user_address)
-    assert len(positions)
+    liquid_positions = OmenAgentMarket.get_positions(
+        user_id=user_address,
+        liquid_only=True,
+    )
+    assert len(positions) > len(liquid_positions)
 
     # Pick a single position to test, otherwise it can be very slow
     position = positions[0]

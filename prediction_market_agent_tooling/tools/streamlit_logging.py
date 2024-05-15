@@ -1,9 +1,10 @@
 from enum import Enum
 
 import streamlit as st
-from prediction_market_agent_tooling.loggers import logger
 from pydantic import BaseModel, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from prediction_market_agent_tooling.loggers import logger
 
 
 class LoggedUser(BaseModel):

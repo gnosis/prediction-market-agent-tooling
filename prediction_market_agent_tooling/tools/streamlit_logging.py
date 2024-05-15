@@ -16,6 +16,7 @@ class LoggingSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
+    free_for_everyone: bool = False
     free_access_codes: list[SecretStr] = []
     users: list[LoggedUser] = []
 
@@ -42,6 +43,10 @@ def find_logged_user(email: str, password: SecretStr) -> LoggedUser | None:
 def streamlit_login() -> tuple[LoggedEnum, LoggedUser | None]:
     logging_settings = LoggingSettings()
     free_acess_code = st.query_params.get("free_access_code")
+
+    if logging_settings.free_for_everyone:
+        logger.info("Free access for everyone!")
+        return LoggedEnum.FREE_ACCESS, None
 
     if free_acess_code is not None and free_acess_code in [
         x.get_secret_value() for x in logging_settings.free_access_codes

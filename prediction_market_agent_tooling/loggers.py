@@ -94,6 +94,3 @@ def simple_warning_format(message, category, filename, lineno, line=None):  # ty
 if not getattr(logger, "_patched", False):
     patch_logger()
     logger._patched = True  # type: ignore[attr-defined] # Hacky way to store a flag on the logger object, to not patch it multiple times.
-
-
-print("Blabla")

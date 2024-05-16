@@ -369,6 +369,10 @@ class OmenAgentMarket(AgentMarket):
 
         return positions
 
+    @classmethod
+    def get_user_url(cls, keys: APIKeys) -> str:
+        return f"https://gnosisscan.io/address/{keys.bet_from_address}"
+
 
 def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN

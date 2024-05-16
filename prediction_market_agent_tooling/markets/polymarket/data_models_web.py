@@ -83,7 +83,7 @@ class Market(BaseModel):
     category: t.Any | None
     ammType: t.Any | None
     description: str
-    liquidity: str
+    liquidity: str | None
     startDate: datetime
     createdAt: datetime
     xAxisValue: t.Any | None
@@ -128,7 +128,7 @@ class Market(BaseModel):
     umaResolutionStatus: t.Any | None
     curationOrder: t.Any | None
     volumeNum: USDC | None
-    liquidityNum: float
+    liquidityNum: float | None
     endDateIso: datetime | None
     startDateIso: datetime | None
     umaEndDateIso: datetime | None
@@ -137,8 +137,8 @@ class Market(BaseModel):
     gameStartTime: datetime | None
     secondsDelay: int | None
     clobTokenIds: list[str]
-    liquidityAmm: float
-    liquidityClob: float
+    liquidityAmm: float | None
+    liquidityClob: float | None
     makerBaseFee: int | None
     takerBaseFee: int | None
     negRisk: t.Any | None
@@ -163,7 +163,7 @@ class Market(BaseModel):
     closed_time: t.Any | None
     wide_format: bool | None
     volume_num: USDC | None
-    liquidity_num: USDC
+    liquidity_num: USDC | None
     image_raw: str
     resolutionData: ResolutionData
 
@@ -208,6 +208,25 @@ class Category(BaseModel):
     slug: str
 
 
+class Bid(BaseModel):
+    price: str
+    size: str
+
+
+class Ask(BaseModel):
+    price: str
+    size: str
+
+
+class MarketBidsAndAsks(BaseModel):
+    market: str
+    asset_id: str
+    hash: str
+    bids: list[Bid]
+    asks: list[Ask]
+    lastUpdated: int
+
+
 class PolymarketFullMarket(BaseModel):
     id: str
     ticker: str
@@ -228,7 +247,7 @@ class PolymarketFullMarket(BaseModel):
     new: bool
     featured: bool
     restricted: bool
-    liquidity: USDC
+    liquidity: USDC | None
     volume: USDC | None
     volume24hr: USDC | None
     competitive: float
@@ -239,8 +258,8 @@ class PolymarketFullMarket(BaseModel):
     disqusThread: t.Any | None
     updatedAt: datetime
     enableOrderBook: bool
-    liquidityAmm: float
-    liquidityClob: float
+    liquidityAmm: float | None
+    liquidityClob: float | None
     imageOptimized: ImageOptimized | None
     iconOptimized: IconOptimized | None
     featuredImageOptimized: str | None
@@ -248,7 +267,7 @@ class PolymarketFullMarket(BaseModel):
     negRiskMarketID: t.Any | None
     negRiskFeeBips: t.Any | None
     markets: list[Market]
-    categories: list[Category] | None
+    categories: list[Category] | None = None
     series: t.Any | None
     image_raw: str
 
@@ -327,7 +346,12 @@ class PriceSide(BaseModel):
 
 class State(BaseModel):
     data: (
-        PolymarketFullMarket | PriceSide | None
+        PolymarketFullMarket
+        | MarketBidsAndAsks
+        | PriceSide
+        | dict[str, MarketBidsAndAsks]
+        | dict[str, PriceSide]
+        | None
     )  # It's none if you go to the website and it says "Oops...we didn't forecast this".
     dataUpdateCount: int
     dataUpdatedAt: int

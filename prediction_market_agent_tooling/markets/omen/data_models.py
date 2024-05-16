@@ -422,7 +422,7 @@ class RealityQuestion(BaseModel):
     # And because all the contract methods so far needed bytes32 input, when asked for question id, `questionId` field was the correct one to use so far.
     id: str
     user: HexAddress
-    historyHash: HexBytes
+    historyHash: HexBytes | None
     updatedTimestamp: datetime
     contentHash: HexBytes
     questionId: HexBytes

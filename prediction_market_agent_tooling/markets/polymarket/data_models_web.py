@@ -250,7 +250,7 @@ class PolymarketFullMarket(BaseModel):
     liquidity: USDC | None
     volume: USDC | None
     volume24hr: USDC | None
-    competitive: float
+    competitive: float | None
     openInterest: int | None
     sortBy: str | None
     createdAt: datetime

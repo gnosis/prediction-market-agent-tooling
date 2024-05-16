@@ -208,6 +208,25 @@ class Category(BaseModel):
     slug: str
 
 
+class Bid(BaseModel):
+    price: str
+    size: str
+
+
+class Ask(BaseModel):
+    price: str
+    size: str
+
+
+class MarketBidsAndAsks(BaseModel):
+    market: str
+    asset_id: str
+    hash: str
+    bids: list[Bid]
+    asks: list[Ask]
+    lastUpdated: int
+
+
 class PolymarketFullMarket(BaseModel):
     id: str
     ticker: str
@@ -327,7 +346,12 @@ class PriceSide(BaseModel):
 
 class State(BaseModel):
     data: (
-        PolymarketFullMarket | PriceSide | None
+        PolymarketFullMarket
+        | MarketBidsAndAsks
+        | PriceSide
+        | dict[str, MarketBidsAndAsks]
+        | dict[str, PriceSide]
+        | None
     )  # It's none if you go to the website and it says "Oops...we didn't forecast this".
     dataUpdateCount: int
     dataUpdatedAt: int

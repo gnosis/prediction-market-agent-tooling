@@ -1,5 +1,7 @@
+import builtins
 import logging
 import sys
+import typing as t
 import warnings
 from enum import Enum
 
@@ -35,9 +37,11 @@ def patch_logger() -> None:
         format_loguru = GCP_LOG_LOGURU_FORMAT
         format_logging = GCP_LOG_LOGGING_FORMAT
         datefmt_logging = GCP_LOG_FORMAT_LOGGING_DATEFMT
+        print_logging = print_using_loguru_info
 
     elif config.LOG_FORMAT == LogFormat.DEFAULT:
         format_loguru, format_logging, datefmt_logging = None, None, None
+        print_logging = None
 
     else:
         raise ValueError(f"Unknown log format: {config.LOG_FORMAT}")
@@ -63,11 +67,30 @@ def patch_logger() -> None:
     # Use logging module for warnings.
     logging.captureWarnings(True)
 
+    # Use loguru for prints.
+    if print_logging is not None:
+        builtins.print = print_logging  # type: ignore[assignment] # Monkey patching, it's messy but it works.
+
     logger.info(f"Patched logger for {config.LOG_FORMAT.value} format.")
 
 
+def print_using_loguru_info(
+    *values: object,
+    sep: str = " ",
+    end: str = "\n",
+    **kwargs: t.Any,
+) -> None:
+    message = sep.join(map(str, values)) + end
+    message = message.strip().replace(
+        "\n", "\\n"
+    )  # Escape new lines, because otherwise logs will be broken.
+    logger.info(message)
+
+
 def simple_warning_format(message, category, filename, lineno, line=None):  # type: ignore[no-untyped-def] # Not typed in the standard library neither.
-    return f"{category.__name__}: {message}"
+    return f"{category.__name__}: {message}".strip().replace(
+        "\n", "\\n"
+    )  # Escape new lines, because otherwise logs will be broken.
 
 
 if not getattr(logger, "_patched", False):

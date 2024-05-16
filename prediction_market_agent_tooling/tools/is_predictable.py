@@ -45,7 +45,11 @@ def is_predictable_binary(
         logger.info("langchain not installed, skipping is_predictable_binary")
         return True
 
-    llm = ChatOpenAI(model=engine, temperature=0.0, api_key=APIKeys().openai_api_key.get_secret_value())
+    llm = ChatOpenAI(
+        model=engine,
+        temperature=0.0,
+        api_key=APIKeys().openai_api_key.get_secret_value(),
+    )
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
     messages = prompt.format_messages(question=question)

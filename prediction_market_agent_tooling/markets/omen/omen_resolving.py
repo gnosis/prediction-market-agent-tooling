@@ -31,6 +31,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.markets.polymarket.utils import (
     find_resolution_on_polymarket,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
 
 
@@ -95,7 +96,12 @@ def claim_bonds_on_realitio_question(
             # TODO: See `if len(answers_objects) > 1` above.
             # This is from the original Olas implementation (https://github.com/kongzii/trader/blob/700af475a4538cc3d5d22caf9dec9e9d22d72af1/packages/valory/skills/market_manager_abci/graph_tooling/requests.py#L297),
             # but it's most probably wrong (see comment above).
-            history_hashes.append(answers_objects[i + 1].question.historyHash)
+            history_hashes.append(
+                check_not_none(
+                    answers_objects[i + 1].question.historyHash,
+                    "Shouldn't be None here.",
+                )
+            )
 
         # last-to-first, the address of each answerer or commitment sender
         addresses.append(Web3.to_checksum_address(answer.question.user))

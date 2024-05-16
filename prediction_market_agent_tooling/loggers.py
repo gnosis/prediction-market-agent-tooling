@@ -88,7 +88,9 @@ def print_using_loguru_info(
 
 
 def simple_warning_format(message, category, filename, lineno, line=None):  # type: ignore[no-untyped-def] # Not typed in the standard library neither.
-    return f"{category.__name__}: {message}"
+    return f"{category.__name__}: {message}".strip().replace(
+        "\n", "\\n"
+    )  # Escape new lines, because otherwise logs will be broken.
 
 
 if not getattr(logger, "_patched", False):

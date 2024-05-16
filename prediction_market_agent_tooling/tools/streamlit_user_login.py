@@ -7,30 +7,30 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from prediction_market_agent_tooling.loggers import logger
 
 
-class LoggedUser(BaseModel):
+class LoggedInUser(BaseModel):
     email: str
     password: SecretStr
 
 
-class LoggingSettings(BaseSettings):
+class LoginSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
     free_for_everyone: bool = False
     free_access_codes: list[SecretStr] = []
-    users: list[LoggedUser] = []
+    users: list[LoggedInUser] = []
 
 
 class LoggedEnum(str, Enum):
     SELF_PAYING = "self_paying"
     FREE_ACCESS = "free_access"
-    LOGGED_ACCESS = "logged_access"
+    USER_LOGGED_IN = "user_logged_in"
 
 
-def find_logged_user(email: str, password: SecretStr) -> LoggedUser | None:
-    logging_settings = LoggingSettings()
+def find_logged_in_user(email: str, password: SecretStr) -> LoggedInUser | None:
+    login_settings = LoginSettings()
 
-    for user in logging_settings.users:
+    for user in login_settings.users:
         if (
             user.email == email
             and user.password.get_secret_value() == password.get_secret_value()
@@ -40,17 +40,17 @@ def find_logged_user(email: str, password: SecretStr) -> LoggedUser | None:
     return None
 
 
-def streamlit_login() -> tuple[LoggedEnum, LoggedUser | None]:
-    logging_settings = LoggingSettings()
+def streamlit_login() -> tuple[LoggedEnum, LoggedInUser | None]:
+    login_settings = LoginSettings()
 
-    if logging_settings.free_for_everyone:
+    if login_settings.free_for_everyone:
         logger.info("Free access for everyone!")
         return LoggedEnum.FREE_ACCESS, None
 
     if (
         free_access_code := st.query_params.get("free_access_code")
     ) is not None and free_access_code in [
-        x.get_secret_value() for x in logging_settings.free_access_codes
+        x.get_secret_value() for x in login_settings.free_access_codes
     ]:
         logger.info(f"Using free access code: {free_access_code}.")
         return LoggedEnum.FREE_ACCESS, None
@@ -66,11 +66,11 @@ def streamlit_login() -> tuple[LoggedEnum, LoggedUser | None]:
     if not self_paying:
         email = st.text_input("Email")
         password = SecretStr(st.text_input("Password", type="password"))
-        logged_user = find_logged_user(email, password)
+        logged_user = find_logged_in_user(email, password)
 
         if logged_user is not None:
             logger.info(f"Logged in as {email}.")
-            return LoggedEnum.LOGGED_ACCESS, logged_user
+            return LoggedEnum.USER_LOGGED_IN, logged_user
 
         else:
             st.error("Invalid email or password.")

@@ -5,6 +5,7 @@ from enum import Enum
 from eth_typing import ChecksumAddress
 from pydantic import BaseModel, field_validator
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
@@ -196,3 +197,7 @@ class AgentMarket(BaseModel):
         if self.is_closed() or not self.has_liquidity():
             return False
         return True
+
+    @classmethod
+    def get_user_url(cls, keys: APIKeys) -> str:
+        raise NotImplementedError("Subclasses must implement this method")

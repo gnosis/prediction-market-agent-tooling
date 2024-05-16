@@ -42,16 +42,16 @@ def find_logged_user(email: str, password: SecretStr) -> LoggedUser | None:
 
 def streamlit_login() -> tuple[LoggedEnum, LoggedUser | None]:
     logging_settings = LoggingSettings()
-    free_acess_code = st.query_params.get("free_access_code")
+    free_access_code = st.query_params.get("free_access_code")
 
     if logging_settings.free_for_everyone:
         logger.info("Free access for everyone!")
         return LoggedEnum.FREE_ACCESS, None
 
-    if free_acess_code is not None and free_acess_code in [
+    if free_access_code is not None and free_access_code in [
         x.get_secret_value() for x in logging_settings.free_access_codes
     ]:
-        logger.info(f"Using free access code: {free_acess_code}.")
+        logger.info(f"Using free access code: {free_access_code}.")
         return LoggedEnum.FREE_ACCESS, None
 
     # TODO: Because we are initializing APIKeys (based on environment variables) in random places in the code, the user can not provide their own access keys, such as OPENAI_API_KEY.

@@ -21,8 +21,8 @@ MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
 
 
 @tenacity.retry(
-    stop=tenacity.stop_after_attempt(3),
-    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 4)]),
+    stop=tenacity.stop_after_attempt(5),
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
     after=lambda x: logger.debug(f"get_polymarkets failed, {x.attempt_number=}."),
 )
 def get_polymarkets(

@@ -67,7 +67,7 @@ def patch_logger() -> None:
         logger.add(
             sys.stdout,
             format=format_loguru,
-            level=config.LOG_LEVEL.value,  # Can be the lowest level, higher ones will use by default this one.
+            level=config.LOG_LEVEL.value,
             colorize=True,
         )
 

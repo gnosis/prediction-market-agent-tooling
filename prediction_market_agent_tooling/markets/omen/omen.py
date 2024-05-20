@@ -117,11 +117,17 @@ class OmenAgentMarket(AgentMarket):
             else None
         )
 
-    def get_liquidity(self) -> Wei:
+    def get_liquidity_in_wei(self) -> Wei:
         return self.get_contract().totalSupply()
 
     def get_liquidity_in_xdai(self) -> xDai:
-        return wei_to_xdai(self.get_liquidity())
+        return wei_to_xdai(self.get_liquidity_in_wei())
+
+    def get_liquidity(self) -> TokenAmount:
+        return TokenAmount(
+            amount=self.get_liquidity_in_xdai(),
+            currency=Currency.xDai,
+        )
 
     def get_tiny_bet_amount(self) -> BetAmount:
         return BetAmount(amount=0.00001, currency=self.currency)
@@ -133,6 +139,10 @@ class OmenAgentMarket(AgentMarket):
         omen_auto_deposit: bool = True,
         web3: Web3 | None = None,
     ) -> None:
+        if not self.can_be_traded():
+            raise ValueError(
+                f"Market {self.id} is not open for trading. Cannot place bet."
+            )
         if amount.currency != self.currency:
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
         amount_xdai = xDai(amount.amount)
@@ -148,6 +158,10 @@ class OmenAgentMarket(AgentMarket):
     def sell_tokens(
         self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
     ) -> None:
+        if not self.can_be_traded():
+            raise ValueError(
+                f"Market {self.id} is not open for trading. Cannot sell tokens."
+            )
         binary_omen_sell_outcome_tx(
             api_keys=APIKeys(),
             amount=xDai(amount.amount),
@@ -301,7 +315,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @classmethod
-    def get_positions(cls, user_id: str) -> list[Position]:
+    def get_positions(cls, user_id: str, liquid_only: bool = False) -> list[Position]:
         sgh = OmenSubgraphHandler()
         omen_positions = sgh.get_user_positions(
             better_address=Web3.to_checksum_address(user_id),
@@ -329,6 +343,11 @@ class OmenAgentMarket(AgentMarket):
         positions = []
         for condition_id, omen_positions in omen_positions_dict.items():
             market = cls.from_data_model(omen_markets[condition_id])
+
+            # Skip markets that cannot be traded if `liquid_only`` is True.
+            if liquid_only and not market.can_be_traded():
+                continue
+
             amounts: dict[OutcomeStr, TokenAmount] = {}
             for omen_position in omen_positions:
                 outecome_str = market.index_set_to_outcome_str(
@@ -349,6 +368,10 @@ class OmenAgentMarket(AgentMarket):
             positions.append(Position(market_id=market.id, amounts=amounts))
 
         return positions
+
+    @classmethod
+    def get_user_url(cls, keys: APIKeys) -> str:
+        return f"https://gnosisscan.io/address/{keys.bet_from_address}"
 
 
 def pick_binary_market(

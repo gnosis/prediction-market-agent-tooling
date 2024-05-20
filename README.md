@@ -78,7 +78,7 @@ poetry run python scripts/create_safe_for_agent.py  --from-private-key <YOUR_AGE
 This will output the newly created Safe in the terminal, and it can then be copied over to the deployment part (e.g. Terraform).
 Note that `salt_nonce` can be passed so that the created safe is deterministically created for each agent, so that, if the same `salt_nonce` is used, the script will not create a new Safe for the agent, instead it will output the previously existent Safe.
 
-You can then specify this agent's Safe address with the the `SAFE_ADDRESS` environment variable.
+You can then specify this agent's Safe address with the `SAFE_ADDRESS` environment variable.
 
 ## Monitoring
 
@@ -131,6 +131,6 @@ This API can be built on top of to create your application. See [here](https://g
 
 ## Contributing
 
-See the [Issues](https://github.com/gnosis/prediction-market-agent-tooling/issues) for ideas of things that need fixing or implementing. The team are also receptive to new issues and PRs.
+See the [Issues](https://github.com/gnosis/prediction-market-agent-tooling/issues) for ideas of things that need fixing or implementing. The team is also receptive to new issues and PRs.
 
 We use `mypy` for static type checking, and `isort`, `black` and `autoflake` for linting. These all run as steps in CI.

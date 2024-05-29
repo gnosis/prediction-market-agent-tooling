@@ -156,7 +156,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     def sell_tokens(
-        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
+        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = False
     ) -> None:
         if not self.can_be_traded():
             raise ValueError(

@@ -156,7 +156,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     def sell_tokens(
-        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
+        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = False
     ) -> None:
         if not self.can_be_traded():
             raise ValueError(
@@ -368,6 +368,10 @@ class OmenAgentMarket(AgentMarket):
             positions.append(Position(market_id=market.id, amounts=amounts))
 
         return positions
+
+    @classmethod
+    def get_user_url(cls, keys: APIKeys) -> str:
+        return f"https://gnosisscan.io/address/{keys.bet_from_address}"
 
 
 def pick_binary_market(

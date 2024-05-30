@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.manifold.api import (
+    get_authenticated_user,
     get_manifold_binary_markets,
     place_bet,
 )
@@ -108,3 +109,7 @@ class ManifoldAgentMarket(AgentMarket):
                 excluded_questions=excluded_questions,
             )
         ]
+
+    @classmethod
+    def get_user_url(cls, keys: APIKeys) -> str:
+        return get_authenticated_user(keys.manifold_api_key.get_secret_value()).url

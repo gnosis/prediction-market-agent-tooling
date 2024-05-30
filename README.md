@@ -18,7 +18,6 @@ Deploying and monitoring agents using GCP requires that you set up the gcloud CL
 
 ```bash
 MANIFOLD_API_KEY=...
-BET_FROM_ADDRESS=...
 BET_FROM_PRIVATE_KEY=...
 OPENAI_API_KEY=...
 ```
@@ -33,45 +32,53 @@ For example:
 
 ```python
 import prediction_market_agent_tooling.benchmark.benchmark as bm
+from prediction_market_agent_tooling.benchmark.agents import RandomAgent
 from prediction_market_agent_tooling.markets.markets import MarketType, get_binary_markets
 
 benchmarker = bm.Benchmarker(
     markets=get_binary_markets(limit=10, market_type=MarketType.MANIFOLD),
-    agents=[...],
+    agents=[RandomAgent(agent_name="a_random_agent")],
 )
 benchmarker.run_agents()
 md = benchmarker.generate_markdown_report()
 ```
 
-This produces a markdown report comparing agents:
+This produces a markdown report that you can use for comparing agents side-by-side, like:
 
 ![Benchmark results](assets/comparison-report.png)
 
 ## Deploying
 
-Create a deployable agent by subclassing the `DeployableAgent` base class, and implementing the 
+> **Deprecated**: We suggest using your own infrastructure to deploy, but you may still find this useful.
+
+Create a deployable agent by subclassing the `DeployableTraderAgent` base class, and implementing the `answer_binary_market` method.
 
 For example, deploy an agent that randomly picks an outcome:
 
 ```python
 import random
-from prediction_market_agent_tooling.deploy.agent import DeployableAgent
+from prediction_market_agent_tooling.deploy.agent import DeployableTraderAgent
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 
-class DeployableCoinFlipAgent(DeployableAgent):
+class DeployableCoinFlipAgent(DeployableTraderAgent):
     def answer_binary_market(self, market: AgentMarket) -> bool | None:
         return random.choice([True, False])
 
 DeployableCoinFlipAgent().deploy_gcp(...)
 ```
 
-For deploying a Safe manually for a given agent, run the script below:
+### Safe
+
+Agents can control funds via a wallet primary key only, or optionally via a [Safe](https://safe.global/) as well. For deploying a Safe manually for a given agent, run the script below:
 
 ```commandline
 poetry run python scripts/create_safe_for_agent.py  --from-private-key <YOUR_AGENT_PRIVATE_KEY> --salt-nonce 42
 ```
+
 This will output the newly created Safe in the terminal, and it can then be copied over to the deployment part (e.g. Terraform).
 Note that `salt_nonce` can be passed so that the created safe is deterministically created for each agent, so that, if the same `salt_nonce` is used, the script will not create a new Safe for the agent, instead it will output the previously existent Safe.
+
+You can then specify this agent's Safe address with the `SAFE_ADDRESS` environment variable.
 
 ## Monitoring
 
@@ -89,14 +96,41 @@ Which launches in the browser:
 
 ## The Market Platforms
 
-The following markets platforms are supported:
+The following prediction market platforms are supported:
 
-- [Manifold](https://manifold.markets/)
-- [AIOmen](https://aiomen.eth.limo/)
-- [Polymarket](https://polymarket.com/) - Benchmarking only. Deploy and monitor TODO
+| Platform                              | Benchmarking | Deployment | Monitoring |
+|---------------------------------------|--------------|------------|------------|
+| [Manifold](https://manifold.markets/) | ✅ | ✅ | ✅ |
+| [AIOmen](https://aiomen.eth.limo/)    | ✅ | ✅ | ✅ |
+| [Polymarket](https://polymarket.com/) | ✅ | ❌ | ❌ |
+
+## Prediction Markets Python API
+
+We have built clean abstractions for taking actions on the different prediction market platforms (retrieving markets, buying and selling tokens, etc.). This is currently undocumented, but for now, inspecting the [`AgentMarket`](https://github.com/gnosis/prediction-market-agent-tooling/blob/1e497fff9f2b53e4e3e1beb5dda08b4d49da881b/prediction_market_agent_tooling/markets/agent_market.py) class and its methods is your best bet.
+
+For example:
+
+```python
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.markets.agent_market import SortBy
+from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+
+# Place a bet on the market closing soonest
+market = OmenAgentMarket.get_binary_markets(limit=1, sort_by=SortBy.CLOSING_SOONEST)[0]
+market.place_bet(outcome=True, amount=market.get_bet_amount(0.1))
+
+# View your positions
+my_positions = OmenAgentMarket.get_positions(user_id=APIKeys().bet_from_address)
+print(my_positions)
+
+# Sell position (accounting for fees)
+market.sell_tokens(outcome=True, amount=market.get_bet_amount(0.095))
+```
+
+This API can be built on top of to create your application. See [here](https://github.com/gnosis/prediction-market-agent/tree/main/prediction_market_agent/agents/microchain_agent) for an example.
 
 ## Contributing
 
-See the [Issues](https://github.com/gnosis/prediction-market-agent-tooling/issues) for ideas of things that need fixing or implementing. Or come up with your own :D.
+See the [Issues](https://github.com/gnosis/prediction-market-agent-tooling/issues) for ideas of things that need fixing or implementing. The team is also receptive to new issues and PRs.
 
 We use `mypy` for static type checking, and `isort`, `black` and `autoflake` for linting. These all run as steps in CI.

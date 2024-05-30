@@ -9,7 +9,11 @@ from prediction_market_agent_tooling.tools.google import search_google
 def find_resolution_on_polymarket(question: str) -> Resolution | None:
     full_market = find_full_polymarket(question)
     # TODO: Only main markets are supported right now, add logic for others if needed.
-    return full_market.main_market.resolution if full_market else None
+    return (
+        full_market.main_market.resolution
+        if full_market and full_market.is_main_market
+        else None
+    )
 
 
 def find_full_polymarket(question: str) -> PolymarketFullMarket | None:

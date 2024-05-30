@@ -1,6 +1,8 @@
 import typing as t
 
 import requests
+import tenacity
+from loguru import logger
 
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
@@ -18,6 +20,27 @@ POLYMARKET_API_BASE_URL = "https://clob.polymarket.com/"
 MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(5),
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
+    after=lambda x: logger.debug(f"get_polymarkets failed, {x.attempt_number=}."),
+)
+def get_polymarkets(
+    limit: int,
+    with_rewards: bool = False,
+    next_cursor: str | None = None,
+) -> MarketsEndpointResponse:
+    url = (
+        f"{POLYMARKET_API_BASE_URL}/{'sampling-markets' if with_rewards else 'markets'}"
+    )
+    params: dict[str, str | int | float | None] = {
+        "limit": min(limit, MARKETS_LIMIT),
+    }
+    if next_cursor is not None:
+        params["next_cursor"] = next_cursor
+    return response_to_model(requests.get(url, params=params), MarketsEndpointResponse)
+
+
 def get_polymarket_binary_markets(
     limit: int,
     closed: bool | None = False,
@@ -28,17 +51,13 @@ def get_polymarket_binary_markets(
     """
     See https://learn.polymarket.com/trading-rewards for information about rewards.
     """
-    url = (
-        f"{POLYMARKET_API_BASE_URL}/{'sampling-markets' if with_rewards else 'markets'}"
-    )
+
     all_markets: list[PolymarketMarketWithPrices] = []
-    params: dict[str, str | int | float | None] = {
-        "limit": min(limit, MARKETS_LIMIT),
-    }
+    next_cursor: str | None = None
 
     while True:
-        response = response_to_model(
-            requests.get(url, params=params), MarketsEndpointResponse
+        response = get_polymarkets(
+            limit, with_rewards=with_rewards, next_cursor=next_cursor
         )
 
         for market in response.data:
@@ -81,11 +100,11 @@ def get_polymarket_binary_markets(
         if len(all_markets) >= limit:
             break
 
-        if response.next_cursor == "LTE=":
+        next_cursor = response.next_cursor
+
+        if next_cursor == "LTE=":
             # 'LTE=' means the end.
             break
-
-        params["next_cursor"] = response.next_cursor
 
     return all_markets[:limit]
 

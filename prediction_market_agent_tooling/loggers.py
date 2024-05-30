@@ -14,12 +14,21 @@ class LogFormat(str, Enum):
     GCP = "gcp"
 
 
+class LogLevel(str, Enum):
+    CRITICAL = "CRITICAL"
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    INFO = "INFO"
+    DEBUG = "DEBUG"
+
+
 class LogConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     LOG_FORMAT: LogFormat = LogFormat.DEFAULT
+    LOG_LEVEL: LogLevel = LogLevel.DEBUG
 
 
 GCP_LOG_LOGURU_FORMAT = (
@@ -49,7 +58,7 @@ def patch_logger() -> None:
     # Change built-in logging.
     if format_logging is not None:
         logging.basicConfig(
-            level=logging.DEBUG, format=format_logging, datefmt=datefmt_logging
+            level=config.LOG_LEVEL.value, format=format_logging, datefmt=datefmt_logging
         )
 
     # Change loguru.
@@ -58,7 +67,7 @@ def patch_logger() -> None:
         logger.add(
             sys.stdout,
             format=format_loguru,
-            level="DEBUG",  # Can be the lowest level, higher ones will use by default this one.
+            level=config.LOG_LEVEL.value,
             colorize=True,
         )
 

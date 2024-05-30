@@ -156,14 +156,18 @@ class OmenAgentMarket(AgentMarket):
         )
 
     def sell_tokens(
-        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = False
+        self,
+        outcome: bool,
+        amount: TokenAmount,
+        auto_withdraw: bool = False,
+        api_keys: APIKeys | None = None,
     ) -> None:
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot sell tokens."
             )
         binary_omen_sell_outcome_tx(
-            api_keys=APIKeys(),
+            api_keys=api_keys if api_keys is not None else APIKeys(),
             amount=xDai(amount.amount),
             market=self,
             binary_outcome=outcome,

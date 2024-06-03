@@ -203,22 +203,23 @@ def monitor_agent(agent: DeployedAgent) -> None:
         "Is Correct": [bet.is_correct for bet in agent_bets],
         "Profit": [round(bet.profit.amount, 2) for bet in agent_bets],
     }
-    bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time", ascending=False)
 
-    # Metrics
-    col1, col2 = st.columns(2)
-    col1.metric(label="Number of bets", value=f"{len(agent_bets)}")
-    col2.metric(label="% Correct", value=f"{100 * bets_df['Is Correct'].mean():.2f}%")
-
-    # Time column to use for x-axes
+    # Time column to use for x-axes and sorting
     x_axis_column = st.selectbox(
         "X-axis column",
         ["Created Time", "Resolved Time"],
         key=f"{agent.name}_x_axis_column",
     )
 
-    # Chart of grouped accuracy per day
+    bets_df = pd.DataFrame(bets_info).sort_values(by=x_axis_column, ascending=False)
     bets_df["x-axis-day"] = bets_df[x_axis_column].dt.date
+
+    # Metrics
+    col1, col2 = st.columns(2)
+    col1.metric(label="Number of bets", value=f"{len(agent_bets)}")
+    col2.metric(label="% Correct", value=f"{100 * bets_df['Is Correct'].mean():.2f}%")
+
+    # Chart of grouped accuracy per day
     per_day_accuracy = bets_df.groupby("x-axis-day")["Is Correct"].mean()
     per_day_accuracy_chart = (
         alt.Chart(per_day_accuracy.reset_index())
@@ -264,7 +265,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
     )
     if show_bet_history:
         st.subheader("Resolved Bet History")
-        st.table(bets_df)
+        st.table(bets_df.drop(columns=["x-axis-day"]))
 
 
 def monitor_market(

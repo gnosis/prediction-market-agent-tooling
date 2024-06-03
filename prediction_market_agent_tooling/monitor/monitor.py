@@ -41,9 +41,9 @@ class DeployedAgent(BaseModel):
     name: str
 
     start_time: DatetimeWithTimezone
-    end_time: t.Optional[
-        DatetimeWithTimezone
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: t.Optional[DatetimeWithTimezone] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -185,7 +185,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
     col3.markdown(f"Public ID: `{agent.public_id}`")
 
     show_agent_bets = st.checkbox(
-        "Show resolved bets", value=False, key=f"{agent.name}_show_bets"
+        "Show resolved bets statistics", value=False, key=f"{agent.name}_show_bets"
     )
     if not show_agent_bets:
         return
@@ -203,16 +203,42 @@ def monitor_agent(agent: DeployedAgent) -> None:
         "Is Correct": [bet.is_correct for bet in agent_bets],
         "Profit": [round(bet.profit.amount, 2) for bet in agent_bets],
     }
-    bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time")
+    bets_df = pd.DataFrame(bets_info).sort_values(by="Resolved Time", ascending=False)
 
     # Metrics
     col1, col2 = st.columns(2)
     col1.metric(label="Number of bets", value=f"{len(agent_bets)}")
     col2.metric(label="% Correct", value=f"{100 * bets_df['Is Correct'].mean():.2f}%")
 
+    # Time column to use for x-axes
+    x_axis_column = st.selectbox(
+        "X-axis column",
+        ["Created Time", "Resolved Time"],
+        key=f"{agent.name}_x_axis_column",
+    )
+
+    # Chart of grouped accuracy per day
+    bets_df["x-axis-day"] = bets_df[x_axis_column].dt.date
+    per_day_accuracy = bets_df.groupby("x-axis-day")["Is Correct"].mean()
+    per_day_accuracy_chart = (
+        alt.Chart(per_day_accuracy.reset_index())
+        .encode(
+            x=alt.X("x-axis-day", axis=alt.Axis(format="%Y-%m-%d"), title=None),
+            y=alt.Y("Is Correct", axis=alt.Axis(format=".2f")),
+        )
+        .interactive()
+    )
+    st.altair_chart(
+        per_day_accuracy_chart.mark_line()
+        + per_day_accuracy_chart.transform_loess("x-axis-day", "Is Correct").mark_line(
+            color="red", strokeDash=[5, 5]
+        ),
+        use_container_width=True,
+    )
+
     # Chart of cumulative profit per day
     profit_info = {
-        "Time": bets_df["Resolved Time"],
+        "Time": bets_df[x_axis_column],
         "Cumulative Profit": bets_df["Profit"].astype(float),
     }
     profit_df = pd.DataFrame(profit_info)
@@ -233,8 +259,12 @@ def monitor_agent(agent: DeployedAgent) -> None:
     )
 
     # Table of resolved bets
-    st.subheader("Resolved Bet History")
-    st.table(bets_df)
+    show_bet_history = st.checkbox(
+        "Show resolved bet history", value=False, key=f"{agent.name}_show_bet_history"
+    )
+    if show_bet_history:
+        st.subheader("Resolved Bet History")
+        st.table(bets_df)
 
 
 def monitor_market(

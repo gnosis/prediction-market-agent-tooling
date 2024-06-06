@@ -190,7 +190,7 @@ def calculate_sell_amount_in_collateral(
     Simplified for binary markets.
     """
 
-    if not (0 < fee <= 1.0):
+    if not (0 <= fee < 1.0):
         raise ValueError("Fee must be between 0 and 1")
 
     for v in [shares_to_sell, holdings, other_holdings]:

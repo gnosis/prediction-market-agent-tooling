@@ -7,6 +7,7 @@ from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 import pytz
 import requests
 from pydantic import BaseModel, ValidationError
+from scipy.optimize import newton
 from scipy.stats import entropy
 
 from prediction_market_agent_tooling.gtypes import (
@@ -173,3 +174,35 @@ def prob_uncertainty(prob: Probability) -> float:
         - Market's probability is 0.95, so the market is quite certain about YES: prob_uncertainty(0.95) == 0.286
     """
     return float(entropy([prob, 1 - prob], base=2))
+
+
+def calculate_sell_amount_in_collateral(
+    shares_to_sell: float,
+    holdings: float,
+    other_holdings: float,
+    fee: float,
+) -> Optional[float]:
+    """
+    Computes the amount of collateral that needs to be sold to get `shares`
+    amount of shares. Returns None if the amount can't be computed.
+
+    Taken from https://github.com/protofire/omen-exchange/blob/29d0ab16bdafa5cc0d37933c1c7608a055400c73/app/src/util/tools/fpmm/trading/index.ts#L99
+    Simplified for binary markets.
+    """
+
+    if fee >= 1 or fee < 0:
+        raise ValueError("Fee must be between 0 and 1")
+
+    for v in [shares_to_sell, holdings, other_holdings]:
+        if v <= 0:
+            raise ValueError("All share args must be greater than 0")
+
+    def f(r: float) -> float:
+        R = r / (1 - fee)
+        first_term = other_holdings - R
+        second_term = holdings + shares_to_sell - R
+        third_term = holdings * other_holdings
+        return (first_term * second_term) - third_term
+
+    amount_to_sell = newton(f, 0)
+    return float(amount_to_sell) * 0.999999  # Avoid rounding errors

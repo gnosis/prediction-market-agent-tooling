@@ -1,6 +1,7 @@
 import time
 from datetime import timedelta
 
+import numpy as np
 import pytest
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
@@ -8,7 +9,11 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
+from prediction_market_agent_tooling.markets.data_models import (
+    Currency,
+    Position,
+    TokenAmount,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -242,3 +247,51 @@ def test_omen_buy_and_sell_outcome(
         auto_withdraw=True,
         web3=local_web3,
     )
+
+
+@pytest.mark.skip(reason=DEFAULT_REASON)
+def test_omen_buy_and_sell_outcome_1() -> None:
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+
+    def get_market_position(user_id: str, market_id: str) -> Position | None:
+        for position in OmenAgentMarket.get_positions(user_id):
+            if position.market_id == market_id:
+                return position
+        return None
+
+    # Check that we have no initial position in the market.
+    assert (
+        get_market_position(
+            user_id=APIKeys().bet_from_address,
+            market_id=market.id,
+        )
+        is None
+    )
+
+    outcome = True
+    market.place_bet(
+        outcome=outcome,
+        amount=market.get_bet_amount(amount=0.4),
+    )
+
+    time.sleep(10)
+    position = get_market_position(
+        user_id=APIKeys().bet_from_address,
+        market_id=market.id,
+    )
+    assert position is not None
+    shares_to_sell = TokenAmount(
+        amount=position.amounts[OMEN_TRUE_OUTCOME].amount, currency=Currency.xDai
+    )
+
+    market.sell_tokens(
+        outcome=outcome,
+        amount=shares_to_sell,
+    )
+
+    time.sleep(10)
+    final_position = get_market_position(
+        user_id=APIKeys().bet_from_address,
+        market_id=market.id,
+    )
+    assert np.isclose(final_position.amounts[OMEN_TRUE_OUTCOME].amount, 0)

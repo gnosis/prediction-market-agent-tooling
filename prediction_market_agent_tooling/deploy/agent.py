@@ -5,10 +5,11 @@ import time
 import typing as t
 from datetime import datetime, timedelta
 
+from modal import runner, App, Cron, Image
 from pydantic import BaseModel, BeforeValidator
 from typing_extensions import Annotated
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, ModalApiKeys
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
     REPOSITORY_KEY,
@@ -111,6 +112,32 @@ class DeployableAgent:
             time.sleep(sleep_time)
             if time.time() - start_time > timeout:
                 break
+
+    def deploy_to_modal(
+        self,
+        market_type: MarketType,
+        cron_schedule: str,
+        app: App,
+        app_name: str | None = None,
+    ):
+        modal_keys = ModalApiKeys()
+        if modal_keys.MODAL_TOKEN_ID is None or modal_keys.MODAL_TOKEN_SECRET is None:
+            raise ValueError("No Modal API keys provided.")
+
+        if not app_name:
+            app_name = "default-app"
+
+        image = Image.from_registry(
+            "ghcr.io/gnosis/prediction-market-agent:main"
+        ).pip_install("pydantic==2.6.1")
+        # app = App(image=image, name=app_name)
+        app.image = image
+
+        # @app.function(schedule=Cron(cron_schedule))
+        # def run():
+        #    self.run(market_type=market_type)
+
+        runner.deploy_app(app)
 
     def deploy_gcp(
         self,

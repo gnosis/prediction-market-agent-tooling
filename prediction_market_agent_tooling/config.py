@@ -18,6 +18,15 @@ SECRET_TYPES = [
 ]
 
 
+class ModalApiKeys(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    MODAL_TOKEN_ID: t.Optional[SecretStr] = None
+    MODAL_TOKEN_SECRET: t.Optional[SecretStr] = None
+
+
 class APIKeys(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

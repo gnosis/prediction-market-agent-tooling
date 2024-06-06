@@ -41,6 +41,7 @@ eth-account = "^0.8.0"
 prompt-toolkit = "^3.0.43"
 safe-cli = "^1.0.0"
 langfuse = "^2.27.1"
+modal = "^0.62.204"
 
 [tool.poetry.extras]
 langchain = ["langchain", "langchain-openai"]

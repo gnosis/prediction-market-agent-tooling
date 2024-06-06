@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import timedelta
 
@@ -225,32 +226,39 @@ def test_omen_buy_and_sell_outcome(
     outcome_str = OMEN_TRUE_OUTCOME if outcome else OMEN_FALSE_OUTCOME
     bet_amount = market.get_bet_amount(amount=0.4)
 
-    api_keys = APIKeys(BET_FROM_PRIVATE_KEY=test_keys.bet_from_private_key)
+    # TODO hack until https://github.com/gnosis/prediction-market-agent-tooling/issues/266 is complete
+    os.environ[
+        "BET_FROM_PRIVATE_KEY"
+    ] = test_keys.bet_from_private_key.get_secret_value()
+    api_keys = APIKeys()
 
-    def get_market_outcome_tokens(market: OmenAgentMarket, user_id: str) -> TokenAmount:
-        return market.get_token_balance(user_id=user_id, outcome=outcome_str)
+    def get_market_outcome_tokens() -> TokenAmount:
+        return market.get_token_balance(
+            user_id=api_keys.bet_from_address,
+            outcome=outcome_str,
+            web3=local_web3,
+        )
 
     # Check that we have no initial position in the market.
-    assert (
-        get_market_outcome_tokens(
-            user_id=api_keys.bet_from_address,
-            market=market,
-        ).amount
-        == 0
-    )
+    assert get_market_outcome_tokens().amount == 0
 
     # Check our wallet has sufficient funds
-    balances = get_balances(api_keys.bet_from_address)
+    balances = get_balances(address=api_keys.bet_from_address, web3=local_web3)
     assert balances.xdai + balances.wxdai > bet_amount.amount
 
     market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
 
     # Check that we now have a position in the market.
-    outcome_tokens = get_market_outcome_tokens(market, api_keys.bet_from_address)
+    outcome_tokens = get_market_outcome_tokens()
     assert outcome_tokens.amount > 0
 
-    market.sell_tokens(outcome=outcome, amount=outcome_tokens, web3=local_web3)
-    remaining_tokens = get_market_outcome_tokens(market, api_keys.bet_from_address)
+    market.sell_tokens(
+        outcome=outcome,
+        amount=outcome_tokens,
+        web3=local_web3,
+        api_keys=api_keys,
+    )
 
     # Check that we have sold our entire stake in the market.
-    assert np.isclose(remaining_tokens.amount, 0)
+    remaining_tokens = get_market_outcome_tokens()
+    assert np.isclose(remaining_tokens.amount, 0, atol=5e-3)

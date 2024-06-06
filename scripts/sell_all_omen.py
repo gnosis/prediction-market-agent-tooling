@@ -49,7 +49,8 @@ def sell_all(
     )
     bets_total_usd = sum(b.collateralAmountUSD for b in bets)
     unique_market_urls = set(b.fpmm.url for b in bets)
-    balances_before = get_balances(better_address)
+    starting_balance = get_balances(better_address)
+    new_balance = starting_balance  # initialisation
 
     logger.info(
         f"For {better_address}, found the following {len(bets)} bets on {len(unique_market_urls)} unique markets worth of {bets_total_usd} USD: {unique_market_urls}"
@@ -66,37 +67,20 @@ def sell_all(
             )
             continue
 
-        # TODO: This should be fixable once https://github.com/gnosis/prediction-market-agent-tooling/issues/195 is resolved and used in this script.
-        # We need to convert `current_token_balance.amount` properly into their actual xDai value and then use it here.
-        # Afterwards, we can sell the actual xDai value, instead of just trying to sell these hard-coded values.
-        for current_xdai_value in [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]:
-            current_token_balance.amount = current_xdai_value
+        old_balance = new_balance
+        agent_market.sell_tokens(
+            bet.boolean_outcome,
+            current_token_balance,
+            auto_withdraw=auto_withdraw,
+            api_keys=api_keys,
+        )
+        new_balance = get_balances(better_address)
 
-            try:
-                agent_market.sell_tokens(
-                    bet.boolean_outcome,
-                    current_token_balance,
-                    auto_withdraw=auto_withdraw,
-                    api_keys=api_keys,
-                )
-                logger.info(
-                    f"Sold bet on {bet.fpmm.url} for {current_xdai_value} xDai."
-                )
-                break
-            except Exception as e:
-                # subtraction error is currently expected because of the TODO above, so log only other errors
-                if "Reverted SafeMath: subtraction overflow" not in str(e):
-                    logger.error(
-                        f"Failed to sell bet on {bet.fpmm.url} for {current_xdai_value} xDai because of {e}."
-                    )
-                continue
-        else:
-            logger.warning(
-                f"Skipped bet on {bet.fpmm.url} because of insufficient balance."
-            )
+        logger.info(
+            f"Sold bet on {bet.fpmm.url} for {new_balance.wxdai - old_balance.wxdai} xDai."
+        )
 
-    balances_after = get_balances(better_address)
-    logger.info(f"Obtained back {balances_after.wxdai - balances_before.wxdai} wxDai.")
+    logger.info(f"Obtained back {new_balance.wxdai - starting_balance.wxdai} wxDai.")
 
 
 if __name__ == "__main__":

@@ -118,6 +118,8 @@ def test_minimum_bet_to_win(
             url="url",
             volume=None,
             finalized_time=None,
+            outcome_token_amounts=[OmenOutcomeToken(2), OmenOutcomeToken(3)],
+            fee=0.02,
         ),
     )
     assert (

@@ -32,8 +32,8 @@ class PolymarketMarket(BaseModel):
     active: bool
     closed: bool
     archived: bool
-    minimum_order_size: str
-    minimum_tick_size: str
+    minimum_order_size: str | float
+    minimum_tick_size: str | float
     condition_id: str
     question_id: str
     question: str
@@ -54,8 +54,8 @@ class PolymarketMarket(BaseModel):
     rewards: PolymarketRewards
     tokens: tuple[PolymarketToken, ...]
     is_50_50_outcome: bool
-    categories: list[str]
-    parent_categories: list[str]
+    categories: list[str] | None = None
+    parent_categories: list[str] | None = None
     accepting_orders: bool
 
     @property

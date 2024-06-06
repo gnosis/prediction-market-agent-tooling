@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexStr,
+    OmenOutcomeToken,
     OutcomeStr,
     Probability,
     Wei,
@@ -54,7 +55,10 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import (
+    calculate_sell_amount_in_collateral,
+    check_not_none,
+)
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     remove_fraction,
@@ -80,6 +84,8 @@ class OmenAgentMarket(AgentMarket):
     finalized_time: datetime | None
     created_time: datetime
     close_time: datetime
+    outcome_token_amounts: list[OmenOutcomeToken]
+    fee: float  # proportion, from 0 to 1
 
     INVALID_MARKET_ANSWER: HexStr = HexStr(
         "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
@@ -155,19 +161,50 @@ class OmenAgentMarket(AgentMarket):
             web3=web3,
         )
 
+    def calculate_sell_amount_in_collateral(
+        self, amount: TokenAmount, outcome: bool
+    ) -> xDai:
+        if len(self.outcome_token_amounts) != 2:
+            raise ValueError(
+                f"Market {self.id} has {len(self.outcome_token_amounts)} "
+                f"outcomes. This method only supports binary markets."
+            )
+        sell_index = self.yes_index if outcome else self.no_index
+        other_index = self.no_index if outcome else self.yes_index
+        collateral = calculate_sell_amount_in_collateral(
+            shares_to_sell=amount.amount,
+            holdings=wei_to_xdai(Wei(self.outcome_token_amounts[sell_index])),
+            other_holdings=wei_to_xdai(Wei(self.outcome_token_amounts[other_index])),
+            fee=self.fee,
+        )
+        return xDai(collateral)
+
     def sell_tokens(
-        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
+        self,
+        outcome: bool,
+        amount: TokenAmount,
+        auto_withdraw: bool = False,
+        api_keys: APIKeys | None = None,
+        web3: Web3 | None = None,
     ) -> None:
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot sell tokens."
             )
+
+        # Convert from token (i.e. share) number to xDai value of tokens, as
+        # this is the expected unit of the argument in the smart contract.
+        collateral = self.calculate_sell_amount_in_collateral(
+            amount=amount,
+            outcome=outcome,
+        )
         binary_omen_sell_outcome_tx(
-            api_keys=APIKeys(),
-            amount=xDai(amount.amount),
+            amount=collateral,
+            api_keys=api_keys if api_keys is not None else APIKeys(),
             market=self,
             binary_outcome=outcome,
             auto_withdraw=auto_withdraw,
+            web3=web3,
         )
 
     def was_any_bet_outcome_correct(
@@ -245,6 +282,8 @@ class OmenAgentMarket(AgentMarket):
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
             close_time=model.close_time,
+            outcome_token_amounts=model.outcomeTokenAmounts,
+            fee=float(wei_to_xdai(model.fee)) if model.fee is not None else 0.0,
         )
 
     @staticmethod
@@ -368,6 +407,10 @@ class OmenAgentMarket(AgentMarket):
             positions.append(Position(market_id=market.id, amounts=amounts))
 
         return positions
+
+    @classmethod
+    def get_user_url(cls, keys: APIKeys) -> str:
+        return f"https://gnosisscan.io/address/{keys.bet_from_address}"
 
 
 def pick_binary_market(

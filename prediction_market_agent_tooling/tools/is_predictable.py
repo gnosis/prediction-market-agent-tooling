@@ -1,5 +1,6 @@
 from loguru import logger
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
 
 # I tried to make it return a JSON, but it didn't work well in combo with asking it to do chain of thought.
@@ -44,7 +45,11 @@ def is_predictable_binary(
         logger.info("langchain not installed, skipping is_predictable_binary")
         return True
 
-    llm = ChatOpenAI(model=engine, temperature=0.0)
+    llm = ChatOpenAI(
+        model=engine,
+        temperature=0.0,
+        api_key=APIKeys().openai_api_key.get_secret_value(),
+    )
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
     messages = prompt.format_messages(question=question)

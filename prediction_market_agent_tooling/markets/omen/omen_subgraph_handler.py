@@ -205,8 +205,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 finalized_before
             )
 
+        # `excluded_question_titles` can not be an empty list, otherwise the API bugs out and returns nothing.
         excluded_question_titles = [""]
-        if excluded_questions is not None:
+        if excluded_questions:
             excluded_question_titles = [i for i in excluded_questions]
 
         where_stms["question_"]["title_not_in"] = excluded_question_titles
@@ -439,6 +440,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         type_: t.Literal["Buy", "Sell"] | None = None,
+        market_opening_after: datetime | None = None,
+        collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
@@ -457,6 +460,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms.append(trade.fpmm == market_id.lower())
         if filter_by_answer_finalized_not_null:
             where_stms.append(trade.fpmm.answerFinalizedTimestamp != None)
+        if market_opening_after is not None:
+            where_stms.append(
+                trade.fpmm.openingTimestamp > to_int_timestamp(market_opening_after)
+            )
+        if collateral_amount_more_than is not None:
+            where_stms.append(trade.collateralAmount > collateral_amount_more_than)
 
         trades = self.trades_subgraph.Query.fpmmTrades(
             first=sys.maxsize, where=where_stms
@@ -473,6 +482,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
+        market_opening_after: datetime | None = None,
+        collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         return self.get_trades(
             better_address=better_address,
@@ -481,6 +492,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             market_id=market_id,
             filter_by_answer_finalized_not_null=filter_by_answer_finalized_not_null,
             type_="Buy",  # We consider `bet` to be only the `Buy` trade types.
+            market_opening_after=market_opening_after,
+            collateral_amount_more_than=collateral_amount_more_than,
         )
 
     def get_resolved_bets(

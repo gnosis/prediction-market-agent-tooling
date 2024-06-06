@@ -9,11 +9,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import (
-    Currency,
-    Position,
-    TokenAmount,
-)
+from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -22,7 +18,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
-    binary_omen_sell_outcome_tx,
     omen_create_market_tx,
     omen_fund_market_tx,
     omen_redeem_full_position_tx,
@@ -35,6 +30,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests_integration.conftest import is_contract
@@ -225,73 +221,36 @@ def test_omen_buy_and_sell_outcome(
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
     # You can double check your address at https://gnosisscan.io/ afterwards.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
-    buy_amount = xdai_type(0.00142)
-    sell_amount = xdai_type(
-        buy_amount / 2
-    )  # There will be some fees, so this has to be lower.
+    outcome = True
+    outcome_str = OMEN_TRUE_OUTCOME if outcome else OMEN_FALSE_OUTCOME
+    bet_amount = market.get_bet_amount(amount=0.4)
 
-    binary_omen_buy_outcome_tx(
-        api_keys=test_keys,
-        amount=buy_amount,
-        market=market,
-        binary_outcome=True,
-        auto_deposit=True,
-        web3=local_web3,
-    )
+    api_keys = APIKeys(BET_FROM_PRIVATE_KEY=test_keys.bet_from_private_key)
 
-    binary_omen_sell_outcome_tx(
-        api_keys=test_keys,
-        amount=sell_amount,
-        market=market,
-        binary_outcome=True,
-        auto_withdraw=True,
-        web3=local_web3,
-    )
-
-
-@pytest.mark.skip(reason=DEFAULT_REASON)
-def test_omen_buy_and_sell_outcome_1() -> None:
-    market = OmenAgentMarket.from_data_model(pick_binary_market())
-
-    def get_market_position(user_id: str, market_id: str) -> Position | None:
-        for position in OmenAgentMarket.get_positions(user_id):
-            if position.market_id == market_id:
-                return position
-        return None
+    def get_market_outcome_tokens(market: OmenAgentMarket, user_id: str) -> TokenAmount:
+        return market.get_token_balance(user_id=user_id, outcome=outcome_str)
 
     # Check that we have no initial position in the market.
     assert (
-        get_market_position(
-            user_id=APIKeys().bet_from_address,
-            market_id=market.id,
-        )
-        is None
+        get_market_outcome_tokens(
+            user_id=api_keys.bet_from_address,
+            market=market,
+        ).amount
+        == 0
     )
 
-    outcome = True
-    market.place_bet(
-        outcome=outcome,
-        amount=market.get_bet_amount(amount=0.4),
-    )
+    # Check our wallet has sufficient funds
+    balances = get_balances(api_keys.bet_from_address)
+    assert balances.xdai + balances.wxdai > bet_amount.amount
 
-    time.sleep(10)
-    position = get_market_position(
-        user_id=APIKeys().bet_from_address,
-        market_id=market.id,
-    )
-    assert position is not None
-    shares_to_sell = TokenAmount(
-        amount=position.amounts[OMEN_TRUE_OUTCOME].amount, currency=Currency.xDai
-    )
+    market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
 
-    market.sell_tokens(
-        outcome=outcome,
-        amount=shares_to_sell,
-    )
+    # Check that we now have a position in the market.
+    outcome_tokens = get_market_outcome_tokens(market, api_keys.bet_from_address)
+    assert outcome_tokens.amount > 0
 
-    time.sleep(10)
-    final_position = get_market_position(
-        user_id=APIKeys().bet_from_address,
-        market_id=market.id,
-    )
-    assert np.isclose(final_position.amounts[OMEN_TRUE_OUTCOME].amount, 0)
+    market.sell_tokens(outcome=outcome, amount=outcome_tokens, web3=local_web3)
+    remaining_tokens = get_market_outcome_tokens(market, api_keys.bet_from_address)
+
+    # Check that we have sold our entire stake in the market.
+    assert np.isclose(remaining_tokens.amount, 0)

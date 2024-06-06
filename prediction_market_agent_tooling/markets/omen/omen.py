@@ -180,7 +180,11 @@ class OmenAgentMarket(AgentMarket):
         return xDai(collateral)
 
     def sell_tokens(
-        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = False
+        self,
+        outcome: bool,
+        amount: TokenAmount,
+        auto_withdraw: bool = False,
+        api_keys: APIKeys | None = None,
     ) -> None:
         if not self.can_be_traded():
             raise ValueError(
@@ -195,6 +199,8 @@ class OmenAgentMarket(AgentMarket):
         )
         binary_omen_sell_outcome_tx(
             api_keys=APIKeys(),
+            amount=collateral,
+            api_keys=api_keys if api_keys is not None else APIKeys(),
             amount=collateral,
             market=self,
             binary_outcome=outcome,

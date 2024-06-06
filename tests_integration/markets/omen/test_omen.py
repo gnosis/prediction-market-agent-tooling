@@ -239,9 +239,6 @@ def test_omen_buy_and_sell_outcome(
             web3=local_web3,
         )
 
-    # Get our initial position in the market for later comparison
-    initial_tokens = get_market_outcome_tokens()
-
     # Check our wallet has sufficient funds
     balances = get_balances(address=api_keys.bet_from_address, web3=local_web3)
     assert balances.xdai + balances.wxdai > bet_amount.amount
@@ -261,9 +258,4 @@ def test_omen_buy_and_sell_outcome(
 
     # Check that we have sold our entire stake in the market.
     remaining_tokens = get_market_outcome_tokens()
-    assert np.isclose(
-        remaining_tokens.amount,
-        initial_tokens.amount,
-        rtol=5e-3,
-        atol=5e-3,
-    )
+    assert np.isclose(remaining_tokens.amount, 0, atol=5e-3)

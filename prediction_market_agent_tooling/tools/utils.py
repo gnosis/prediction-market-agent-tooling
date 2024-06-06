@@ -181,7 +181,7 @@ def calculate_sell_amount_in_collateral(
     holdings: float,
     other_holdings: float,
     fee: float,
-) -> Optional[float]:
+) -> float:
     """
     Computes the amount of collateral that needs to be sold to get `shares`
     amount of shares. Returns None if the amount can't be computed.

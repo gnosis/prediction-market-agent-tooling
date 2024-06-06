@@ -173,8 +173,8 @@ class OmenAgentMarket(AgentMarket):
         other_index = self.no_index if outcome else self.yes_index
         collateral = calculate_sell_amount_in_collateral(
             shares_to_sell=amount.amount,
-            holdings=wei_to_xdai(self.outcome_token_amounts[sell_index]),
-            other_holdings=wei_to_xdai(self.outcome_token_amounts[other_index]),
+            holdings=wei_to_xdai(Wei(self.outcome_token_amounts[sell_index])),
+            other_holdings=wei_to_xdai(Wei(self.outcome_token_amounts[other_index])),
             fee=self.fee,
         )
         return xDai(collateral)

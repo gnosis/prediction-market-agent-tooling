@@ -198,10 +198,8 @@ class OmenAgentMarket(AgentMarket):
             outcome=outcome,
         )
         binary_omen_sell_outcome_tx(
-            api_keys=APIKeys(),
             amount=collateral,
             api_keys=api_keys if api_keys is not None else APIKeys(),
-            amount=collateral,
             market=self,
             binary_outcome=outcome,
             auto_withdraw=auto_withdraw,

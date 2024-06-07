@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL.Image import Image as ImageType
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.image_gen.image_gen import generate_image
@@ -25,6 +25,6 @@ def rewrite_question_into_image_generation_prompt(question: str) -> str:
     return rewritten
 
 
-def generate_image_for_market(question: str) -> Image:
+def generate_image_for_market(question: str) -> ImageType:
     prompt = rewrite_question_into_image_generation_prompt(question)
     return generate_image(prompt)

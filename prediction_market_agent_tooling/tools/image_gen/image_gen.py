@@ -1,17 +1,22 @@
 import base64
 import io
+import typing as t
 
 from PIL import Image
+from PIL.Image import Image as ImageType
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 def generate_image(
     prompt: str,
     model: str = "dall-e-3",
-    size: str = "1024x1024",
-    quality: str = "standard",
-) -> Image:
+    size: t.Literal[
+        "256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"
+    ] = "1024x1024",
+    quality: t.Literal["standard", "hd"] = "standard",
+) -> ImageType:
     try:
         from openai import OpenAI
     except ImportError:
@@ -32,5 +37,13 @@ def generate_image(
         )
         .data[0]
     )
-    image = Image.open(io.BytesIO(base64.b64decode(response.b64_json)))
+    image = Image.open(
+        io.BytesIO(
+            base64.b64decode(
+                check_not_none(
+                    response.b64_json, "Can't be none if response_format is b64_json."
+                )
+            )
+        )
+    )
     return image

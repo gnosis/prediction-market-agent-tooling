@@ -10,7 +10,6 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexStr,
-    OmenOutcomeToken,
     OutcomeStr,
     Probability,
     Wei,
@@ -84,7 +83,6 @@ class OmenAgentMarket(AgentMarket):
     finalized_time: datetime | None
     created_time: datetime
     close_time: datetime
-    outcome_token_amounts: list[OmenOutcomeToken]
     fee: float  # proportion, from 0 to 1
 
     INVALID_MARKET_ANSWER: HexStr = HexStr(
@@ -162,19 +160,19 @@ class OmenAgentMarket(AgentMarket):
         )
 
     def calculate_sell_amount_in_collateral(
-        self, amount: TokenAmount, outcome: bool
+        self, amount: TokenAmount, outcome: bool, web3: Web3 | None = None
     ) -> xDai:
-        if len(self.outcome_token_amounts) != 2:
-            raise ValueError(
-                f"Market {self.id} has {len(self.outcome_token_amounts)} "
-                f"outcomes. This method only supports binary markets."
-            )
-        sell_index = self.yes_index if outcome else self.no_index
-        other_index = self.no_index if outcome else self.yes_index
+        pool_balance = get_conditional_tokens_balance_for_market(
+            self, self.market_maker_contract_address_checksummed, web3=web3
+        )
+
+        sell_str = self.outcomes[self.yes_index if outcome else self.no_index]
+        other_str = self.outcomes[self.no_index if outcome else self.yes_index]
+
         collateral = calculate_sell_amount_in_collateral(
             shares_to_sell=amount.amount,
-            holdings=wei_to_xdai(Wei(self.outcome_token_amounts[sell_index])),
-            other_holdings=wei_to_xdai(Wei(self.outcome_token_amounts[other_index])),
+            holdings=wei_to_xdai(pool_balance[self.get_index_set(sell_str)]),
+            other_holdings=wei_to_xdai(pool_balance[self.get_index_set(other_str)]),
             fee=self.fee,
         )
         return xDai(collateral)
@@ -197,6 +195,7 @@ class OmenAgentMarket(AgentMarket):
         collateral = self.calculate_sell_amount_in_collateral(
             amount=amount,
             outcome=outcome,
+            web3=web3,
         )
         binary_omen_sell_outcome_tx(
             amount=collateral,
@@ -282,7 +281,6 @@ class OmenAgentMarket(AgentMarket):
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
             close_time=model.close_time,
-            outcome_token_amounts=model.outcomeTokenAmounts,
             fee=float(wei_to_xdai(model.fee)) if model.fee is not None else 0.0,
         )
 

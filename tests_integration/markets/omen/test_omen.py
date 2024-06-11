@@ -249,9 +249,6 @@ def test_omen_buy_and_sell_outcome(
     outcome_tokens = get_market_outcome_tokens()
     assert outcome_tokens.amount > 0
 
-    # TODO hack to get test to pass. https://github.com/gnosis/prediction-market-agent-tooling/issues/271
-    market.fee = 0.0
-
     market.sell_tokens(
         outcome=outcome,
         amount=outcome_tokens,

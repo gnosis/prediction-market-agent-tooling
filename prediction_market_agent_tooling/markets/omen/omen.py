@@ -475,7 +475,7 @@ def omen_buy_outcome_tx(
         for_address=from_address_checksummed, web3=web3
     )
     if auto_deposit and collateral_token_balance < amount_wei:
-        deposit_amount_wei = amount_wei - collateral_token_balance
+        deposit_amount_wei = Wei(amount_wei - collateral_token_balance)
         collateral_token_contract.deposit(
             api_keys=api_keys, amount_wei=deposit_amount_wei, web3=web3
         )

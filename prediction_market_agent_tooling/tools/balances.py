@@ -15,7 +15,7 @@ class Balances(BaseModel):
 
     @property
     def total(self) -> xDai:
-        return self.xdai + self.wxdai
+        return xDai(self.xdai + self.wxdai)
 
 
 def get_balances(address: ChecksumAddress, web3: Web3 | None = None) -> Balances:

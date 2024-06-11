@@ -272,13 +272,22 @@ def test_place_bet_with_autodeposit(
 ) -> None:
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    collateral_token_contract = OmenCollateralTokenContract()
+
+    # Start by moving all funds from wxdai to xdai
+    if initial_balances.wxdai > 0:
+        collateral_token_contract.withdraw(
+            api_keys=test_keys,
+            amount_wei=xdai_to_wei(initial_balances.wxdai),
+            web3=local_web3,
+        )
 
     # Check that we have xdai funds, but no wxdai funds
+    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     assert initial_balances.wxdai == 0
     assert initial_balances.xdai > 0
 
     # Convert half of the xDai to wxDai
-    collateral_token_contract = OmenCollateralTokenContract()
     collateral_token_contract.deposit(
         api_keys=test_keys,
         amount_wei=xdai_to_wei(initial_balances.xdai * 0.5),

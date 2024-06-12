@@ -10,7 +10,11 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
+from prediction_market_agent_tooling.markets.data_models import (
+    BetAmount,
+    Currency,
+    TokenAmount,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -26,6 +30,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     pick_binary_market,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenCollateralTokenContract,
     OmenRealitioContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
@@ -259,3 +264,47 @@ def test_omen_buy_and_sell_outcome(
     # Check that we have sold our entire stake in the market.
     remaining_tokens = get_market_outcome_tokens()
     assert np.isclose(remaining_tokens.amount, 0, atol=1e-6)
+
+
+def test_place_bet_with_autodeposit(
+    local_web3: Web3,
+    test_keys: APIKeys,
+) -> None:
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    collateral_token_contract = OmenCollateralTokenContract()
+
+    # Start by moving all funds from wxdai to xdai
+    if initial_balances.wxdai > 0:
+        collateral_token_contract.withdraw(
+            api_keys=test_keys,
+            amount_wei=xdai_to_wei(initial_balances.wxdai),
+            web3=local_web3,
+        )
+
+    # Check that we have xdai funds, but no wxdai funds
+    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    assert initial_balances.wxdai == 0
+    assert initial_balances.xdai > 0
+
+    # Convert half of the xDai to wxDai
+    collateral_token_contract.deposit(
+        api_keys=test_keys,
+        amount_wei=xdai_to_wei(initial_balances.xdai * 0.5),
+        web3=local_web3,
+    )
+    new_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    assert np.allclose(new_balances.total, initial_balances.total)
+
+    # Try to place a bet with 90% of the xDai funds
+    bet_amount = BetAmount(amount=initial_balances.xdai * 0.9, currency=Currency.xDai)
+    assert new_balances.xdai < bet_amount.amount
+    assert new_balances.wxdai < bet_amount.amount
+    assert new_balances.total > bet_amount.amount
+    market.place_bet(
+        outcome=True,
+        amount=bet_amount,
+        omen_auto_deposit=True,
+        web3=local_web3,
+        api_keys=test_keys,
+    )

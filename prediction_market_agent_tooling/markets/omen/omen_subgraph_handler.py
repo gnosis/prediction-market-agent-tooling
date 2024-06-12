@@ -6,6 +6,7 @@ import tenacity
 from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -29,13 +30,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """
 
-    OMEN_TRADES_SUBGRAPH = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
-    CONDITIONAL_TOKENS_SUBGRAPH = (
-        "https://api.thegraph.com/subgraphs/name/gnosis/conditional-tokens-gc"
-    )
-    REALITYETH_GRAPH_URL = (
-        "https://api.thegraph.com/subgraphs/name/realityeth/realityeth-gnosis"
-    )
+    OMEN_TRADES_SUBGRAPH = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/9fUVQpFwzpdWS9bq5WkAnmKbNNcoBwatMR4yZq81pbbz"
+
+    CONDITIONAL_TOKENS_SUBGRAPH = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/7s9rGBffUTL8kDZuxvvpuc46v44iuDarbrADBFw5uVp2"
+
+    REALITYETH_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/E7ymrCnNcQdAAgLbdFWzGE5mvr5Mb5T9VfT43FqA7bNh"
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -49,12 +48,24 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
         )(self.sg.query_json)
 
+        keys = APIKeys()
+
         # Load the subgraph
-        self.trades_subgraph = self.sg.load_subgraph(self.OMEN_TRADES_SUBGRAPH)
-        self.conditional_tokens_subgraph = self.sg.load_subgraph(
-            self.CONDITIONAL_TOKENS_SUBGRAPH
+        self.trades_subgraph = self.sg.load_subgraph(
+            self.OMEN_TRADES_SUBGRAPH.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
         )
-        self.realityeth_subgraph = self.sg.load_subgraph(self.REALITYETH_GRAPH_URL)
+        self.conditional_tokens_subgraph = self.sg.load_subgraph(
+            self.CONDITIONAL_TOKENS_SUBGRAPH.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
+        )
+        self.realityeth_subgraph = self.sg.load_subgraph(
+            self.REALITYETH_GRAPH_URL.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
+        )
 
     def _get_fields_for_bets(self, bets_field: FieldPath) -> list[FieldPath]:
         markets = bets_field.fpmm

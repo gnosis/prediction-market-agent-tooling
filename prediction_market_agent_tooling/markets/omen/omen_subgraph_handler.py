@@ -6,6 +6,7 @@ import tenacity
 from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
 
+from config import APIKeys
 from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -30,9 +31,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     """
 
     OMEN_TRADES_SUBGRAPH = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
-    CONDITIONAL_TOKENS_SUBGRAPH = (
-        "https://api.thegraph.com/subgraphs/name/gnosis/conditional-tokens-gc"
-    )
+
+    CONDITIONAL_TOKENS_SUBGRAPH = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/7s9rGBffUTL8kDZuxvvpuc46v44iuDarbrADBFw5uVp2"
+
     REALITYETH_GRAPH_URL = (
         "https://api.thegraph.com/subgraphs/name/realityeth/realityeth-gnosis"
     )
@@ -49,10 +50,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
         )(self.sg.query_json)
 
+        keys = APIKeys()
+
         # Load the subgraph
         self.trades_subgraph = self.sg.load_subgraph(self.OMEN_TRADES_SUBGRAPH)
         self.conditional_tokens_subgraph = self.sg.load_subgraph(
-            self.CONDITIONAL_TOKENS_SUBGRAPH
+            self.CONDITIONAL_TOKENS_SUBGRAPH.format(graph_api_key=keys.graph_api_key)
         )
         self.realityeth_subgraph = self.sg.load_subgraph(self.REALITYETH_GRAPH_URL)
 

@@ -51,11 +51,15 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         keys = APIKeys()
 
         # Load the subgraph
-        self.trades_subgraph = self.sg.load_subgraph(self.OMEN_TRADES_SUBGRAPH)
+        self.trades_subgraph = self.sg.load_subgraph(
+            self.OMEN_TRADES_SUBGRAPH.format(graph_api_key=keys.graph_api_key)
+        )
         self.conditional_tokens_subgraph = self.sg.load_subgraph(
             self.CONDITIONAL_TOKENS_SUBGRAPH.format(graph_api_key=keys.graph_api_key)
         )
-        self.realityeth_subgraph = self.sg.load_subgraph(self.REALITYETH_GRAPH_URL)
+        self.realityeth_subgraph = self.sg.load_subgraph(
+            self.REALITYETH_GRAPH_URL.format(graph_api_key=keys.graph_api_key)
+        )
 
     def _get_fields_for_bets(self, bets_field: FieldPath) -> list[FieldPath]:
         markets = bets_field.fpmm

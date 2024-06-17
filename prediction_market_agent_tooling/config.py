@@ -27,6 +27,7 @@ class APIKeys(BaseSettings):
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
     SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
+    GRAPH_API_KEY: t.Optional[SecretStr] = None
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
     GOOGLE_SEARCH_ENGINE_ID: t.Optional[SecretStr] = None
@@ -70,6 +71,12 @@ class APIKeys(BaseSettings):
     def openai_api_key(self) -> SecretStr:
         return check_not_none(
             self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."
+        )
+
+    @property
+    def graph_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.GRAPH_API_KEY, "GRAPH_API_KEY missing in the environment."
         )
 
     @property

@@ -34,7 +34,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     CONDITIONAL_TOKENS_SUBGRAPH = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/7s9rGBffUTL8kDZuxvvpuc46v44iuDarbrADBFw5uVp2"
 
-    REALITYETH_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/E7ymrCnNcQdAAgLbdFWzGE5mvr5Mb5T9VfT43FqA7bNh"
+    REALITYETH_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/deployments/id/QmW5UPM7oExsXvJd5BV7hYQoGebtELCreYanNCKX7o4Apy"
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 

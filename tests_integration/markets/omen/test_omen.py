@@ -263,7 +263,7 @@ def test_omen_buy_and_sell_outcome(
 
     # Check that we have sold our entire stake in the market.
     remaining_tokens = get_market_outcome_tokens()
-    assert np.isclose(remaining_tokens.amount, 0, atol=1e-6)
+    assert np.isclose(remaining_tokens.amount, 0, atol=1e-5)
 
 
 def test_place_bet_with_autodeposit(

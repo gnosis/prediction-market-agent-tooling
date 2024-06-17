@@ -6,6 +6,7 @@ import tenacity
 from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -29,13 +30,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """
 
-    OMEN_TRADES_SUBGRAPH = "https://api.thegraph.com/subgraphs/name/protofire/omen-xdai"
-    CONDITIONAL_TOKENS_SUBGRAPH = (
-        "https://api.thegraph.com/subgraphs/name/gnosis/conditional-tokens-gc"
-    )
-    REALITYETH_GRAPH_URL = (
-        "https://api.thegraph.com/subgraphs/name/realityeth/realityeth-gnosis"
-    )
+    OMEN_TRADES_SUBGRAPH = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/9fUVQpFwzpdWS9bq5WkAnmKbNNcoBwatMR4yZq81pbbz"
+
+    CONDITIONAL_TOKENS_SUBGRAPH = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/7s9rGBffUTL8kDZuxvvpuc46v44iuDarbrADBFw5uVp2"
+
+    REALITYETH_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/deployments/id/QmW5UPM7oExsXvJd5BV7hYQoGebtELCreYanNCKX7o4Apy"
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -49,12 +48,24 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
         )(self.sg.query_json)
 
+        keys = APIKeys()
+
         # Load the subgraph
-        self.trades_subgraph = self.sg.load_subgraph(self.OMEN_TRADES_SUBGRAPH)
-        self.conditional_tokens_subgraph = self.sg.load_subgraph(
-            self.CONDITIONAL_TOKENS_SUBGRAPH
+        self.trades_subgraph = self.sg.load_subgraph(
+            self.OMEN_TRADES_SUBGRAPH.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
         )
-        self.realityeth_subgraph = self.sg.load_subgraph(self.REALITYETH_GRAPH_URL)
+        self.conditional_tokens_subgraph = self.sg.load_subgraph(
+            self.CONDITIONAL_TOKENS_SUBGRAPH.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
+        )
+        self.realityeth_subgraph = self.sg.load_subgraph(
+            self.REALITYETH_GRAPH_URL.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
+        )
 
     def _get_fields_for_bets(self, bets_field: FieldPath) -> list[FieldPath]:
         markets = bets_field.fpmm
@@ -205,8 +216,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 finalized_before
             )
 
+        # `excluded_question_titles` can not be an empty list, otherwise the API bugs out and returns nothing.
         excluded_question_titles = [""]
-        if excluded_questions is not None:
+        if excluded_questions:
             excluded_question_titles = [i for i in excluded_questions]
 
         where_stms["question_"]["title_not_in"] = excluded_question_titles
@@ -439,6 +451,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         type_: t.Literal["Buy", "Sell"] | None = None,
+        market_opening_after: datetime | None = None,
+        collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
@@ -457,6 +471,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms.append(trade.fpmm == market_id.lower())
         if filter_by_answer_finalized_not_null:
             where_stms.append(trade.fpmm.answerFinalizedTimestamp != None)
+        if market_opening_after is not None:
+            where_stms.append(
+                trade.fpmm.openingTimestamp > to_int_timestamp(market_opening_after)
+            )
+        if collateral_amount_more_than is not None:
+            where_stms.append(trade.collateralAmount > collateral_amount_more_than)
 
         trades = self.trades_subgraph.Query.fpmmTrades(
             first=sys.maxsize, where=where_stms
@@ -473,6 +493,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
+        market_opening_after: datetime | None = None,
+        collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         return self.get_trades(
             better_address=better_address,
@@ -481,6 +503,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             market_id=market_id,
             filter_by_answer_finalized_not_null=filter_by_answer_finalized_not_null,
             type_="Buy",  # We consider `bet` to be only the `Buy` trade types.
+            market_opening_after=market_opening_after,
+            collateral_amount_more_than=collateral_amount_more_than,
         )
 
     def get_resolved_bets(

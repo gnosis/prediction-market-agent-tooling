@@ -54,7 +54,10 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import (
+    calculate_sell_amount_in_collateral,
+    check_not_none,
+)
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     remove_fraction,
@@ -80,6 +83,7 @@ class OmenAgentMarket(AgentMarket):
     finalized_time: datetime | None
     created_time: datetime
     close_time: datetime
+    fee: float  # proportion, from 0 to 1
 
     INVALID_MARKET_ANSWER: HexStr = HexStr(
         "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
@@ -138,6 +142,7 @@ class OmenAgentMarket(AgentMarket):
         amount: BetAmount,
         omen_auto_deposit: bool = True,
         web3: Web3 | None = None,
+        api_keys: APIKeys | None = None,
     ) -> None:
         if not self.can_be_traded():
             raise ValueError(
@@ -147,7 +152,7 @@ class OmenAgentMarket(AgentMarket):
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
         amount_xdai = xDai(amount.amount)
         binary_omen_buy_outcome_tx(
-            api_keys=APIKeys(),
+            api_keys=api_keys if api_keys is not None else APIKeys(),
             amount=amount_xdai,
             market=self,
             binary_outcome=outcome,
@@ -155,19 +160,65 @@ class OmenAgentMarket(AgentMarket):
             web3=web3,
         )
 
+    def buy_tokens(
+        self,
+        outcome: bool,
+        amount: TokenAmount,
+        web3: Web3 | None = None,
+        api_keys: APIKeys | None = None,
+    ) -> None:
+        return self.place_bet(
+            outcome=outcome,
+            amount=amount,
+            web3=web3,
+            api_keys=api_keys,
+        )
+
+    def calculate_sell_amount_in_collateral(
+        self, amount: TokenAmount, outcome: bool, web3: Web3 | None = None
+    ) -> xDai:
+        pool_balance = get_conditional_tokens_balance_for_market(
+            self, self.market_maker_contract_address_checksummed, web3=web3
+        )
+
+        sell_str = self.outcomes[self.yes_index if outcome else self.no_index]
+        other_str = self.outcomes[self.no_index if outcome else self.yes_index]
+
+        collateral = calculate_sell_amount_in_collateral(
+            shares_to_sell=amount.amount,
+            holdings=wei_to_xdai(pool_balance[self.get_index_set(sell_str)]),
+            other_holdings=wei_to_xdai(pool_balance[self.get_index_set(other_str)]),
+            fee=self.fee,
+        )
+        return xDai(collateral)
+
     def sell_tokens(
-        self, outcome: bool, amount: TokenAmount, auto_withdraw: bool = True
+        self,
+        outcome: bool,
+        amount: TokenAmount,
+        auto_withdraw: bool = False,
+        api_keys: APIKeys | None = None,
+        web3: Web3 | None = None,
     ) -> None:
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot sell tokens."
             )
+
+        # Convert from token (i.e. share) number to xDai value of tokens, as
+        # this is the expected unit of the argument in the smart contract.
+        collateral = self.calculate_sell_amount_in_collateral(
+            amount=amount,
+            outcome=outcome,
+            web3=web3,
+        )
         binary_omen_sell_outcome_tx(
-            api_keys=APIKeys(),
-            amount=xDai(amount.amount),
+            amount=collateral,
+            api_keys=api_keys if api_keys is not None else APIKeys(),
             market=self,
             binary_outcome=outcome,
             auto_withdraw=auto_withdraw,
+            web3=web3,
         )
 
     def was_any_bet_outcome_correct(
@@ -245,6 +296,7 @@ class OmenAgentMarket(AgentMarket):
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
             close_time=model.close_time,
+            fee=float(wei_to_xdai(model.fee)) if model.fee is not None else 0.0,
         )
 
     @staticmethod
@@ -423,8 +475,9 @@ def omen_buy_outcome_tx(
         for_address=from_address_checksummed, web3=web3
     )
     if auto_deposit and collateral_token_balance < amount_wei:
+        deposit_amount_wei = Wei(amount_wei - collateral_token_balance)
         collateral_token_contract.deposit(
-            api_keys=api_keys, amount_wei=amount_wei, web3=web3
+            api_keys=api_keys, amount_wei=deposit_amount_wei, web3=web3
         )
     # Buy shares using the deposited xDai in the collateral token.
     market_contract.buy(

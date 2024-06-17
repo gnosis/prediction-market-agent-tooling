@@ -118,6 +118,7 @@ def test_minimum_bet_to_win(
             url="url",
             volume=None,
             finalized_time=None,
+            fee=0.02,
         ),
     )
     assert (

@@ -273,11 +273,11 @@ class DeployableTraderAgent(DeployableAgent):
         for market in markets:
             result = self.answer_binary_market(market)
             if result is None:
-                logger.debug(f"Skipping market {market} as no answer was provided")
+                logger.info(f"Skipping market {market} as no answer was provided")
                 continue
             if self.place_bet:
                 amount = self.calculate_bet_amount(result, market)
-                logger.debug(
+                logger.info(
                     f"Placing bet on {market} with result {result} and amount {amount}"
                 )
                 market.place_bet(

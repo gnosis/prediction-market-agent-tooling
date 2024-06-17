@@ -1,6 +1,8 @@
+import os
 import time
 from datetime import timedelta
 
+import numpy as np
 import pytest
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
@@ -8,7 +10,11 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
+from prediction_market_agent_tooling.markets.data_models import (
+    BetAmount,
+    Currency,
+    TokenAmount,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -17,7 +23,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OMEN_DEFAULT_MARKET_FEE,
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
-    binary_omen_sell_outcome_tx,
     omen_create_market_tx,
     omen_fund_market_tx,
     omen_redeem_full_position_tx,
@@ -25,11 +30,13 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     pick_binary_market,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenCollateralTokenContract,
     OmenRealitioContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests_integration.conftest import is_contract
@@ -220,25 +227,84 @@ def test_omen_buy_and_sell_outcome(
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
     # You can double check your address at https://gnosisscan.io/ afterwards.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
-    buy_amount = xdai_type(0.00142)
-    sell_amount = xdai_type(
-        buy_amount / 2
-    )  # There will be some fees, so this has to be lower.
+    outcome = True
+    outcome_str = OMEN_TRUE_OUTCOME if outcome else OMEN_FALSE_OUTCOME
+    bet_amount = market.get_bet_amount(amount=0.4)
 
-    binary_omen_buy_outcome_tx(
-        api_keys=test_keys,
-        amount=buy_amount,
-        market=market,
-        binary_outcome=True,
-        auto_deposit=True,
+    # TODO hack until https://github.com/gnosis/prediction-market-agent-tooling/issues/266 is complete
+    os.environ[
+        "BET_FROM_PRIVATE_KEY"
+    ] = test_keys.bet_from_private_key.get_secret_value()
+    api_keys = APIKeys()
+
+    def get_market_outcome_tokens() -> TokenAmount:
+        return market.get_token_balance(
+            user_id=api_keys.bet_from_address,
+            outcome=outcome_str,
+            web3=local_web3,
+        )
+
+    # Check our wallet has sufficient funds
+    balances = get_balances(address=api_keys.bet_from_address, web3=local_web3)
+    assert balances.xdai + balances.wxdai > bet_amount.amount
+
+    market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
+
+    # Check that we now have a position in the market.
+    outcome_tokens = get_market_outcome_tokens()
+    assert outcome_tokens.amount > 0
+
+    market.sell_tokens(
+        outcome=outcome,
+        amount=outcome_tokens,
         web3=local_web3,
+        api_keys=api_keys,
     )
 
-    binary_omen_sell_outcome_tx(
+    # Check that we have sold our entire stake in the market.
+    remaining_tokens = get_market_outcome_tokens()
+    assert np.isclose(remaining_tokens.amount, 0, atol=1e-5)
+
+
+def test_place_bet_with_autodeposit(
+    local_web3: Web3,
+    test_keys: APIKeys,
+) -> None:
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    collateral_token_contract = OmenCollateralTokenContract()
+
+    # Start by moving all funds from wxdai to xdai
+    if initial_balances.wxdai > 0:
+        collateral_token_contract.withdraw(
+            api_keys=test_keys,
+            amount_wei=xdai_to_wei(initial_balances.wxdai),
+            web3=local_web3,
+        )
+
+    # Check that we have xdai funds, but no wxdai funds
+    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    assert initial_balances.wxdai == 0
+    assert initial_balances.xdai > 0
+
+    # Convert half of the xDai to wxDai
+    collateral_token_contract.deposit(
         api_keys=test_keys,
-        amount=sell_amount,
-        market=market,
-        binary_outcome=True,
-        auto_withdraw=True,
+        amount_wei=xdai_to_wei(initial_balances.xdai * 0.5),
         web3=local_web3,
+    )
+    new_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    assert np.allclose(new_balances.total, initial_balances.total)
+
+    # Try to place a bet with 90% of the xDai funds
+    bet_amount = BetAmount(amount=initial_balances.xdai * 0.9, currency=Currency.xDai)
+    assert new_balances.xdai < bet_amount.amount
+    assert new_balances.wxdai < bet_amount.amount
+    assert new_balances.total > bet_amount.amount
+    market.place_bet(
+        outcome=True,
+        amount=bet_amount,
+        omen_auto_deposit=True,
+        web3=local_web3,
+        api_keys=test_keys,
     )

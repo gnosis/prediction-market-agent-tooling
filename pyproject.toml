@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.31.0"
+version = "0.37.0"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -11,7 +11,7 @@ sell_omen = "scripts.bet_omen:sell"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-typer = "^0.9.0"
+typer = ">=0.9.0,<1.0.0"
 types-requests = "^2.31.0.0"
 google-cloud-functions = "^1.16.0"
 google-cloud-resource-manager = "^1.12.0"
@@ -42,8 +42,10 @@ eth-account = "*"
 prompt-toolkit = "^3.0.43"
 safe-cli = "^1.0.0"
 langfuse = "^2.27.1"
+openai = { version = "^1.0.0", optional = true}
 
 [tool.poetry.extras]
+openai = ["openai"]
 langchain = ["langchain", "langchain-openai"]
 google = ["google-api-python-client"]
 

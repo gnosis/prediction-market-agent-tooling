@@ -239,6 +239,20 @@ files = [
 ]
 
 [[package]]
+name = "base58"
+version = "2.1.1"
+description = "Base58 and Base58Check implementation."
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "base58-2.1.1-py3-none-any.whl", hash = "sha256:11a36f4d3ce51dfc1043f3218591ac4eb1ceb172919cebe05b52a5bcc8d245c2"},
+    {file = "base58-2.1.1.tar.gz", hash = "sha256:c5d0cb3f5b6e81e8e35da5754388ddcc6d0d14b6c6a132cb93d69ed580a7278c"},
+]
+
+[package.extras]
+tests = ["PyHamcrest (>=2.0.2)", "mypy", "pytest (>=4.6)", "pytest-benchmark", "pytest-cov", "pytest-flake8"]
+
+[[package]]
 name = "bitarray"
 version = "2.9.2"
 description = "efficient arrays of booleans -- C extension"
@@ -4641,4 +4655,4 @@ openai = ["openai"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "d7d691f6c30b60d5aeb9cb25e339d3589eb90c65795445b8b7d3dba991fd8aff"
+content-hash = "accfe2b3c34752bd9e400d59f42ad935c89f2c7274373eb24fae0cbe837264b5"

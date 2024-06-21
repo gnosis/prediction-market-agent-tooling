@@ -1,5 +1,6 @@
 from pydantic.types import SecretStr
 
+from prediction_market_agent_tooling.gtypes import IPFSCIDVersion0
 from prediction_market_agent_tooling.tools.web3_utils import (
     byte32_to_ipfscidv0,
     ipfscidv0_to_byte32,
@@ -19,7 +20,7 @@ def test_private_key_to_public_key() -> None:
 
 
 def test_ipfs_hash_conversion() -> None:
-    ipfs = "QmRUkBx3FQHrMrt3bACh5XCSLwRjNcTpJreJp4p2qL3in3"
+    ipfs = IPFSCIDVersion0("QmRUkBx3FQHrMrt3bACh5XCSLwRjNcTpJreJp4p2qL3in3")
 
     as_bytes32 = ipfscidv0_to_byte32(ipfs)
     assert len(as_bytes32) == 32, "The length of the bytes32 should be 32"

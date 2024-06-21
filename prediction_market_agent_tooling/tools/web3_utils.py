@@ -308,4 +308,4 @@ def byte32_to_ipfscidv0(hex: HexBytes) -> IPFSCIDVersion0:
     Modified from https://github.com/emg110/ipfs2bytes32/blob/main/python/ipfs2bytes32.py
     """
     completed_binary_str = b"\x12 " + hex
-    return base58.b58encode(completed_binary_str).decode("utf-8")
+    return IPFSCIDVersion0(base58.b58encode(completed_binary_str).decode("utf-8"))

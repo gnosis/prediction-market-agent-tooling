@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.37.1"
+version = "0.38.0"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -42,6 +42,7 @@ prompt-toolkit = "^3.0.43"
 safe-cli = "^1.0.0"
 langfuse = "^2.27.1"
 openai = { version = "^1.0.0", optional = true}
+base58 = "^2.1.1"
 
 [tool.poetry.extras]
 openai = ["openai"]

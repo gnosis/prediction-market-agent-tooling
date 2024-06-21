@@ -1,6 +1,11 @@
 from pydantic.types import SecretStr
 
-from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
+from prediction_market_agent_tooling.gtypes import IPFSCIDVersion0
+from prediction_market_agent_tooling.tools.web3_utils import (
+    byte32_to_ipfscidv0,
+    ipfscidv0_to_byte32,
+    private_key_to_public_key,
+)
 
 
 def test_private_key_to_public_key() -> None:
@@ -12,3 +17,13 @@ def test_private_key_to_public_key() -> None:
         SecretStr(ganache_private_key_example)
     )
     assert actual_public_key == ganache_public_key_example
+
+
+def test_ipfs_hash_conversion() -> None:
+    ipfs = IPFSCIDVersion0("QmRUkBx3FQHrMrt3bACh5XCSLwRjNcTpJreJp4p2qL3in3")
+
+    as_bytes32 = ipfscidv0_to_byte32(ipfs)
+    assert len(as_bytes32) == 32, "The length of the bytes32 should be 32"
+
+    as_ipfs = byte32_to_ipfscidv0(as_bytes32)
+    assert as_ipfs == ipfs, "The IPFS hash should be the same after conversion back"

@@ -1,0 +1,52 @@
+[
+  {
+    "type": "function",
+    "name": "get",
+    "inputs": [
+      {
+        "name": "marketAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "remove",
+    "inputs": [
+      {
+        "name": "marketAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "set",
+    "inputs": [
+      {
+        "name": "marketAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "image_hash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]

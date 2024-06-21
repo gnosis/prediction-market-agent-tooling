@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     HexStr,
+    IPFSCIDVersion0,
     OmenOutcomeToken,
     TxParams,
     TxReceipt,
@@ -26,7 +27,12 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractOnGnosisChain,
     abi_field_validator,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import (
+    ZERO_BYTES,
+    byte32_to_ipfscidv0,
+    ipfscidv0_to_byte32,
+    xdai_to_wei,
+)
 
 
 class OmenOracleContract(ContractOnGnosisChain):
@@ -610,3 +616,53 @@ class OmenRealitioContract(ContractOnGnosisChain):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(api_keys=api_keys, function_name="withdraw", web3=web3)
+
+
+class OmenThumbnailMapping(ContractOnGnosisChain):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../../abis/omen_thumbnailmapping.abi.json",
+        )
+    )
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x5D8B7B619EcdE05B8A94C0a0E99E0A0727A0e2e7"
+    )
+
+    def get(
+        self,
+        market_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> IPFSCIDVersion0 | None:
+        hash_bytes = HexBytes(
+            self.call("get", function_params=[market_address], web3=web3)
+        )
+        return byte32_to_ipfscidv0(hash_bytes) if hash_bytes != ZERO_BYTES else None
+
+    def set(
+        self,
+        api_keys: APIKeys,
+        market_address: ChecksumAddress,
+        image_hash: IPFSCIDVersion0,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="set",
+            function_params=[market_address, ipfscidv0_to_byte32(image_hash)],
+            web3=web3,
+        )
+
+    def remove(
+        self,
+        api_keys: APIKeys,
+        market_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="remove",
+            function_params=[market_address],
+            web3=web3,
+        )

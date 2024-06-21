@@ -1,5 +1,7 @@
+import binascii
 from typing import Any, Optional, TypeVar
 
+import base58
 import tenacity
 from eth_account import Account
 from eth_typing import URI
@@ -16,6 +18,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     HexStr,
+    IPFSCIDVersion0,
     PrivateKey,
     xDai,
     xdai_type,
@@ -287,3 +290,22 @@ def send_xdai_to(
         web3, tx_params_new, from_private_key, timeout
     )
     return receipt_tx
+
+
+def ipfscidv0_to_byte32(cid: IPFSCIDVersion0) -> HexBytes:
+    """
+    Convert ipfscidv0 to 32 bytes.
+    Modified from https://github.com/emg110/ipfs2bytes32/blob/main/python/ipfs2bytes32.py
+    """
+    decoded = base58.b58decode(cid)
+    sliced_decoded = decoded[2:]
+    return HexBytes(binascii.b2a_hex(sliced_decoded).decode("utf-8"))
+
+
+def byte32_to_ipfscidv0(hex: HexBytes) -> IPFSCIDVersion0:
+    """
+    Convert 32 bytes hex to ipfscidv0.
+    Modified from https://github.com/emg110/ipfs2bytes32/blob/main/python/ipfs2bytes32.py
+    """
+    completed_binary_str = b"\x12 " + hex
+    return base58.b58encode(completed_binary_str).decode("utf-8")

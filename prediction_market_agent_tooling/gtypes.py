@@ -34,6 +34,7 @@ Mana = NewType("Mana", float)  # Manifold's "currency"
 USDC = NewType("USDC", float)
 DatetimeWithTimezone = NewType("DatetimeWithTimezone", datetime)
 ChainID = NewType("ChainID", int)
+IPFSCIDVersion0 = NewType("IPFSCIDVersion0", str)
 
 
 def usd_type(amount: Union[str, int, float]) -> USD:

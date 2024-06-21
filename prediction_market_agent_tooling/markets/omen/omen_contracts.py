@@ -640,6 +640,14 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
         )
         return byte32_to_ipfscidv0(hash_bytes) if hash_bytes != ZERO_BYTES else None
 
+    def get_url(
+        self,
+        market_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> str | None:
+        hash_ = self.get(market_address, web3)
+        return f"https://ipfs.io/ipfs/{hash_}" if hash_ is not None else None
+
     def set(
         self,
         api_keys: APIKeys,

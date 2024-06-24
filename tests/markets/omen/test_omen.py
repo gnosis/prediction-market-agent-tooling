@@ -145,3 +145,13 @@ def test_get_positions_1() -> None:
         assert token_balance.amount == position.amounts[OutcomeStr(outcome_str)].amount
 
     print(position)  # For extra test coverage
+
+
+def test_positions_value() -> None:
+    # Pick a user that has active positions
+    user_address = Web3.to_checksum_address(
+        "0x2DD9f5678484C1F59F97eD334725858b938B4102"
+    )
+    positions = OmenAgentMarket.get_positions(user_id=user_address)
+    value = OmenAgentMarket.get_positions_value(positions=positions)
+    assert value.amount > 0

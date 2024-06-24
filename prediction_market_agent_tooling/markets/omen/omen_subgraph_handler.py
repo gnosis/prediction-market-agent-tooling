@@ -166,6 +166,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         resolved: bool | None = None,
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
+        id_in: list[str] | None = None,
         excluded_questions: set[str] | None = None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
@@ -192,6 +193,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         if condition_id_in is not None:
             where_stms["condition_"]["id_in"] = [x.hex() for x in condition_id_in]
+
+        if id_in is not None:
+            where_stms["id_in"] = id_in
 
         if resolved is not None:
             if resolved:
@@ -308,6 +312,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         creator: t.Optional[HexAddress] = None,
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
+        id_in: list[str] | None = None,
         excluded_questions: set[str] | None = None,  # question titles
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
@@ -326,6 +331,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             finalized=finalized,
             resolved=resolved,
             condition_id_in=condition_id_in,
+            id_in=id_in,
             excluded_questions=excluded_questions,
             liquidity_bigger_than=liquidity_bigger_than,
         )

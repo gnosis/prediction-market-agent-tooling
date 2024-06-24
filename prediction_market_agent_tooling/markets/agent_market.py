@@ -114,6 +114,16 @@ class AgentMarket(BaseModel):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    def get_last_trade_yes_outcome_price(self) -> float | None:
+        if last_trade_p_yes := self.get_last_trade_p_yes():
+            return float(last_trade_p_yes)
+        return None
+
+    def get_last_trade_no_outcome_price(self) -> float | None:
+        if last_trade_p_no := self.get_last_trade_p_no():
+            return float(last_trade_p_no)
+        return None
+
     def get_bet_amount(self, amount: float) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
 

@@ -5,7 +5,7 @@ from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, OutcomeStr
+from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, OutcomeStr, Wei
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Position, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import OmenBet
@@ -171,9 +171,9 @@ def test_positions_value() -> None:
 
     def bet_to_position(bet: OmenBet) -> Position:
         market = OmenAgentMarket.get_binary_market(bet.fpmm.id)
-        outcome_str = market.get_outcome_str(bet.outcomeIndex)
+        outcome_str = OutcomeStr(market.get_outcome_str(bet.outcomeIndex))
         outcome_tokens = TokenAmount(
-            amount=wei_to_xdai(bet.outcomeTokensTraded),
+            amount=wei_to_xdai(Wei(bet.outcomeTokensTraded)),
             currency=OmenAgentMarket.currency,
         )
         return Position(market_id=market.id, amounts={outcome_str: outcome_tokens})
@@ -185,6 +185,6 @@ def test_positions_value() -> None:
     assert np.isclose(
         position_value.amount,
         bet_value_amount,
-        rtol=1e-3,  # tolerances due to fees
+        rtol=1e-3,  # relax tolerances due to fees
         atol=1e-3,
     )

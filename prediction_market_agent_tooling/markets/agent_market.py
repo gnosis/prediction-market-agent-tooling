@@ -203,6 +203,13 @@ class AgentMarket(BaseModel):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @classmethod
+    def get_positions_value(cls, positions: list[Position]) -> BetAmount:
+        """
+        Get the total value of all positions held by a user.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
     def can_be_traded(self) -> bool:
         if self.is_closed() or not self.has_liquidity():
             return False

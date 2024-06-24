@@ -423,7 +423,7 @@ class OmenAgentMarket(AgentMarket):
 
     @classmethod
     def get_positions_value(cls, positions: list[Position]) -> BetAmount:
-        # Two dicts to map from market ids to (1) postions and (2) market.
+        # Two dicts to map from market ids to (1) positions and (2) market.
         market_ids_positions = {p.market_id: p for p in positions}
         markets: list[OmenAgentMarket] = [
             OmenAgentMarket.from_data_model(m)

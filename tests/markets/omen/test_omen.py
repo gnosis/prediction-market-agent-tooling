@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import numpy as np
 from eth_account import Account
 from eth_typing import HexAddress, HexStr
@@ -5,6 +7,8 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, OutcomeStr
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.data_models import Position, TokenAmount
+from prediction_market_agent_tooling.markets.omen.data_models import OmenBet
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     get_binary_market_p_yes_history,
@@ -14,6 +18,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 
 def test_omen_pick_binary_market() -> None:
@@ -148,10 +153,38 @@ def test_get_positions_1() -> None:
 
 
 def test_positions_value() -> None:
-    # Pick a user that has active positions
+    """
+    Test that an artificial user position (generated based on a historical
+    resolved bet) has the correct expected value, based on the bet's profit
+    """
     user_address = Web3.to_checksum_address(
         "0x2DD9f5678484C1F59F97eD334725858b938B4102"
     )
-    positions = OmenAgentMarket.get_positions(user_id=user_address)
-    value = OmenAgentMarket.get_positions_value(positions=positions)
-    assert value.amount > 0
+    resolved_bets = OmenSubgraphHandler().get_resolved_bets_with_valid_answer(
+        start_time=datetime(2024, 3, 27, 4, 20),
+        end_time=datetime(2024, 3, 27, 4, 30),
+        better_address=user_address,
+    )
+    assert len(resolved_bets) == 1
+    bet = resolved_bets[0]
+    assert bet.to_generic_resolved_bet().is_correct
+
+    def bet_to_position(bet: OmenBet) -> Position:
+        market = OmenAgentMarket.get_binary_market(bet.fpmm.id)
+        outcome_str = market.get_outcome_str(bet.outcomeIndex)
+        outcome_tokens = TokenAmount(
+            amount=wei_to_xdai(bet.outcomeTokensTraded),
+            currency=OmenAgentMarket.currency,
+        )
+        return Position(market_id=market.id, amounts={outcome_str: outcome_tokens})
+
+    positions = [bet_to_position(bet)]
+    position_value = OmenAgentMarket.get_positions_value(positions=positions)
+
+    bet_value_amount = bet.get_profit().amount + wei_to_xdai(bet.collateralAmount)
+    assert np.isclose(
+        position_value.amount,
+        bet_value_amount,
+        rtol=1e-3,  # tolerances due to fees
+        atol=1e-3,
+    )

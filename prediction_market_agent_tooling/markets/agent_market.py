@@ -115,6 +115,8 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_last_trade_yes_outcome_price(self) -> float | None:
+        # Price on prediction markets are, by definition, equal to the probability of an outcome.
+        # Just making it explicit in this function.
         if last_trade_p_yes := self.get_last_trade_p_yes():
             return float(last_trade_p_yes)
         return None

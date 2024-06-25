@@ -425,6 +425,11 @@ class OmenAgentMarket(AgentMarket):
     def get_positions_value(cls, positions: list[Position]) -> BetAmount:
         # Two dicts to map from market ids to (1) positions and (2) market.
         market_ids_positions = {p.market_id: p for p in positions}
+        # Check there is only one position per market.
+        if len(set(market_ids_positions.keys())) != len(positions):
+            raise ValueError(
+                f"Markets for positions ({market_ids_positions.keys()}) are not unique."
+            )
         markets: list[OmenAgentMarket] = [
             OmenAgentMarket.from_data_model(m)
             for m in OmenSubgraphHandler().get_omen_binary_markets(

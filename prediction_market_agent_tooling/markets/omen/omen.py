@@ -422,6 +422,67 @@ class OmenAgentMarket(AgentMarket):
         return positions
 
     @classmethod
+    def get_positions_value(cls, positions: list[Position]) -> BetAmount:
+        # Two dicts to map from market ids to (1) positions and (2) market.
+        market_ids_positions = {p.market_id: p for p in positions}
+        # Check there is only one position per market.
+        if len(set(market_ids_positions.keys())) != len(positions):
+            raise ValueError(
+                f"Markets for positions ({market_ids_positions.keys()}) are not unique."
+            )
+        markets: list[OmenAgentMarket] = [
+            OmenAgentMarket.from_data_model(m)
+            for m in OmenSubgraphHandler().get_omen_binary_markets(
+                limit=sys.maxsize, id_in=list(market_ids_positions.keys())
+            )
+        ]
+        market_ids_markets = {m.id: m for m in markets}
+
+        # Validate that dict keys are the same.
+        if set(market_ids_positions.keys()) != set(market_ids_markets.keys()):
+            raise ValueError(
+                f"Market ids in {market_ids_positions.keys()} are not the same as in {market_ids_markets.keys()}"
+            )
+
+        # Initialise position value.
+        total_position_value = 0.0
+
+        for market_id in market_ids_positions.keys():
+            position = market_ids_positions[market_id]
+            market = market_ids_markets[market_id]
+
+            yes_tokens = 0.0
+            no_tokens = 0.0
+            if OMEN_TRUE_OUTCOME in position.amounts:
+                yes_tokens = position.amounts[OutcomeStr(OMEN_TRUE_OUTCOME)].amount
+            if OMEN_FALSE_OUTCOME in position.amounts:
+                no_tokens = position.amounts[OutcomeStr(OMEN_FALSE_OUTCOME)].amount
+
+            # Account for the value of positions in resolved markets
+            if market.is_resolved() and market.has_successful_resolution():
+                valued_tokens = yes_tokens if market.boolean_outcome else no_tokens
+                total_position_value += valued_tokens
+
+            # Or if the market is open and trading, get the value of the position
+            elif market.can_be_traded():
+                total_position_value += yes_tokens * market.yes_outcome_price
+                total_position_value += no_tokens * market.no_outcome_price
+
+            # Or if the market is still open but not trading, estimate the value
+            # of the position
+            else:
+                if yes_tokens:
+                    yes_price = check_not_none(
+                        market.get_last_trade_yes_outcome_price()
+                    )
+                    total_position_value += yes_tokens * yes_price
+                if no_tokens:
+                    no_price = check_not_none(market.get_last_trade_no_outcome_price())
+                    total_position_value += no_tokens * no_price
+
+        return BetAmount(amount=total_position_value, currency=Currency.xDai)
+
+    @classmethod
     def get_user_url(cls, keys: APIKeys) -> str:
         return f"https://gnosisscan.io/address/{keys.bet_from_address}"
 

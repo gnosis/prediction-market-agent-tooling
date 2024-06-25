@@ -114,6 +114,20 @@ class AgentMarket(BaseModel):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    def get_last_trade_yes_outcome_price(self) -> float | None:
+        # Price on prediction markets are, by definition, equal to the probability of an outcome.
+        # Just making it explicit in this function.
+        if last_trade_p_yes := self.get_last_trade_p_yes():
+            return float(last_trade_p_yes)
+        return None
+
+    def get_last_trade_no_outcome_price(self) -> float | None:
+        # Price on prediction markets are, by definition, equal to the probability of an outcome.
+        # Just making it explicit in this function.
+        if last_trade_p_no := self.get_last_trade_p_no():
+            return float(last_trade_p_no)
+        return None
+
     def get_bet_amount(self, amount: float) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
 
@@ -190,6 +204,13 @@ class AgentMarket(BaseModel):
         Get all non-zero positions a user has in any market.
 
         If `liquid_only` is True, only return positions that can be sold.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @classmethod
+    def get_positions_value(cls, positions: list[Position]) -> BetAmount:
+        """
+        Get the total value of all positions held by a user.
         """
         raise NotImplementedError("Subclasses must implement this method")
 

@@ -268,3 +268,14 @@ def build_incomplete_user_position_from_condition_ids(
             conditionIds=condition_ids,
         )
     )
+
+
+def test_get_markets_id_in() -> None:
+    market_id = "0x934b9f379dd9d8850e468df707d58711da2966cd"
+    sgh = OmenSubgraphHandler()
+    markets = sgh.get_omen_binary_markets(
+        limit=1,
+        id_in=[market_id],
+    )
+    assert len(markets) == 1
+    assert markets[0].id == market_id

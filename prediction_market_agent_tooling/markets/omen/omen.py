@@ -376,7 +376,7 @@ class OmenAgentMarket(AgentMarket):
         sgh = OmenSubgraphHandler()
         omen_positions = sgh.get_user_positions(
             better_address=Web3.to_checksum_address(user_id),
-            total_balance_bigger_than=xdai_to_wei(larger_than),
+            total_balance_bigger_than=xdai_to_wei(xDai(larger_than)),
         )
 
         # Sort positions and corresponding markets by condition_id

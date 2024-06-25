@@ -122,6 +122,8 @@ class AgentMarket(BaseModel):
         return None
 
     def get_last_trade_no_outcome_price(self) -> float | None:
+        # Price on prediction markets are, by definition, equal to the probability of an outcome.
+        # Just making it explicit in this function.
         if last_trade_p_no := self.get_last_trade_p_no():
             return float(last_trade_p_no)
         return None

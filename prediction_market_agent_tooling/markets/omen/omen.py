@@ -367,11 +367,16 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @classmethod
-    def get_positions(cls, user_id: str, liquid_only: bool = False) -> list[Position]:
+    def get_positions(
+        cls,
+        user_id: str,
+        liquid_only: bool = False,
+        larger_than: float = 0,
+    ) -> list[Position]:
         sgh = OmenSubgraphHandler()
         omen_positions = sgh.get_user_positions(
             better_address=Web3.to_checksum_address(user_id),
-            total_balance_bigger_than=wei_type(0),
+            total_balance_bigger_than=xdai_to_wei(larger_than),
         )
 
         # Sort positions and corresponding markets by condition_id

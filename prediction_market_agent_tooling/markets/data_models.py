@@ -50,6 +50,13 @@ class Position(BaseModel):
     market_id: str
     amounts: dict[OutcomeStr, TokenAmount]
 
+    @property
+    def total_amount(self) -> TokenAmount:
+        return TokenAmount(
+            amount=sum(amount.amount for amount in self.amounts.values()),
+            currency=self.amounts[next(iter(self.amounts.keys()))].currency,
+        )
+
     def __str__(self) -> str:
         amounts_str = ", ".join(
             f"{amount.amount} '{outcome}' tokens"

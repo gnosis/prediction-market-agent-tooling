@@ -283,5 +283,5 @@ def test_get_markets_id_in() -> None:
 
 def test_omen_get_non_existing_market_by_id() -> None:
     with pytest.raises(ValueError) as e:
-        OmenSubgraphHandler().get_omen_market_by_market_id("0x123")
+        OmenSubgraphHandler().get_omen_market_by_market_id(HexAddress(HexStr("0x123")))
     assert "Fetched wrong number of markets. Expected 1 but got 0" in str(e)

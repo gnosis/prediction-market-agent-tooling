@@ -383,7 +383,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         for result_chunk in result:
             for k, v in result_chunk.items():
                 # subgrounds might pack all items as a list, indexed by a key, or pack it as a dictionary (if one single element)
-                if isinstance(v, dict):
+                if v is None:
+                    continue
+                elif isinstance(v, dict):
                     items.extend([v])
                 else:
                     items.extend(v)

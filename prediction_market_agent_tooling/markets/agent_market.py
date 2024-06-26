@@ -199,11 +199,16 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     @classmethod
-    def get_positions(cls, user_id: str, liquid_only: bool = False) -> list[Position]:
+    def get_positions(
+        cls, user_id: str, liquid_only: bool = False, larger_than: float = 0
+    ) -> list[Position]:
         """
         Get all non-zero positions a user has in any market.
 
         If `liquid_only` is True, only return positions that can be sold.
+
+        If `larger_than` is not None, only return positions with a larger number
+        of tokens than this amount.
         """
         raise NotImplementedError("Subclasses must implement this method")
 

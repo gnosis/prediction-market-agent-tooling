@@ -123,6 +123,8 @@ def test_get_positions_0() -> None:
 def test_get_positions_1() -> None:
     """
     Check the user's positions against 'market.get_token_balance'
+
+    Also check that `larger_than` and `liquid_only` filters work
     """
     # Pick a user that has active positions
     user_address = Web3.to_checksum_address(
@@ -134,6 +136,23 @@ def test_get_positions_1() -> None:
         liquid_only=True,
     )
     assert len(positions) > len(liquid_positions)
+
+    # Get position id with smallest total amount
+    min_position_id = min(positions, key=lambda x: x.total_amount.amount).market_id
+    min_amount_position = next(
+        position for position in positions if position.market_id == min_position_id
+    )
+
+    large_positions = OmenAgentMarket.get_positions(
+        user_id=user_address, larger_than=min_amount_position.total_amount.amount
+    )
+    # Check that the smallest position has been filtered out
+    assert len(large_positions) == len(positions) - 1
+    assert all(position.market_id != min_position_id for position in large_positions)
+    assert all(
+        position.total_amount.amount > min_amount_position.total_amount.amount
+        for position in large_positions
+    )
 
     # Pick a single position to test, otherwise it can be very slow
     position = positions[0]

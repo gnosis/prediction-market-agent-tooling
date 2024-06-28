@@ -1,4 +1,6 @@
 import typer
+from web3 import Web3
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Wei, private_key_type
 from prediction_market_agent_tooling.loggers import logger
@@ -8,7 +10,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from web3 import Web3
 
 
 def main(

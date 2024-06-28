@@ -627,7 +627,7 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
         )
     )
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x5D8B7B619EcdE05B8A94C0a0E99E0A0727A0e2e7"
+        "0xe0cf08311F03850497B0ed6A2cf067f1750C3eFc"
     )
 
     def get(

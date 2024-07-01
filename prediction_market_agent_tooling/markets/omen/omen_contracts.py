@@ -630,6 +630,10 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
         "0xe0cf08311F03850497B0ed6A2cf067f1750C3eFc"
     )
 
+    @staticmethod
+    def construct_ipfs_url(ipfs_hash: IPFSCIDVersion0) -> str:
+        return f"https://ipfs.io/ipfs/{ipfs_hash}"
+
     def get(
         self,
         market_address: ChecksumAddress,
@@ -646,7 +650,7 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
         web3: Web3 | None = None,
     ) -> str | None:
         hash_ = self.get(market_address, web3)
-        return f"https://ipfs.io/ipfs/{hash_}" if hash_ is not None else None
+        return self.construct_ipfs_url(hash_) if hash_ is not None else None
 
     def set(
         self,

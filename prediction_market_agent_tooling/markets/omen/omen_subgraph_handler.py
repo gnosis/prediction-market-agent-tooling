@@ -2,8 +2,11 @@ import sys
 import typing as t
 from datetime import datetime
 
+import requests
 import tenacity
 from eth_typing import ChecksumAddress
+from PIL import Image
+from PIL.Image import Image as ImageType
 from subgrounds import FieldPath, Subgrounds
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -20,9 +23,15 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityAnswer,
     RealityQuestion,
 )
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenThumbnailMapping,
+)
 from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
-from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
+from prediction_market_agent_tooling.tools.web3_utils import (
+    ZERO_BYTES,
+    byte32_to_ipfscidv0,
+)
 
 
 class OmenSubgraphHandler(metaclass=SingletonMeta):
@@ -35,6 +44,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     CONDITIONAL_TOKENS_SUBGRAPH = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/7s9rGBffUTL8kDZuxvvpuc46v44iuDarbrADBFw5uVp2"
 
     REALITYETH_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/E7ymrCnNcQdAAgLbdFWzGE5mvr5Mb5T9VfT43FqA7bNh"
+
+    # TODO: Switch to arbitrum subgraph once it's published.
+    OMEN_IMAGE_MAPPING_GRAPH_URL = (
+        "https://api.studio.thegraph.com/query/63564/omen-thumbnailmapping/v0.0.3"
+    )
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -63,6 +77,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         )
         self.realityeth_subgraph = self.sg.load_subgraph(
             self.REALITYETH_GRAPH_URL.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
+        )
+        self.omen_image_mapping_subgraph = self.sg.load_subgraph(
+            self.OMEN_IMAGE_MAPPING_GRAPH_URL.format(
                 graph_api_key=keys.graph_api_key.get_secret_value()
             )
         )
@@ -609,3 +628,23 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 f"Incorrect number of markets fetched {len(markets)}, expected 1."
             )
         return markets[0]
+
+    def get_market_image_url(self, market_id: HexAddress) -> str | None:
+        image = self.omen_image_mapping_subgraph.Query.omenThumbnailMapping(
+            id=market_id.lower()
+        )
+        fields = [image.id, image.image_hash]
+        result = self.sg.query_json(fields)
+        items = self._parse_items_from_json(result)
+        if not items:
+            return None
+        parsed = byte32_to_ipfscidv0(HexBytes(items[0]["image_hash"]))
+        return OmenThumbnailMapping.construct_ipfs_url(parsed)
+
+    def get_market_image(self, market_id: HexAddress) -> ImageType | None:
+        image_url = self.get_market_image_url(market_id)
+        return (
+            Image.open(requests.get(image_url, stream=True).raw)
+            if image_url is not None
+            else None
+        )

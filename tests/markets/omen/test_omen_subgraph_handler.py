@@ -285,3 +285,22 @@ def test_omen_get_non_existing_market_by_id() -> None:
     with pytest.raises(ValueError) as e:
         OmenSubgraphHandler().get_omen_market_by_market_id(HexAddress(HexStr("0x123")))
     assert "Fetched wrong number of markets. Expected 1 but got 0" in str(e)
+
+
+def test_get_existing_image() -> None:
+    market_id = HexAddress(HexStr("0x0539590c0cf0d929e3f40b290fda04b9b4a8cf68"))
+    image_url = OmenSubgraphHandler().get_market_image_url(market_id)
+    assert (
+        image_url
+        == "https://ipfs.io/ipfs/QmRiPQ4x7jAgKMyJMV8Uqw7vQir6vmgB851TXe7CgQx7cV"
+    )
+    image = OmenSubgraphHandler().get_market_image(market_id)
+    assert image is not None
+
+
+def test_get_non_existing_image() -> None:
+    market_id = HexAddress(HexStr("0xd37dfcee94666f83d7c334658719817bf8ee1bca"))
+    image_url = OmenSubgraphHandler().get_market_image_url(market_id)
+    assert image_url is None
+    image = OmenSubgraphHandler().get_market_image(market_id)
+    assert image is None

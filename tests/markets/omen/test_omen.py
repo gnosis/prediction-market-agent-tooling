@@ -186,7 +186,7 @@ def test_positions_value() -> None:
     )
     assert len(resolved_bets) == 1
     bet = resolved_bets[0]
-    assert bet.to_generic_resolved_bet().is_correct
+    assert bet.to_generic_resolved_bet().is_correct()
 
     def bet_to_position(bet: OmenBet) -> Position:
         market = OmenAgentMarket.get_binary_market(bet.fpmm.id)

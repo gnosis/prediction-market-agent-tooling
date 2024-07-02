@@ -150,7 +150,7 @@ class ManifoldBet(BaseModel):
     id: str
     fees: ManifoldBetFees
     isCancelled: t.Optional[bool] = None
-    loanAmount: Mana | None
+    loanAmount: Mana
     orderAmount: t.Optional[Mana] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
     createdTime: datetime

@@ -42,6 +42,7 @@ class ResolvedBet(Bet):
     profit: ProfitAmount
 
     @computed_field
+    @property
     def is_correct(self) -> bool:
         return self.outcome == self.market_outcome
 

@@ -59,13 +59,13 @@ class APIKeys(BaseSettings):
         )
 
     @property
+    def public_key(self) -> ChecksumAddress:
+        return private_key_to_public_key(self.bet_from_private_key)
+
+    @property
     def bet_from_address(self) -> ChecksumAddress:
         """If the SAFE is available, we always route transactions via SAFE. Otherwise we use the EOA."""
-        return (
-            self.SAFE_ADDRESS
-            if self.SAFE_ADDRESS
-            else private_key_to_public_key(self.bet_from_private_key)
-        )
+        return self.SAFE_ADDRESS if self.SAFE_ADDRESS else self.public_key
 
     @property
     def openai_api_key(self) -> SecretStr:

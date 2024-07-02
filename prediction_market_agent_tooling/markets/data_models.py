@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import TypeAlias
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 from prediction_market_agent_tooling.gtypes import OutcomeStr
 
@@ -41,6 +41,7 @@ class ResolvedBet(Bet):
     resolved_time: datetime
     profit: ProfitAmount
 
+    @computed_field  # type: ignore[misc]
     @property
     def is_correct(self) -> bool:
         return self.outcome == self.market_outcome

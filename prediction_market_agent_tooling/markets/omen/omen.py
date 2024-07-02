@@ -1000,3 +1000,40 @@ def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability
             )
 
     return history
+
+
+def withdraw_wxdai_to_xdai_to_keep_balance(
+    api_keys: APIKeys,
+    min_required_balance: xDai,
+    withdraw_multiplier: float = 1.0,
+    web3: Web3 | None = None,
+) -> None:
+    """
+    Keeps xDai balance above the minimum required balance by withdrawing wxDai to xDai.
+    Optionally, the amount to withdraw can be multiplied by the `withdraw_multiplier`, which can be useful to keep a buffer.
+    """
+    # xDai needs to be in our wallet where we pay transaction fees, so do not check for Safe's balance.
+    current_balances = get_balances(api_keys.public_key, web3)
+
+    if current_balances.xdai >= min_required_balance:
+        logger.info(
+            f"Current xDai balance {current_balances.xdai} is more or equal than the required minimum balance {min_required_balance}."
+        )
+        return
+
+    need_to_withdraw = xDai(
+        (min_required_balance - current_balances.xdai) * withdraw_multiplier
+    )
+
+    if current_balances.wxdai < need_to_withdraw:
+        raise ValueError(
+            f"Current wxDai balance {current_balances.wxdai} is less than the required minimum wxDai to withdraw {need_to_withdraw}."
+        )
+
+    collateral_token_contract = OmenCollateralTokenContract()
+    collateral_token_contract.withdraw(
+        api_keys=api_keys, amount_wei=xdai_to_wei(need_to_withdraw), web3=web3
+    )
+    logger.info(
+        f"Withdrew {need_to_withdraw} wxDai to keep the balance above the minimum required balance {min_required_balance}."
+    )

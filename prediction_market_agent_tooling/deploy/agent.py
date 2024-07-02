@@ -22,7 +22,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import Probability, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -36,6 +36,7 @@ from prediction_market_agent_tooling.markets.markets import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     redeem_from_all_user_positions,
+    withdraw_wxdai_to_xdai_to_keep_balance,
 )
 from prediction_market_agent_tooling.monitor.langfuse.langfuse_wrapper import (
     LangfuseWrapper,
@@ -260,9 +261,14 @@ class DeployableTraderAgent(DeployableAgent):
         """
         Executes actions that occur before bets are placed.
         """
+        api_keys = APIKeys()
         if market_type == MarketType.OMEN:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
-            redeem_from_all_user_positions(APIKeys())
+            redeem_from_all_user_positions(api_keys)
+            # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
+            withdraw_wxdai_to_xdai_to_keep_balance(
+                api_keys, min_required_balance=xdai_type(1), withdraw_multiplier=2
+            )
 
     def process_bets(self, market_type: MarketType) -> None:
         """

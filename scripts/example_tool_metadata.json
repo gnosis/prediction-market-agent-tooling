@@ -1,0 +1,35 @@
+ {
+      "name": "OpenAI Prediction Online",
+      "description": "Makes a prediction using OpenAI GPT-3.5 Turbo. Uses data from searching the web.",
+      "input": {
+        "type": "text",
+        "description": "The text to make a prediction on"
+      },
+      "output": {
+        "type": "object",
+        "description": "A JSON object containing the prediction and confidence",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "requestId": {
+              "type": "integer",
+              "description": "Unique identifier for the request"
+            },
+            "result": {
+              "type": "string",
+              "description": "Result information in JSON format as a string",
+              "example": "{\n  \"p_yes\": 0.6,\n  \"p_no\": 0.4,\n  \"confidence\": 0.8,\n  \"info_utility\": 0.6\n}"
+            },
+            "prompt": {
+              "type": "string",
+              "description": "Prompt used for probability estimation."
+            }
+          },
+          "required": [
+            "requestId",
+            "result",
+            "prompt"
+          ]
+        }
+      }
+    }

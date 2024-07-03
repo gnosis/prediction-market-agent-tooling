@@ -489,7 +489,11 @@ class OmenAgentMarket(AgentMarket):
 
     @classmethod
     def get_user_url(cls, keys: APIKeys) -> str:
-        return f"https://gnosisscan.io/address/{keys.bet_from_address}"
+        return get_omen_user_url(keys.bet_from_address)
+
+
+def get_omen_user_url(address: ChecksumAddress) -> str:
+    return f"https://gnosisscan.io/address/{address}"
 
 
 def pick_binary_market(

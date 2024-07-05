@@ -58,8 +58,8 @@ class MetaculusQuestion(BaseModel):
     close_time: datetime | None = None
     effected_close_time: datetime | None
     resolve_time: datetime | None = None
-    possibilities: dict | None = None
-    scoring: dict = {}
+    possibilities: dict[Any, Any] | None = None
+    scoring: dict[Any, Any] = {}
     type: QuestionType | None = None
     user_perms: Any
     weekly_movement: float | None

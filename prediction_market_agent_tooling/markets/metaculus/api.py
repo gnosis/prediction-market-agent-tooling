@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from typing import Union
 
 import requests
 
@@ -13,15 +14,11 @@ METACULUS_API_BASE_URL = "https://www.metaculus.com/api2"
 WARMUP_TOURNAMENT_ID = 3294
 
 
-def get_auth_headers():
-    return {
-        "headers": {
-            "Authorization": f"Token {APIKeys().metaculus_api_key.get_secret_value()}"
-        }
-    }
+def get_auth_headers() -> dict[str, str]:
+    return {"Authorization": f"Token {APIKeys().metaculus_api_key.get_secret_value()}"}
 
 
-def post_question_comment(question_id: str, comment_text: str):
+def post_question_comment(question_id: str, comment_text: str) -> None:
     """
     Post a comment on the question page as the bot user.
     """
@@ -34,12 +31,12 @@ def post_question_comment(question_id: str, comment_text: str):
             "include_latest_prediction": True,
             "question": question_id,
         },
-        **get_auth_headers(),
+        headers=get_auth_headers(),
     )
     response.raise_for_status()
 
 
-def make_prediction(question_id: str, p_yes: Probability):
+def make_prediction(question_id: str, p_yes: Probability) -> None:
     """
     Make a prediction for a question.
     """
@@ -47,17 +44,17 @@ def make_prediction(question_id: str, p_yes: Probability):
     response = requests.post(
         url,
         json={"prediction": p_yes},
-        **get_auth_headers(),
+        headers=get_auth_headers(),
     )
     response.raise_for_status()
 
 
-def get_question(question_id) -> MetaculusQuestion:
+def get_question(question_id: str) -> MetaculusQuestion:
     """
     Get all details about a specific question.
     """
     url = f"{METACULUS_API_BASE_URL}/questions/{question_id}/"
-    response = requests.get(url, **get_auth_headers())
+    response = requests.get(url, headers=get_auth_headers())
     response.raise_for_status()
     response_json = json.loads(response.content)
     return MetaculusQuestion.model_validate(response_json)
@@ -70,11 +67,11 @@ def get_questions(
     tournament_id: int | None = None,
     created_after: datetime | None = None,
     status: str | None = None,
-):
+) -> list[MetaculusQuestion]:
     """
     List (all details) {count} questions from the {tournament_id}
     """
-    url_params = {
+    url_params: dict[str, Union[int, str]] = {
         "limit": limit,
         "offset": offset,
         "has_group": "false",
@@ -92,7 +89,7 @@ def get_questions(
         url_params["status"] = status
 
     url = f"{METACULUS_API_BASE_URL}/questions/"
-    response = requests.get(url, **get_auth_headers(), params=url_params)
+    response = requests.get(url, headers=get_auth_headers(), params=url_params)
     response.raise_for_status()
     response_json = json.loads(response.content)
     return [MetaculusQuestion.model_validate(q) for q in response_json["results"]]

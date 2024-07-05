@@ -1,6 +1,7 @@
 import typing as t
 from datetime import datetime
 
+from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -25,11 +26,11 @@ class MetaculusAgentMarket(AgentMarket):
     @staticmethod
     def from_data_model(model: MetaculusQuestion) -> "MetaculusAgentMarket":
         return MetaculusAgentMarket(
-            id=model.id,
+            id=str(model.id),
             question=model.title,
             outcomes=[],
-            resolution=model.resolution,
-            current_p_yes=model.community_prediction.full.p_yes,
+            resolution=None,
+            current_p_yes=Probability(model.community_prediction.full.p_yes),
             created_time=model.created_time,
             close_time=model.close_time,
             url=model.url,
@@ -54,7 +55,7 @@ class MetaculusAgentMarket(AgentMarket):
         else:
             raise ValueError(f"Unknown sort_by: {sort_by}")
 
-        closed: bool | None
+        status: str | None
         if filter_by == FilterBy.OPEN:
             status = "open"
         elif filter_by == FilterBy.RESOLVED:
@@ -73,7 +74,6 @@ class MetaculusAgentMarket(AgentMarket):
             MetaculusAgentMarket.from_data_model(m)
             for m in get_questions(
                 limit=limit,
-                closed=closed,
                 order_by=order_by,
                 created_after=created_after,
                 status=status,

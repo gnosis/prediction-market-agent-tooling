@@ -10,6 +10,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.metaculus.api import (
     METACULUS_API_BASE_URL,
     get_questions,
+    make_prediction,
+    post_question_comment,
 )
 from prediction_market_agent_tooling.markets.metaculus.data_models import (
     MetaculusQuestion,
@@ -79,3 +81,7 @@ class MetaculusAgentMarket(AgentMarket):
                 status=status,
             )
         ]
+
+    def submit_prediction(self, p_yes: Probability, reasoning: str) -> None:
+        make_prediction(self.id, p_yes)
+        post_question_comment(self.id, reasoning)

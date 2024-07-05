@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     Position,
     Resolution,
     TokenAmount,
+    ResolvedBet,
 )
 from prediction_market_agent_tooling.tools.utils import (
     add_utc_timezone_validator,
@@ -166,7 +167,7 @@ class AgentMarket(BaseModel):
     @staticmethod
     def get_resolved_bets_made_since(
         better_address: ChecksumAddress, start_time: datetime
-    ):
+    ) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method")
 
     def is_closed(self) -> bool:

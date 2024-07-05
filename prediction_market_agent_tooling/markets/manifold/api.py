@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 import tenacity
 
-from prediction_market_agent_tooling.gtypes import Mana, SecretStr
+from prediction_market_agent_tooling.gtypes import Mana, SecretStr, HexAddress, HexStr
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
@@ -213,6 +213,7 @@ def manifold_to_generic_resolved_bet(
         outcome=bet.get_resolved_boolean_outcome(),
         created_time=bet.createdTime,
         market_question=market.question,
+        market_id=HexAddress(HexStr(market.id)),
         market_outcome=market_outcome,
         resolved_time=market.resolutionTime,
         profit=bet.get_profit(market_outcome=market_outcome),

@@ -28,8 +28,8 @@ from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
     Position,
-    TokenAmount,
     ResolvedBet,
+    TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BASE_URL,

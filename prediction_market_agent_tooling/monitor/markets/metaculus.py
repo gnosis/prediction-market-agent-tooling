@@ -15,7 +15,7 @@ class DeployedMetaculusAgent(DeployedAgent):
 
     @property
     def public_id(self) -> str:
-        return self.user
+        return str(self.user)
 
     def get_resolved_bets(self) -> list[ResolvedBet]:
         raise NotImplementedError("TODO: Implement to allow betting on Metaculus.")

@@ -11,7 +11,6 @@ from prediction_market_agent_tooling.markets.metaculus.data_models import (
 )
 
 METACULUS_API_BASE_URL = "https://www.metaculus.com/api2"
-WARMUP_TOURNAMENT_ID = 3294
 
 
 def get_auth_headers() -> dict[str, str]:
@@ -69,7 +68,7 @@ def get_questions(
     status: str | None = None,
 ) -> list[MetaculusQuestion]:
     """
-    List (all details) {count} questions from the {tournament_id}
+    List detailed metaculus questions (i.e. markets)
     """
     url_params: dict[str, Union[int, str]] = {
         "limit": limit,

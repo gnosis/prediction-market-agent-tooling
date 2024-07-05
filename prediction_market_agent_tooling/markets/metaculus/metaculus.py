@@ -46,6 +46,7 @@ class MetaculusAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[datetime] = None,
         excluded_questions: set[str] | None = None,
+        tournament_id: int | None = None,
     ) -> t.Sequence["MetaculusAgentMarket"]:
         order_by: str | None
         if sort_by == SortBy.NONE:
@@ -79,6 +80,7 @@ class MetaculusAgentMarket(AgentMarket):
                 order_by=order_by,
                 created_after=created_after,
                 status=status,
+                tournament_id=tournament_id,
             )
         ]
 

@@ -77,7 +77,7 @@ class MetaculusAgentMarket(AgentMarket):
             )
 
         offset = 0
-        question_page_size = 100
+        question_page_size = 500
         all_questions = []
         while True:
             questions = get_questions(

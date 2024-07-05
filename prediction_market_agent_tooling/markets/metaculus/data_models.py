@@ -15,7 +15,7 @@ class QuestionType(str, Enum):
     multiple_choice = "multiple_choice"
 
 
-class Prediction(BaseModel):
+class CommunityPrediction(BaseModel):
     y: list[float]
     q1: float | None = None
     q2: float | None = None
@@ -31,9 +31,23 @@ class Prediction(BaseModel):
         return self.q2 if self.q2 is not None else 0.5
 
 
-class CommunityPrediction(BaseModel):
-    full: Prediction
-    unweighted: Prediction
+class Prediction(BaseModel):
+    t: datetime
+    x: float
+
+
+class UserPredictions(BaseModel):
+    id: int
+    predictions: list[Prediction]
+    points_won: float | None = None
+    user: int
+    username: str
+    question: int
+
+
+class CommunityPredictionStats(BaseModel):
+    full: CommunityPrediction
+    unweighted: CommunityPrediction
 
 
 class MetaculusQuestion(BaseModel):
@@ -70,7 +84,8 @@ class MetaculusQuestion(BaseModel):
     activity: float
     comment_count: int
     votes: int
-    community_prediction: CommunityPrediction
+    community_prediction: CommunityPredictionStats
+    my_predictions: UserPredictions | None = None
     # TODO add the rest of the fields
     # metaculus_prediction
     # number_of_forecasters
@@ -96,7 +111,6 @@ class MetaculusQuestion(BaseModel):
     # cp_peer_score
     # summary
     # user_vote
-    # my_predictions
     # divergence
     # peer_score
     # spot_peer_score

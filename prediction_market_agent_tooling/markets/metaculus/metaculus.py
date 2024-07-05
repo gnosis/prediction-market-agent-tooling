@@ -23,6 +23,7 @@ class MetaculusAgentMarket(AgentMarket):
     Metaculus' market class that can be used by agents to make predictions.
     """
 
+    have_predicted: bool
     base_url: t.ClassVar[str] = METACULUS_API_BASE_URL
 
     @staticmethod
@@ -37,6 +38,8 @@ class MetaculusAgentMarket(AgentMarket):
             close_time=model.close_time,
             url=model.url,
             volume=None,
+            have_predicted=model.my_predictions is not None
+            and len(model.my_predictions.predictions) > 0,
         )
 
     @staticmethod

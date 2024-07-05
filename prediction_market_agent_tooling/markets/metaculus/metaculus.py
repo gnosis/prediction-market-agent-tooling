@@ -76,16 +76,26 @@ class MetaculusAgentMarket(AgentMarket):
                 "Excluded questions are not suppoerted for Metaculus markets yet."
             )
 
-        return [
-            MetaculusAgentMarket.from_data_model(m)
-            for m in get_questions(
-                limit=limit,
+        offset = 0
+        question_page_size = 100
+        all_questions = []
+        while True:
+            questions = get_questions(
+                limit=question_page_size,
+                offset=offset,
                 order_by=order_by,
                 created_after=created_after,
                 status=status,
                 tournament_id=tournament_id,
             )
-        ]
+            if not questions:
+                break
+            all_questions.extend(questions)
+            offset += question_page_size
+
+            if len(all_questions) >= limit:
+                break
+        return [MetaculusAgentMarket.from_data_model(q) for q in all_questions]
 
     def submit_prediction(self, p_yes: Probability, reasoning: str) -> None:
         make_prediction(self.id, p_yes)

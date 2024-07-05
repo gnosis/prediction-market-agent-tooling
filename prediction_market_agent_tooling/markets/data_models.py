@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import TypeAlias
 
+from eth_typing import HexAddress
 from pydantic import BaseModel, computed_field
 
 from prediction_market_agent_tooling.gtypes import OutcomeStr
@@ -11,6 +12,9 @@ class Currency(str, Enum):
     xDai = "xDai"
     Mana = "Mana"
     USDC = "USDC"
+
+    def __str__(self):
+        return self.value
 
 
 class Resolution(str, Enum):
@@ -24,6 +28,9 @@ class TokenAmount(BaseModel):
     amount: float
     currency: Currency
 
+    def __str__(self):
+        return "Amount {} currency {}".format(self.amount, self.currency)
+
 
 BetAmount: TypeAlias = TokenAmount
 ProfitAmount: TypeAlias = TokenAmount
@@ -34,6 +41,10 @@ class Bet(BaseModel):
     outcome: bool
     created_time: datetime
     market_question: str
+    market_id: HexAddress
+
+    def __str__(self):
+        return f"Bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}"
 
 
 class ResolvedBet(Bet):
@@ -45,6 +56,9 @@ class ResolvedBet(Bet):
     @property
     def is_correct(self) -> bool:
         return self.outcome == self.market_outcome
+
+    def __str__(self):
+        return f"Resolved bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}. Bet was resolved at {self.resolved_time} and was {'correct' if self.is_correct else 'incorrect'}. Profit was {self.profit}"
 
 
 class Position(BaseModel):

@@ -163,6 +163,12 @@ class AgentMarket(BaseModel):
     ) -> list[Bet]:
         raise NotImplementedError("Subclasses must implement this method")
 
+    @staticmethod
+    def get_resolved_bets_made_since(
+        better_address: ChecksumAddress, start_time: datetime
+    ):
+        raise NotImplementedError("Subclasses must implement this method")
+
     def is_closed(self) -> bool:
         return self.close_time is not None and self.close_time <= utcnow()
 

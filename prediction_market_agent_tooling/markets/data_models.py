@@ -13,9 +13,6 @@ class Currency(str, Enum):
     Mana = "Mana"
     USDC = "USDC"
 
-    def __str__(self) -> str:
-        return self.value
-
 
 class Resolution(str, Enum):
     YES = "YES"
@@ -29,7 +26,7 @@ class TokenAmount(BaseModel):
     currency: Currency
 
     def __str__(self) -> str:
-        return "Amount {} currency {}".format(self.amount, self.currency)
+        return f"Amount {self.amount} currency {self.currency}"
 
 
 BetAmount: TypeAlias = TokenAmount

@@ -81,7 +81,7 @@ def get_questions(
     if order_by:
         url_params["order_by"] = order_by
     if tournament_id:
-        url_params["tournament"] = tournament_id
+        url_params["project"] = tournament_id
     if created_after:
         url_params["created_time__gt"] = created_after.isoformat()
     if status:

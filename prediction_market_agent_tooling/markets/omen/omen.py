@@ -339,13 +339,13 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_resolved_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime
+        better_address: ChecksumAddress, start_time: datetime, end_time: datetime | None
     ) -> list[ResolvedBet]:
         subgraph_handler = OmenSubgraphHandler()
         bets = subgraph_handler.get_resolved_bets_with_valid_answer(
             better_address=better_address,
             start_time=start_time,
-            end_time=None,
+            end_time=end_time,
             market_id=None,
         )
         generic_bets = [b.to_generic_resolved_bet() for b in bets]

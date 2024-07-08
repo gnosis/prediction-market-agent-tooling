@@ -166,7 +166,7 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_resolved_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime
+        better_address: ChecksumAddress, start_time: datetime, end_time: datetime | None
     ) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method")
 

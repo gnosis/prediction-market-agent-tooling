@@ -38,7 +38,7 @@ class Bet(BaseModel):
     outcome: bool
     created_time: datetime
     market_question: str
-    market_id: HexAddress
+    market_id: str
 
     def __str__(self) -> str:
         return f"Bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}"

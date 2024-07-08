@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 from typing import Union
 
@@ -8,6 +7,10 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.metaculus.data_models import (
     MetaculusQuestion,
+)
+from prediction_market_agent_tooling.tools.utils import (
+    response_list_to_model,
+    response_to_model,
 )
 
 METACULUS_API_BASE_URL = "https://www.metaculus.com/api2"
@@ -53,10 +56,10 @@ def get_question(question_id: str) -> MetaculusQuestion:
     Get all details about a specific question.
     """
     url = f"{METACULUS_API_BASE_URL}/questions/{question_id}/"
-    response = requests.get(url, headers=get_auth_headers())
-    response.raise_for_status()
-    response_json = json.loads(response.content)
-    return MetaculusQuestion.model_validate(response_json)
+    return response_to_model(
+        response=requests.get(url, headers=get_auth_headers()),
+        model=MetaculusQuestion,
+    )
 
 
 def get_questions(
@@ -88,7 +91,7 @@ def get_questions(
         url_params["status"] = status
 
     url = f"{METACULUS_API_BASE_URL}/questions/"
-    response = requests.get(url, headers=get_auth_headers(), params=url_params)
-    response.raise_for_status()
-    response_json = json.loads(response.content)
-    return [MetaculusQuestion.model_validate(q) for q in response_json["results"]]
+    return response_list_to_model(
+        response=requests.get(url, headers=get_auth_headers(), params=url_params),
+        model=MetaculusQuestion,
+    )

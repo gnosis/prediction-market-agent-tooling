@@ -12,13 +12,17 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
 )
 from prediction_market_agent_tooling.markets.manifold.data_models import (
+    FullManifoldMarket,
     ManifoldBet,
     ManifoldContractMetric,
     ManifoldMarket,
     ManifoldUser,
 )
 from prediction_market_agent_tooling.tools.parallelism import par_map
-from prediction_market_agent_tooling.tools.utils import response_list_to_model
+from prediction_market_agent_tooling.tools.utils import (
+    response_list_to_model,
+    response_to_model,
+)
 
 """
 Python API for Manifold Markets
@@ -65,9 +69,7 @@ def get_manifold_binary_markets(
     while True:
         params["offset"] = offset
         response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        markets = [ManifoldMarket.model_validate(x) for x in data]
+        markets = response_list_to_model(response, ManifoldMarket)
 
         if not markets:
             break
@@ -152,11 +154,9 @@ def get_authenticated_user(api_key: str) -> ManifoldUser:
     wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(f"get_manifold_market failed, {x.attempt_number=}."),
 )
-def get_manifold_market(market_id: str) -> ManifoldMarket:
+def get_manifold_market(market_id: str) -> FullManifoldMarket:
     url = f"{MANIFOLD_API_BASE_URL}/v0/market/{market_id}"
-    response = requests.get(url)
-    response.raise_for_status()
-    return ManifoldMarket.model_validate(response.json())
+    return response_to_model(requests.get(url), FullManifoldMarket)
 
 
 @tenacity.retry(
@@ -222,6 +222,6 @@ def manifold_to_generic_resolved_bet(
 def get_market_positions(market_id: str, user_id: str) -> list[ManifoldContractMetric]:
     url = f"{MANIFOLD_API_BASE_URL}/v0/market/{market_id}/positions"
     params = {"userId": user_id}
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    return [ManifoldContractMetric.model_validate(x) for x in response.json()]
+    return response_list_to_model(
+        requests.get(url, params=params), ManifoldContractMetric
+    )

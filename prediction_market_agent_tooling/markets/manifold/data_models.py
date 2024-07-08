@@ -1,5 +1,6 @@
 import typing as t
 from datetime import datetime, timedelta
+from enum import Enum
 
 from pydantic import BaseModel, field_validator
 
@@ -17,6 +18,25 @@ MANIFOLD_BASE_URL = "https://manifold.markets"
 class ManifoldPool(BaseModel):
     NO: float
     YES: float
+
+
+class ManifoldAnswersMode(str, Enum):
+    ANYONE = "ANYONE"
+    ONLY_CREATOR = "ONLY_CREATOR"
+    DISABLED = "DISABLED"
+
+
+class ManifoldAnswer(BaseModel):
+    createdTime: datetime
+    avatarUrl: str
+    id: str
+    username: str
+    number: int
+    name: str
+    contractId: str
+    text: str
+    userId: str
+    probability: float
 
 
 class ManifoldMarket(BaseModel):
@@ -82,6 +102,20 @@ class ManifoldMarket(BaseModel):
         max_timestamp = (datetime.max - timedelta(days=1)).timestamp()
         value = int(min(value / 1000, max_timestamp))
         return datetime.fromtimestamp(value)
+
+
+class FullManifoldMarket(ManifoldMarket):
+    # Some of these fields are available only in specific cases, see https://docs.manifold.markets/api#get-v0marketmarketid.
+    answers: list[ManifoldAnswer] | None = None
+    shouldAnswersSumToOne: bool | None = None
+    addAnswersMode: ManifoldAnswersMode | None = None
+    options: dict[str, int | str] | None = None
+    totalBounty: float | None = None
+    bountyLeft: float | None = None
+    description: str | dict[str, t.Any]
+    textDescription: str
+    coverImageUrl: str | None = None
+    groupSlugs: list[str] | None = None
 
 
 class ProfitCached(BaseModel):

@@ -26,7 +26,8 @@ class CommunityPrediction(BaseModel):
         """
         q2 corresponds to the median, or 'second quartile' of the distribution.
 
-        If no value is provided, we default to 0.5.
+        If no value is provided (i.e. the question is new and has not been
+        answered yet), we default to 0.5.
         """
         return self.q2 if self.q2 is not None else 0.5
 

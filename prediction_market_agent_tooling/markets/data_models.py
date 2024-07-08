@@ -2,7 +2,6 @@ from datetime import datetime
 from enum import Enum
 from typing import TypeAlias
 
-from eth_typing import HexAddress
 from pydantic import BaseModel, computed_field
 
 from prediction_market_agent_tooling.gtypes import OutcomeStr

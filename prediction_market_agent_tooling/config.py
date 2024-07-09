@@ -3,6 +3,7 @@ import typing as t
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
 from pydantic.types import SecretStr
+from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
@@ -28,7 +29,7 @@ class APIKeys(BaseSettings):
     METACULUS_USER_ID: t.Optional[int] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
     SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
-    OPENAI_API_KEY: t.Optional[SecretStr] = None
+    OPENAI_API_KEY: t.Optional[SecretStrV1] = None
     GRAPH_API_KEY: t.Optional[SecretStr] = None
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
@@ -82,7 +83,7 @@ class APIKeys(BaseSettings):
         return self.SAFE_ADDRESS if self.SAFE_ADDRESS else self.public_key
 
     @property
-    def openai_api_key(self) -> SecretStr:
+    def openai_api_key(self) -> SecretStrV1:
         return check_not_none(
             self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."
         )

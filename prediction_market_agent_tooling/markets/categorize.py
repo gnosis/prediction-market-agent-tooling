@@ -21,7 +21,7 @@ Write only the category itself, nothing else.
         prompt
         | ChatOpenAI(
             model=model,
-            api_key=APIKeys().openai_api_key.get_secret_value(),
+            api_key=APIKeys().openai_api_key,
         )
         | StrOutputParser()
     )

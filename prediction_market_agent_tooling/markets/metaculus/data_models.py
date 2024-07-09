@@ -88,3 +88,9 @@ class MetaculusQuestion(BaseModel):
     community_prediction: CommunityPredictionStats
     my_predictions: UserPredictions | None = None
     # TODO add the rest of the fields https://github.com/gnosis/prediction-market-agent-tooling/issues/301
+
+
+class MetaculusQuestions(BaseModel):
+    next: str | None
+    previous: str | None
+    results: list[MetaculusQuestion]

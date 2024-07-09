@@ -24,6 +24,8 @@ class APIKeys(BaseSettings):
     )
 
     MANIFOLD_API_KEY: t.Optional[SecretStr] = None
+    METACULUS_API_KEY: t.Optional[SecretStr] = None
+    METACULUS_USER_ID: t.Optional[int] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
     SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
@@ -49,6 +51,18 @@ class APIKeys(BaseSettings):
     def manifold_api_key(self) -> SecretStr:
         return check_not_none(
             self.MANIFOLD_API_KEY, "MANIFOLD_API_KEY missing in the environment."
+        )
+
+    @property
+    def metaculus_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.METACULUS_API_KEY, "METACULUS_API_KEY missing in the environment."
+        )
+
+    @property
+    def metaculus_user_id(self) -> int:
+        return check_not_none(
+            self.METACULUS_USER_ID, "METACULUS_USER_ID missing in the environment."
         )
 
     @property

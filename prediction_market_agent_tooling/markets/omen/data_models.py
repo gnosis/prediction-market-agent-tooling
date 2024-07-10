@@ -386,6 +386,7 @@ class OmenBet(BaseModel):
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
             market_question=self.title,
+            market_id=self.fpmm.id,
         )
 
     def to_generic_resolved_bet(self) -> ResolvedBet:
@@ -399,6 +400,7 @@ class OmenBet(BaseModel):
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
             market_question=self.title,
+            market_id=self.fpmm.id,
             market_outcome=self.fpmm.boolean_outcome,
             resolved_time=datetime.fromtimestamp(
                 check_not_none(self.fpmm.answerFinalizedTimestamp)

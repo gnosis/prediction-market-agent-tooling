@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     Position,
     Resolution,
+    ResolvedBet,
     TokenAmount,
 )
 from prediction_market_agent_tooling.tools.utils import (
@@ -161,6 +162,12 @@ class AgentMarket(BaseModel):
     def get_bets_made_since(
         better_address: ChecksumAddress, start_time: datetime
     ) -> list[Bet]:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def get_resolved_bets_made_since(
+        better_address: ChecksumAddress, start_time: datetime, end_time: datetime | None
+    ) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method")
 
     def is_closed(self) -> bool:

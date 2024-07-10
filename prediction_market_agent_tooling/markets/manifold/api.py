@@ -213,6 +213,7 @@ def manifold_to_generic_resolved_bet(
         outcome=bet.get_resolved_boolean_outcome(),
         created_time=bet.createdTime,
         market_question=market.question,
+        market_id=market.id,
         market_outcome=market_outcome,
         resolved_time=market.resolutionTime,
         profit=bet.get_profit(market_outcome=market_outcome),

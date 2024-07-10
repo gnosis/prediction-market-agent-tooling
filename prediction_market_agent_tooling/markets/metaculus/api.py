@@ -7,11 +7,9 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.metaculus.data_models import (
     MetaculusQuestion,
+    MetaculusQuestions,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    response_list_to_model,
-    response_to_model,
-)
+from prediction_market_agent_tooling.tools.utils import response_to_model
 
 METACULUS_API_BASE_URL = "https://www.metaculus.com/api2"
 
@@ -91,7 +89,7 @@ def get_questions(
         url_params["status"] = status
 
     url = f"{METACULUS_API_BASE_URL}/questions/"
-    return response_list_to_model(
+    return response_to_model(
         response=requests.get(url, headers=get_auth_headers(), params=url_params),
-        model=MetaculusQuestion,
-    )
+        model=MetaculusQuestions,
+    ).results

@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.deploy.constants import OWNER_KEY
 from prediction_market_agent_tooling.gtypes import (
     SecretStr,
     private_key_type,
-    SecretStrV1,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.tools.utils import get_current_git_commit_sha
@@ -67,7 +66,7 @@ def main(
                 else None
             ),
             OPENAI_API_KEY=(
-                SecretStrV1(openai_api_key_secret_name)
+                SecretStr(openai_api_key_secret_name)
                 if openai_api_key_secret_name
                 else None
             ),

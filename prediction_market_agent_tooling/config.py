@@ -6,7 +6,11 @@ from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+    secretstr_to_v1_secretstr,
+)
 from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
@@ -29,7 +33,7 @@ class APIKeys(BaseSettings):
     METACULUS_USER_ID: t.Optional[int] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
     SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
-    OPENAI_API_KEY: t.Optional[SecretStrV1] = None
+    OPENAI_API_KEY: t.Optional[SecretStr] = None
     GRAPH_API_KEY: t.Optional[SecretStr] = None
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
@@ -83,10 +87,14 @@ class APIKeys(BaseSettings):
         return self.SAFE_ADDRESS if self.SAFE_ADDRESS else self.public_key
 
     @property
-    def openai_api_key(self) -> SecretStrV1:
+    def openai_api_key(self) -> SecretStr:
         return check_not_none(
             self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."
         )
+
+    @property
+    def openai_api_key_secretstr_v1(self) -> SecretStrV1:
+        return secretstr_to_v1_secretstr(self.openai_api_key)
 
     @property
     def graph_api_key(self) -> SecretStr:

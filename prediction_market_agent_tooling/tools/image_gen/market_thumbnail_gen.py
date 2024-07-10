@@ -14,7 +14,7 @@ def rewrite_question_into_image_generation_prompt(question: str) -> str:
     llm = ChatOpenAI(
         model="gpt-4-turbo",
         temperature=0.0,
-        api_key=APIKeys().openai_api_key,
+        api_key=APIKeys().openai_api_key_secretstr_v1,
     )
     rewritten = str(
         llm.invoke(

@@ -48,7 +48,7 @@ def is_predictable_binary(
     llm = ChatOpenAI(
         model=engine,
         temperature=0.0,
-        api_key=APIKeys().openai_api_key.get_secret_value(),
+        api_key=APIKeys().openai_api_key_secretstr_v1,
     )
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)

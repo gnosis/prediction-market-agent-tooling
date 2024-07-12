@@ -2,9 +2,9 @@ import pytest
 from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
-from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from web3 import Web3
 
+from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 
@@ -22,16 +22,6 @@ def local_web3(load_env) -> Web3:
     yield node.w3
     if node_daemon:
         node_daemon.stop()
-
-
-def local_web3_at_block(
-    request: pytest.FixtureRequest, block: int, port: int = 8546
-) -> Web3:
-    node = LocalNode(GNOSIS_RPC_URL, port=port, default_block=block)
-    node_daemon = _local_node(node, True)
-    # for auto-closing connection
-    request.addfinalizer(node_daemon.stop)
-    return node.w3
 
 
 @pytest.fixture(scope="session")

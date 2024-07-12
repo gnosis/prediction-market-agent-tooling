@@ -143,6 +143,7 @@ def test_minimum_bet_to_win_manifold(
     min_bet = ManifoldAgentMarket(
         id="id",
         question="question",
+        description=None,
         outcomes=["Yes", "No"],
         current_p_yes=market_p_yes,
         created_time=utcnow() - timedelta(days=1),

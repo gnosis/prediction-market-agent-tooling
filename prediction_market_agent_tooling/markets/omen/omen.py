@@ -91,6 +91,9 @@ class OmenAgentMarket(AgentMarket):
     )
 
     _binary_market_p_yes_history: list[Probability] | None = None
+    description: str | None = (
+        None  # Omen markets don't have a description, so just default to None.
+    )
 
     @property
     def yes_index(self) -> int:

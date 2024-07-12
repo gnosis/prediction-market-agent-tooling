@@ -66,6 +66,7 @@ def test_benchmark_run(
     benchmarker = bm.Benchmarker(
         markets=[
             PolymarketAgentMarket(
+                description=None,
                 id="1",
                 volume=None,
                 url="url",
@@ -112,6 +113,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         cache_path = f"{tmpdir}/cache.json"
         markets = [
             PolymarketAgentMarket(
+                description=None,
                 id="1",
                 volume=None,
                 url="url",
@@ -179,6 +181,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
 def test_benchmarker_cancelled_markets() -> None:
     markets = [
         PolymarketAgentMarket(
+            description=None,
             id="1",
             volume=None,
             url="url",
@@ -204,6 +207,7 @@ def test_benchmarker_cancelled_markets() -> None:
 def test_market_probable_resolution() -> None:
     with pytest.raises(ValueError) as e:
         PolymarketAgentMarket(
+            description=None,
             id="1",
             volume=None,
             url="url",
@@ -217,6 +221,7 @@ def test_market_probable_resolution() -> None:
     assert "Unknown resolution" in str(e)
     assert (
         PolymarketAgentMarket(
+            description=None,
             id="1",
             volume=None,
             url="url",
@@ -231,6 +236,7 @@ def test_market_probable_resolution() -> None:
     )
     assert (
         PolymarketAgentMarket(
+            description=None,
             id="1",
             volume=None,
             url="url",
@@ -245,6 +251,7 @@ def test_market_probable_resolution() -> None:
     )
     assert (
         PolymarketAgentMarket(
+            description=None,
             id="1",
             volume=None,
             url="url",
@@ -259,6 +266,7 @@ def test_market_probable_resolution() -> None:
     )
     assert (
         PolymarketAgentMarket(
+            description=None,
             id="1",
             volume=None,
             url="url",

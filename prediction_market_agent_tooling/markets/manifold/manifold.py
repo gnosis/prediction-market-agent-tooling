@@ -13,11 +13,12 @@ from prediction_market_agent_tooling.markets.data_models import BetAmount, Curre
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
     get_manifold_binary_markets,
+    get_manifold_market,
     place_bet,
 )
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     MANIFOLD_BASE_URL,
-    ManifoldMarket,
+    FullManifoldMarket,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
     minimum_bet_to_win,
@@ -58,10 +59,11 @@ class ManifoldAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def from_data_model(model: ManifoldMarket) -> "ManifoldAgentMarket":
+    def from_data_model(model: FullManifoldMarket) -> "ManifoldAgentMarket":
         return ManifoldAgentMarket(
             id=model.id,
             question=model.question,
+            description=model.textDescription,
             outcomes=model.outcomes,
             resolution=model.resolution,
             created_time=model.createdTime,
@@ -100,7 +102,7 @@ class ManifoldAgentMarket(AgentMarket):
             raise ValueError(f"Unknown filter_by: {filter_by}")
 
         return [
-            ManifoldAgentMarket.from_data_model(m)
+            ManifoldAgentMarket.from_data_model(get_manifold_market(m.id))
             for m in get_manifold_binary_markets(
                 limit=limit,
                 sort=sort,

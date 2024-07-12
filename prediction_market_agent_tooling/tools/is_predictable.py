@@ -122,7 +122,7 @@ def is_predictable_without_description(
     llm = ChatOpenAI(
         model=engine,
         temperature=LLM_SUPER_LOW_TEMPERATURE,
-        api_key=APIKeys().openai_api_key.get_secret_value(),
+        api_key=APIKeys().openai_api_key_secretstr_v1,
     )
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)

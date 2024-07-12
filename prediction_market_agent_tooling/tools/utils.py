@@ -82,11 +82,13 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone: ...
+def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
+    ...
 
 
 @t.overload
-def add_utc_timezone_validator(value: None) -> None: ...
+def add_utc_timezone_validator(value: None) -> None:
+    ...
 
 
 def add_utc_timezone_validator(value: datetime | None) -> DatetimeWithTimezone | None:

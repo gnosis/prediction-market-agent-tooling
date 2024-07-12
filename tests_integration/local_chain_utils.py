@@ -139,5 +139,5 @@ def _local_node(
     if start_local_node:
         node_daemon = run_anvil(node.remote_url, node.default_block, node.port)
 
-    wait_for_port(node.port, timeout=20)
+    wait_for_port(node.port, timeout=60)
     return node_daemon

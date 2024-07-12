@@ -19,6 +19,10 @@ from prediction_market_agent_tooling.loggers import logger
 
 T = TypeVar("T")
 
+# t=0 is mathematically impossible and it's not clear how OpenAI (and others) handle it, as a result, even with t=0, gpt-4-turbo produces very different outputs,
+# it seems that using a very low temperature is the best way to have as consistent outputs as possible: https://community.openai.com/t/why-the-api-output-is-inconsistent-even-after-the-temperature-is-set-to-0/329541/12
+LLM_SUPER_LOW_TEMPERATURE = 0.00000001
+
 
 def check_not_none(
     value: Optional[T],
@@ -78,13 +82,11 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
-    ...
+def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone: ...
 
 
 @t.overload
-def add_utc_timezone_validator(value: None) -> None:
-    ...
+def add_utc_timezone_validator(value: None) -> None: ...
 
 
 def add_utc_timezone_validator(value: datetime | None) -> DatetimeWithTimezone | None:

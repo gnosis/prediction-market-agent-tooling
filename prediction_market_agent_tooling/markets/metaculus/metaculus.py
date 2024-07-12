@@ -25,6 +25,9 @@ class MetaculusAgentMarket(AgentMarket):
 
     have_predicted: bool
     base_url: t.ClassVar[str] = METACULUS_API_BASE_URL
+    description: str | None = (
+        None  # Metaculus markets don't have a description, so just default to None.
+    )
 
     @staticmethod
     def from_data_model(model: MetaculusQuestion) -> "MetaculusAgentMarket":

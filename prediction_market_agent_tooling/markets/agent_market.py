@@ -47,6 +47,7 @@ class AgentMarket(BaseModel):
 
     id: str
     question: str
+    description: str | None
     outcomes: list[str]
     resolution: Resolution | None
     created_time: datetime | None

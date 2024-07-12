@@ -2,9 +2,9 @@ import pytest
 from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
+from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from web3 import Web3
 
-from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 

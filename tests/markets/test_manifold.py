@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_bets,
     get_manifold_binary_markets,
+    get_manifold_market,
     get_one_manifold_binary_market,
     get_resolved_manifold_bets,
     manifold_to_generic_resolved_bet,
@@ -35,6 +36,13 @@ def test_manifold_markets() -> None:
         limit=limit, sort="newest", filter_="resolved"
     )
     assert len(markets) == limit
+
+
+def test_manifold_full_market() -> None:
+    markets = get_manifold_binary_markets(22)
+    for market in markets:
+        full_market = get_manifold_market(market.id)
+        assert market.id == full_market.id, f"{market.id=} != {full_market.id=}"
 
 
 def test_manifold_bets(a_user_id: str) -> None:

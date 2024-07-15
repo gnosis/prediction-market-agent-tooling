@@ -24,16 +24,6 @@ def local_web3(load_env) -> Web3:
         node_daemon.stop()
 
 
-def local_web3_at_block(
-    request: pytest.FixtureRequest, block: int, port: int = 8546
-) -> Web3:
-    node = LocalNode(GNOSIS_RPC_URL, port=port, default_block=block)
-    node_daemon = _local_node(node, True)
-    # for auto-closing connection
-    request.addfinalizer(node_daemon.stop)
-    return node.w3
-
-
 @pytest.fixture(scope="session")
 def local_ethereum_client(local_web3: Web3) -> EthereumClient:
     return EthereumClient()

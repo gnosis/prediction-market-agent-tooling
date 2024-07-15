@@ -24,6 +24,9 @@ class TokenAmount(BaseModel):
     amount: float
     currency: Currency
 
+    def __str__(self) -> str:
+        return f"Amount {self.amount} currency {self.currency}"
+
 
 BetAmount: TypeAlias = TokenAmount
 ProfitAmount: TypeAlias = TokenAmount
@@ -34,6 +37,10 @@ class Bet(BaseModel):
     outcome: bool
     created_time: datetime
     market_question: str
+    market_id: str
+
+    def __str__(self) -> str:
+        return f"Bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}"
 
 
 class ResolvedBet(Bet):
@@ -45,6 +52,9 @@ class ResolvedBet(Bet):
     @property
     def is_correct(self) -> bool:
         return self.outcome == self.market_outcome
+
+    def __str__(self) -> str:
+        return f"Resolved bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}. Bet was resolved at {self.resolved_time} and was {'correct' if self.is_correct else 'incorrect'}. Profit was {self.profit}"
 
 
 class Position(BaseModel):

@@ -45,10 +45,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     REALITYETH_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/E7ymrCnNcQdAAgLbdFWzGE5mvr5Mb5T9VfT43FqA7bNh"
 
-    # TODO: Switch to arbitrum subgraph once it's published.
-    OMEN_IMAGE_MAPPING_GRAPH_URL = (
-        "https://api.studio.thegraph.com/query/63564/omen-thumbnailmapping/v0.0.3"
-    )
+    OMEN_IMAGE_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/EWN14ciGK53PpUiKSm7kMWQ6G4iz3tDrRLyZ1iXMQEdu"
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 

@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
     Position,
+    ResolvedBet,
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -90,6 +91,9 @@ class OmenAgentMarket(AgentMarket):
     )
 
     _binary_market_p_yes_history: list[Probability] | None = None
+    description: str | None = (
+        None  # Omen markets don't have a description, so just default to None.
+    )
 
     @property
     def yes_index(self) -> int:
@@ -335,6 +339,20 @@ class OmenAgentMarket(AgentMarket):
         )
         bets.sort(key=lambda x: x.creation_datetime)
         return [b.to_bet() for b in bets]
+
+    @staticmethod
+    def get_resolved_bets_made_since(
+        better_address: ChecksumAddress, start_time: datetime, end_time: datetime | None
+    ) -> list[ResolvedBet]:
+        subgraph_handler = OmenSubgraphHandler()
+        bets = subgraph_handler.get_resolved_bets_with_valid_answer(
+            better_address=better_address,
+            start_time=start_time,
+            end_time=end_time,
+            market_id=None,
+        )
+        generic_bets = [b.to_generic_resolved_bet() for b in bets]
+        return generic_bets
 
     def get_contract(
         self,

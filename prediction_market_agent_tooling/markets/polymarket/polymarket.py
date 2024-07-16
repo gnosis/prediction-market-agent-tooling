@@ -31,6 +31,7 @@ class PolymarketAgentMarket(AgentMarket):
         return PolymarketAgentMarket(
             id=model.id,
             question=model.question,
+            description=model.description,
             outcomes=[x.outcome for x in model.tokens],
             resolution=model.resolution,
             current_p_yes=model.p_yes,

@@ -3,9 +3,14 @@ import typing as t
 from gnosis.eth import EthereumClient
 from gnosis.safe import Safe
 from pydantic.types import SecretStr
+from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, PrivateKey
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+    secretstr_to_v1_secretstr,
+)
 from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
@@ -24,6 +29,8 @@ class APIKeys(BaseSettings):
     )
 
     MANIFOLD_API_KEY: t.Optional[SecretStr] = None
+    METACULUS_API_KEY: t.Optional[SecretStr] = None
+    METACULUS_USER_ID: t.Optional[int] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
     SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
@@ -52,6 +59,18 @@ class APIKeys(BaseSettings):
         )
 
     @property
+    def metaculus_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.METACULUS_API_KEY, "METACULUS_API_KEY missing in the environment."
+        )
+
+    @property
+    def metaculus_user_id(self) -> int:
+        return check_not_none(
+            self.METACULUS_USER_ID, "METACULUS_USER_ID missing in the environment."
+        )
+
+    @property
     def bet_from_private_key(self) -> PrivateKey:
         return check_not_none(
             self.BET_FROM_PRIVATE_KEY,
@@ -72,6 +91,10 @@ class APIKeys(BaseSettings):
         return check_not_none(
             self.OPENAI_API_KEY, "OPENAI_API_KEY missing in the environment."
         )
+
+    @property
+    def openai_api_key_secretstr_v1(self) -> SecretStrV1:
+        return secretstr_to_v1_secretstr(self.openai_api_key)
 
     @property
     def graph_api_key(self) -> SecretStr:

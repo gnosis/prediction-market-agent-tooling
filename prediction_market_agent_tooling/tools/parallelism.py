@@ -1,10 +1,12 @@
 import concurrent
 from concurrent.futures import Executor
+from concurrent.futures.process import ProcessPoolExecutor
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Callable, Generator, TypeVar
 
 # Max workers to 5 to avoid rate limiting on some APIs, create a custom executor if you need more workers.
 DEFAULT_THREADPOOL_EXECUTOR = ThreadPoolExecutor(max_workers=5)
+DEFAULT_PROCESSPOOL_EXECUTOR = ProcessPoolExecutor(max_workers=5)
 
 A = TypeVar("A")
 B = TypeVar("B")

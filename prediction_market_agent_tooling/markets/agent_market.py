@@ -133,7 +133,8 @@ class AgentMarket(BaseModel):
     def get_bet_amount(self, amount: float) -> BetAmount:
         return BetAmount(amount=amount, currency=self.currency)
 
-    def get_tiny_bet_amount(self) -> BetAmount:
+    @classmethod
+    def get_tiny_bet_amount(cls) -> BetAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:

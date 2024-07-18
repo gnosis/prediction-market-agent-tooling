@@ -134,11 +134,12 @@ class OmenAgentMarket(AgentMarket):
     def get_liquidity(self) -> TokenAmount:
         return TokenAmount(
             amount=self.get_liquidity_in_xdai(),
-            currency=Currency.xDai,
+            currency=self.currency,
         )
 
-    def get_tiny_bet_amount(self) -> BetAmount:
-        return BetAmount(amount=0.00001, currency=self.currency)
+    @classmethod
+    def get_tiny_bet_amount(cls) -> BetAmount:
+        return BetAmount(amount=0.00001, currency=cls.currency)
 
     def place_bet(
         self,
@@ -381,7 +382,7 @@ class OmenAgentMarket(AgentMarket):
         )
         return TokenAmount(
             amount=wei_to_xdai(balances[index_set]),
-            currency=Currency.xDai,
+            currency=self.currency,
         )
 
     @classmethod
@@ -437,7 +438,7 @@ class OmenAgentMarket(AgentMarket):
 
                 amounts[outecome_str] = TokenAmount(
                     amount=wei_to_xdai(omen_position.totalBalance),
-                    currency=Currency.xDai,
+                    currency=cls.currency,
                 )
 
             positions.append(Position(market_id=market.id, amounts=amounts))
@@ -503,7 +504,7 @@ class OmenAgentMarket(AgentMarket):
                     no_price = check_not_none(market.get_last_trade_no_outcome_price())
                     total_position_value += no_tokens * no_price
 
-        return BetAmount(amount=total_position_value, currency=Currency.xDai)
+        return BetAmount(amount=total_position_value, currency=cls.currency)
 
     @classmethod
     def get_user_url(cls, keys: APIKeys) -> str:

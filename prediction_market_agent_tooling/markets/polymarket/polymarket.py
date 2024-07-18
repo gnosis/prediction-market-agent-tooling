@@ -41,7 +41,8 @@ class PolymarketAgentMarket(AgentMarket):
             volume=None,
         )
 
-    def get_tiny_bet_amount(self) -> BetAmount:
+    @classmethod
+    def get_tiny_bet_amount(cls) -> BetAmount:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:

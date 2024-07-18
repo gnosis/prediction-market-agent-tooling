@@ -209,7 +209,9 @@ class DeployableTraderAgent(DeployableAgent):
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
         return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
 
-    def pick_markets(self, markets: t.Sequence[AgentMarket]) -> t.Sequence[AgentMarket]:
+    def pick_markets(
+        self, market_type: MarketType, markets: t.Sequence[AgentMarket]
+    ) -> t.Sequence[AgentMarket]:
         """
         Subclasses can implement their own logic instead of this one, or on top of this one.
         By default, it picks only the first {n_markets_per_run} markets where user didn't bet recently and it's a reasonable question.
@@ -225,6 +227,12 @@ class DeployableTraderAgent(DeployableAgent):
 
             # Do as a last check, as it uses paid OpenAI API.
             if not is_predictable_binary(market.question):
+                continue
+
+            # Manifold allows to bet only on markets with probability between 1 and 99.
+            if market_type == MarketType.MANIFOLD and not (
+                1 < market.current_p_yes < 99
+            ):
                 continue
 
             picked.append(market)
@@ -275,7 +283,7 @@ class DeployableTraderAgent(DeployableAgent):
         Processes bets placed by agents on a given market.
         """
         available_markets = self.get_markets(market_type)
-        markets = self.pick_markets(available_markets)
+        markets = self.pick_markets(market_type, available_markets)
         for market in markets:
             result = self.answer_binary_market(market)
             if result is None:

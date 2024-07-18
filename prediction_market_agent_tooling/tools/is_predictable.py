@@ -76,6 +76,7 @@ def is_predictable_binary(
     question: str,
     engine: str = "gpt-4-1106-preview",
     prompt_template: str = QUESTION_IS_PREDICTABLE_BINARY_PROMPT,
+    max_tokens: int = 1024,
 ) -> bool:
     """
     Evaluate if the question is actually answerable.
@@ -95,7 +96,7 @@ def is_predictable_binary(
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
     messages = prompt.format_messages(question=question)
-    completion = str(llm(messages, max_tokens=512).content)
+    completion = str(llm(messages, max_tokens=max_tokens).content)
 
     return parse_decision_yes_no_completion(question, completion)
 
@@ -106,6 +107,7 @@ def is_predictable_without_description(
     description: str,
     engine: str = "gpt-4-1106-preview",
     prompt_template: str = QUESTION_IS_PREDICTABLE_WITHOUT_DESCRIPTION_PROMPT,
+    max_tokens: int = 1024,
 ) -> bool:
     """
     Evaluate if the question is fully self-contained.
@@ -130,7 +132,7 @@ def is_predictable_without_description(
         question=question,
         description=description,
     )
-    completion = str(llm(messages, max_tokens=512).content)
+    completion = str(llm(messages, max_tokens=max_tokens).content)
 
     return parse_decision_yes_no_completion(question, completion)
 

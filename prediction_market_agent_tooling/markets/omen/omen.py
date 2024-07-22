@@ -32,7 +32,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_BASE_URL,
+    PRESAGIO_BASE_URL,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     Condition,
@@ -75,7 +75,7 @@ class OmenAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.xDai
-    base_url: t.ClassVar[str] = OMEN_BASE_URL
+    base_url: t.ClassVar[str] = PRESAGIO_BASE_URL
     creator: HexAddress
 
     collateral_token_contract_address_checksummed: ChecksumAddress

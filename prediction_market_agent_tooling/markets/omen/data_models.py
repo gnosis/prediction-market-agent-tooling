@@ -32,6 +32,7 @@ OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 OMEN_BASE_URL = "https://aiomen.eth.limo"
+PRESAGIO_BASE_URL = "https://presagio.pages.dev"
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
@@ -325,7 +326,7 @@ class OmenMarket(BaseModel):
 
     @property
     def url(self) -> str:
-        return f"{OMEN_BASE_URL}/#/{self.id}"
+        return f"{PRESAGIO_BASE_URL}/markets?id={self.id}"
 
 
 class OmenBetCreator(BaseModel):

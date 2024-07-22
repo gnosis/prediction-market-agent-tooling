@@ -140,7 +140,7 @@ def finalize_markets(
         )
 
         if resolution is None:
-            logger.error(f"No resolution provided for {market.url=}")
+            logger.warning(f"No resolution provided for {market.url=}")
 
         elif resolution in (Resolution.YES, Resolution.NO):
             logger.info(f"Found resolution {resolution.value=} for {market.url=}")

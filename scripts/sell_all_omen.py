@@ -61,9 +61,9 @@ def sell_all(
         outcome = agent_market.outcomes[bet.outcomeIndex]
         current_token_balance = agent_market.get_token_balance(better_address, outcome)
 
-        if current_token_balance.amount <= 0:
+        if current_token_balance.amount <= OmenAgentMarket.get_tiny_bet_amount().amount:
             logger.info(
-                f"Skipping bet on {bet.fpmm.url} because the actual balance is {current_token_balance.amount}."
+                f"Skipping bet on {bet.fpmm.url} because the actual balance is unreasonably low {current_token_balance.amount}."
             )
             continue
 

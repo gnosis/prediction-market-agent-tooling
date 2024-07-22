@@ -4,7 +4,7 @@ import typer
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -37,7 +37,6 @@ def main(
         --closing-time "2024-12-31T23:59:59" \
         --category cryptocurrency \
         --initial-funds 0.01 \
-        --from-address your-address \
         --from-private-key your-private-key
     ```
 
@@ -46,8 +45,12 @@ def main(
     safe_address_checksum = (
         Web3.to_checksum_address(safe_address) if safe_address else None
     )
+    api_keys = APIKeys(
+        BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
+        SAFE_ADDRESS=safe_address_checksum,
+    )
     market_address = omen_create_market_tx(
-        api_keys=APIKeys(),
+        api_keys=api_keys,
         initial_funds=xdai_type(initial_funds),
         fee=fee,
         question=question,

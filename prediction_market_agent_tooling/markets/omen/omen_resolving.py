@@ -140,7 +140,7 @@ def finalize_markets(
         )
 
         if resolution is None:
-            logger.error(f"No resolution provided for {market.url=}")
+            logger.warning(f"No resolution provided for {market.url=}")
 
         elif resolution in (Resolution.YES, Resolution.NO):
             logger.info(f"Found resolution {resolution.value=} for {market.url=}")
@@ -236,9 +236,10 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
                 resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:
-                raise ValueError(
+                logger.warning(
                     f"Unknown market type {market_type} in replication resolving."
                 )
+                continue
 
         if resolution is not None:
             return resolution

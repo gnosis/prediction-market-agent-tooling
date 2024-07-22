@@ -32,9 +32,9 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    PRESAGIO_BASE_URL,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
+    PRESAGIO_BASE_URL,
     Condition,
     OmenBet,
     OmenMarket,

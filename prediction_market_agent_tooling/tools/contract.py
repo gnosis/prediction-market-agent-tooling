@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import typing as t
 from contextlib import contextmanager
@@ -156,6 +157,12 @@ class ContractERC20BaseClass(ContractBaseClass):
     Contract base class extended by ERC-20 standard methods.
     """
 
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "../abis/erc20.abi.json"
+        )
+    )
+
     def approve(
         self,
         api_keys: APIKeys,
@@ -227,6 +234,70 @@ class ContractERC20BaseClass(ContractBaseClass):
         return balance
 
 
+class ContractERC4626BaseClass(ContractBaseClass):
+    """
+    Contract base class extended by ERC-4626 standard methods.
+    """
+
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "../abis/erc4626.abi.json"
+        )
+    )
+
+    def asset(self, web3: Web3 | None = None) -> ChecksumAddress:
+        address = self.call("asset", web3=web3)
+        return Web3.to_checksum_address(address)
+
+    def approve(
+        self,
+        api_keys: APIKeys,
+        for_address: ChecksumAddress,
+        amount_wei: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="approve",
+            function_params=[
+                for_address,
+                amount_wei,
+            ],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+    def deposit(
+        self,
+        api_keys: APIKeys,
+        amount_wei: Wei,
+        receiver: ChecksumAddress,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="deposit",
+            function_params=[amount_wei, receiver],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
+        # In contrast to ERC-20, this returns `shares`, not the wrapped token amount.
+        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
+        return balance
+
+    def convertToShares(self, assets: Wei, web3: Web3 | None = None) -> Wei:
+        shares: Wei = self.call("convertToShares", [assets], web3=web3)
+        return shares
+
+    def convertToAssets(self, shares: Wei, web3: Web3 | None = None) -> Wei:
+        assets: Wei = self.call("convertToAssets", [shares], web3=web3)
+        return assets
+
+
 class ContractOnGnosisChain(ContractBaseClass):
     """
     Contract base class with Gnosis Chain configuration.
@@ -240,3 +311,37 @@ class ContractERC20OnGnosisChain(ContractERC20BaseClass, ContractOnGnosisChain):
     """
     ERC-20 standard base class with Gnosis Chain configuration.
     """
+
+
+class ContractERC4626OnGnosisChain(ContractERC4626BaseClass, ContractOnGnosisChain):
+    """
+    ERC-4626 standard base class with Gnosis Chain configuration.
+    """
+
+
+def init_erc4626_or_erc20_contract(
+    address: ChecksumAddress,
+) -> ContractERC20OnGnosisChain | ContractERC4626OnGnosisChain:
+    """
+    Checks if the given contract is ERC-20 or ERC-4626 and returns the appropriate class instance.
+    Throws an error if the contract is neither of them.
+    TODO: Is there a better way to check if the address adheres to some standard, than trying to call some random function we believe aren't present on the other standard?
+    """
+
+    erc4626 = ContractERC4626OnGnosisChain(address=address)
+
+    try:
+        erc4626.asset()
+        return erc4626
+    except Exception:
+        pass
+
+    erc20 = ContractERC20OnGnosisChain(address=address)
+
+    try:
+        erc20.balanceOf(address)
+        return erc20
+    except Exception:
+        pass
+
+    raise ValueError(f"Contract at {address} is neither ERC-20 nor ERC-4626.")

@@ -30,8 +30,12 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     pick_binary_market,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OmenCollateralTokenContract,
+    OMEN_DEFAULT_MARKET_FEE,
+    ContractERC20OnGnosisChain,
+    OmenFixedProductMarketMakerContract,
     OmenRealitioContract,
+    WrappedxDaiContract,
+    sDaiContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -113,7 +117,7 @@ def test_create_bet_withdraw_resolve_market(
     # The same goes about claiming bonded xDai on Realitio.
 
 
-def test_omen_create_market(
+def test_omen_create_market_wxdai(
     local_web3: Web3,
     test_keys: APIKeys,
 ) -> None:
@@ -128,8 +132,33 @@ def test_omen_create_market(
         auto_deposit=True,
         web3=local_web3,
     )
-
     assert is_contract(local_web3, market_address)
+    market_contract = OmenFixedProductMarketMakerContract(address=market_address)
+    assert (
+        market_contract.collateralToken(web3=local_web3)
+        == WrappedxDaiContract().address
+    )
+
+
+def test_omen_create_market_sdai(
+    local_web3: Web3,
+    test_keys: APIKeys,
+) -> None:
+    market_address = omen_create_market_tx(
+        api_keys=test_keys,
+        initial_funds=xdai_type(100),
+        question="Will GNO hit $1000 in 2 minutes from creation of this market?",
+        closing_time=utcnow() + timedelta(minutes=2),
+        category="cryptocurrency",
+        language="en",
+        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        auto_deposit=True,
+        collateral_token_address=sDaiContract().address,
+        web3=local_web3,
+    )
+    assert is_contract(local_web3, market_address)
+    market_contract = OmenFixedProductMarketMakerContract(address=market_address)
+    assert market_contract.collateralToken(web3=local_web3) == sDaiContract().address
 
 
 @pytest.mark.skip(reason=DEFAULT_REASON)
@@ -272,7 +301,10 @@ def test_place_bet_with_autodeposit(
 ) -> None:
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
-    collateral_token_contract = OmenCollateralTokenContract()
+    collateral_token_contract = market.get_contract().get_collateral_token_contract()
+    assert isinstance(
+        collateral_token_contract, ContractERC20OnGnosisChain
+    ), "TODO: Implement for the ERC-4626 case."
 
     # Start by moving all funds from wxdai to xdai
     if initial_balances.wxdai > 0:

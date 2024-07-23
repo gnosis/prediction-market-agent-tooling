@@ -24,8 +24,10 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
+    ContractERC4626BaseClass,
     ContractOnGnosisChain,
     abi_field_validator,
+    init_erc4626_or_erc20_contract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
@@ -291,9 +293,13 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         )
         return calculated_shares
 
-    def conditionalTokens(self, web3: Web3 | None = None) -> HexAddress:
+    def conditionalTokens(self, web3: Web3 | None = None) -> ChecksumAddress:
         address: HexAddress = self.call("conditionalTokens", web3=web3)
-        return address
+        return Web3.to_checksum_address(address)
+
+    def collateralToken(self, web3: Web3 | None = None) -> ChecksumAddress:
+        address: HexAddress = self.call("collateralToken", web3=web3)
+        return Web3.to_checksum_address(address)
 
     def buy(
         self,
@@ -380,21 +386,23 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         total_supply: Wei = self.call("totalSupply", web3=web3)
         return total_supply
 
+    def get_collateral_token_contract(
+        self, web3: Web3 | None = None
+    ) -> ContractERC20OnGnosisChain | ContractERC4626BaseClass:
+        return init_erc4626_or_erc20_contract(self.collateralToken(web3=web3))
+
 
 class WrappedxDaiContract(ContractERC20OnGnosisChain):
-    # File content taken from https://gnosisscan.io/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d#code.
-    abi: ABI = abi_field_validator(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "../../abis/wxdai.abi.json"
-        )
-    )
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
     )
 
 
-# Collateral token used on Omen is wrapped xDai.
-OmenCollateralTokenContract = WrappedxDaiContract
+class sDaiContract(ContractERC4626BaseClass):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0xaf204776c7245bF4147c2612BF6e5972Ee483701"
+    )
+
 
 OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
 
@@ -416,6 +424,7 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         condition_id: HexBytes,
         initial_funds_wei: Wei,
+        collateral_token_address: ChecksumAddress,
         fee: float = OMEN_DEFAULT_MARKET_FEE,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
@@ -431,7 +440,7 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
                     0, 1000000
                 ),  # See https://github.com/protofire/omen-exchange/blob/923756c3a9ac370f8e89af8193393a53531e2c0f/app/src/services/cpk/fns.ts#L942.
                 conditionalTokens=OmenConditionalTokenContract().address,
-                collateralToken=OmenCollateralTokenContract().address,
+                collateralToken=collateral_token_address,
                 conditionIds=[condition_id],
                 fee=fee_wei,
                 initialFunds=initial_funds_wei,
@@ -678,3 +687,14 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
             function_params=[market_address],
             web3=web3,
         )
+
+
+class CollateralTokenChoice(str, Enum):
+    wxdai = "wxdai"
+    sdai = "sdai"
+
+
+COLLATERAL_TOKEN_CHOICE_TO_ADDRESS = {
+    CollateralTokenChoice.wxdai: WrappedxDaiContract().address,
+    CollateralTokenChoice.sdai: sDaiContract().address,
+}

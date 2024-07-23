@@ -34,7 +34,7 @@ class Event(BaseModel):
     slug: str
     ticker: str
     title: str
-    series: str | None
+    series: t.Any | None = None
 
 
 class Event1(BaseModel):
@@ -46,7 +46,7 @@ class Market1(BaseModel):
     slug: str
     question: str
     image: str
-    volume: USDC | None
+    volume: USDC | None = None
     outcomes: list[str]
     outcomePrices: list[USDC]
     active: bool
@@ -54,7 +54,7 @@ class Market1(BaseModel):
     closed: bool
     orderPriceMinTickSize: USDC
     clobTokenIds: str
-    events: list[Event1]
+    events: list[Event1] | None = None
 
 
 class ResolutionData(BaseModel):
@@ -77,98 +77,98 @@ class Market(BaseModel):
     question: str
     conditionId: str
     slug: str
-    twitterCardImage: t.Any | None
+    twitterCardImage: t.Any | None = None
     resolutionSource: str
     endDate: datetime
-    category: t.Any | None
-    ammType: t.Any | None
+    category: t.Any | None = None
+    ammType: t.Any | None = None
     description: str
-    liquidity: str | None
+    liquidity: str | None = None
     startDate: datetime
     createdAt: datetime
-    xAxisValue: t.Any | None
-    yAxisValue: t.Any | None
-    denominationToken: t.Any | None
-    fee: str | None
-    lowerBound: t.Any | None
-    upperBound: t.Any | None
+    xAxisValue: t.Any | None = None
+    yAxisValue: t.Any | None = None
+    denominationToken: t.Any | None = None
+    fee: str | None = None
+    lowerBound: t.Any | None = None
+    upperBound: t.Any | None = None
     outcomes: list[str]
     image: str
     icon: str
-    imageOptimized: t.Any | None
-    iconOptimized: t.Any | None
+    imageOptimized: t.Any | None = None
+    iconOptimized: t.Any | None = None
     outcomePrices: list[USDC]
-    volume: USDC | None
+    volume: USDC | None = None
     active: bool
-    marketType: str | None
-    formatType: t.Any | None
-    lowerBoundDate: t.Any | None
-    upperBoundDate: t.Any | None
+    marketType: str | None = None
+    formatType: t.Any | None = None
+    lowerBoundDate: t.Any | None = None
+    upperBoundDate: t.Any | None = None
     closed: bool
     marketMakerAddress: HexAddress
-    closedTime: datetime | None
-    wideFormat: bool | None
+    closedTime: datetime | None = None
+    wideFormat: bool | None = None
     new: bool
-    sentDiscord: t.Any | None
-    mailchimpTag: t.Any | None
+    sentDiscord: t.Any | None = None
+    mailchimpTag: t.Any | None = None
     featured: bool
     submitted_by: str
-    subcategory: t.Any | None
-    categoryMailchimpTag: t.Any | None
+    subcategory: t.Any | None = None
+    categoryMailchimpTag: t.Any | None = None
     archived: bool
     resolvedBy: str
     restricted: bool
     groupItemTitle: str
     groupItemThreshold: str
     questionID: str
-    umaEndDate: t.Any | None
+    umaEndDate: t.Any | None = None
     enableOrderBook: bool
     orderPriceMinTickSize: float
     orderMinSize: int
-    umaResolutionStatus: t.Any | None
-    curationOrder: t.Any | None
-    volumeNum: USDC | None
-    liquidityNum: float | None
-    endDateIso: datetime | None
-    startDateIso: datetime | None
-    umaEndDateIso: datetime | None
-    commentsEnabled: bool | None
-    disqusThread: t.Any | None
-    gameStartTime: datetime | None
-    secondsDelay: int | None
+    umaResolutionStatus: t.Any | None = None
+    curationOrder: t.Any | None = None
+    volumeNum: USDC | None = None
+    liquidityNum: float | None = None
+    endDateIso: datetime | None = None
+    startDateIso: datetime | None = None
+    umaEndDateIso: datetime | None = None
+    commentsEnabled: bool | None = None
+    disqusThread: t.Any | None = None
+    gameStartTime: datetime | None = None
+    secondsDelay: int | None = None
     clobTokenIds: list[str]
-    liquidityAmm: float | None
-    liquidityClob: float | None
-    makerBaseFee: int | None
-    takerBaseFee: int | None
-    negRisk: t.Any | None
-    negRiskRequestID: t.Any | None
-    negRiskMarketID: t.Any | None
+    liquidityAmm: float | None = None
+    liquidityClob: float | None = None
+    makerBaseFee: int | None = None
+    takerBaseFee: int | None = None
+    negRisk: t.Any | None = None
+    negRiskRequestID: t.Any | None = None
+    negRiskMarketID: t.Any | None = None
     events: list[Event]
     markets: list[Market1]
-    lower_bound_date: t.Any | None
-    upper_bound_date: t.Any | None
-    market_type: str | None
+    lower_bound_date: t.Any | None = None
+    upper_bound_date: t.Any | None = None
+    market_type: str | None = None
     resolution_source: str
     end_date: str
-    amm_type: t.Any | None
-    x_axis_value: t.Any | None
-    y_axis_value: t.Any | None
-    denomination_token: t.Any | None
+    amm_type: t.Any | None = None
+    x_axis_value: t.Any | None = None
+    y_axis_value: t.Any | None = None
+    denomination_token: t.Any | None = None
     resolved_by: str
-    upper_bound: t.Any | None
-    lower_bound: t.Any | None
+    upper_bound: t.Any | None = None
+    lower_bound: t.Any | None = None
     created_at: str
-    updated_at: t.Any | None
-    closed_time: t.Any | None
-    wide_format: bool | None
-    volume_num: USDC | None
-    liquidity_num: USDC | None
+    updated_at: t.Any | None = None
+    closed_time: t.Any | None = None
+    wide_format: bool | None = None
+    volume_num: USDC | None = None
+    liquidity_num: USDC | None = None
     image_raw: str
     resolutionData: ResolutionData
 
     @field_validator("closedTime", mode="before")
-    def field_validator_closedTime(cls, v: str | None) -> str | None:
+    def field_validator_closedTime(cls, v: str | None = None) -> str | None:
         return v.replace("+00", "") if v else None
 
     @property
@@ -232,7 +232,7 @@ class PolymarketFullMarket(BaseModel):
     ticker: str
     slug: str
     title: str
-    subtitle: t.Any | None
+    subtitle: t.Any | None = None
     description: str
     commentCount: int
     resolutionSource: str
@@ -240,35 +240,35 @@ class PolymarketFullMarket(BaseModel):
     endDate: datetime
     image: str
     icon: str
-    featuredImage: str | None
+    featuredImage: str | None = None
     active: bool
     closed: bool
     archived: bool
     new: bool
     featured: bool
     restricted: bool
-    liquidity: USDC | None
-    volume: USDC | None
-    volume24hr: USDC | None
-    competitive: float | None
-    openInterest: int | None
-    sortBy: str | None
+    liquidity: USDC | None = None
+    volume: USDC | None = None
+    volume24hr: USDC | None = None
+    competitive: float | None = None
+    openInterest: int | None = None
+    sortBy: str | None = None
     createdAt: datetime
-    commentsEnabled: bool | None
-    disqusThread: t.Any | None
+    commentsEnabled: bool | None = None
+    disqusThread: t.Any | None = None
     updatedAt: datetime
     enableOrderBook: bool
-    liquidityAmm: float | None
-    liquidityClob: float | None
-    imageOptimized: ImageOptimized | None
-    iconOptimized: IconOptimized | None
-    featuredImageOptimized: str | None
-    negRisk: t.Any | None
-    negRiskMarketID: t.Any | None
-    negRiskFeeBips: t.Any | None
+    liquidityAmm: float | None = None
+    liquidityClob: float | None = None
+    imageOptimized: ImageOptimized | None = None
+    iconOptimized: IconOptimized | None = None
+    featuredImageOptimized: str | None = None
+    negRisk: t.Any | None = None
+    negRiskMarketID: t.Any | None = None
+    negRiskFeeBips: t.Any | None = None
     markets: list[Market]
     categories: list[Category] | None = None
-    series: t.Any | None
+    series: t.Any | None = None
     image_raw: str
 
     @property
@@ -355,12 +355,12 @@ class State(BaseModel):
     )  # It's none if you go to the website and it says "Oops...we didn't forecast this".
     dataUpdateCount: int
     dataUpdatedAt: int
-    error: t.Any | None
+    error: t.Any | None = None
     errorUpdateCount: int
     errorUpdatedAt: int
     fetchFailureCount: int
-    fetchFailureReason: t.Any | None
-    fetchMeta: t.Any | None
+    fetchFailureReason: t.Any | None = None
+    fetchMeta: t.Any | None = None
     isInvalidated: bool
     status: str
     fetchStatus: str
@@ -381,7 +381,7 @@ class PageProps(BaseModel):
     key: str
     dehydratedState: DehydratedState
     eslug: str
-    mslug: str | None
+    mslug: str | None = None
     isSingleMarket: bool
 
 

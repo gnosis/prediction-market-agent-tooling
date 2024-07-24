@@ -152,6 +152,22 @@ class ContractBaseClass(BaseModel):
         return Web3(Web3.HTTPProvider(cls.CHAIN_RPC_URL))
 
 
+class ContractProxyBaseClass(ContractBaseClass):
+    """
+    Contract base class for proxy contracts.
+    """
+
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "../abis/proxy.abi.json"
+        )
+    )
+
+    def implementation(self, web3: Web3 | None = None) -> ChecksumAddress:
+        address = self.call("implementation", web3=web3)
+        return Web3.to_checksum_address(address)
+
+
 class ContractERC20BaseClass(ContractBaseClass):
     """
     Contract base class extended by ERC-20 standard methods.
@@ -182,21 +198,6 @@ class ContractERC20BaseClass(ContractBaseClass):
             web3=web3,
         )
 
-    def deposit(
-        self,
-        api_keys: APIKeys,
-        amount_wei: Wei,
-        tx_params: t.Optional[TxParams] = None,
-        web3: Web3 | None = None,
-    ) -> TxReceipt:
-        return self.send_with_value(
-            api_keys=api_keys,
-            function_name="deposit",
-            amount_wei=amount_wei,
-            tx_params=tx_params,
-            web3=web3,
-        )
-
     def transferFrom(
         self,
         api_keys: APIKeys,
@@ -210,6 +211,39 @@ class ContractERC20BaseClass(ContractBaseClass):
             api_keys=api_keys,
             function_name="transferFrom",
             function_params=[sender, recipient, amount_wei],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
+        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
+        return balance
+
+
+class ContractWrapperERC20BaseClass(ContractERC20BaseClass):
+    """
+    ERC-20 standard base class extended for wrapper tokens.
+    Altough this is not a standard, it's seems to be a common pattern for wrapped tokens (at least it checks out for wxDai and wETH).
+    """
+
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/wrapper_erc20.abi.json",
+        )
+    )
+
+    def deposit(
+        self,
+        api_keys: APIKeys,
+        amount_wei: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send_with_value(
+            api_keys=api_keys,
+            function_name="deposit",
+            amount_wei=amount_wei,
             tx_params=tx_params,
             web3=web3,
         )
@@ -229,14 +263,10 @@ class ContractERC20BaseClass(ContractBaseClass):
             web3=web3,
         )
 
-    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
-        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
-        return balance
 
-
-class ContractERC4626BaseClass(ContractBaseClass):
+class ContractERC4626BaseClass(ContractERC20BaseClass):
     """
-    Contract base class extended by ERC-4626 standard methods.
+    Class for ERC-4626, which is a superset for ERC-20.
     """
 
     abi: ABI = abi_field_validator(
@@ -248,25 +278,6 @@ class ContractERC4626BaseClass(ContractBaseClass):
     def asset(self, web3: Web3 | None = None) -> ChecksumAddress:
         address = self.call("asset", web3=web3)
         return Web3.to_checksum_address(address)
-
-    def approve(
-        self,
-        api_keys: APIKeys,
-        for_address: ChecksumAddress,
-        amount_wei: Wei,
-        tx_params: t.Optional[TxParams] = None,
-        web3: Web3 | None = None,
-    ) -> TxReceipt:
-        return self.send(
-            api_keys=api_keys,
-            function_name="approve",
-            function_params=[
-                for_address,
-                amount_wei,
-            ],
-            tx_params=tx_params,
-            web3=web3,
-        )
 
     def deposit(
         self,
@@ -283,11 +294,6 @@ class ContractERC4626BaseClass(ContractBaseClass):
             tx_params=tx_params,
             web3=web3,
         )
-
-    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
-        # In contrast to ERC-20, this returns `shares`, not the wrapped token amount.
-        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
-        return balance
 
     def convertToShares(self, assets: Wei, web3: Web3 | None = None) -> Wei:
         shares: Wei = self.call("convertToShares", [assets], web3=web3)
@@ -307,9 +313,23 @@ class ContractOnGnosisChain(ContractBaseClass):
     CHAIN_RPC_URL = GNOSIS_RPC_URL
 
 
+class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):
+    """
+    Proxy contract base class with Gnosis Chain configuration.
+    """
+
+
 class ContractERC20OnGnosisChain(ContractERC20BaseClass, ContractOnGnosisChain):
     """
     ERC-20 standard base class with Gnosis Chain configuration.
+    """
+
+
+class ContractWrapperERC20OnGnosisChain(
+    ContractWrapperERC20BaseClass, ContractOnGnosisChain
+):
+    """
+    Wrapper ERC-20 standard base class with Gnosis Chain configuration.
     """
 
 
@@ -319,29 +339,70 @@ class ContractERC4626OnGnosisChain(ContractERC4626BaseClass, ContractOnGnosisCha
     """
 
 
-def init_erc4626_or_erc20_contract(
+def contract_implements_function(
+    contract_address: ChecksumAddress,
+    function_name: str,
+    web3: Web3,
+    function_arg_types: list[str] | None = None,
+    look_for_proxy_contract: bool = True,
+) -> bool:
+    function_signature = f"{function_name}({','.join(function_arg_types or [])})"
+    function_hash = web3.keccak(text=function_signature)[0:4].hex()[2:]
+    contract_code = web3.eth.get_code(contract_address).hex()
+    implements = function_hash in contract_code
+    if (
+        not implements
+        and look_for_proxy_contract
+        and contract_implements_function(
+            contract_address, "implementation", web3, look_for_proxy_contract=False
+        )
+    ):
+        implementation_address = ContractProxyOnGnosisChain(
+            address=contract_address
+        ).implementation()
+        implements = contract_implements_function(
+            implementation_address,
+            function_name=function_name,
+            web3=web3,
+            function_arg_types=function_arg_types,
+            look_for_proxy_contract=False,
+        )
+    return implements
+
+
+def init_erc4626_or_wrappererc20_or_erc20_contract(
     address: ChecksumAddress,
-) -> ContractERC20OnGnosisChain | ContractERC4626OnGnosisChain:
+) -> (
+    ContractERC20OnGnosisChain
+    | ContractERC4626OnGnosisChain
+    | ContractWrapperERC20OnGnosisChain
+):
     """
     Checks if the given contract is ERC-20 or ERC-4626 and returns the appropriate class instance.
     Throws an error if the contract is neither of them.
     TODO: Is there a better way to check if the address adheres to some standard, than trying to call some random function we believe aren't present on the other standard?
     """
+    gnosis_web3 = ContractOnGnosisChain.get_web3()
 
-    erc4626 = ContractERC4626OnGnosisChain(address=address)
+    if contract_implements_function(address, "asset", web3=gnosis_web3):
+        return ContractERC4626OnGnosisChain(address=address)
 
-    try:
-        erc4626.asset()
-        return erc4626
-    except Exception:
-        pass
+    elif contract_implements_function(
+        address,
+        "deposit",
+        web3=gnosis_web3,
+    ):
+        return ContractWrapperERC20OnGnosisChain(address=address)
 
-    erc20 = ContractERC20OnGnosisChain(address=address)
+    elif contract_implements_function(
+        address,
+        "balanceOf",
+        web3=gnosis_web3,
+        function_arg_types=["address"],
+    ):
+        return ContractERC20OnGnosisChain(address=address)
 
-    try:
-        erc20.balanceOf(address)
-        return erc20
-    except Exception:
-        pass
-
-    raise ValueError(f"Contract at {address} is neither ERC-20 nor ERC-4626.")
+    else:
+        raise ValueError(
+            f"Contract at {address} on Gnosis Chain is neither WrapperERC-20, ERC-20 nor ERC-4626."
+        )

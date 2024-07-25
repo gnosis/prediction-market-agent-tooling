@@ -59,6 +59,7 @@ from prediction_market_agent_tooling.tools.contract import (
     asset_or_shares,
     auto_deposit_collateral_token,
     init_erc4626_or_wrappererc20_or_erc20_contract,
+    to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import (
@@ -710,8 +711,8 @@ def omen_create_market_tx(
 
     realitio_contract = OmenRealitioContract()
     conditional_token_contract = OmenConditionalTokenContract()
-    collateral_token_contract = init_erc4626_or_wrappererc20_or_erc20_contract(
-        collateral_token_address, web3
+    collateral_token_contract = to_gnosis_chain_contract(
+        init_erc4626_or_wrappererc20_or_erc20_contract(collateral_token_address, web3)
     )
     factory_contract = OmenFixedProductMarketMakerFactoryContract()
     oracle_contract = OmenOracleContract()

@@ -303,6 +303,39 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         assets: Wei = self.call("convertToAssets", [shares], web3=web3)
         return assets
 
+    def get_asset_token_contract(
+        self, web3: Web3 | None = None
+    ) -> ContractERC20BaseClass | ContractDepositableWrapperERC20BaseClass:
+        web3 = web3 or self.get_web3()
+        contract = init_erc4626_or_wrappererc20_or_erc20_contract(
+            self.asset(), web3=web3
+        )
+        assert not isinstance(
+            contract, ContractERC4626OnGnosisChain
+        ), "Asset token should be either Depositable Wrapper ERC-20 or ERC-20."  # Shrinking down possible types.
+        return contract
+
+    def get_asset_token_balance(
+        self, for_address: ChecksumAddress, web3: Web3 | None = None
+    ) -> Wei:
+        asset_token_contract = self.get_asset_token_contract(web3=web3)
+        return asset_token_contract.balanceOf(for_address, web3=web3)
+
+    def deposit_asset_token(
+        self, asset_value: Wei, api_keys: APIKeys, web3: Web3 | None = None
+    ) -> TxReceipt:
+        for_address = api_keys.bet_from_address
+        web3 = web3 or self.get_web3()
+
+        asset_token_contract = self.get_asset_token_contract(web3=web3)
+        # Approve vault to withdraw the erc-20 token from the user.
+        asset_token_contract.approve(api_keys, self.address, asset_value, web3=web3)
+
+        # Deposit asset token (erc20) and we will receive shares in this vault.
+        receipt = self.deposit(api_keys, asset_value, for_address, web3=web3)
+
+        return receipt
+
 
 class ContractOnGnosisChain(ContractBaseClass):
     """
@@ -329,7 +362,7 @@ class ContractDepositableWrapperERC20OnGnosisChain(
     ContractDepositableWrapperERC20BaseClass, ContractOnGnosisChain
 ):
     """
-    Wrapper ERC-20 standard base class with Gnosis Chain configuration.
+    Depositable Wrapper ERC-20 standard base class with Gnosis Chain configuration.
     """
 
 
@@ -372,37 +405,131 @@ def contract_implements_function(
 
 def init_erc4626_or_wrappererc20_or_erc20_contract(
     address: ChecksumAddress,
+    web3: Web3,
 ) -> (
-    ContractERC20OnGnosisChain
-    | ContractERC4626OnGnosisChain
-    | ContractDepositableWrapperERC20OnGnosisChain
+    ContractERC20BaseClass
+    | ContractERC4626BaseClass
+    | ContractDepositableWrapperERC20BaseClass
 ):
     """
     Checks if the given contract is ERC-20 or ERC-4626 and returns the appropriate class instance.
     Throws an error if the contract is neither of them.
     TODO: Is there a better way to check if the address adheres to some standard, than trying to call some random function we believe aren't present on the other standard?
     """
-    gnosis_web3 = ContractOnGnosisChain.get_web3()
-
-    if contract_implements_function(address, "asset", web3=gnosis_web3):
-        return ContractERC4626OnGnosisChain(address=address)
+    if contract_implements_function(address, "asset", web3=web3):
+        return ContractERC4626BaseClass(address=address)
 
     elif contract_implements_function(
         address,
         "deposit",
-        web3=gnosis_web3,
+        web3=web3,
     ):
-        return ContractDepositableWrapperERC20OnGnosisChain(address=address)
+        return ContractDepositableWrapperERC20BaseClass(address=address)
 
     elif contract_implements_function(
         address,
         "balanceOf",
-        web3=gnosis_web3,
+        web3=web3,
         function_arg_types=["address"],
     ):
-        return ContractERC20OnGnosisChain(address=address)
+        return ContractERC20BaseClass(address=address)
 
     else:
         raise ValueError(
             f"Contract at {address} on Gnosis Chain is neither WrapperERC-20, ERC-20 nor ERC-4626."
         )
+
+
+def auto_deposit_collateral_token(
+    collateral_token_contract: (
+        ContractERC20BaseClass
+        | ContractERC4626BaseClass
+        | ContractDepositableWrapperERC20BaseClass
+    ),
+    amount_wei: Wei,
+    api_keys: APIKeys,
+    web3: Web3 | None,
+) -> None:
+    for_address = api_keys.bet_from_address
+    # This might be in shares, if it's an erc-4626 token.
+    collateral_token_balance = collateral_token_contract.balanceOf(
+        for_address=for_address, web3=web3
+    )
+
+    if isinstance(collateral_token_contract, ContractERC4626BaseClass):
+        # In the more complex case, we need to deposit into the saving token, out of the erc-20 token.
+        # We need to compare with shares, because if erc-4626 is used, the liquidity in market will be in shares as well.
+        if collateral_token_balance < collateral_token_contract.convertToShares(
+            amount_wei
+        ):
+            asset_token_contract = collateral_token_contract.get_asset_token_contract(
+                web3=web3
+            )
+
+            # If the asset token is Depositable Wrapper ERC-20, we can deposit it, in case we don't have enough.
+            if (
+                collateral_token_contract.get_asset_token_balance(for_address, web3)
+                < amount_wei
+            ):
+                if isinstance(
+                    asset_token_contract, ContractDepositableWrapperERC20BaseClass
+                ):
+                    asset_token_contract.deposit(api_keys, amount_wei, web3=web3)
+                else:
+                    raise ValueError(
+                        f"Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
+                    )
+
+            collateral_token_contract.deposit_asset_token(amount_wei, api_keys, web3)
+
+    elif isinstance(
+        collateral_token_contract, ContractDepositableWrapperERC20BaseClass
+    ):
+        # If the collateral token is Depositable Wrapper ERC-20, it's a simple case where we can just deposit it, if needed.
+        if collateral_token_balance < amount_wei:
+            collateral_token_contract.deposit(api_keys, amount_wei, web3=web3)
+
+    elif isinstance(collateral_token_contract, ContractERC20BaseClass):
+        if collateral_token_balance < amount_wei:
+            raise ValueError(
+                f"Not enough of the collateral token, but it's not a wrapper token that we can deposit automatically."
+            )
+
+    else:
+        raise RuntimeError("Bug in our logic! :(")
+
+
+def asset_or_shares(
+    collateral_token_contract: (
+        ContractERC20BaseClass
+        | ContractERC4626BaseClass
+        | ContractDepositableWrapperERC20BaseClass
+    ),
+    amount_wei: Wei,
+) -> Wei:
+    return (
+        collateral_token_contract.convertToShares(amount_wei)
+        if isinstance(collateral_token_contract, ContractERC4626BaseClass)
+        else amount_wei
+    )
+
+
+def to_gnosis_chain_contract(
+    contract: (
+        ContractDepositableWrapperERC20BaseClass
+        | ContractERC4626BaseClass
+        | ContractERC20BaseClass
+    ),
+) -> (
+    ContractDepositableWrapperERC20OnGnosisChain
+    | ContractERC4626OnGnosisChain
+    | ContractERC20OnGnosisChain
+):
+    if isinstance(contract, ContractERC4626BaseClass):
+        return ContractERC4626OnGnosisChain(address=contract.address)
+    elif isinstance(contract, ContractDepositableWrapperERC20BaseClass):
+        return ContractDepositableWrapperERC20OnGnosisChain(address=contract.address)
+    elif isinstance(contract, ContractERC20BaseClass):
+        return ContractERC20OnGnosisChain(address=contract.address)
+    else:
+        raise ValueError("Unsupported contract type")

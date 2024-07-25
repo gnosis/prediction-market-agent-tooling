@@ -44,8 +44,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
     ContractDepositableWrapperERC20OnGnosisChain,
-    ContractERC20OnGnosisChain,
-    ContractERC4626OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -58,6 +56,8 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
+    asset_or_shares,
+    auto_deposit_collateral_token,
     init_erc4626_or_wrappererc20_or_erc20_contract,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -703,12 +703,15 @@ def omen_create_market_tx(
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
+    web3 = (
+        web3 or OmenFixedProductMarketMakerFactoryContract.get_web3()
+    )  # Default to Gnosis web3.
     initial_funds_wei = xdai_to_wei(initial_funds)
 
     realitio_contract = OmenRealitioContract()
     conditional_token_contract = OmenConditionalTokenContract()
     collateral_token_contract = init_erc4626_or_wrappererc20_or_erc20_contract(
-        collateral_token_address
+        collateral_token_address, web3
     )
     factory_contract = OmenFixedProductMarketMakerFactoryContract()
     oracle_contract = OmenOracleContract()
@@ -1084,105 +1087,3 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
     logger.info(
         f"Withdrew {need_to_withdraw} wxDai to keep the balance above the minimum required balance {min_required_balance}."
     )
-
-
-def asset_or_shares(
-    collateral_token_contract: (
-        ContractERC20OnGnosisChain
-        | ContractERC4626OnGnosisChain
-        | ContractDepositableWrapperERC20OnGnosisChain
-    ),
-    amount_wei: Wei,
-) -> Wei:
-    return (
-        collateral_token_contract.convertToShares(amount_wei)
-        if isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
-        else amount_wei
-    )
-
-
-def auto_deposit_collateral_token(
-    collateral_token_contract: (
-        ContractERC20OnGnosisChain
-        | ContractERC4626OnGnosisChain
-        | ContractDepositableWrapperERC20OnGnosisChain
-    ),
-    amount_wei: Wei,
-    api_keys: APIKeys,
-    web3: Web3 | None,
-) -> None:
-    from_address = api_keys.bet_from_address
-
-    # If the collateral token is ERC-4626, we need to get the asset token contract as well,
-    # as the collateral token is a vault for the ERC-20 asset token.
-    asset_token_contract = (
-        init_erc4626_or_wrappererc20_or_erc20_contract(
-            collateral_token_contract.asset()
-        )
-        if isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
-        else None
-    )
-    assert not isinstance(
-        asset_token_contract, ContractERC4626OnGnosisChain
-    ), "Asset token should be either Wrapper ERC-20 or ERC-20."  # Shrinking down possible types.
-
-    # Approve vault to withdraw the erc-20 token from the user.
-    if asset_token_contract is not None:
-        asset_token_contract.approve(
-            api_keys, collateral_token_contract.address, amount_wei, web3=web3
-        )
-
-    # Deposits, this can be skipped, if we know we already have enough collateral tokens.
-    # Note: Collateral balance will be in shares, if the collateral is erc-4626.
-    collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=from_address, web3=web3
-    )
-    # Asset token balance is the actual erc-20 token, if the collateral is erc-4626.
-    asset_token_balance = (
-        asset_token_contract.balanceOf(for_address=from_address, web3=web3)
-        if asset_token_contract is not None
-        else None
-    )
-
-    if (
-        isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
-        and asset_token_contract is not None
-        and asset_token_balance is not None
-    ):
-        # In the more complex case, we need to deposit into the saving token, out of the erc-20 token.
-        # We need to compare with `initial_funds_wei_in_shares`, because if erc-4626 is used, the liquidity in market will be in shares as well.
-        if collateral_token_balance < collateral_token_contract.convertToShares(
-            amount_wei
-        ):
-            # If the asset token is Wrapper ERC-20, we can deposit it, in case we don't have enough.
-            if asset_token_balance < amount_wei:
-                if isinstance(
-                    asset_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-                ):
-                    asset_token_contract.deposit(api_keys, amount_wei, web3=web3)
-                else:
-                    raise ValueError(
-                        f"Not enough of the asset token, but it's not a wrapper token that we can deposit automatically."
-                    )
-
-            # Deposit the erc-20 token to the vault.
-            # We deposit erc-20 `initial_funds_wei`, but then we will have around `initial_funds_wei_in_shares` in the vault.
-            collateral_token_contract.deposit(
-                api_keys, amount_wei, from_address, web3=web3
-            )
-
-    elif isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ):
-        # If the collateral token is Wrapping ERC-20, it's a simple case where we can just deposit it, if needed.
-        if collateral_token_balance < amount_wei:
-            collateral_token_contract.deposit(api_keys, amount_wei, web3=web3)
-
-    elif isinstance(collateral_token_contract, ContractERC20OnGnosisChain):
-        if collateral_token_balance < amount_wei:
-            raise ValueError(
-                f"Not enough of the collateral token, but it's not a wrapper token that we can deposit automatically."
-            )
-
-    else:
-        raise RuntimeError("Bug in our logic! :(")

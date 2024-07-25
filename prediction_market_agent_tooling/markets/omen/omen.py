@@ -43,7 +43,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
-    ContractDepositableWrapperERC20OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -58,7 +57,7 @@ from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
     asset_or_shares,
     auto_deposit_collateral_token,
-    init_erc4626_or_wrappererc20_or_erc20_contract,
+    init_collateral_contract,
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -547,9 +546,6 @@ def omen_buy_outcome_tx(
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
-    assert isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
@@ -625,9 +621,6 @@ def omen_sell_outcome_tx(
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
-    assert isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Verify, that markets uses conditional tokens that we expect.
     if (
@@ -712,7 +705,7 @@ def omen_create_market_tx(
     realitio_contract = OmenRealitioContract()
     conditional_token_contract = OmenConditionalTokenContract()
     collateral_token_contract = to_gnosis_chain_contract(
-        init_erc4626_or_wrappererc20_or_erc20_contract(collateral_token_address, web3)
+        init_collateral_contract(collateral_token_address, web3)
     )
     factory_contract = OmenFixedProductMarketMakerFactoryContract()
     oracle_contract = OmenOracleContract()
@@ -729,7 +722,8 @@ def omen_create_market_tx(
             "The oracle's conditional tokens address is not the same as we are using."
         )
 
-    # If auto deposit is enabled.
+    # If auto deposit is enabled. Note - we only support collateral tokens which have the deposit method (see
+    # AbstractCollateral). This DOES NOT include erc20 tokens.
     if auto_deposit:
         auto_deposit_collateral_token(
             collateral_token_contract=collateral_token_contract,
@@ -813,9 +807,6 @@ def omen_fund_market_tx(
     from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
-    assert isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.

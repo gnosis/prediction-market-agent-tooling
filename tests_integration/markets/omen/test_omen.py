@@ -20,7 +20,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
-    OMEN_DEFAULT_MARKET_FEE,
     OmenAgentMarket,
     binary_omen_buy_outcome_tx,
     omen_create_market_tx,
@@ -31,7 +30,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
-    ContractDepositableWrapperERC20OnGnosisChain,
     OmenFixedProductMarketMakerContract,
     OmenRealitioContract,
     WrappedxDaiContract,
@@ -302,9 +300,6 @@ def test_place_bet_with_autodeposit(
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     collateral_token_contract = market.get_contract().get_collateral_token_contract()
-    assert isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Start by moving all funds from wxdai to xdai
     if initial_balances.wxdai > 0:

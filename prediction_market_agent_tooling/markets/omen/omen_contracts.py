@@ -23,13 +23,13 @@ from prediction_market_agent_tooling.gtypes import (
     xdai_type,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    AbstractCollateral,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
     ContractOnGnosisChain,
     abi_field_validator,
     init_collateral_contract,
     to_gnosis_chain_contract,
-    AbstractCollateral,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,

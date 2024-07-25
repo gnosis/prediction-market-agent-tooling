@@ -23,10 +23,10 @@ from prediction_market_agent_tooling.gtypes import (
     xdai_type,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
     ContractOnGnosisChain,
-    ContractWrapperERC20OnGnosisChain,
     abi_field_validator,
     init_erc4626_or_wrappererc20_or_erc20_contract,
 )
@@ -392,14 +392,14 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
     ) -> (
         ContractERC20OnGnosisChain
         | ContractERC4626OnGnosisChain
-        | ContractWrapperERC20OnGnosisChain
+        | ContractDepositableWrapperERC20OnGnosisChain
     ):
         return init_erc4626_or_wrappererc20_or_erc20_contract(
             self.collateralToken(web3=web3)
         )
 
 
-class WrappedxDaiContract(ContractWrapperERC20OnGnosisChain):
+class WrappedxDaiContract(ContractDepositableWrapperERC20OnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
     )

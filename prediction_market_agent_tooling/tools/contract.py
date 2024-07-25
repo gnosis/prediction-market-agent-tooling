@@ -220,7 +220,7 @@ class ContractERC20BaseClass(ContractBaseClass):
         return balance
 
 
-class ContractWrapperERC20BaseClass(ContractERC20BaseClass):
+class ContractDepositableWrapperERC20BaseClass(ContractERC20BaseClass):
     """
     ERC-20 standard base class extended for wrapper tokens.
     Altough this is not a standard, it's seems to be a common pattern for wrapped tokens (at least it checks out for wxDai and wETH).
@@ -229,7 +229,7 @@ class ContractWrapperERC20BaseClass(ContractERC20BaseClass):
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../abis/wrapper_erc20.abi.json",
+            "../abis/depositablewrapper_erc20.abi.json",
         )
     )
 
@@ -325,8 +325,8 @@ class ContractERC20OnGnosisChain(ContractERC20BaseClass, ContractOnGnosisChain):
     """
 
 
-class ContractWrapperERC20OnGnosisChain(
-    ContractWrapperERC20BaseClass, ContractOnGnosisChain
+class ContractDepositableWrapperERC20OnGnosisChain(
+    ContractDepositableWrapperERC20BaseClass, ContractOnGnosisChain
 ):
     """
     Wrapper ERC-20 standard base class with Gnosis Chain configuration.
@@ -375,7 +375,7 @@ def init_erc4626_or_wrappererc20_or_erc20_contract(
 ) -> (
     ContractERC20OnGnosisChain
     | ContractERC4626OnGnosisChain
-    | ContractWrapperERC20OnGnosisChain
+    | ContractDepositableWrapperERC20OnGnosisChain
 ):
     """
     Checks if the given contract is ERC-20 or ERC-4626 and returns the appropriate class instance.
@@ -392,7 +392,7 @@ def init_erc4626_or_wrappererc20_or_erc20_contract(
         "deposit",
         web3=gnosis_web3,
     ):
-        return ContractWrapperERC20OnGnosisChain(address=address)
+        return ContractDepositableWrapperERC20OnGnosisChain(address=address)
 
     elif contract_implements_function(
         address,

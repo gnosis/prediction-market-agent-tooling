@@ -43,9 +43,9 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
+    ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
-    ContractWrapperERC20OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -547,7 +547,7 @@ def omen_buy_outcome_tx(
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
     assert isinstance(
-        collateral_token_contract, ContractWrapperERC20OnGnosisChain
+        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
     ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Get the index of the outcome we want to buy.
@@ -625,7 +625,7 @@ def omen_sell_outcome_tx(
     conditional_token_contract = OmenConditionalTokenContract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
     assert isinstance(
-        collateral_token_contract, ContractWrapperERC20OnGnosisChain
+        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
     ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Verify, that markets uses conditional tokens that we expect.
@@ -703,7 +703,6 @@ def omen_create_market_tx(
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
-    from_address = api_keys.bet_from_address
     initial_funds_wei = xdai_to_wei(initial_funds)
 
     realitio_contract = OmenRealitioContract()
@@ -713,25 +712,6 @@ def omen_create_market_tx(
     )
     factory_contract = OmenFixedProductMarketMakerFactoryContract()
     oracle_contract = OmenOracleContract()
-
-    # If the collateral token is ERC-4626, we need to get the asset token contract as well,
-    # as the collateral token is a vault for the ERC-20 asset token.
-    asset_token_contract = (
-        init_erc4626_or_wrappererc20_or_erc20_contract(
-            collateral_token_contract.asset()
-        )
-        if isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
-        else None
-    )
-    assert not isinstance(
-        asset_token_contract, ContractERC4626OnGnosisChain
-    ), "Asset token should be either Wrapper ERC-20 or ERC-20."  # Shrinking down possible types.
-
-    # Approve vault to withdraw the erc-20 token from the user.
-    if asset_token_contract is not None:
-        asset_token_contract.approve(
-            api_keys, collateral_token_contract.address, initial_funds_wei, web3=web3
-        )
 
     # These checks were originally maded somewhere in the middle of the process, but it's safer to do them right away.
     # Double check that the oracle's realitio address is the same as we are using.
@@ -745,69 +725,14 @@ def omen_create_market_tx(
             "The oracle's conditional tokens address is not the same as we are using."
         )
 
-    # Deposits, this can be skipped, if we know we already have enough collateral tokens.
-    # Note: Collateral balance will be in shares, if the collateral is erc-4626.
-    collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=from_address, web3=web3
-    )
-    # Asset token balance is the actual erc-20 token, if the collateral is erc-4626.
-    asset_token_balance = (
-        asset_token_contract.balanceOf(for_address=from_address, web3=web3)
-        if asset_token_contract is not None
-        else None
-    )
-    # If we work with erc-4626, convert the initial funds argument to shares and allow some small slippage.
-    initial_funds_wei_in_shares = (
-        wei_type(collateral_token_contract.convertToShares(initial_funds_wei) * 0.999)
-        if isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
-        else None
-    )
-
     # If auto deposit is enabled.
     if auto_deposit:
-        if (
-            isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
-            and asset_token_contract is not None
-            and asset_token_balance is not None
-            and initial_funds_wei_in_shares is not None
-        ):
-            # In the more complex case, we need to deposit into the saving token, out of the erc-20 token.
-            # We need to compare with `initial_funds_wei_in_shares`, because if erc-4626 is used, the liquidity in market will be in shares as well.
-            if collateral_token_balance < initial_funds_wei_in_shares:
-                # If the asset token is Wrapper ERC-20, we can deposit it, in case we don't have enough.
-                if asset_token_balance < initial_funds_wei:
-                    if isinstance(
-                        asset_token_contract, ContractWrapperERC20OnGnosisChain
-                    ):
-                        asset_token_contract.deposit(
-                            api_keys, initial_funds_wei, web3=web3
-                        )
-                    else:
-                        raise ValueError(
-                            f"Not enough of the asset token, but it's not a wrapper token that we can deposit automatically."
-                        )
-
-                # Deposit the erc-20 token to the vault.
-                # We deposit erc-20 `initial_funds_wei`, but then we will have around `initial_funds_wei_in_shares` in the vault.
-                collateral_token_contract.deposit(
-                    api_keys, initial_funds_wei, from_address, web3=web3
-                )
-
-        elif isinstance(collateral_token_contract, ContractWrapperERC20OnGnosisChain):
-            # If the collateral token is Wrapping ERC-20, it's a simple case where we can just deposit it, if needed.
-            if collateral_token_balance < initial_funds_wei:
-                collateral_token_contract.deposit(
-                    api_keys, initial_funds_wei, web3=web3
-                )
-
-        elif isinstance(collateral_token_contract, ContractERC20OnGnosisChain):
-            if collateral_token_balance < initial_funds_wei:
-                raise ValueError(
-                    f"Not enough of the collateral token, but it's not a wrapper token that we can deposit automatically."
-                )
-
-        else:
-            raise RuntimeError("Bug in our logic! :(")
+        auto_deposit_collateral_token(
+            collateral_token_contract=collateral_token_contract,
+            api_keys=api_keys,
+            amount_wei=initial_funds_wei,
+            web3=web3,
+        )
 
     # Create the question on Realitio.
     question_id = realitio_contract.askQuestion(
@@ -840,10 +765,9 @@ def omen_create_market_tx(
     # Use shares as the initial funds, if the collateral is erc-4626.
     # We need to do this, because for example for 1 xDai in erc-20 token, we could receive <1 shares in the vault,
     # and then, providing liquidity would fail, because we would not have enough shares.
-    initial_funds_in_asset_or_shares = (
-        initial_funds_wei_in_shares
-        if initial_funds_wei_in_shares is not None
-        else initial_funds_wei
+    initial_funds_in_asset_or_shares = wei_type(
+        asset_or_shares(collateral_token_contract, initial_funds_wei)
+        * 0.999  # Allow some slippage.
     )
 
     # Approve the market maker to withdraw our collateral token.
@@ -886,7 +810,7 @@ def omen_fund_market_tx(
     market_contract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
     assert isinstance(
-        collateral_token_contract, ContractWrapperERC20OnGnosisChain
+        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
     ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Deposit xDai to the collateral token,
@@ -1160,3 +1084,105 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
     logger.info(
         f"Withdrew {need_to_withdraw} wxDai to keep the balance above the minimum required balance {min_required_balance}."
     )
+
+
+def asset_or_shares(
+    collateral_token_contract: (
+        ContractERC20OnGnosisChain
+        | ContractERC4626OnGnosisChain
+        | ContractDepositableWrapperERC20OnGnosisChain
+    ),
+    amount_wei: Wei,
+) -> Wei:
+    return (
+        collateral_token_contract.convertToShares(amount_wei)
+        if isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
+        else amount_wei
+    )
+
+
+def auto_deposit_collateral_token(
+    collateral_token_contract: (
+        ContractERC20OnGnosisChain
+        | ContractERC4626OnGnosisChain
+        | ContractDepositableWrapperERC20OnGnosisChain
+    ),
+    amount_wei: Wei,
+    api_keys: APIKeys,
+    web3: Web3 | None,
+) -> None:
+    from_address = api_keys.bet_from_address
+
+    # If the collateral token is ERC-4626, we need to get the asset token contract as well,
+    # as the collateral token is a vault for the ERC-20 asset token.
+    asset_token_contract = (
+        init_erc4626_or_wrappererc20_or_erc20_contract(
+            collateral_token_contract.asset()
+        )
+        if isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
+        else None
+    )
+    assert not isinstance(
+        asset_token_contract, ContractERC4626OnGnosisChain
+    ), "Asset token should be either Wrapper ERC-20 or ERC-20."  # Shrinking down possible types.
+
+    # Approve vault to withdraw the erc-20 token from the user.
+    if asset_token_contract is not None:
+        asset_token_contract.approve(
+            api_keys, collateral_token_contract.address, amount_wei, web3=web3
+        )
+
+    # Deposits, this can be skipped, if we know we already have enough collateral tokens.
+    # Note: Collateral balance will be in shares, if the collateral is erc-4626.
+    collateral_token_balance = collateral_token_contract.balanceOf(
+        for_address=from_address, web3=web3
+    )
+    # Asset token balance is the actual erc-20 token, if the collateral is erc-4626.
+    asset_token_balance = (
+        asset_token_contract.balanceOf(for_address=from_address, web3=web3)
+        if asset_token_contract is not None
+        else None
+    )
+
+    if (
+        isinstance(collateral_token_contract, ContractERC4626OnGnosisChain)
+        and asset_token_contract is not None
+        and asset_token_balance is not None
+    ):
+        # In the more complex case, we need to deposit into the saving token, out of the erc-20 token.
+        # We need to compare with `initial_funds_wei_in_shares`, because if erc-4626 is used, the liquidity in market will be in shares as well.
+        if collateral_token_balance < collateral_token_contract.convertToShares(
+            amount_wei
+        ):
+            # If the asset token is Wrapper ERC-20, we can deposit it, in case we don't have enough.
+            if asset_token_balance < amount_wei:
+                if isinstance(
+                    asset_token_contract, ContractDepositableWrapperERC20OnGnosisChain
+                ):
+                    asset_token_contract.deposit(api_keys, amount_wei, web3=web3)
+                else:
+                    raise ValueError(
+                        f"Not enough of the asset token, but it's not a wrapper token that we can deposit automatically."
+                    )
+
+            # Deposit the erc-20 token to the vault.
+            # We deposit erc-20 `initial_funds_wei`, but then we will have around `initial_funds_wei_in_shares` in the vault.
+            collateral_token_contract.deposit(
+                api_keys, amount_wei, from_address, web3=web3
+            )
+
+    elif isinstance(
+        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
+    ):
+        # If the collateral token is Wrapping ERC-20, it's a simple case where we can just deposit it, if needed.
+        if collateral_token_balance < amount_wei:
+            collateral_token_contract.deposit(api_keys, amount_wei, web3=web3)
+
+    elif isinstance(collateral_token_contract, ContractERC20OnGnosisChain):
+        if collateral_token_balance < amount_wei:
+            raise ValueError(
+                f"Not enough of the collateral token, but it's not a wrapper token that we can deposit automatically."
+            )
+
+    else:
+        raise RuntimeError("Bug in our logic! :(")

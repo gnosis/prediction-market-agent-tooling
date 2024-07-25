@@ -7,9 +7,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     sDaiContract,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
-    ContractWrapperERC20OnGnosisChain,
     contract_implements_function,
     init_erc4626_or_wrappererc20_or_erc20_contract,
 )
@@ -27,7 +27,7 @@ def test_init_erc4626_erc20_contract_return_wrappererc20_instance() -> None:
         WrappedxDaiContract().address
     )
     assert isinstance(
-        contract, ContractWrapperERC20OnGnosisChain
+        contract, ContractDepositableWrapperERC20OnGnosisChain
     ), f"Returned contract is {type(contract)}"
 
 

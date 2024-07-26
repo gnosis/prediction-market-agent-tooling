@@ -474,8 +474,8 @@ def init_collateral_contract(
     web3: Web3,
 ) -> AbstractCollateral:
     """
-    Checks if the given contract is ERC-4626 or WrapperERC-20 or ERC-20 and returns the appropriate class instance.
-    Throws an error if the contract is neither of them.
+    Checks if the given contract is ERC-4626 or WrapperERC-20 and returns the appropriate class instance.
+    Throws an error if the contract is neither of them. Note that ERC-20 is not supported (see AbstractCollateral abstract function definitions).
     The checks below could be made more elegant if we have verified contracts, but using keccak via web3.eth.get_code() allows us
     to also check unverified contracts.
     #
@@ -492,7 +492,7 @@ def init_collateral_contract(
 
     else:
         raise ValueError(
-            f"Contract at {address} on Gnosis Chain is neither WrapperERC-20 nor ERC-20."
+            f"Contract at {address} on Gnosis Chain is neither WrapperERC-20 nor ERC-4626."
         )
 
 

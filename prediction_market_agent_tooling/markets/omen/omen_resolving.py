@@ -40,6 +40,7 @@ def claim_bonds_on_realitio_questions(
     questions: list[RealityQuestion],
     auto_withdraw: bool,
     web3: Web3 | None = None,
+    silent_errors: bool = False,
 ) -> list[HexBytes]:
     claimed_questions: list[HexBytes] = []
 
@@ -47,10 +48,19 @@ def claim_bonds_on_realitio_questions(
         logger.info(
             f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=} {question.url=}"
         )
-        claim_bonds_on_realitio_question(
-            api_keys, question, auto_withdraw=auto_withdraw, web3=web3
-        )
-        claimed_questions.append(question.questionId)
+        try:
+            claim_bonds_on_realitio_question(
+                api_keys, question, auto_withdraw=auto_withdraw, web3=web3
+            )
+            claimed_questions.append(question.questionId)
+        except Exception as e:
+            # TODO: This shouldn't be required once `claim_bonds_on_realitio_question` below is fixed.
+            if silent_errors:
+                logger.error(
+                    f"Error while claiming bond for {question.questionId=} {question.url=}: {e}"
+                )
+            else:
+                raise
 
     return claimed_questions
 

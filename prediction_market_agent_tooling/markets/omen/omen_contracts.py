@@ -406,9 +406,6 @@ class sDaiContract(ContractERC4626OnGnosisChain):
     )
 
 
-# Collateral token used on Omen is wrapped xDai.
-OmenCollateralTokenContract = WrappedxDaiContract
-
 OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
 
 

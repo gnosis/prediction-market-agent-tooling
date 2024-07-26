@@ -41,7 +41,7 @@ def usd_type(amount: Union[str, int, float]) -> USD:
     return USD(float(amount))
 
 
-def wei_type(amount: Union[str, int]) -> Wei:
+def wei_type(amount: Union[str, int, float]) -> Wei:
     return Wei(int(amount))
 
 

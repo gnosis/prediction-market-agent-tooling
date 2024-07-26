@@ -2,6 +2,7 @@ import sys
 import typing as t
 from datetime import datetime
 
+import tenacity
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
@@ -43,17 +44,24 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
-    OmenCollateralTokenContract,
+    ContractDepositableWrapperERC20OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
     OmenOracleContract,
     OmenRealitioContract,
+    WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.contract import (
+    asset_or_shares,
+    auto_deposit_collateral_token,
+    init_erc4626_or_wrappererc20_or_erc20_contract,
+    to_gnosis_chain_contract,
+)
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import (
     calculate_sell_amount_in_collateral,
@@ -524,6 +532,11 @@ def pick_binary_market(
     )[0]
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"omen_buy_outcome_tx failed, {x.attempt_number=}."),
+)
 def omen_buy_outcome_tx(
     api_keys: APIKeys,
     amount: xDai,
@@ -539,8 +552,10 @@ def omen_buy_outcome_tx(
     from_address_checksummed = api_keys.bet_from_address
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
-
-    collateral_token_contract = OmenCollateralTokenContract()
+    collateral_token_contract = market_contract.get_collateral_token_contract()
+    assert isinstance(
+        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
+    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
@@ -615,7 +630,10 @@ def omen_sell_outcome_tx(
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
-    collateral_token = OmenCollateralTokenContract()
+    collateral_token_contract = market_contract.get_collateral_token_contract()
+    assert isinstance(
+        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
+    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Verify, that markets uses conditional tokens that we expect.
     if (
@@ -653,7 +671,9 @@ def omen_sell_outcome_tx(
     )
     if auto_withdraw:
         # Optionally, withdraw from the collateral token back to the `from_address` wallet.
-        collateral_token.withdraw(api_keys=api_keys, amount_wei=amount_wei, web3=web3)
+        collateral_token_contract.withdraw(
+            api_keys=api_keys, amount_wei=amount_wei, web3=web3
+        )
 
 
 def binary_omen_sell_outcome_tx(
@@ -684,17 +704,22 @@ def omen_create_market_tx(
     outcomes: list[str],
     auto_deposit: bool,
     fee: float = OMEN_DEFAULT_MARKET_FEE,
+    collateral_token_address: ChecksumAddress = WrappedxDaiContract().address,
     web3: Web3 | None = None,
 ) -> ChecksumAddress:
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
-    from_address = api_keys.bet_from_address
+    web3 = (
+        web3 or OmenFixedProductMarketMakerFactoryContract.get_web3()
+    )  # Default to Gnosis web3.
     initial_funds_wei = xdai_to_wei(initial_funds)
 
     realitio_contract = OmenRealitioContract()
     conditional_token_contract = OmenConditionalTokenContract()
-    collateral_token_contract = OmenCollateralTokenContract()
+    collateral_token_contract = to_gnosis_chain_contract(
+        init_erc4626_or_wrappererc20_or_erc20_contract(collateral_token_address, web3)
+    )
     factory_contract = OmenFixedProductMarketMakerFactoryContract()
     oracle_contract = OmenOracleContract()
 
@@ -710,25 +735,14 @@ def omen_create_market_tx(
             "The oracle's conditional tokens address is not the same as we are using."
         )
 
-    # Approve the market maker to withdraw our collateral token.
-    collateral_token_contract.approve(
-        api_keys=api_keys,
-        for_address=factory_contract.address,
-        amount_wei=initial_funds_wei,
-        web3=web3,
-    )
-
-    # Deposit xDai to the collateral token,
-    # this can be skipped, if we know we already have enough collateral tokens.
-    collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=from_address, web3=web3
-    )
-    if (
-        auto_deposit
-        and initial_funds_wei > 0
-        and collateral_token_balance < initial_funds_wei
-    ):
-        collateral_token_contract.deposit(api_keys, initial_funds_wei, web3=web3)
+    # If auto deposit is enabled.
+    if auto_deposit:
+        auto_deposit_collateral_token(
+            collateral_token_contract=collateral_token_contract,
+            api_keys=api_keys,
+            amount_wei=initial_funds_wei,
+            web3=web3,
+        )
 
     # Create the question on Realitio.
     question_id = realitio_contract.askQuestion(
@@ -758,12 +772,29 @@ def omen_create_market_tx(
             web3=web3,
         )
 
+    # Use shares as the initial funds, if the collateral is erc-4626.
+    # We need to do this, because for example for 1 xDai in erc-20 token, we could receive <1 shares in the vault,
+    # and then, providing liquidity would fail, because we would not have enough shares.
+    initial_funds_in_asset_or_shares = wei_type(
+        asset_or_shares(collateral_token_contract, initial_funds_wei)
+        * 0.999  # Allow some slippage.
+    )
+
+    # Approve the market maker to withdraw our collateral token.
+    collateral_token_contract.approve(
+        api_keys=api_keys,
+        for_address=factory_contract.address,
+        amount_wei=initial_funds_in_asset_or_shares,
+        web3=web3,
+    )
+
     # Create the market.
     create_market_receipt_tx = factory_contract.create2FixedProductMarketMaker(
         api_keys=api_keys,
         condition_id=condition_id,
         fee=fee,
-        initial_funds_wei=initial_funds_wei,
+        initial_funds_wei=initial_funds_in_asset_or_shares,
+        collateral_token_address=collateral_token_contract.address,
         web3=web3,
     )
 
@@ -787,7 +818,10 @@ def omen_fund_market_tx(
 ) -> None:
     from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
-    collateral_token_contract = OmenCollateralTokenContract()
+    collateral_token_contract = market_contract.get_collateral_token_contract()
+    assert isinstance(
+        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
+    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Deposit xDai to the collateral token,
     # this can be skipped, if we know we already have enough collateral tokens.
@@ -1053,8 +1087,8 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
             f"Current wxDai balance {current_balances.wxdai} is less than the required minimum wxDai to withdraw {need_to_withdraw}."
         )
 
-    collateral_token_contract = OmenCollateralTokenContract()
-    collateral_token_contract.withdraw(
+    wxdai_contract = WrappedxDaiContract()
+    wxdai_contract.withdraw(
         api_keys=api_keys, amount_wei=xdai_to_wei(need_to_withdraw), web3=web3
     )
     logger.info(

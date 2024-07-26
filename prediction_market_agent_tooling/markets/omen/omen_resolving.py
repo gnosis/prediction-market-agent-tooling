@@ -56,7 +56,7 @@ def claim_bonds_on_realitio_questions(
         except Exception as e:
             # TODO: This shouldn't be required once `claim_bonds_on_realitio_question` below is fixed.
             if silent_errors:
-                logger.error(
+                logger.warning(
                     f"Error while claiming bond for {question.questionId=} {question.url=}: {e}"
                 )
             else:

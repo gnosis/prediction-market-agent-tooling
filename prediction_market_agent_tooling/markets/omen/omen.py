@@ -2,6 +2,7 @@ import sys
 import typing as t
 from datetime import datetime
 
+import tenacity
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
@@ -531,6 +532,11 @@ def pick_binary_market(
     )[0]
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"omen_buy_outcome_tx failed, {x.attempt_number=}."),
+)
 def omen_buy_outcome_tx(
     api_keys: APIKeys,
     amount: xDai,

@@ -412,9 +412,8 @@ def init_erc4626_or_wrappererc20_or_erc20_contract(
     | ContractDepositableWrapperERC20BaseClass
 ):
     """
-    Checks if the given contract is ERC-20 or ERC-4626 and returns the appropriate class instance.
+    Checks if the given contract is Depositable ERC-20, ERC-20 or ERC-4626 and returns the appropriate class instance.
     Throws an error if the contract is neither of them.
-    TODO: Is there a better way to check if the address adheres to some standard, than trying to call some random function we believe aren't present on the other standard?
     """
     if contract_implements_function(address, "asset", web3=web3):
         return ContractERC4626BaseClass(address=address)

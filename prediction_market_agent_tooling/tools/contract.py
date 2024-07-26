@@ -321,6 +321,7 @@ class ContractERC4626BaseClass(AbstractCollateral):
         self,
         api_keys: APIKeys,
         amount_wei: Wei,
+        receiver: ChecksumAddress,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
         **kwargs: Unpack[ExtraDepositParams],

@@ -32,9 +32,9 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_BASE_URL,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
+    PRESAGIO_BASE_URL,
     Condition,
     OmenBet,
     OmenMarket,
@@ -43,6 +43,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
+    ContractDepositableWrapperERC20OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -54,6 +55,12 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.contract import (
+    asset_or_shares,
+    auto_deposit_collateral_token,
+    init_erc4626_or_wrappererc20_or_erc20_contract,
+    to_gnosis_chain_contract,
+)
 from prediction_market_agent_tooling.tools.contract import (
     asset_or_shares,
     auto_deposit_collateral_token,
@@ -81,7 +88,7 @@ class OmenAgentMarket(AgentMarket):
     """
 
     currency: t.ClassVar[Currency] = Currency.xDai
-    base_url: t.ClassVar[str] = OMEN_BASE_URL
+    base_url: t.ClassVar[str] = PRESAGIO_BASE_URL
     creator: HexAddress
 
     collateral_token_contract_address_checksummed: ChecksumAddress

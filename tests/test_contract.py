@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC4626BaseClass,
     contract_implements_function,
     init_collateral_contract,
+    ERC20FakeDepositWithdraw,
 )
 
 
@@ -38,11 +39,13 @@ def test_init_erc4626_erc20_contract_return_wrappererc20_instance(
 
 
 def test_init_erc4626_erc20_contract_return_erc20_instance(test_web3: Web3) -> None:
-    with pytest.raises(ValueError) as e:
-        init_collateral_contract(
-            Web3.to_checksum_address("0x4ecaba5870353805a9f068101a40e0f32ed605c6"),
-            test_web3,
-        )
+    contract = init_collateral_contract(
+        Web3.to_checksum_address("0x4ecaba5870353805a9f068101a40e0f32ed605c6"),
+        WrappedxDaiContract.get_web3(),
+    )
+    assert isinstance(
+        contract, ERC20FakeDepositWithdraw
+    ), f"Returned contract is {type(contract)}"
 
 
 def test_init_erc4626_erc20_contract_throws_on_unknown_contract(

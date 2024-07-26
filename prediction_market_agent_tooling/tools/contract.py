@@ -5,6 +5,7 @@ import typing as t
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
+from loguru import logger
 from pydantic import BaseModel, field_validator
 from typing_extensions import Unpack
 from web3 import Web3
@@ -262,6 +263,34 @@ class AbstractCollateral(ABC, ContractERC20BaseClass):
         pass
 
 
+class ERC20FakeDepositWithdraw(AbstractCollateral):
+    def deposit(
+        self,
+        api_keys: APIKeys,
+        amount_wei: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+        **kwargs: Unpack[ExtraDepositParams],
+    ) -> TxReceipt:
+        logger.info(
+            "ERC20 has no deposit, balance is increased/reduced by calling the transferFrom function."
+        )
+        pass
+
+    def withdraw(
+        self,
+        api_keys: APIKeys,
+        amount_wei: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+        **kwargs: Unpack[ExtraWithdrawParams],
+    ) -> TxReceipt:
+        logger.info(
+            "ERC20 has no deposit, balance is increased/reduced by calling the transferFrom function."
+        )
+        pass
+
+
 class ContractDepositableWrapperERC20BaseClass(AbstractCollateral):
     """
     ERC-20-wrapper standard base class. It has deposit/withdraw method for wrapping/unwrapping.
@@ -474,10 +503,8 @@ def init_collateral_contract(
     web3: Web3,
 ) -> AbstractCollateral:
     """
-    Checks if the given contract is ERC-4626 or WrapperERC-20 and returns the appropriate class instance.
-    Throws an error if the contract is neither of them. Note that ERC-20 is not supported (see AbstractCollateral abstract function definitions).
-    The checks below could be made more elegant if we have verified contracts, but using keccak via web3.eth.get_code() allows us
-    to also check unverified contracts.
+    Checks if the given contract is ERC-4626 or WrapperERC-20 or ERC-20 and returns the appropriate class instance.
+    Throws an error if the contract is neither of them.
     #
     """
     if contract_implements_function(address, "asset", web3=web3):
@@ -489,6 +516,14 @@ def init_collateral_contract(
         web3=web3,
     ):
         return ContractDepositableWrapperERC20BaseClass(address=address)
+
+    elif contract_implements_function(
+        address,
+        "balanceOf",
+        web3=web3,
+        function_arg_types=["address"],
+    ):
+        return ERC20FakeDepositWithdraw(address=address)
 
     else:
         raise ValueError(

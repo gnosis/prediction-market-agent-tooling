@@ -27,7 +27,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OmenCollateralTokenContract,
+    WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_criterion_bet,
@@ -107,7 +107,7 @@ def test_minimum_bet_to_win(
             creator=GANACHE_ADDRESS_NR_1,
             outcomes=["Yes", "No"],
             current_p_yes=market_p_yes,
-            collateral_token_contract_address_checksummed=OmenCollateralTokenContract().address,
+            collateral_token_contract_address_checksummed=WrappedxDaiContract().address,
             market_maker_contract_address_checksummed=Web3.to_checksum_address(
                 "0xf3318C420e5e30C12786C4001D600e9EE1A7eBb1"
             ),

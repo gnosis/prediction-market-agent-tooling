@@ -15,6 +15,8 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
+MARKET_ID_WITH_SDAI_AS_COLLATERAL = "0x4ecb20cea4d1b0c90d935a45213d27e1695bee92"
+
 
 def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     market = omen_subgraph_handler.get_omen_market_by_market_id(
@@ -304,3 +306,22 @@ def test_get_non_existing_image() -> None:
     assert image_url is None
     image = OmenSubgraphHandler().get_market_image(market_id)
     assert image is None
+
+
+def test_wont_return_non_wxdai_markets() -> None:
+    markets = OmenSubgraphHandler().get_omen_binary_markets(
+        limit=None,
+        id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
+    )
+    assert (
+        not markets
+    ), "Shouldn't return markets that are not on wxDai, because of the default filter."
+
+
+def test_will_return_non_wxdai_markets_if_asked_for() -> None:
+    markets = OmenSubgraphHandler().get_omen_binary_markets(
+        limit=None,
+        id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
+        collateral_token_address=None,
+    )
+    assert len(markets) == 1, "Should have return that one market with the given ID."

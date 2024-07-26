@@ -17,11 +17,11 @@
     "constant": false,
     "inputs": [
       {
-        "name": "_spender",
+        "name": "guy",
         "type": "address"
       },
       {
-        "name": "_value",
+        "name": "wad",
         "type": "uint256"
       }
     ],
@@ -54,15 +54,15 @@
     "constant": false,
     "inputs": [
       {
-        "name": "_from",
+        "name": "src",
         "type": "address"
       },
       {
-        "name": "_to",
+        "name": "dst",
         "type": "address"
       },
       {
-        "name": "_value",
+        "name": "wad",
         "type": "uint256"
       }
     ],
@@ -73,6 +73,20 @@
         "type": "bool"
       }
     ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "wad",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdraw",
+    "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
     "type": "function"
@@ -95,14 +109,14 @@
     "constant": true,
     "inputs": [
       {
-        "name": "_owner",
+        "name": "",
         "type": "address"
       }
     ],
     "name": "balanceOf",
     "outputs": [
       {
-        "name": "balance",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -128,11 +142,11 @@
     "constant": false,
     "inputs": [
       {
-        "name": "_to",
+        "name": "dst",
         "type": "address"
       },
       {
-        "name": "_value",
+        "name": "wad",
         "type": "uint256"
       }
     ],
@@ -148,14 +162,23 @@
     "type": "function"
   },
   {
+    "constant": false,
+    "inputs": [],
+    "name": "deposit",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
     "constant": true,
     "inputs": [
       {
-        "name": "_owner",
+        "name": "",
         "type": "address"
       },
       {
-        "name": "_spender",
+        "name": "",
         "type": "address"
       }
     ],
@@ -180,17 +203,17 @@
     "inputs": [
       {
         "indexed": true,
-        "name": "owner",
+        "name": "src",
         "type": "address"
       },
       {
         "indexed": true,
-        "name": "spender",
+        "name": "guy",
         "type": "address"
       },
       {
         "indexed": false,
-        "name": "value",
+        "name": "wad",
         "type": "uint256"
       }
     ],
@@ -202,21 +225,55 @@
     "inputs": [
       {
         "indexed": true,
-        "name": "from",
+        "name": "src",
         "type": "address"
       },
       {
         "indexed": true,
-        "name": "to",
+        "name": "dst",
         "type": "address"
       },
       {
         "indexed": false,
-        "name": "value",
+        "name": "wad",
         "type": "uint256"
       }
     ],
     "name": "Transfer",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "dst",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "wad",
+        "type": "uint256"
+      }
+    ],
+    "name": "Deposit",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "src",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "wad",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdrawal",
     "type": "event"
   }
 ]

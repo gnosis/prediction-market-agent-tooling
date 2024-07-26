@@ -233,6 +233,11 @@ class ExtraDepositParams(t.TypedDict):
     receiver: ChecksumAddress
 
 
+class ExtraWithdrawParams(t.TypedDict):
+    receiver: ChecksumAddress
+    owner: ChecksumAddress
+
+
 class AbstractCollateral(ABC, ContractERC20BaseClass):
     @abstractmethod
     def deposit(
@@ -245,10 +250,21 @@ class AbstractCollateral(ABC, ContractERC20BaseClass):
     ) -> TxReceipt:
         pass
 
+    @abstractmethod
+    def withdraw(
+        self,
+        api_keys: APIKeys,
+        amount_wei: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+        **kwargs: Unpack[ExtraWithdrawParams],
+    ) -> TxReceipt:
+        pass
+
 
 class ContractDepositableWrapperERC20BaseClass(AbstractCollateral):
     """
-    ERC-20 standard base class extended for wrapper tokens.
+    ERC-20-wrapper standard base class. It has deposit/withdraw method for wrapping/unwrapping.
     Although this is not a standard, it's seems to be a common pattern for wrapped tokens (at least it checks out for wxDai and wETH).
     """
 
@@ -281,6 +297,7 @@ class ContractDepositableWrapperERC20BaseClass(AbstractCollateral):
         amount_wei: Wei,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
+        **kwargs: Unpack[ExtraWithdrawParams],
     ) -> TxReceipt:
         return self.send(
             api_keys=api_keys,
@@ -321,7 +338,6 @@ class ContractERC4626BaseClass(AbstractCollateral):
         self,
         api_keys: APIKeys,
         amount_wei: Wei,
-        receiver: ChecksumAddress,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
         **kwargs: Unpack[ExtraDepositParams],
@@ -338,6 +354,24 @@ class ContractERC4626BaseClass(AbstractCollateral):
             api_keys=api_keys,
             function_name="deposit",
             function_params=[amount_wei, receiver],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+    def withdraw(
+        self,
+        api_keys: APIKeys,
+        amount_wei: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+        **kwargs: Unpack[ExtraWithdrawParams],
+    ) -> TxReceipt:
+        owner: ChecksumAddress = check_not_none(kwargs.get("owner", None))
+        receiver: ChecksumAddress = check_not_none(kwargs.get("receiver", None))
+        return self.send(
+            api_keys=api_keys,
+            function_name="withdraw",
+            function_params=[amount_wei, receiver, owner],
             tx_params=tx_params,
             web3=web3,
         )

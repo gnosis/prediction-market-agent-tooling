@@ -43,7 +43,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
-    ContractDepositableWrapperERC20OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -58,14 +57,7 @@ from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
     asset_or_shares,
     auto_deposit_collateral_token,
-    init_erc4626_or_wrappererc20_or_erc20_contract,
-    to_gnosis_chain_contract,
-)
-from prediction_market_agent_tooling.tools.contract import (
-    asset_or_shares,
-    auto_deposit_collateral_token,
     init_collateral_contract,
-    to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import (
@@ -578,7 +570,10 @@ def omen_buy_outcome_tx(
     if auto_deposit and collateral_token_balance < amount_wei:
         deposit_amount_wei = Wei(amount_wei - collateral_token_balance)
         collateral_token_contract.deposit(
-            api_keys=api_keys, amount_wei=deposit_amount_wei, web3=web3
+            api_keys=api_keys,
+            amount_wei=deposit_amount_wei,
+            web3=web3,
+            receiver=api_keys.bet_from_address,
         )
     # Buy shares using the deposited xDai in the collateral token.
     market_contract.buy(
@@ -666,7 +661,11 @@ def omen_sell_outcome_tx(
     if auto_withdraw:
         # Optionally, withdraw from the collateral token back to the `from_address` wallet.
         collateral_token_contract.withdraw(
-            api_keys=api_keys, amount_wei=amount_wei, web3=web3
+            api_keys=api_keys,
+            amount_wei=amount_wei,
+            web3=web3,
+            owner=api_keys.bet_from_address,
+            receiver=api_keys.bet_from_address,
         )
 
 
@@ -711,9 +710,8 @@ def omen_create_market_tx(
 
     realitio_contract = OmenRealitioContract()
     conditional_token_contract = OmenConditionalTokenContract()
-    collateral_token_contract = to_gnosis_chain_contract(
-        init_collateral_contract(collateral_token_address, web3)
-    )
+    collateral_token_contract = init_collateral_contract(collateral_token_address, web3)
+
     factory_contract = OmenFixedProductMarketMakerFactoryContract()
     oracle_contract = OmenOracleContract()
 
@@ -822,7 +820,9 @@ def omen_fund_market_tx(
         and collateral_token_contract.balanceOf(for_address=from_address, web3=web3)
         < funds
     ):
-        collateral_token_contract.deposit(api_keys, funds, web3=web3)
+        collateral_token_contract.deposit(
+            api_keys, funds, web3=web3, receiver=from_address
+        )
 
     collateral_token_contract.approve(
         api_keys=api_keys,
@@ -1081,7 +1081,11 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
 
     wxdai_contract = WrappedxDaiContract()
     wxdai_contract.withdraw(
-        api_keys=api_keys, amount_wei=xdai_to_wei(need_to_withdraw), web3=web3
+        api_keys=api_keys,
+        amount_wei=xdai_to_wei(need_to_withdraw),
+        web3=web3,
+        owner=api_keys.bet_from_address,
+        receiver=api_keys.bet_from_address,
     )
     logger.info(
         f"Withdrew {need_to_withdraw} wxDai to keep the balance above the minimum required balance {min_required_balance}."

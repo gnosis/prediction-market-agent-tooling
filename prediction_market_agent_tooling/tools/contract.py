@@ -248,7 +248,7 @@ class AbstractCollateral(ABC, ContractERC20BaseClass):
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
         **kwargs: Unpack[ExtraDepositParams],
-    ) -> TxReceipt:
+    ) -> TxReceipt | None:
         pass
 
     @abstractmethod
@@ -259,7 +259,7 @@ class AbstractCollateral(ABC, ContractERC20BaseClass):
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
         **kwargs: Unpack[ExtraWithdrawParams],
-    ) -> TxReceipt:
+    ) -> TxReceipt | None:
         pass
 
 
@@ -271,11 +271,11 @@ class ERC20FakeDepositWithdraw(AbstractCollateral):
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
         **kwargs: Unpack[ExtraDepositParams],
-    ) -> TxReceipt:
+    ) -> TxReceipt | None:
         logger.info(
             "ERC20 has no deposit, balance is increased/reduced by calling the transferFrom function."
         )
-        pass
+        return None
 
     def withdraw(
         self,
@@ -284,11 +284,11 @@ class ERC20FakeDepositWithdraw(AbstractCollateral):
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
         **kwargs: Unpack[ExtraWithdrawParams],
-    ) -> TxReceipt:
+    ) -> TxReceipt | None:
         logger.info(
             "ERC20 has no deposit, balance is increased/reduced by calling the transferFrom function."
         )
-        pass
+        return None
 
 
 class ContractDepositableWrapperERC20BaseClass(AbstractCollateral):

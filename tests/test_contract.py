@@ -11,9 +11,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20BaseClass,
     ContractERC4626BaseClass,
+    ERC20FakeDepositWithdraw,
     contract_implements_function,
     init_collateral_contract,
-    ERC20FakeDepositWithdraw,
 )
 
 

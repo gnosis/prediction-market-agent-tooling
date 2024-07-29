@@ -341,7 +341,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
-        # TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of GNO would be crazy :D)
+        # TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
         collateral_token_address_in: tuple[ChecksumAddress, ...]
         | None = (
             WrappedxDaiContract().address,

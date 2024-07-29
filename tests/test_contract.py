@@ -49,7 +49,7 @@ def test_init_erc4626_erc20_contract_throws_on_unknown_contract() -> None:
             Web3.to_checksum_address("0x7d3A0DA18e14CCb63375cdC250E8A8399997816F"),
             WrappedxDaiContract.get_web3(),
         )
-    assert "is neither WrapperERC-20, ERC-20 nor ERC-4626" in str(e)
+    assert "is neither Depositable ERC-20, ERC-20 nor ERC-4626" in str(e)
 
 
 @pytest.mark.parametrize(

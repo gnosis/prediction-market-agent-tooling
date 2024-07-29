@@ -474,21 +474,6 @@ def init_collateral_token_contract(
         )
 
 
-def auto_withdraw_collateral_token(
-    collateral_token_contract: (
-        ContractERC4626BaseClass | ContractDepositableWrapperERC20BaseClass
-    ),
-    assets_wei: Wei,
-    api_keys: APIKeys,
-    web3: Web3 | None,
-) -> None:
-    collateral_token_contract.withdraw(
-        api_keys,
-        assets_wei,
-        web3=web3,
-    )
-
-
 def auto_deposit_collateral_token(
     collateral_token_contract: ContractERC20BaseClass,
     amount_wei: Wei,

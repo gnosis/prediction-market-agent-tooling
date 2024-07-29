@@ -58,7 +58,6 @@ from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC4626BaseClass,
     auto_deposit_collateral_token,
-    auto_withdraw_collateral_token,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
@@ -661,13 +660,12 @@ def omen_sell_outcome_tx(
     if auto_withdraw_erc4626 and isinstance(
         collateral_token_contract, ContractERC4626BaseClass
     ):
-        auto_withdraw_collateral_token(
-            collateral_token_contract,
+        collateral_token_contract.withdraw(
+            api_keys,
             remove_fraction(
                 amount_wei,
                 0.001,  # Allow 0.1% slippage.
             ),
-            api_keys,
             web3,
         )
 

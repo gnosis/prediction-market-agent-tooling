@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenPosition,
     OmenUserPosition,
 )
+from prediction_market_agent_tooling.markets.omen.omen import WrappedxDaiContract
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
@@ -308,10 +309,11 @@ def test_get_non_existing_image() -> None:
     assert image is None
 
 
-def test_wont_return_non_wxdai_markets() -> None:
+def test_wont_return_non_wxdai_markets_if_not_wanted() -> None:
     markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
+        collateral_token_address_in=(WrappedxDaiContract().address,),
     )
     assert (
         not markets

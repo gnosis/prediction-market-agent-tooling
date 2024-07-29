@@ -571,7 +571,7 @@ def auto_deposit_erc4626(
             )
         else:
             raise ValueError(
-                f"Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
+                "Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
             )
 
     # Finally, we can deposit the asset token into the erc4626 vault.

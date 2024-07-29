@@ -3,7 +3,6 @@ import os
 import time
 import typing as t
 from contextlib import contextmanager
-from functools import cache
 
 from pydantic import BaseModel, field_validator
 from web3 import Web3
@@ -181,13 +180,16 @@ class ContractERC20BaseClass(ContractBaseClass):
         )
     )
 
+    _symbol_cache: str | None = None
+
     def symbol(self, web3: Web3 | None = None) -> str:
         symbol: str = self.call("symbol", web3=web3)
         return symbol
 
-    @cache
-    def symbol_cached(self, web3: Web3 | None) -> str:
-        return self.symbol(web3=web3)
+    def symbol_cached(self, web3: Web3 | None = None) -> str:
+        if self._symbol_cache is None:
+            self._symbol_cache = self.symbol(web3=web3)
+        return self._symbol_cache
 
     def approve(
         self,

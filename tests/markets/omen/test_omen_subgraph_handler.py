@@ -322,6 +322,6 @@ def test_will_return_non_wxdai_markets_if_asked_for() -> None:
     markets = OmenSubgraphHandler().get_omen_binary_markets(
         limit=None,
         id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
-        collateral_token_address=None,
+        collateral_token_address_in=None,
     )
     assert len(markets) == 1, "Should have return that one market with the given ID."

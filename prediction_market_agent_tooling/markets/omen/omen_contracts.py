@@ -28,7 +28,7 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC4626OnGnosisChain,
     ContractOnGnosisChain,
     abi_field_validator,
-    init_erc4626_or_wrappererc20_or_erc20_contract,
+    init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
@@ -390,16 +390,10 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     def get_collateral_token_contract(
         self, web3: Web3 | None = None
-    ) -> (
-        ContractERC20OnGnosisChain
-        | ContractERC4626OnGnosisChain
-        | ContractDepositableWrapperERC20OnGnosisChain
-    ):
+    ) -> ContractERC20OnGnosisChain:
         web3 = web3 or self.get_web3()
         return to_gnosis_chain_contract(
-            init_erc4626_or_wrappererc20_or_erc20_contract(
-                self.collateralToken(web3=web3), web3
-            )
+            init_collateral_token_contract(self.collateralToken(web3=web3), web3)
         )
 
 

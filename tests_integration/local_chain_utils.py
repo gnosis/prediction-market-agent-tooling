@@ -4,10 +4,12 @@ import socket
 import subprocess
 import sys
 import time
+import typing as t
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3 import HTTPProvider, Web3
+from web3.types import RPCEndpoint
 
 from prediction_market_agent_tooling.loggers import logger
 
@@ -31,7 +33,7 @@ def get_anvil_test_accounts() -> list[LocalAccount]:
     return [Account.from_key(key) for key in keys]
 
 
-def wait_for_port(port, host="localhost", timeout=5.0):
+def wait_for_port(port: int, host: str = "localhost", timeout: float = 5.0) -> None:
     """Wait until a port starts accepting TCP connections."""
     start_time = time.time()
     while True:
@@ -46,40 +48,47 @@ def wait_for_port(port, host="localhost", timeout=5.0):
 
 
 class SimpleDaemonRunner(object):
-    def __init__(self, cmd, popen_kwargs=None):
-        self.console = None
-        self.proc = None
+    def __init__(
+        self,
+        cmd: str,
+        popen_stdout: t.TextIO | None = None,
+        popen_stderr: t.TextIO | None = None,
+    ) -> None:
+        self.proc: subprocess.Popen[t.Any] | None = None
         self.cmd = cmd
-        self.popen_kwargs = popen_kwargs or {}
+        self.popen_stdout = popen_stdout
+        self.popen_stderr = popen_stderr
 
-    def start(self):
+    def start(self) -> None:
         if self.is_running():
             raise ValueError("Process is already running")
-        logger.info("Starting daemon: %s %s", self.cmd, self.popen_kwargs)
-        self.proc = subprocess.Popen(shlex.split(self.cmd), **self.popen_kwargs)
+        logger.info("Starting daemon: %s %s", self.cmd)
+        self.proc = subprocess.Popen(
+            shlex.split(self.cmd), stdout=self.popen_stdout, stderr=self.popen_stderr
+        )
         atexit.register(self.stop)
 
-    def stop(self):
+    def stop(self) -> int | None:
         if not self.proc:
-            return
+            return None
 
         self.proc.terminate()
-        stdout, stderr = self.proc.communicate(timeout=20)
+        self.proc.communicate(timeout=20)
         retcode = self.proc.returncode
 
         self.proc = None
         return retcode
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self.proc is not None
 
 
-def fork_unlock_account(w3, address):
+def fork_unlock_account(w3: Web3, address: str) -> None:
     """Unlock the given address on the forked node."""
-    return w3.provider.make_request("anvil_impersonateAccount", [address])
+    w3.provider.make_request(RPCEndpoint("anvil_impersonateAccount"), [address])
 
 
-def fork_reset_state(w3: Web3, url: str, block: int | str = "latest"):
+def fork_reset_state(w3: Web3, url: str, block: int | str | None = "latest") -> None:
     """Reset the state of the forked node to the state of the blockchain node at the given block.
 
     Args:
@@ -91,19 +100,21 @@ def fork_reset_state(w3: Web3, url: str, block: int | str = "latest"):
     if isinstance(block, str):
         if block == "latest":
             raise ValueError("Can't use 'latest' as fork block")
-    return w3.provider.make_request(
-        "anvil_reset", [{"forking": {"jsonRpcUrl": url, "blockNumber": block}}]
+    w3.provider.make_request(
+        RPCEndpoint("anvil_reset"),
+        [{"forking": {"jsonRpcUrl": url, "blockNumber": block}}],
     )
 
 
-def run_anvil(url: str, block: int | None, port: int = 8545):
+def run_anvil(url: str, block: int | None, port: int = 8545) -> SimpleDaemonRunner:
     """Run anvil node in the background"""
     cmd = f"anvil --accounts 10 -f '{url}' --port {port}"
     if block:
         cmd += f" --fork-block-number {block}"
     node = SimpleDaemonRunner(
         cmd=cmd,
-        popen_kwargs={"stdout": sys.stdout, "stderr": sys.stderr},
+        popen_stdout=sys.stdout,
+        popen_stderr=sys.stderr,
     )
 
     node.start()
@@ -120,13 +131,13 @@ class LocalNode:
         self.default_block = default_block
         self.w3 = Web3(HTTPProvider(self.url, request_kwargs={"timeout": 30}))
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         fork_reset_state(self.w3, self.remote_url, self.default_block)
 
-    def unlock_account(self, address: str):
+    def unlock_account(self, address: str) -> None:
         fork_unlock_account(self.w3, address)
 
-    def set_block(self, block):
+    def set_block(self, block: int | str | None) -> None:
         """Set the local node to a specific block"""
         fork_reset_state(self.w3, url=self.remote_url, block=block)
 

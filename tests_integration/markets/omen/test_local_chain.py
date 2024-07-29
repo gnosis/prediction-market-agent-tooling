@@ -47,7 +47,7 @@ def test_send_xdai(local_web3: Web3) -> None:
 def test_send_xdai_from_locked_account(
     local_web3: Web3,
     test_keys: APIKeys,
-):
+) -> None:
     from_account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     fund_value = xdai_to_wei(xDai(10))
     transfer_back_value = xdai_to_wei(xDai(5))

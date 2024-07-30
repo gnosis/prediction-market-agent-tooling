@@ -34,7 +34,15 @@ def get_kelly_bet_simplified(
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
 
-    Based on https://en.wikipedia.org/wiki/Kelly_criterion
+    From https://en.wikipedia.org/wiki/Kelly_criterion:
+
+    f* = p - q / b
+
+    where:
+    - f* is the fraction of the current bankroll to wager
+    - p is the probability of a win
+    - q = 1-p is the probability of a loss
+    - b is the proportion of the bet gained with a win
 
     'Simplified' in that it is assumes that the bet does not change the market odds.
     """

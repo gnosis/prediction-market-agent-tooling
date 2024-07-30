@@ -67,6 +67,9 @@ class ContractBaseClass(BaseModel):
     address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
+    _cache: dict[str, t.Any] = (
+        {}
+    )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
     def call(
         self,
@@ -180,16 +183,17 @@ class ContractERC20BaseClass(ContractBaseClass):
         )
     )
 
-    _symbol_cache: str | None = None
-
     def symbol(self, web3: Web3 | None = None) -> str:
         symbol: str = self.call("symbol", web3=web3)
         return symbol
 
     def symbol_cached(self, web3: Web3 | None = None) -> str:
-        if self._symbol_cache is None:
-            self._symbol_cache = self.symbol(web3=web3)
-        return self._symbol_cache
+        web3 = web3 or self.get_web3()
+        cache_key = create_contract_method_cache_key(self.symbol, web3)
+        if cache_key not in self._cache:
+            self._cache[cache_key] = self.symbol(web3=web3)
+        value: str = self._cache[cache_key]
+        return value
 
     def approve(
         self,
@@ -578,3 +582,9 @@ def to_gnosis_chain_contract(
         return ContractERC20OnGnosisChain(address=contract.address)
     else:
         raise ValueError("Unsupported contract type")
+
+
+def create_contract_method_cache_key(
+    method: t.Callable[[t.Any], t.Any], web3: Web3
+) -> str:
+    return f"{method.__name__}-{str(web3.provider)}"

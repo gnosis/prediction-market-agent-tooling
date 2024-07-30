@@ -15,8 +15,8 @@ from enum import Enum
 
 
 class BetOutcome(str, Enum):
-    YES = "yes"
-    NO = "no"
+    YES = "Yes"
+    NO = "No"
 
 
 def check_is_valid_probability(probability: float) -> bool:

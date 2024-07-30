@@ -230,7 +230,7 @@ def test_stretch_bet_between(
 def test_kelly_bet_simplified(
     est_p_yes: Probability, bet_outcome: BetOutcome, omen_market: OmenMarket
 ) -> None:
-    max_bet = xdai_type(10)
+    max_bet = 10
     confidence = 1.0
     other_outcome = BetOutcome.NO if bet_outcome == BetOutcome.YES else BetOutcome.YES
 
@@ -240,8 +240,8 @@ def test_kelly_bet_simplified(
         get_kelly_bet_simplified(
             market_p_yes=omen_market.current_p_yes,
             estimated_p_yes=est_p_yes,
-            max_bet=10,
-            confidence=1.0,
+            max_bet=max_bet,
+            confidence=confidence,
             bet_outcome=bet_outcome,
         )
         > 0
@@ -251,8 +251,8 @@ def test_kelly_bet_simplified(
         get_kelly_bet_simplified(
             market_p_yes=omen_market.current_p_yes,
             estimated_p_yes=est_p_yes,
-            max_bet=10,
-            confidence=1.0,
+            max_bet=max_bet,
+            confidence=confidence,
             bet_outcome=other_outcome,
         )
         == 0

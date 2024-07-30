@@ -30,6 +30,8 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
+    BetOutcome,
+    get_kelly_bet_simplified,
     get_kelly_criterion_bet,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
@@ -216,3 +218,42 @@ def test_stretch_bet_between(
     probability: Probability, min_bet: float, max_bet: float, expected_bet: float
 ) -> None:
     assert stretch_bet_between(probability, min_bet, max_bet) == expected_bet
+
+
+@pytest.mark.parametrize(
+    "est_p_yes, bet_outcome",
+    [
+        (Probability(0.1), BetOutcome.NO),
+        (Probability(0.9), BetOutcome.YES),
+    ],
+)
+def test_kelly_bet_simplified(
+    est_p_yes: Probability, bet_outcome: BetOutcome, omen_market: OmenMarket
+) -> None:
+    max_bet = xdai_type(10)
+    confidence = 1.0
+    other_outcome = BetOutcome.NO if bet_outcome == BetOutcome.YES else BetOutcome.YES
+
+    # Kelly estimates the best bet for maximizing the expected value of the logarithm of the wealth.
+    # We don't know the real best bet amount, but at least we know which outcome index makes sense.
+    assert (
+        get_kelly_bet_simplified(
+            market_p_yes=omen_market.current_p_yes,
+            estimated_p_yes=est_p_yes,
+            max_bet=10,
+            confidence=1.0,
+            bet_outcome=bet_outcome,
+        )
+        > 0
+    )
+
+    assert (
+        get_kelly_bet_simplified(
+            market_p_yes=omen_market.current_p_yes,
+            estimated_p_yes=est_p_yes,
+            max_bet=10,
+            confidence=1.0,
+            bet_outcome=other_outcome,
+        )
+        == 0
+    )

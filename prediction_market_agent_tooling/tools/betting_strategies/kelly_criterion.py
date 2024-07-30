@@ -11,6 +11,58 @@ from prediction_market_agent_tooling.tools.web3_utils import (
 
 OutcomeIndex = t.Literal[0, 1]
 
+from enum import Enum
+
+
+class BetOutcome(str, Enum):
+    YES = "yes"
+    NO = "no"
+
+
+def check_is_valid_probability(probability: float) -> bool:
+    if probability < 0 or probability > 1:
+        raise ValueError("Probability must be between 0 and 1")
+
+
+def get_kelly_bet_simplified(
+    max_bet: float,
+    market_p_yes: float,
+    estimated_p_yes: float,
+    confidence: float,
+    bet_outcome: BetOutcome,
+) -> float:
+    """
+    Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
+
+    Based on https://en.wikipedia.org/wiki/Kelly_criterion
+
+    'Simplified' in that it is assumes that the bet does not change the market odds.
+    """
+    check_is_valid_probability(market_p_yes)
+    check_is_valid_probability(estimated_p_yes)
+    check_is_valid_probability(confidence)
+
+    if bet_outcome == BetOutcome.YES:
+        my_prob = estimated_p_yes
+        market_prob = market_p_yes
+    elif bet_outcome == BetOutcome.NO:
+        my_prob = 1 - estimated_p_yes
+        market_prob = 1 - market_p_yes
+
+    edge = (my_prob - market_prob) * confidence
+
+    # Handle the case where market_prob is 0
+    if market_prob == 0:
+        market_prob = 1e-10
+
+    odds = (1 / market_prob) - 1
+    kelly_fraction = edge / odds
+
+    # Ensure bet size is non-negative does not exceed the wallet balance
+    bet_size = max(min(kelly_fraction * max_bet, max_bet), 0)
+
+    return bet_size
+
 
 def _get_kelly_criterion_bet(
     x: int, y: int, p: float, c: float, b: int, f: float
@@ -20,6 +72,7 @@ def _get_kelly_criterion_bet(
 
     Taken from https://github.com/valory-xyz/trader/blob/main/strategies/kelly_criterion/kelly_criterion.py
 
+    Takes into account how the bet changes the market odds.
     ```
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -108,3 +161,26 @@ def get_kelly_criterion_bet(
         )
     )
     return wei_to_xdai(kelly_bet_wei), outcome_index
+
+
+def get_kelly_criterion_bet_2(
+    market: OmenMarket,
+    estimated_p_yes: Probability,
+    max_bet: xDai,
+) -> t.Tuple[xDai, OutcomeIndex]:
+    if len(market.outcomeTokenAmounts) != 2:
+        raise ValueError("Only binary markets are supported.")
+
+    current_p_yes = check_not_none(
+        market.outcomeTokenProbabilities, "No probabilities, is marked closed?"
+    )[0]
+    outcome_index: OutcomeIndex = 0 if estimated_p_yes > current_p_yes else 1
+    bet_outcome = BetOutcome.YES if outcome_index == 0 else BetOutcome.NO
+    bet = kelly_bet(
+        wallet_balance=max_bet,
+        market_p_yes=current_p_yes,
+        my_p_yes=estimated_p_yes,
+        confidence=1,
+        bet_outcome=bet_outcome,
+    )
+    return bet, outcome_index

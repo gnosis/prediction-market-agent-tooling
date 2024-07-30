@@ -19,7 +19,7 @@ class BetOutcome(str, Enum):
     NO = "No"
 
 
-def check_is_valid_probability(probability: float) -> bool:
+def check_is_valid_probability(probability: float) -> None:
     if probability < 0 or probability > 1:
         raise ValueError("Probability must be between 0 and 1")
 
@@ -161,26 +161,3 @@ def get_kelly_criterion_bet(
         )
     )
     return wei_to_xdai(kelly_bet_wei), outcome_index
-
-
-def get_kelly_criterion_bet_2(
-    market: OmenMarket,
-    estimated_p_yes: Probability,
-    max_bet: xDai,
-) -> t.Tuple[xDai, OutcomeIndex]:
-    if len(market.outcomeTokenAmounts) != 2:
-        raise ValueError("Only binary markets are supported.")
-
-    current_p_yes = check_not_none(
-        market.outcomeTokenProbabilities, "No probabilities, is marked closed?"
-    )[0]
-    outcome_index: OutcomeIndex = 0 if estimated_p_yes > current_p_yes else 1
-    bet_outcome = BetOutcome.YES if outcome_index == 0 else BetOutcome.NO
-    bet = kelly_bet(
-        wallet_balance=max_bet,
-        market_p_yes=current_p_yes,
-        my_p_yes=estimated_p_yes,
-        confidence=1,
-        bet_outcome=bet_outcome,
-    )
-    return bet, outcome_index

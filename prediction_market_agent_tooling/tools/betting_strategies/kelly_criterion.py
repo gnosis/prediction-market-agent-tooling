@@ -1,110 +1,67 @@
-import typing as t
+from enum import Enum
 
-from prediction_market_agent_tooling.gtypes import Probability, wei_type, xDai
-from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
-from prediction_market_agent_tooling.tools.utils import check_not_none
-from prediction_market_agent_tooling.tools.web3_utils import (
-    ONE_XDAI,
-    wei_to_xdai,
-    xdai_to_wei,
-)
-
-OutcomeIndex = t.Literal[0, 1]
+from pydantic import BaseModel
 
 
-def _get_kelly_criterion_bet(
-    x: int, y: int, p: float, c: float, b: int, f: float
-) -> int:
+class BetDirection(str, Enum):
+    YES = "Yes"
+    NO = "No"
+
+
+class KellyBet(BaseModel):
+    direction: BetDirection
+    size: float
+
+
+def check_is_valid_probability(probability: float) -> None:
+    if not 0 <= probability <= 1:
+        raise ValueError("Probability must be between 0 and 1")
+
+
+def get_kelly_bet(
+    max_bet: float,
+    market_p_yes: float,
+    estimated_p_yes: float,
+    confidence: float,
+) -> KellyBet:
     """
-    Implments https://en.wikipedia.org/wiki/Kelly_criterion
+    Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
 
-    Taken from https://github.com/valory-xyz/trader/blob/main/strategies/kelly_criterion/kelly_criterion.py
+    From https://en.wikipedia.org/wiki/Kelly_criterion:
 
-    ```
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+    f* = p - q / b
 
-        http://www.apache.org/licenses/LICENSE-2.0
+    where:
+    - f* is the fraction of the current bankroll to wager
+    - p is the probability of a win
+    - q = 1-p is the probability of a loss
+    - b is the proportion of the bet gained with a win
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-    ```
-
-    x: Number of tokens in the selected outcome pool
-    y: Number of tokens in the other outcome pool
-    p: Probability of winning
-    c: Confidence
-    b: Bankroll
-    f: Fee fraction
+    Note: this calculation does not factor in that the bet changes the market
+    odds. This means the calculation is only accurate if the bet size is small
+    compared to the market volume. See discussion here for more detail:
+    https://github.com/gnosis/prediction-market-agent-tooling/pull/330#discussion_r1698269328
     """
-    if b == 0:
-        return 0
-    numerator = (
-        -4 * x**2 * y
-        + b * y**2 * p * c * f
-        + 2 * b * x * y * p * c * f
-        + b * x**2 * p * c * f
-        - 2 * b * y**2 * f
-        - 2 * b * x * y * f
-        + (
-            (
-                4 * x**2 * y
-                - b * y**2 * p * c * f
-                - 2 * b * x * y * p * c * f
-                - b * x**2 * p * c * f
-                + 2 * b * y**2 * f
-                + 2 * b * x * y * f
-            )
-            ** 2
-            - (
-                4
-                * (x**2 * f - y**2 * f)
-                * (
-                    -4 * b * x * y**2 * p * c
-                    - 4 * b * x**2 * y * p * c
-                    + 4 * b * x * y**2
-                )
-            )
-        )
-        ** (1 / 2)
-    )
-    denominator = 2 * (x**2 * f - y**2 * f)
-    if denominator == 0:
-        return 0
-    kelly_bet_amount = numerator / denominator
-    return int(kelly_bet_amount)
+    check_is_valid_probability(market_p_yes)
+    check_is_valid_probability(estimated_p_yes)
+    check_is_valid_probability(confidence)
 
+    if estimated_p_yes > market_p_yes:
+        bet_direction = BetDirection.YES
+        market_prob = market_p_yes
+    else:
+        bet_direction = BetDirection.NO
+        market_prob = 1 - market_p_yes
 
-def get_kelly_criterion_bet(
-    market: OmenMarket,
-    estimated_p_yes: Probability,
-    max_bet: xDai,
-) -> t.Tuple[xDai, OutcomeIndex]:
-    if len(market.outcomeTokenAmounts) != 2:
-        raise ValueError("Only binary markets are supported.")
+    # Handle the case where market_prob is 0
+    if market_prob == 0:
+        market_prob = 1e-10
 
-    current_p_yes = check_not_none(
-        market.outcomeTokenProbabilities, "No probabilities, is marked closed?"
-    )[0]
-    outcome_index: OutcomeIndex = 0 if estimated_p_yes > current_p_yes else 1
-    estimated_p_win = estimated_p_yes if outcome_index == 0 else 1 - estimated_p_yes
+    edge = abs(estimated_p_yes - market_p_yes) * confidence
+    odds = (1 / market_prob) - 1
+    kelly_fraction = edge / odds
 
-    kelly_bet_wei = wei_type(
-        _get_kelly_criterion_bet(
-            x=market.outcomeTokenAmounts[outcome_index],
-            y=market.outcomeTokenAmounts[1 - outcome_index],
-            p=estimated_p_win,
-            c=1,  # confidence
-            b=xdai_to_wei(max_bet),  # bankroll, or max bet, in Wei
-            f=(
-                xdai_to_wei(ONE_XDAI)
-                - check_not_none(market.fee, "No fee for the market.")
-            )
-            / xdai_to_wei(ONE_XDAI),  # fee fraction
-        )
-    )
-    return wei_to_xdai(kelly_bet_wei), outcome_index
+    # Ensure bet size is non-negative does not exceed the wallet balance
+    bet_size = min(kelly_fraction * max_bet, max_bet)
+
+    return KellyBet(direction=bet_direction, size=bet_size)

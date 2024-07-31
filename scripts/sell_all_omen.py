@@ -19,7 +19,7 @@ def sell_all(
     closing_later_than_days: int = typer.Option(7),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(default=None),
-    auto_withdraw_erc4626: bool = typer.Option(True),
+    auto_withdraw: bool = typer.Option(True),
 ) -> None:
     """
     Helper script to sell all existing outcomes on Omen that would resolve later than in X days.
@@ -71,7 +71,7 @@ def sell_all(
         agent_market.sell_tokens(
             bet.boolean_outcome,
             current_token_balance,
-            auto_withdraw_erc4626=auto_withdraw_erc4626,
+            auto_withdraw=auto_withdraw,
             api_keys=api_keys,
         )
         new_balance = get_balances(better_address)

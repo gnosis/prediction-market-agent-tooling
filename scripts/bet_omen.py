@@ -61,7 +61,7 @@ def sell(
     safe_address: str = typer.Option(default=None),
     market_id: str = typer.Option(),
     outcome: str = typer.Option(),
-    auto_withdraw_erc4626: bool = typer.Option(False),
+    auto_withdraw: bool = typer.Option(False),
 ) -> None:
     """
     Helper script to sell outcome of an existing bet on Omen, usage:
@@ -89,7 +89,7 @@ def sell(
         amount=xdai_type(amount),
         market=market,
         outcome=outcome,
-        auto_withdraw_erc4626=auto_withdraw_erc4626,
+        auto_withdraw=auto_withdraw,
     )
 
 

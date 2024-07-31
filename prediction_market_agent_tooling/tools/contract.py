@@ -67,9 +67,7 @@ class ContractBaseClass(BaseModel):
     address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
-    _cache: dict[
-        str, t.Any
-    ] = (
+    _cache: dict[str, t.Any] = (
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
@@ -184,8 +182,6 @@ class ContractERC20BaseClass(ContractBaseClass):
             os.path.dirname(os.path.realpath(__file__)), "../abis/erc20.abi.json"
         )
     )
-
-    _symbol_cache: str | None = None
 
     def symbol(self, web3: Web3 | None = None) -> str:
         symbol: str = self.call("symbol", web3=web3)

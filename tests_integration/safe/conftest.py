@@ -21,9 +21,6 @@ def test_safe(local_web3: Web3, test_keys: APIKeys) -> Safe:
     local_ethereum_client = EthereumClient()
     logger.debug(f"is connected {web3.is_connected()} {web3.provider}")
     print_current_block(web3)
-    logger.debug(
-        f"provider {web3.provider.endpoint_uri} connected {web3.is_connected()}"
-    )
 
     # Deploy safe
     account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
@@ -34,5 +31,6 @@ def test_safe(local_web3: Web3, test_keys: APIKeys) -> Safe:
         salt_nonce=42,
         threshold=1,
     )
-    deployed_safe = Safe(safe_address, local_ethereum_client)
+    assert safe_address is not None, "Safe needs to be deployed."
+    deployed_safe = Safe(safe_address, local_ethereum_client)  # type: ignore[abstract]
     return deployed_safe

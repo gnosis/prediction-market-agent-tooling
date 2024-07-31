@@ -19,7 +19,7 @@ def sell_all(
     closing_later_than_days: int = typer.Option(7),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(default=None),
-    auto_withdraw: bool = typer.Option(True),
+    auto_withdraw: bool = typer.Option(False),
 ) -> None:
     """
     Helper script to sell all existing outcomes on Omen that would resolve later than in X days.

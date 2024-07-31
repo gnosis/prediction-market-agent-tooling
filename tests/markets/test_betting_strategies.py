@@ -200,15 +200,6 @@ def test_kelly_criterion_bet(
         estimated_p_yes=est_p_yes,
         max_bet=xdai_type(10),  # This significantly changes the outcome.
     )
-    xdai_amount_simplified = get_kelly_bet_simplified(
-        market_p_yes=omen_market.current_p_yes,
-        estimated_p_yes=est_p_yes,
-        max_bet=xdai_type(10),
-        confidence=1,
-        bet_outcome=BetOutcome(expected_outcome),
-    )
-
-    breakpoint()
     # Kelly estimates the best bet for maximizing the expected value of the logarithm of the wealth.
     # We don't know the real best xdai_amount, but at least we know which outcome index makes sense.
     assert outcome_index == omen_market.outcomes.index(expected_outcome)

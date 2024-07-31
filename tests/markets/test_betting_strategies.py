@@ -31,8 +31,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     BetOutcome,
-    get_kelly_bet_simplified,
-    get_kelly_criterion_bet,
+    get_kelly_bet,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
     get_market_moving_bet,
@@ -186,26 +185,6 @@ def test_get_market_moving_bet(
 
 
 @pytest.mark.parametrize(
-    "est_p_yes, expected_outcome",
-    [
-        (Probability(0.1), "No"),
-        (Probability(0.9), "Yes"),
-    ],
-)
-def test_kelly_criterion_bet(
-    est_p_yes: Probability, expected_outcome: str, omen_market: OmenMarket
-) -> None:
-    xdai_amount, outcome_index = get_kelly_criterion_bet(
-        market=omen_market,
-        estimated_p_yes=est_p_yes,
-        max_bet=xdai_type(10),  # This significantly changes the outcome.
-    )
-    # Kelly estimates the best bet for maximizing the expected value of the logarithm of the wealth.
-    # We don't know the real best xdai_amount, but at least we know which outcome index makes sense.
-    assert outcome_index == omen_market.outcomes.index(expected_outcome)
-
-
-@pytest.mark.parametrize(
     "probability, min_bet, max_bet, expected_bet",
     [
         (Probability(0.1), 0, 1, 0.1),
@@ -227,7 +206,7 @@ def test_stretch_bet_between(
         (Probability(0.9), BetOutcome.YES),
     ],
 )
-def test_kelly_bet_simplified(
+def test_kelly_bet(
     est_p_yes: Probability, bet_outcome: BetOutcome, omen_market: OmenMarket
 ) -> None:
     max_bet = 10
@@ -237,7 +216,7 @@ def test_kelly_bet_simplified(
     # Kelly estimates the best bet for maximizing the expected value of the logarithm of the wealth.
     # We don't know the real best bet amount, but at least we know which outcome index makes sense.
     assert (
-        get_kelly_bet_simplified(
+        get_kelly_bet(
             market_p_yes=omen_market.current_p_yes,
             estimated_p_yes=est_p_yes,
             max_bet=max_bet,
@@ -248,7 +227,7 @@ def test_kelly_bet_simplified(
     )
 
     assert (
-        get_kelly_bet_simplified(
+        get_kelly_bet(
             market_p_yes=omen_market.current_p_yes,
             estimated_p_yes=est_p_yes,
             max_bet=max_bet,

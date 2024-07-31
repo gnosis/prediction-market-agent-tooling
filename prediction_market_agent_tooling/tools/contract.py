@@ -67,6 +67,11 @@ class ContractBaseClass(BaseModel):
     address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
+    _cache: dict[
+        str, t.Any
+    ] = (
+        {}
+    )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
     def call(
         self,
@@ -187,9 +192,12 @@ class ContractERC20BaseClass(ContractBaseClass):
         return symbol
 
     def symbol_cached(self, web3: Web3 | None = None) -> str:
-        if self._symbol_cache is None:
-            self._symbol_cache = self.symbol(web3=web3)
-        return self._symbol_cache
+        web3 = web3 or self.get_web3()
+        cache_key = create_contract_method_cache_key(self.symbol, web3)
+        if cache_key not in self._cache:
+            self._cache[cache_key] = self.symbol(web3=web3)
+        value: str = self._cache[cache_key]
+        return value
 
     def approve(
         self,
@@ -474,21 +482,6 @@ def init_collateral_token_contract(
         )
 
 
-def auto_withdraw_collateral_token(
-    collateral_token_contract: (
-        ContractERC4626BaseClass | ContractDepositableWrapperERC20BaseClass
-    ),
-    assets_wei: Wei,
-    api_keys: APIKeys,
-    web3: Web3 | None,
-) -> None:
-    collateral_token_contract.withdraw(
-        api_keys,
-        assets_wei,
-        web3=web3,
-    )
-
-
 def auto_deposit_collateral_token(
     collateral_token_contract: ContractERC20BaseClass,
     amount_wei: Wei,
@@ -571,7 +564,7 @@ def auto_deposit_erc4626(
             )
         else:
             raise ValueError(
-                f"Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
+                "Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
             )
 
     # Finally, we can deposit the asset token into the erc4626 vault.
@@ -593,3 +586,9 @@ def to_gnosis_chain_contract(
         return ContractERC20OnGnosisChain(address=contract.address)
     else:
         raise ValueError("Unsupported contract type")
+
+
+def create_contract_method_cache_key(
+    method: t.Callable[[t.Any], t.Any], web3: Web3
+) -> str:
+    return f"{method.__name__}-{str(web3.provider)}"

@@ -200,6 +200,15 @@ def test_kelly_criterion_bet(
         estimated_p_yes=est_p_yes,
         max_bet=xdai_type(10),  # This significantly changes the outcome.
     )
+    xdai_amount_simplified = get_kelly_bet_simplified(
+        market_p_yes=omen_market.current_p_yes,
+        estimated_p_yes=est_p_yes,
+        max_bet=xdai_type(10),
+        confidence=1,
+        bet_outcome=BetOutcome(expected_outcome),
+    )
+
+    breakpoint()
     # Kelly estimates the best bet for maximizing the expected value of the logarithm of the wealth.
     # We don't know the real best xdai_amount, but at least we know which outcome index makes sense.
     assert outcome_index == omen_market.outcomes.index(expected_outcome)
@@ -257,3 +266,51 @@ def test_kelly_bet_simplified(
         )
         == 0
     )
+
+
+def test_kelly_criterion_bet_comparison_1(omen_market: OmenMarket) -> None:
+    xdai_amounts = []
+    xdai_amounts_simplified = []
+    est_p_yes = 0.8
+    expected_outcome = "Yes"
+    max_bets = [0.1, 1, 2, 4, 8, 16, 24]
+    max_bet_to_volume_ratios = [mb / omen_market.usdVolume for mb in max_bets]
+    market_p_yes = omen_market.current_p_yes
+    for max_bet in max_bets:
+        xdai_amount, outcome_index = get_kelly_criterion_bet(
+            market=omen_market,
+            estimated_p_yes=est_p_yes,
+            max_bet=max_bet,  # This significantly changes the outcome.
+        )
+        if outcome_index == omen_market.outcomes.index(expected_outcome):
+            xdai_amounts.append(xdai_amount)
+        else:
+            xdai_amounts.append(0)
+
+        xdai_amount_simplified = get_kelly_bet_simplified(
+            market_p_yes=market_p_yes,
+            estimated_p_yes=est_p_yes,
+            max_bet=max_bet,
+            confidence=1,
+            bet_outcome=BetOutcome(expected_outcome),
+        )
+        xdai_amounts_simplified.append(xdai_amount_simplified)
+
+    # Plot the results
+    from matplotlib import pyplot as plt
+
+    plt.plot(max_bet_to_volume_ratios, xdai_amounts, label="Kelly Criterion")
+    plt.plot(
+        max_bet_to_volume_ratios,
+        xdai_amounts_simplified,
+        label="Kelly Criterion Simplified",
+    )
+    plt.xlabel("Max xDai Bet Amount / Market Volume")
+    plt.ylabel("xDai Bet Amount")
+    plt.title(
+        f"Kelly Criterion Bet Comparison ({est_p_yes=}, market_p_yes={market_p_yes:.3g}, {expected_outcome=})"
+    )
+    plt.legend()
+    plt.show()
+
+    breakpoint()

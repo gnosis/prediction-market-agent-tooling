@@ -1,9 +1,16 @@
 from enum import Enum
 
+from pydantic import BaseModel
 
-class BetOutcome(str, Enum):
+
+class BetDirection(str, Enum):
     YES = "Yes"
     NO = "No"
+
+
+class KellyBet(BaseModel):
+    direction: BetDirection
+    size: float
 
 
 def check_is_valid_probability(probability: float) -> None:
@@ -16,8 +23,7 @@ def get_kelly_bet(
     market_p_yes: float,
     estimated_p_yes: float,
     confidence: float,
-    bet_outcome: BetOutcome,
-) -> float:
+) -> KellyBet:
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
 
@@ -40,23 +46,22 @@ def get_kelly_bet(
     check_is_valid_probability(estimated_p_yes)
     check_is_valid_probability(confidence)
 
-    if bet_outcome == BetOutcome.YES:
-        my_prob = estimated_p_yes
+    if estimated_p_yes > market_p_yes:
+        bet_direction = BetDirection.YES
         market_prob = market_p_yes
-    elif bet_outcome == BetOutcome.NO:
-        my_prob = 1 - estimated_p_yes
+    else:
+        bet_direction = BetDirection.NO
         market_prob = 1 - market_p_yes
-
-    edge = (my_prob - market_prob) * confidence
 
     # Handle the case where market_prob is 0
     if market_prob == 0:
         market_prob = 1e-10
 
+    edge = abs(estimated_p_yes - market_p_yes) * confidence
     odds = (1 / market_prob) - 1
     kelly_fraction = edge / odds
 
     # Ensure bet size is non-negative does not exceed the wallet balance
-    bet_size = max(min(kelly_fraction * max_bet, max_bet), 0)
+    bet_size = min(kelly_fraction * max_bet, max_bet)
 
-    return bet_size
+    return KellyBet(direction=bet_direction, size=bet_size)

@@ -670,7 +670,6 @@ def omen_sell_outcome_tx(
                 amount_wei,
                 0.001,  # Allow 0.1% slippage.
             ),
-            api_keys,
             web3,
         )
 

@@ -209,8 +209,7 @@ class OmenAgentMarket(AgentMarket):
         self,
         outcome: bool,
         amount: TokenAmount,
-        auto_withdraw_erc4626: bool = True,
-        auto_withdraw_depositable_erc20: bool = False,
+        auto_withdraw: bool = False,
         api_keys: APIKeys | None = None,
         web3: Web3 | None = None,
     ) -> None:
@@ -231,8 +230,7 @@ class OmenAgentMarket(AgentMarket):
             api_keys=api_keys if api_keys is not None else APIKeys(),
             market=self,
             binary_outcome=outcome,
-            auto_withdraw_erc4626=auto_withdraw_erc4626,
-            auto_withdraw_depositable_erc20=auto_withdraw_depositable_erc20,
+            auto_withdraw=auto_withdraw,
             web3=web3,
         )
 
@@ -610,8 +608,7 @@ def omen_sell_outcome_tx(
     amount: xDai,  # The xDai value of shares to sell.
     market: OmenAgentMarket,
     outcome: str,
-    auto_withdraw_erc4626: bool,
-    auto_withdraw_depositable_erc20: bool,
+    auto_withdraw: bool,
     web3: Web3 | None = None,
 ) -> None:
     """
@@ -661,12 +658,9 @@ def omen_sell_outcome_tx(
         max_outcome_tokens_to_sell,
         web3=web3,
     )
-    if (
-        auto_withdraw_erc4626
-        and isinstance(collateral_token_contract, ContractERC4626BaseClass)
-    ) or (
-        auto_withdraw_depositable_erc20
-        and isinstance(
+    if auto_withdraw and (
+        isinstance(collateral_token_contract, ContractERC4626BaseClass)
+        or isinstance(
             collateral_token_contract, ContractDepositableWrapperERC20BaseClass
         )
     ):
@@ -685,8 +679,7 @@ def binary_omen_sell_outcome_tx(
     amount: xDai,
     market: OmenAgentMarket,
     binary_outcome: bool,
-    auto_withdraw_erc4626: bool,
-    auto_withdraw_depositable_erc20: bool,
+    auto_withdraw: bool,
     web3: Web3 | None = None,
 ) -> None:
     omen_sell_outcome_tx(
@@ -694,8 +687,7 @@ def binary_omen_sell_outcome_tx(
         amount=amount,
         market=market,
         outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
-        auto_withdraw_erc4626=auto_withdraw_erc4626,
-        auto_withdraw_depositable_erc20=auto_withdraw_depositable_erc20,
+        auto_withdraw=auto_withdraw,
         web3=web3,
     )
 

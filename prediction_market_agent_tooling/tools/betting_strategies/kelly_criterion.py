@@ -7,7 +7,7 @@ class BetOutcome(str, Enum):
 
 
 def check_is_valid_probability(probability: float) -> None:
-    if probability < 0 or probability > 1:
+    if not 0 <= probability <= 1:
         raise ValueError("Probability must be between 0 and 1")
 
 

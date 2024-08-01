@@ -30,6 +30,7 @@ def main(
     language: str = typer.Option("en"),
     outcomes: list[str] = typer.Option([OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]),
     auto_deposit: bool = typer.Option(False),
+    rpc_url: str = typer.Option(None),
 ) -> None:
     """
     Helper script to create a market on Omen, usage:
@@ -52,6 +53,13 @@ def main(
         BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
         SAFE_ADDRESS=safe_address_checksum,
     )
+
+    w3 = None
+    if rpc_url:
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
+
+    print("w3", w3)
+    # sys.exit(1)
     market_address = omen_create_market_tx(
         api_keys=api_keys,
         collateral_token_address=COLLATERAL_TOKEN_CHOICE_TO_ADDRESS[cl_token],
@@ -63,9 +71,23 @@ def main(
         language=language,
         outcomes=outcomes,
         auto_deposit=auto_deposit,
+        web3=w3,
     )
     logger.info(f"Market created at address: {market_address}")
 
 
 if __name__ == "__main__":
     typer.run(main)
+    # main(
+    #     question="test",
+    #     closing_time=datetime.now(),
+    #     category="test",
+    #     initial_funds="0.01",
+    #     from_private_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    #     cl_token=CollateralTokenChoice.chiado_wxdai,
+    #     fee=0.01,
+    #     language="en",
+    #     outcomes=["test", "test2"],
+    #     auto_deposit=False,
+    #     rpc_url="http://localhost:8546",
+    # )

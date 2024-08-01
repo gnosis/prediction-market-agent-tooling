@@ -703,9 +703,13 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
 class CollateralTokenChoice(str, Enum):
     wxdai = "wxdai"
     sdai = "sdai"
+    chiado_wxdai = "chiado_wxdai"
 
 
 COLLATERAL_TOKEN_CHOICE_TO_ADDRESS = {
     CollateralTokenChoice.wxdai: WrappedxDaiContract().address,
     CollateralTokenChoice.sdai: sDaiContract().address,
+    CollateralTokenChoice.chiado_wxdai: Web3.to_checksum_address(
+        "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    ),
 }

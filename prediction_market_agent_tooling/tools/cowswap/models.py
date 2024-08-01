@@ -16,6 +16,7 @@ from pydantic import (
     StrictStr,
     ValidationError,
     field_validator,
+    model_validator,
 )
 
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -408,165 +409,42 @@ class OrderQuoteSideKindBuy(str, Enum):
     BUY = "buy"
 
 
-class OrderQuoteRequest(BaseModel):
-    """
-    Request fee and price quote.
-    """  # noqa: E501
+class CowMetadata(BaseModel):
+    orderClass: dict[str, Any] = Field(default={"orderClass": "market"})
+    quote: dict[str, Any] = Field(default={"slippageBips": 50})
 
-    kind: OrderKind
-    sell_amount_before_fee: StrictStr = Field(
-        description="The total amount that is available for the order. From this value, the fee is deducted and the buy amount is calculated. ",
-        alias="sellAmountBeforeFee",
-    )
-    sell_amount_after_fee: StrictStr = Field(
-        description="The `sellAmount` for the order.", alias="sellAmountAfterFee"
-    )
-    buy_amount_after_fee: StrictStr = Field(
-        description="The `buyAmount` for the order.", alias="buyAmountAfterFee"
-    )
-    valid_to: Optional[StrictInt] = Field(
-        default=None,
-        description="Unix timestamp (`uint32`) until which the order is valid.",
-        alias="validTo",
-    )
-    valid_for: Optional[StrictInt] = Field(
-        default=None,
-        description="Number (`uint32`) of seconds that the order should be valid for.",
-        alias="validFor",
-    )
-    sell_token: StrictStr = Field(
-        description="ERC-20 token to be sold", alias="sellToken"
-    )
-    buy_token: StrictStr = Field(
-        description="ERC-20 token to be bought", alias="buyToken"
-    )
-    receiver: Optional[StrictStr] = Field(
-        default=None,
-        description="An optional address to receive the proceeds of the trade instead of the `owner` (i.e. the order signer). ",
-    )
-    app_data: Optional[str] = Field(default=None, alias="appData")  # json encoded str
-    app_data_hash: Optional[StrictStr] = Field(
-        default=None,
-        description="32 bytes encoded as hex with `0x` prefix. It's expected to be the hash of the stringified JSON object representing the `appData`. ",
-        alias="appDataHash",
-    )
-    sell_token_balance: Optional[SellTokenSource] = Field(
-        default=None, alias="sellTokenBalance"
-    )
-    buy_token_balance: Optional[BuyTokenDestination] = Field(
-        default=None, alias="buyTokenBalance"
-    )
-    var_from: StrictStr = Field(
-        description="20 byte Ethereum address encoded as a hex with `0x` prefix.",
-        alias="from",
-    )
-    price_quality: Optional[PriceQuality] = Field(default=None, alias="priceQuality")
-    signing_scheme: Optional[SigningScheme] = Field(default=None, alias="signingScheme")
-    onchain_order: Optional[Any] = Field(
-        default=None,
-        description='Flag to signal whether the order is intended for on-chain order placement. Only valid for non ECDSA-signed orders." ',
-        alias="onchainOrder",
-    )
-    __properties: ClassVar[List[str]] = [
-        "kind",
-        "sellAmountBeforeFee",
-        "sellAmountAfterFee",
-        "buyAmountAfterFee",
-        "validTo",
-        "validFor",
-        "sellToken",
-        "buyToken",
-        "receiver",
-        "appData",
-        "appDataHash",
-        "sellTokenBalance",
-        "buyTokenBalance",
-        "from",
-        "priceQuality",
-        "signingScheme",
-        "onchainOrder",
-    ]
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        protected_namespaces=(),
+class AppData(BaseModel):
+    app_code: str | None = Field(default="CoW Swap", alias="appCode")
+    version: str = Field(default="1.1.0")
+    metadata: CowMetadata
+
+
+class Quote(BaseModel):
+    from_: str = Field(alias="from")
+    sell_token: str = Field(alias="sellToken")
+    buy_token: str = Field(alias="buyToken")
+    receiver: str
+    valid_for: int = Field(alias="validFor")
+    app_data: Optional[str] = Field(default=None, alias="appData")
+    sell_token_balance: str = Field(default="erc20", alias="sellTokenBalance")
+    buy_token_balance: str = Field(default="erc20", alias="buyTokenBalance")
+    price_quality: str = Field(default="fast", alias="priceQuality")
+    signing_scheme: str = Field(default="eip712", alias="signingScheme")
+    partially_fillable: bool = Field(default=False, alias="partiallyFillable")
+    kind: OrderKind = Field(default=OrderKind.BUY)
+    sell_amount_before_fee: Optional[str] = Field(
+        default=None, alias="sellAmountBeforeFee"
     )
+    buy_amount_after_fee: Optional[str] = Field(default=None, alias="buyAmountAfterFee")
+    model_config = ConfigDict(populate_by_name=True)
 
-    def to_str(self) -> str:
-        """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.model_dump(by_alias=True))
-
-    def to_json(self) -> str:
-        """Returns the JSON representation of the model using alias"""
-        # TODO: pydantic v2: use .model_dump_json(by_alias=True, exclude_unset=True) instead
-        return json.dumps(self.to_dict())
-
-    @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of OrderQuoteRequest from a JSON string"""
-        return cls.from_dict(json.loads(json_str))
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Return the dictionary representation of the model using alias.
-
-        This has the following differences from calling pydantic's
-        `self.model_dump(by_alias=True)`:
-
-        * `None` is only added to the output dict for nullable fields that
-          were set at model initialization. Other fields with value `None`
-          are ignored.
-        """
-        excluded_fields: Set[str] = set([])
-
-        _dict = self.model_dump(
-            by_alias=True,
-            exclude=excluded_fields,
-            exclude_none=True,
-        )
-        # override the default output from pydantic by calling `to_dict()` of app_data
-        if self.app_data:
-            _dict["appData"] = self.app_data
-        # set to None if receiver (nullable) is None
-        # and model_fields_set contains the field
-        if self.receiver is None and "receiver" in self.model_fields_set:
-            _dict["receiver"] = None
-
-        # set to None if onchain_order (nullable) is None
-        # and model_fields_set contains the field
-        if self.onchain_order is None and "onchain_order" in self.model_fields_set:
-            _dict["onchainOrder"] = None
-
-        return _dict
-
-    @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of OrderQuoteRequest from a dict"""
-        if obj is None:
-            return None
-
-        if not isinstance(obj, dict):
-            return cls.model_validate(obj)
-
-        _obj = cls.model_validate(
-            {
-                "kind": obj.get("kind"),
-                "sellAmountBeforeFee": obj.get("sellAmountBeforeFee"),
-                "sellAmountAfterFee": obj.get("sellAmountAfterFee"),
-                "buyAmountAfterFee": obj.get("buyAmountAfterFee"),
-                "validTo": obj.get("validTo"),
-                "validFor": obj.get("validFor"),
-                "sellToken": obj.get("sellToken"),
-                "buyToken": obj.get("buyToken"),
-                "receiver": obj.get("receiver"),
-                "appData": obj["appData"] if obj.get("appData") is not None else None,
-                "appDataHash": obj.get("appDataHash"),
-                "sellTokenBalance": obj.get("sellTokenBalance"),
-                "buyTokenBalance": obj.get("buyTokenBalance"),
-                "from": obj.get("from"),
-                "priceQuality": obj.get("priceQuality"),
-                "signingScheme": obj.get("signingScheme"),
-                "onchainOrder": obj.get("onchainOrder"),
-            }
-        )
-        return _obj
+    @model_validator(mode="after")
+    def check_either_buy_or_sell_amount_set(self) -> Self:
+        if self.sell_amount_before_fee is None and self.buy_amount_after_fee is None:
+            raise ValueError("neither buy nor sell amounts set")
+        if self.kind == "sell" and self.sell_amount_before_fee is None:
+            raise ValueError("sellAmountBeforeFee not set")
+        elif self.kind == "buy" and self.buy_amount_after_fee is None:
+            raise ValueError("buyAmountAfterFee not set")
+        return self

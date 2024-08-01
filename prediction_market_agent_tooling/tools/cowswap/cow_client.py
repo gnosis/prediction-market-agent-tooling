@@ -9,7 +9,7 @@ import requests
 
 from prediction_market_agent_tooling.tools.cowswap.models import (
     OrderCreation,
-    OrderQuoteRequest,
+    Quote,
 )
 
 
@@ -26,17 +26,23 @@ class CowClient:
         r = requests.get(f"{self.api_url.value}/api/v1/version")
         return r.text
 
-    def post_quote(self, quote: OrderQuoteRequest):
+    def post_quote(self, quote: Quote):
+        # r = requests.post(
+        #     f"{self.api_url.value}/api/v1/quote", json=quote.model_dump_json()
+        # )
         r = requests.post(
-            f"{self.api_url.value}/api/v1/quote", json=quote.model_dump_json()
+            f"{self.api_url.value}/api/v1/quote",
+            json=quote.dict(exclude_none=True, by_alias=True),
         )
-        print(r.content)
+
         r.raise_for_status()
+        return r.json()["quote"]
 
     def post_order(self, order: OrderCreation):
-        r = requests.post(
-            f"{self.api_url.value}/api/v1/orders", json=order.model_dump_json()
-        )
+        # r = requests.post(
+        #     f"{self.api_url.value}/api/v1/orders", json=order.model_dump_json()
+        # )
+        r = requests.post(f"{self.api_url.value}/api/v1/orders", json=order)
         # Example from test_cow_client does not work (same as API example from docs)
         # https://docs.cow.fi/cow-protocol/reference/apis/orderbook
         print(r.content)

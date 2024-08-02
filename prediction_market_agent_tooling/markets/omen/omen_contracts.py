@@ -22,6 +22,9 @@ from prediction_market_agent_tooling.gtypes import (
     wei_type,
     xdai_type,
 )
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    INVALID_ANSWER_HEX_BYTES,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC20OnGnosisChain,
@@ -562,8 +565,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         self,
         api_keys: APIKeys,
         question_id: HexBytes,
-        answer: str,
-        outcomes: list[str],
+        answer: HexBytes,
         bond: Wei,
         max_previous: Wei | None = None,
         web3: Web3 | None = None,
@@ -573,21 +575,57 @@ class OmenRealitioContract(ContractOnGnosisChain):
             # same as on Omen website: https://github.com/protofire/omen-exchange/blob/763d9c9d05ebf9edacbc1dbaa561aa5d08813c0f/app/src/services/realitio.ts#L363.
             max_previous = Wei(0)
 
-        # Normalise the answer to lowercase, to match Enum values as [YES, NO] against outcomes as ["Yes", "No"].
-        answer = answer.lower()
-        outcomes = [o.lower() for o in outcomes]
-
         return self.send_with_value(
             api_keys=api_keys,
             function_name="submitAnswer",
             function_params=dict(
                 question_id=question_id,
-                answer=int_to_hexbytes(
-                    outcomes.index(answer)
-                ),  # Contract's method expects answer index in bytes.
+                answer=answer,
                 max_previous=max_previous,
             ),
             amount_wei=bond,
+            web3=web3,
+        )
+
+    def submit_answer(
+        self,
+        api_keys: APIKeys,
+        question_id: HexBytes,
+        answer: str,
+        outcomes: list[str],
+        bond: Wei,
+        max_previous: Wei | None = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        # Normalise the answer to lowercase, to match Enum values as [YES, NO] against outcomes as ["Yes", "No"].
+        answer = answer.lower()
+        outcomes = [o.lower() for o in outcomes]
+
+        return self.submitAnswer(
+            api_keys=api_keys,
+            question_id=question_id,
+            answer=int_to_hexbytes(
+                outcomes.index(answer)
+            ),  # Contract's method expects answer index in bytes.
+            bond=bond,
+            max_previous=max_previous,
+            web3=web3,
+        )
+
+    def submit_answer_invalid(
+        self,
+        api_keys: APIKeys,
+        question_id: HexBytes,
+        bond: Wei,
+        max_previous: Wei | None = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.submitAnswer(
+            api_keys=api_keys,
+            question_id=question_id,
+            answer=INVALID_ANSWER_HEX_BYTES,
+            bond=bond,
+            max_previous=max_previous,
             web3=web3,
         )
 

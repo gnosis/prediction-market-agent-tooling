@@ -31,6 +31,7 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+INVALID_ANSWER_HEX_BYTES = HexBytes(INVALID_ANSWER)
 OMEN_BASE_URL = "https://aiomen.eth.limo"
 PRESAGIO_BASE_URL = "https://presagio.pages.dev"
 

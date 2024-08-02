@@ -100,7 +100,7 @@ def test_create_bet_withdraw_resolve_market(
     # Submit the answer and verify it was successfully submitted.
     logger.debug(f"Submitting the answer to {market.question.id=}.")
 
-    OmenRealitioContract().submitAnswer(
+    OmenRealitioContract().submit_answer(
         api_keys=test_keys,
         question_id=market.question.id,
         answer=OMEN_FALSE_OUTCOME,

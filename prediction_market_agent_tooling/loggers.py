@@ -31,7 +31,7 @@ class LogConfig(BaseSettings):
     LOG_LEVEL: LogLevel = LogLevel.DEBUG
 
 
-class NoNewLineStreamHandler(logging.StreamHandler):
+class NoNewLineStreamHandler(logging.StreamHandler):  # type: ignore # StreamHandler is not typed in the standard library.
     def format(self, record: logging.LogRecord) -> str:
         return super().format(record).replace("\n", " ")
 

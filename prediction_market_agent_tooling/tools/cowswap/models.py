@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 import json
 import pprint
 import re  # noqa: F401
 from enum import Enum
+from enum import StrEnum
 from typing import ClassVar, List, Union, Any, Self, Set, Dict, TYPE_CHECKING
 from typing import Optional
 
@@ -178,14 +177,7 @@ class SellTokenSource(str, Enum):
     EXTERNAL = "external"
 
 
-class OrderKind(str, Enum):
-    """
-    Is this order a buy or sell?
-    """
-
-    """
-    allowed enum values
-    """
+class OrderKind(StrEnum):
     BUY = "buy"
     SELL = "sell"
 
@@ -421,11 +413,10 @@ class AppData(BaseModel):
 
 
 class Quote(BaseModel):
-    from_: str = Field(alias="from")
+    # from_: str = Field(alias="from")
     sell_token: str = Field(alias="sellToken")
     buy_token: str = Field(alias="buyToken")
     receiver: str
-    valid_for: int = Field(alias="validFor")
     app_data: Optional[str] = Field(default=None, alias="appData")
     sell_token_balance: str = Field(default="erc20", alias="sellTokenBalance")
     buy_token_balance: str = Field(default="erc20", alias="buyTokenBalance")
@@ -448,3 +439,13 @@ class Quote(BaseModel):
         elif self.kind == "buy" and self.buy_amount_after_fee is None:
             raise ValueError("buyAmountAfterFee not set")
         return self
+
+
+class OrderStatus(StrEnum):
+    OPEN = "open"
+    SCHEDULED = "scheduled"
+    ACTIVE = "active"
+    SOLVED = "solved"
+    EXECUTING = "executing"
+    TRADED = "traded"
+    CANCELLED = "cancelled"

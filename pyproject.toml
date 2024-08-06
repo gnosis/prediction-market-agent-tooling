@@ -37,7 +37,7 @@ google-api-python-client = { version = "2.95.0", optional = true}
 subgrounds = "^1.9.1"
 loguru = "^0.7.2"
 safe-eth-py = "^6.0.0b14"
-eth-account = "^0.8.0"
+eth-account = "^0.11.2"
 prompt-toolkit = "^3.0.43"
 safe-cli = "^1.0.0"
 langfuse = "^2.27.1"

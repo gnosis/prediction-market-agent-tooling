@@ -3,22 +3,18 @@ import pprint
 import re  # noqa: F401
 from enum import Enum
 from enum import StrEnum
-from typing import ClassVar, List, Union, Any, Self, Set, Dict, TYPE_CHECKING
 from typing import Optional
+from typing import Union, Any, Self, Set, Dict, TYPE_CHECKING
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    StrictBool,
-    StrictInt,
     StrictStr,
     ValidationError,
     field_validator,
     model_validator,
 )
-
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
 class OrderCreationAppData(BaseModel):
@@ -196,200 +192,6 @@ class SigningScheme(str, Enum):
     EIP1271 = "eip1271"
 
 
-class OrderCreation(BaseModel):
-    """
-    Data a user provides when creating a new order.
-    """  # noqa: E501
-
-    sell_token: StrictStr = Field(
-        description="see `OrderParameters::sellToken`", alias="sellToken"
-    )
-    buy_token: StrictStr = Field(
-        description="see `OrderParameters::buyToken`", alias="buyToken"
-    )
-    receiver: Optional[StrictStr] = Field(
-        default=None, description="see `OrderParameters::receiver`"
-    )
-    sell_amount: StrictStr = Field(
-        description="see `OrderParameters::sellAmount`", alias="sellAmount"
-    )
-    buy_amount: StrictStr = Field(
-        description="see `OrderParameters::buyAmount`", alias="buyAmount"
-    )
-    valid_to: StrictInt = Field(
-        description="see `OrderParameters::validTo`", alias="validTo"
-    )
-    fee_amount: StrictStr = Field(
-        description="see `OrderParameters::feeAmount`", alias="feeAmount"
-    )
-    kind: OrderKind = Field(description="see `OrderParameters::kind`")
-    partially_fillable: StrictBool = Field(
-        description="see `OrderParameters::partiallyFillable`",
-        alias="partiallyFillable",
-    )
-    sell_token_balance: Optional[SellTokenSource] = Field(
-        default=None,
-        description="see `OrderParameters::sellTokenBalance`",
-        alias="sellTokenBalance",
-    )
-    buy_token_balance: Optional[BuyTokenDestination] = Field(
-        default=None,
-        description="see `OrderParameters::buyTokenBalance`",
-        alias="buyTokenBalance",
-    )
-    signing_scheme: SigningScheme = Field(alias="signingScheme")
-    signature: HexBytes
-    var_from: Optional[StrictStr] = Field(
-        default=None,
-        description="If set, the backend enforces that this address matches what is decoded as the *signer* of the signature. This helps catch errors with invalid signature encodings as the backend might otherwise silently work with an unexpected address that for example does not have any balance. ",
-        alias="from",
-    )
-    quote_id: Optional[StrictInt] = Field(
-        default=None,
-        description="Orders can optionally include a quote ID. This way the order can be linked to a quote and enable providing more metadata when analysing order slippage. ",
-        alias="quoteId",
-    )
-    app_data: OrderCreationAppData = Field(alias="appData")
-    app_data_hash: Optional[StrictStr] = Field(
-        default=None,
-        description="May be set for debugging purposes. If set, this field is compared to what the backend internally calculates as the app data hash based on the contents of `appData`. If the hash does not match, an error is returned. If this field is set, then `appData` **MUST** be a string encoding of a JSON object. ",
-        alias="appDataHash",
-    )
-    __properties: ClassVar[List[str]] = [
-        "sellToken",
-        "buyToken",
-        "receiver",
-        "sellAmount",
-        "buyAmount",
-        "validTo",
-        "feeAmount",
-        "kind",
-        "partiallyFillable",
-        "sellTokenBalance",
-        "buyTokenBalance",
-        "signingScheme",
-        "signature",
-        "from",
-        "quoteId",
-        "appData",
-        "appDataHash",
-    ]
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        protected_namespaces=(),
-    )
-
-    def to_str(self) -> str:
-        """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.model_dump(by_alias=True))
-
-    def to_json(self) -> str:
-        """Returns the JSON representation of the model using alias"""
-        # TODO: pydantic v2: use .model_dump_json(by_alias=True, exclude_unset=True) instead
-        return json.dumps(self.to_dict())
-
-    @classmethod
-    def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of OrderCreation from a JSON string"""
-        return cls.from_dict(json.loads(json_str))
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Return the dictionary representation of the model using alias.
-
-        This has the following differences from calling pydantic's
-        `self.model_dump(by_alias=True)`:
-
-        * `None` is only added to the output dict for nullable fields that
-          were set at model initialization. Other fields with value `None`
-          are ignored.
-        """
-        excluded_fields: Set[str] = set([])
-
-        _dict = self.model_dump(
-            by_alias=True,
-            exclude=excluded_fields,
-            exclude_none=True,
-        )
-        # override the default output from pydantic by calling `to_dict()` of signature
-        if self.signature:
-            _dict["signature"] = self.signature
-        # override the default output from pydantic by calling `to_dict()` of app_data
-        if self.app_data:
-            _dict["appData"] = self.app_data.to_dict()
-        # set to None if receiver (nullable) is None
-        # and model_fields_set contains the field
-        if self.receiver is None and "receiver" in self.model_fields_set:
-            _dict["receiver"] = None
-
-        # set to None if var_from (nullable) is None
-        # and model_fields_set contains the field
-        if self.var_from is None and "var_from" in self.model_fields_set:
-            _dict["from"] = None
-
-        # set to None if quote_id (nullable) is None
-        # and model_fields_set contains the field
-        if self.quote_id is None and "quote_id" in self.model_fields_set:
-            _dict["quoteId"] = None
-
-        # set to None if app_data_hash (nullable) is None
-        # and model_fields_set contains the field
-        if self.app_data_hash is None and "app_data_hash" in self.model_fields_set:
-            _dict["appDataHash"] = None
-
-        return _dict
-
-    @classmethod
-    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of OrderCreation from a dict"""
-        if obj is None:
-            return None
-
-        if not isinstance(obj, dict):
-            return cls.model_validate(obj)
-
-        _obj = cls.model_validate(
-            {
-                "sellToken": obj.get("sellToken"),
-                "buyToken": obj.get("buyToken"),
-                "receiver": obj.get("receiver"),
-                "sellAmount": obj.get("sellAmount"),
-                "buyAmount": obj.get("buyAmount"),
-                "validTo": obj.get("validTo"),
-                "feeAmount": obj.get("feeAmount"),
-                "kind": obj.get("kind"),
-                "partiallyFillable": obj.get("partiallyFillable"),
-                "sellTokenBalance": obj.get("sellTokenBalance"),
-                "buyTokenBalance": obj.get("buyTokenBalance"),
-                "signingScheme": obj.get("signingScheme"),
-                "signature": obj["signature"]
-                if obj.get("signature") is not None
-                else None,
-                "from": obj.get("from"),
-                "quoteId": obj.get("quoteId"),
-                "appData": OrderCreationAppData.from_dict(obj["appData"])
-                if obj.get("appData") is not None
-                else None,
-                "appDataHash": obj.get("appDataHash"),
-            }
-        )
-        return _obj
-
-
-class PriceQuality(str, Enum):
-    """
-    How good should the price estimate be?  Fast: The price estimate is chosen among the fastest N price estimates. Optimal: The price estimate is chosen among all price estimates. Verified: The price estimate is chosen among all verified/simulated price estimates.  **NOTE**: Orders are supposed to be created from `verified` or `optimal` price estimates.
-    """
-
-    """
-    allowed enum values
-    """
-    FAST = "fast"
-    OPTIMAL = "optimal"
-    VERIFIED = "verified"
-
-
 class OrderQuoteSideKindBuy(str, Enum):
     """
     OrderQuoteSideKindBuy
@@ -412,8 +214,7 @@ class AppData(BaseModel):
     metadata: CowMetadata
 
 
-class Quote(BaseModel):
-    # from_: str = Field(alias="from")
+class BaseQuote(BaseModel):
     sell_token: str = Field(alias="sellToken")
     buy_token: str = Field(alias="buyToken")
     receiver: str
@@ -424,6 +225,27 @@ class Quote(BaseModel):
     signing_scheme: str = Field(default="eip712", alias="signingScheme")
     partially_fillable: bool = Field(default=False, alias="partiallyFillable")
     kind: OrderKind = Field(default=OrderKind.BUY)
+
+
+class QuoteOutput(BaseQuote):
+    fee_amount: str = Field(alias="feeAmount")
+    buy_amount: Optional[str] = Field(default=None, alias="buyAmount")
+    sell_amount: Optional[str] = Field(default=None, alias="sellAmount")
+    valid_to: int = Field(alias="validTo")
+
+    @model_validator(mode="after")
+    def check_either_buy_or_sell_amount_set(self) -> Self:
+        if self.sell_amount is None and self.buy_amount is None:
+            raise ValueError("neither buy nor sell amounts set")
+        if self.kind == "sell" and self.sell_amount is None:
+            raise ValueError("sellAmountBeforeFee not set")
+        elif self.kind == "buy" and self.buy_amount is None:
+            raise ValueError("buyAmountAfterFee not set")
+        return self
+
+
+class QuoteInput(BaseQuote):
+    from_: Optional[str] = Field(default=None, alias="from")
     sell_amount_before_fee: Optional[str] = Field(
         default=None, alias="sellAmountBeforeFee"
     )

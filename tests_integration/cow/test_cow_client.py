@@ -72,12 +72,10 @@ def test_post_order(
         "prediction_market_agent_tooling.tools.cowswap.cow_client.CowClient.build_order_with_fee_and_sell_amounts",
         Mock(side_effect=fake_build_quote),
     ):
-        # ToDo - do clean-up with created orders
         quote = test_mock_client.post_quote(test_quote)
         posted_order_id = test_mock_client.post_order(quote)
         assert posted_order_id is not None
         id_holder_fixture.ids.append(posted_order_id)
-        # ToDo - clean-up
         status = test_mock_client.get_order_status(posted_order_id)
         assert status != OrderStatus.CANCELLED
 

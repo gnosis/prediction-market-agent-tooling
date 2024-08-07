@@ -247,6 +247,7 @@ class ContractERC20BaseClass(ContractBaseClass):
         allowance: Wei = self.call("allowance", [owner, spender], web3=web3)
         return allowance
 
+
 class ContractDepositableWrapperERC20BaseClass(ContractERC20BaseClass):
     """
     ERC-20 standard base class extended for wrapper tokens.

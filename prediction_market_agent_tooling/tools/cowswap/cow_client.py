@@ -10,17 +10,17 @@ from web3 import Web3
 from prediction_market_agent_tooling.gtypes import Wei
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.cowswap.encoding import (
-    MESSAGE_TYPES_CANCELLATION,
     DOMAIN,
     MESSAGE_TYPES,
+    MESSAGE_TYPES_CANCELLATION,
     RELAYER_ADDRESSES,
 )
 from prediction_market_agent_tooling.tools.cowswap.models import (
-    OrderStatus,
+    CowServer,
     OrderKind,
+    OrderStatus,
     QuoteInput,
     QuoteOutput,
-    CowServer,
 )
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_NETWORK_ID
 

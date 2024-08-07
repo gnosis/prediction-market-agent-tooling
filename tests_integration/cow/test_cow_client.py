@@ -1,4 +1,4 @@
-from typing import Generator, Any
+from typing import Any, Generator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,9 +11,9 @@ from prediction_market_agent_tooling.tools.cowswap.cow_client import (
 )
 from prediction_market_agent_tooling.tools.cowswap.models import (
     OrderKind,
+    OrderStatus,
     QuoteInput,
     QuoteOutput,
-    OrderStatus,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
 

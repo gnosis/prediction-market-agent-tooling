@@ -219,6 +219,12 @@ class ContractERC20BaseClass(ContractBaseClass):
         balance: Wei = self.call("balanceOf", [for_address], web3=web3)
         return balance
 
+    def allowance(
+        self, owner: ChecksumAddress, spender: ChecksumAddress, web3: Web3 | None = None
+    ):
+        allowance: Wei = self.call("allowance", [owner, spender], web3=web3)
+        return allowance
+
 
 class ContractDepositableWrapperERC20BaseClass(ContractERC20BaseClass):
     """

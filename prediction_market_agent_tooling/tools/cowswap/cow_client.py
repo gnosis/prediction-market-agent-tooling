@@ -10,12 +10,15 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_typing import ChecksumAddress
 from loguru import logger
+from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import Wei
+from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.cowswap.encoding import (
     MESSAGE_TYPES_CANCELLATION,
     DOMAIN,
     MESSAGE_TYPES,
+    RELAYER_ADDRESSES,
 )
 from prediction_market_agent_tooling.tools.cowswap.models import (
     OrderStatus,
@@ -23,6 +26,7 @@ from prediction_market_agent_tooling.tools.cowswap.models import (
     QuoteInput,
     QuoteOutput,
 )
+from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_NETWORK_ID
 
 
 class CowServer(StrEnum):
@@ -83,9 +87,24 @@ class CowClient:
         }
         return order_data
 
-    def post_order(self, quote: QuoteOutput) -> str:
-        # sign
+    def _assert_allowance_gt_sell_amount(
+        self, quote: QuoteOutput, web3: Web3 | None = None
+    ) -> None:
+        token = ContractERC20OnGnosisChain(
+            address=Web3.to_checksum_address(quote.sell_token), web3=web3
+        )
+        relayer_address = RELAYER_ADDRESSES.get(GNOSIS_NETWORK_ID)
+        allowance = token.allowance(self.account.address, relayer_address, web3=web3)
+        # We require allowance >= (sell_amount+fee) due to the way we build the order
+        full_sell_amount = int(quote.sell_amount) + int(quote.fee_amount)
+        if full_sell_amount > allowance:
+            raise ValueError(f"Allowance {allowance} < sell_amount {full_sell_amount}")
+
+    def post_order(self, quote: QuoteOutput, web3: Web3 | None = None) -> str:
+        self._assert_allowance_gt_sell_amount(quote=quote, web3=web3)
         order_data = self.build_order_with_fee_and_sell_amounts(quote)
+
+        # sign
         signed_message = Account.sign_typed_data(
             self.account.key, DOMAIN, MESSAGE_TYPES, order_data
         )

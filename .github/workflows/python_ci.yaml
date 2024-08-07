@@ -15,6 +15,7 @@ env:
   GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
   GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
   GRAPH_API_KEY: ${{ secrets.GRAPH_API_KEY }}
+  COWSWAP_TEST_PRIVATE_KEY: ${{ secrets.COWSWAP_TEST_PRIVATE_KEY }}
 
 jobs:
   mypy:

@@ -31,6 +31,7 @@ class TavilyResponseCacheModel(SQLModel, table=True):
     __tablename__ = "tavily_response_cache"
     __table_args__ = {"extend_existing": True}
     id: int | None = Field(None, primary_key=True)
+    agent_id: str = Field(index=True, nullable=False)
     # Parameters used to execute the search
     query: str
     search_depth: str
@@ -52,6 +53,7 @@ class TavilyResponseCacheModel(SQLModel, table=True):
 
     @staticmethod
     def from_model(
+        agent_id: str,
         query: str,
         search_depth: t.Literal["basic", "advanced"],
         topic: t.Literal["general", "news"],
@@ -65,6 +67,7 @@ class TavilyResponseCacheModel(SQLModel, table=True):
         response: TavilyResponse,
     ) -> "TavilyResponseCacheModel":
         return TavilyResponseCacheModel(
+            agent_id=agent_id,
             query=query,
             search_depth=search_depth,
             topic=topic,
@@ -81,7 +84,8 @@ class TavilyResponseCacheModel(SQLModel, table=True):
 
 
 class TavilyResponseCache:
-    def __init__(self, sqlalchemy_db_url: str | None = None):
+    def __init__(self, agent_id: str, sqlalchemy_db_url: str | None = None):
+        self.agent_id = agent_id
         self.engine = create_engine(
             sqlalchemy_db_url
             if sqlalchemy_db_url
@@ -113,6 +117,7 @@ class TavilyResponseCache:
         response: TavilyResponse,
     ) -> None:
         db_item = TavilyResponseCacheModel.from_model(
+            agent_id=self.agent_id,
             query=query,
             search_depth=search_depth,
             topic=topic,

@@ -16,10 +16,7 @@ from prediction_market_agent_tooling.tools.cowswap.models import (
     OrderStatus,
 )
 
-WETH = Web3.to_checksum_address("0x6a023ccd1ff6f2045c3309768ead9e68f978f6e1")
-xDAI = Web3.to_checksum_address("0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d")
 wxDAI = Web3.to_checksum_address("0xe91d153e0b41518a2ce8dd3d7944fa863463a97d")
-NATIVE = Web3.to_checksum_address("0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
 COW = Web3.to_checksum_address("0x177127622c4A00F3d409B75571e12cB3c8973d3c")
 
 
@@ -44,34 +41,6 @@ def test_quote(cowswap_test_account: LocalAccount) -> Generator[QuoteInput, None
     )
 
 
-# @pytest.fixture(scope="module")
-# def test_order() -> Generator[OrderCreation, None, None]:
-#     quote = OrderCreation.from_dict(
-#         {
-#             "sellToken": "0x6810e776880c02933d47db1b9fc05908e5386b96",
-#             "buyToken": "0x6810e776880c02933d47db1b9fc05908e5386b96",
-#             "receiver": "0x6810e776880c02933d47db1b9fc05908e5386b96",
-#             "sellAmount": "1234567890",
-#             "buyAmount": "1234567890",
-#             "validTo": 0,
-#             "feeAmount": "1234567890",
-#             "kind": "buy",
-#             "partiallyFillable": True,
-#             "sellTokenBalance": "erc20",
-#             "buyTokenBalance": "erc20",
-#             "signingScheme": "eip712",
-#             "signature": HexBytes(
-#                 "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-#             ),
-#             "from": "0x6810e776880c02933d47db1b9fc05908e5386b96",
-#             "quoteId": 0,
-#             "appData": '{"version":"0.9.0","metadata":{}}',
-#             "appDataHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-#         }
-#     )
-#     yield quote
-
-
 def test_version(test_mock_client: CowClient) -> None:
     version = test_mock_client.get_version()
     assert version
@@ -94,9 +63,6 @@ def test_get_order_status(test_mock_client: CowClient) -> None:
     order_uid = "0x2959dfad69782fa300d8e2897b7b5a340690515e45fcc529138ebe249faa2d48a7e93f5a0e718bddc654e525ea668c64fd57288266b2a01f"
     order_status = test_mock_client.get_order_status(order_uid)
     assert order_status == OrderStatus.CANCELLED
-
-
-# get all pending orders
 
 
 def test_post_order(

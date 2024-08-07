@@ -1,10 +1,3 @@
-# ToDo - move to env
-#  - description: Gnosis Chain (Prod)
-#     url: https://api.cow.fi/xdai
-#   - description: Gnosis Chain (Staging)
-#     url: https://barn.api.cow.fi/xdai
-from enum import StrEnum
-
 import requests
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
@@ -25,13 +18,9 @@ from prediction_market_agent_tooling.tools.cowswap.models import (
     OrderKind,
     QuoteInput,
     QuoteOutput,
+    CowServer,
 )
 from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_NETWORK_ID
-
-
-class CowServer(StrEnum):
-    GNOSIS_PROD = "https://api.cow.fi/xdai"
-    GNOSIS_STAGING = "https://barn.api.cow.fi/xdai"
 
 
 class CowClient:
@@ -44,9 +33,6 @@ class CowClient:
     def get_version(self) -> str:
         r = requests.get(f"{self.api_url}/api/v1/version")
         return r.text
-
-    def approve_spending_of_token(self) -> None:
-        raise NotImplementedError()
 
     def build_swap_params(
         self, sell_token: ChecksumAddress, buy_token: ChecksumAddress, sell_amount: Wei
@@ -63,7 +49,8 @@ class CowClient:
         )
         return quote
 
-    def _if_error_log_and_raise(self, r: requests.Response) -> None:
+    @staticmethod
+    def _if_error_log_and_raise(r: requests.Response) -> None:
         try:
             r.raise_for_status()
         except:
@@ -77,7 +64,8 @@ class CowClient:
         self._if_error_log_and_raise(r)
         return QuoteOutput.model_validate(r.json()["quote"])
 
-    def build_order_with_fee_and_sell_amounts(self, quote: QuoteOutput) -> dict:
+    @staticmethod
+    def build_order_with_fee_and_sell_amounts(quote: QuoteOutput) -> dict:
         quote_dict = quote.dict(by_alias=True, exclude_none=True)
         new_sell_amount = int(quote["sellAmount"]) + int(quote["feeAmount"])
         order_data = {

@@ -19,7 +19,12 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import (
+    Wei,
+    send_xdai_to,
+    xdai_to_wei,
+    xdai_type,
+)
 from tests_integration.safe.conftest import print_current_block
 
 
@@ -48,26 +53,23 @@ def test_send_function_on_contract_tx_using_safe(
 
     logger.debug(f"is connected {local_web3.is_connected()} {local_web3.provider}")
     print_current_block(local_web3)
-    logger.debug(
-        f"provider {local_web3.provider.endpoint_uri} connected {local_web3.is_connected()}"
-    )
 
     account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     # Fund safe with xDAI if needed
     initial_safe_balance = local_ethereum_client.get_balance(test_safe.address)
-    if initial_safe_balance < xdai_to_wei(10):
+    if initial_safe_balance < xdai_to_wei(xdai_type(10)):
         send_xdai_to(
             web3=local_web3,
             from_private_key=PrivateKey(SecretStr(account.key.hex())),
             to_address=test_safe.address,
-            value=xdai_to_wei(10),
+            value=xdai_to_wei(xdai_type(10)),
         )
 
     print_current_block(local_web3)
     safe_balance = local_ethereum_client.get_balance(test_safe.address)
     logger.debug(f"safe balance {safe_balance} xDai")
     # Fetch existing market with enough liquidity
-    min_liquidity_wei = xdai_to_wei(xDai(5))
+    min_liquidity_wei = xdai_to_wei(xdai_type(5))
     markets = fetch_omen_open_binary_market_with_enough_liquidity(1, min_liquidity_wei)
     # Check that there is a market with enough liquidity
     assert len(markets) == 1
@@ -79,7 +81,7 @@ def test_send_function_on_contract_tx_using_safe(
         test_safe.address, OMEN_TRUE_OUTCOME, web3=local_web3
     )
     logger.debug(f"initial Yes token balance {initial_yes_token_balance}")
-    bet_tx_hash = binary_omen_buy_outcome_tx(
+    binary_omen_buy_outcome_tx(
         api_keys=test_keys,
         amount=xDai(amount.amount),
         market=omen_agent_market,
@@ -88,7 +90,6 @@ def test_send_function_on_contract_tx_using_safe(
         web3=local_web3,
     )
     print_current_block(local_web3)
-    logger.debug(f"placed bet tx hash {bet_tx_hash}")
 
     final_yes_token_balance = omen_agent_market.get_token_balance(
         test_safe.address, OMEN_TRUE_OUTCOME, web3=local_web3
@@ -99,7 +100,7 @@ def test_send_function_on_contract_tx_using_safe(
 
 
 def fetch_omen_open_binary_market_with_enough_liquidity(
-    limit=1, liquidity_bigger_than=xdai_to_wei(xDai(5))
+    limit: int = 1, liquidity_bigger_than: Wei = xdai_to_wei(xdai_type(5))
 ) -> list[OmenMarket]:
     return OmenSubgraphHandler().get_omen_binary_markets(
         limit=limit, resolved=False, liquidity_bigger_than=liquidity_bigger_than

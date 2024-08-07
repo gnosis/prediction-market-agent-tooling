@@ -26,6 +26,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,
     WrappedxDaiContract,
+    sDaiContract,
 )
 from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
@@ -185,7 +186,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         condition_id_in: list[HexBytes] | None = None,
         id_in: list[str] | None = None,
         excluded_questions: set[str] | None = None,
-        collateral_token_address: ChecksumAddress | None = None,
+        collateral_token_address_in: tuple[ChecksumAddress, ...] | None = None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
             "isPendingArbitration": False,
@@ -195,8 +196,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             "condition_": {},
         }
 
-        if collateral_token_address:
-            where_stms["collateralToken"] = collateral_token_address.lower()
+        if collateral_token_address_in:
+            where_stms["collateralToken_in"] = [
+                x.lower() for x in collateral_token_address_in
+            ]
 
         if creator:
             where_stms["creator"] = creator
@@ -338,9 +341,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
-        collateral_token_address: (
-            ChecksumAddress | None
-        ) = WrappedxDaiContract().address,  # TODO: Remove this default limitation once we fully support other than wxDai markets.
+        # TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
+        collateral_token_address_in: tuple[ChecksumAddress, ...]
+        | None = (
+            WrappedxDaiContract().address,
+            sDaiContract().address,
+        ),
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
@@ -358,7 +364,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             id_in=id_in,
             excluded_questions=excluded_questions,
             liquidity_bigger_than=liquidity_bigger_than,
-            collateral_token_address=collateral_token_address,
+            collateral_token_address_in=collateral_token_address_in,
         )
 
         # These values can not be set to `None`, but they can be omitted.

@@ -21,6 +21,7 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
     GNOSIS_NETWORK_ID,
     GNOSIS_RPC_URL,
 )
+from prediction_market_agent_tooling.tools.utils import should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
@@ -66,6 +67,11 @@ class ContractBaseClass(BaseModel):
     address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
+    _cache: dict[
+        str, t.Any
+    ] = (
+        {}
+    )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
     def call(
         self,
@@ -179,6 +185,18 @@ class ContractERC20BaseClass(ContractBaseClass):
         )
     )
 
+    def symbol(self, web3: Web3 | None = None) -> str:
+        symbol: str = self.call("symbol", web3=web3)
+        return symbol
+
+    def symbol_cached(self, web3: Web3 | None = None) -> str:
+        web3 = web3 or self.get_web3()
+        cache_key = create_contract_method_cache_key(self.symbol, web3)
+        if cache_key not in self._cache:
+            self._cache[cache_key] = self.symbol(web3=web3)
+        value: str = self._cache[cache_key]
+        return value
+
     def approve(
         self,
         api_keys: APIKeys,
@@ -218,6 +236,10 @@ class ContractERC20BaseClass(ContractBaseClass):
     def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
         balance: Wei = self.call("balanceOf", [for_address], web3=web3)
         return balance
+
+    def get_in_shares(self, amount: Wei, web3: Web3 | None = None) -> Wei:
+        # ERC-20 just holds the token, so the exact amount we send there, is the amount of shares we have there.
+        return amount
 
     def allowance(
         self, owner: ChecksumAddress, spender: ChecksumAddress, web3: Web3 | None = None
@@ -289,14 +311,34 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         self,
         api_keys: APIKeys,
         amount_wei: Wei,
-        receiver: ChecksumAddress,
+        receiver: ChecksumAddress | None = None,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
+        receiver = receiver or api_keys.bet_from_address
         return self.send(
             api_keys=api_keys,
             function_name="deposit",
             function_params=[amount_wei, receiver],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+    def withdraw(
+        self,
+        api_keys: APIKeys,
+        assets_wei: Wei,
+        receiver: ChecksumAddress | None = None,
+        owner: ChecksumAddress | None = None,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        receiver = receiver or api_keys.bet_from_address
+        owner = owner or api_keys.bet_from_address
+        return self.send(
+            api_keys=api_keys,
+            function_name="withdraw",
+            function_params=[assets_wei, receiver, owner],
             tx_params=tx_params,
             web3=web3,
         )
@@ -313,9 +355,7 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         self, web3: Web3 | None = None
     ) -> ContractERC20BaseClass | ContractDepositableWrapperERC20BaseClass:
         web3 = web3 or self.get_web3()
-        contract = init_erc4626_or_wrappererc20_or_erc20_contract(
-            self.asset(), web3=web3
-        )
+        contract = init_collateral_token_contract(self.asset(), web3=web3)
         assert not isinstance(
             contract, ContractERC4626OnGnosisChain
         ), "Asset token should be either Depositable Wrapper ERC-20 or ERC-20."  # Shrinking down possible types.
@@ -342,6 +382,10 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
 
         return receipt
 
+    def get_in_shares(self, amount: Wei, web3: Web3 | None = None) -> Wei:
+        # We send erc20 to the vault and receive shares in return, which can have a different value.
+        return self.convertToShares(amount, web3=web3)
+
 
 class ContractOnGnosisChain(ContractBaseClass):
     """
@@ -365,14 +409,16 @@ class ContractERC20OnGnosisChain(ContractERC20BaseClass, ContractOnGnosisChain):
 
 
 class ContractDepositableWrapperERC20OnGnosisChain(
-    ContractDepositableWrapperERC20BaseClass, ContractOnGnosisChain
+    ContractDepositableWrapperERC20BaseClass, ContractERC20OnGnosisChain
 ):
     """
     Depositable Wrapper ERC-20 standard base class with Gnosis Chain configuration.
     """
 
 
-class ContractERC4626OnGnosisChain(ContractERC4626BaseClass, ContractOnGnosisChain):
+class ContractERC4626OnGnosisChain(
+    ContractERC4626BaseClass, ContractERC20OnGnosisChain
+):
     """
     ERC-4626 standard base class with Gnosis Chain configuration.
     """
@@ -409,14 +455,9 @@ def contract_implements_function(
     return implements
 
 
-def init_erc4626_or_wrappererc20_or_erc20_contract(
-    address: ChecksumAddress,
-    web3: Web3,
-) -> (
-    ContractERC20BaseClass
-    | ContractERC4626BaseClass
-    | ContractDepositableWrapperERC20BaseClass
-):
+def init_collateral_token_contract(
+    address: ChecksumAddress, web3: Web3
+) -> ContractERC20BaseClass:
     """
     Checks if the given contract is Depositable ERC-20, ERC-20 or ERC-4626 and returns the appropriate class instance.
     Throws an error if the contract is neither of them.
@@ -441,95 +482,106 @@ def init_erc4626_or_wrappererc20_or_erc20_contract(
 
     else:
         raise ValueError(
-            f"Contract at {address} on Gnosis Chain is neither WrapperERC-20, ERC-20 nor ERC-4626."
+            f"Contract at {address} is neither Depositable ERC-20, ERC-20 nor ERC-4626."
         )
 
 
 def auto_deposit_collateral_token(
-    collateral_token_contract: (
-        ContractERC20BaseClass
-        | ContractERC4626BaseClass
-        | ContractDepositableWrapperERC20BaseClass
-    ),
+    collateral_token_contract: ContractERC20BaseClass,
     amount_wei: Wei,
     api_keys: APIKeys,
     web3: Web3 | None,
 ) -> None:
-    for_address = api_keys.bet_from_address
-    # This might be in shares, if it's an erc-4626 token.
-    collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=for_address, web3=web3
-    )
-
     if isinstance(collateral_token_contract, ContractERC4626BaseClass):
-        # In the more complex case, we need to deposit into the saving token, out of the erc-20 token.
-        # We need to compare with shares, because if erc-4626 is used, the liquidity in market will be in shares as well.
-        if collateral_token_balance < collateral_token_contract.convertToShares(
-            amount_wei
-        ):
-            asset_token_contract = collateral_token_contract.get_asset_token_contract(
-                web3=web3
-            )
-
-            # If the asset token is Depositable Wrapper ERC-20, we can deposit it, in case we don't have enough.
-            if (
-                collateral_token_contract.get_asset_token_balance(for_address, web3)
-                < amount_wei
-            ):
-                if isinstance(
-                    asset_token_contract, ContractDepositableWrapperERC20BaseClass
-                ):
-                    asset_token_contract.deposit(api_keys, amount_wei, web3=web3)
-                else:
-                    raise ValueError(
-                        f"Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
-                    )
-
-            collateral_token_contract.deposit_asset_token(amount_wei, api_keys, web3)
+        auto_deposit_erc4626(collateral_token_contract, amount_wei, api_keys, web3)
 
     elif isinstance(
         collateral_token_contract, ContractDepositableWrapperERC20BaseClass
     ):
-        # If the collateral token is Depositable Wrapper ERC-20, it's a simple case where we can just deposit it, if needed.
-        if collateral_token_balance < amount_wei:
-            collateral_token_contract.deposit(api_keys, amount_wei, web3=web3)
+        auto_deposit_depositable_wrapper_erc20(
+            collateral_token_contract, amount_wei, api_keys, web3
+        )
 
     elif isinstance(collateral_token_contract, ContractERC20BaseClass):
-        if collateral_token_balance < amount_wei:
+        if (
+            collateral_token_contract.balanceOf(
+                for_address=api_keys.bet_from_address, web3=web3
+            )
+            < amount_wei
+        ):
             raise ValueError(
                 f"Not enough of the collateral token, but it's not a wrapper token that we can deposit automatically."
             )
 
     else:
-        raise RuntimeError("Bug in our logic! :(")
+        should_not_happen("Unsupported ERC20 contract type.")
 
 
-def asset_or_shares(
-    collateral_token_contract: (
-        ContractERC20BaseClass
-        | ContractERC4626BaseClass
-        | ContractDepositableWrapperERC20BaseClass
-    ),
+def auto_deposit_depositable_wrapper_erc20(
+    collateral_token_contract: ContractDepositableWrapperERC20BaseClass,
     amount_wei: Wei,
-) -> Wei:
-    return (
-        collateral_token_contract.convertToShares(amount_wei)
-        if isinstance(collateral_token_contract, ContractERC4626BaseClass)
-        else amount_wei
+    api_keys: APIKeys,
+    web3: Web3 | None,
+) -> None:
+    collateral_token_balance = collateral_token_contract.balanceOf(
+        for_address=api_keys.bet_from_address, web3=web3
     )
+
+    # If we have enough of the collateral token, we don't need to deposit.
+    if collateral_token_balance >= amount_wei:
+        return
+
+    # If we don't have enough, we need to deposit the difference.
+    left_to_deposit = Wei(amount_wei - collateral_token_balance)
+    collateral_token_contract.deposit(api_keys, left_to_deposit, web3=web3)
+
+
+def auto_deposit_erc4626(
+    collateral_token_contract: ContractERC4626BaseClass,
+    asset_amount_wei: Wei,
+    api_keys: APIKeys,
+    web3: Web3 | None,
+) -> None:
+    for_address = api_keys.bet_from_address
+    collateral_token_balance_in_shares = collateral_token_contract.balanceOf(
+        for_address=for_address, web3=web3
+    )
+    asset_amount_wei_in_shares = collateral_token_contract.convertToShares(
+        asset_amount_wei, web3
+    )
+
+    # If we have enough shares, we don't need to deposit.
+    if collateral_token_balance_in_shares >= asset_amount_wei_in_shares:
+        return
+
+    # If we need to deposit into erc4626, we first need to have enough of the asset token.
+    asset_token_contract = collateral_token_contract.get_asset_token_contract(web3=web3)
+
+    # If the asset token is Depositable Wrapper ERC-20, we can deposit it, in case we don't have enough.
+    if (
+        collateral_token_contract.get_asset_token_balance(for_address, web3)
+        < asset_amount_wei
+    ):
+        if isinstance(asset_token_contract, ContractDepositableWrapperERC20BaseClass):
+            auto_deposit_depositable_wrapper_erc20(
+                asset_token_contract, asset_amount_wei, api_keys, web3
+            )
+        else:
+            raise ValueError(
+                "Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
+            )
+
+    # Finally, we can deposit the asset token into the erc4626 vault.
+    collateral_token_balance_in_assets = collateral_token_contract.convertToAssets(
+        collateral_token_balance_in_shares, web3
+    )
+    left_to_deposit = Wei(asset_amount_wei - collateral_token_balance_in_assets)
+    collateral_token_contract.deposit_asset_token(left_to_deposit, api_keys, web3)
 
 
 def to_gnosis_chain_contract(
-    contract: (
-        ContractDepositableWrapperERC20BaseClass
-        | ContractERC4626BaseClass
-        | ContractERC20BaseClass
-    ),
-) -> (
-    ContractDepositableWrapperERC20OnGnosisChain
-    | ContractERC4626OnGnosisChain
-    | ContractERC20OnGnosisChain
-):
+    contract: ContractERC20BaseClass,
+) -> ContractERC20OnGnosisChain:
     if isinstance(contract, ContractERC4626BaseClass):
         return ContractERC4626OnGnosisChain(address=contract.address)
     elif isinstance(contract, ContractDepositableWrapperERC20BaseClass):
@@ -538,3 +590,9 @@ def to_gnosis_chain_contract(
         return ContractERC20OnGnosisChain(address=contract.address)
     else:
         raise ValueError("Unsupported contract type")
+
+
+def create_contract_method_cache_key(
+    method: t.Callable[[t.Any], t.Any], web3: Web3
+) -> str:
+    return f"{method.__name__}-{str(web3.provider)}"

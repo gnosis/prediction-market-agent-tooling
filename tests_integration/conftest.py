@@ -1,3 +1,5 @@
+import typing as t
+
 import pytest
 from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
@@ -10,12 +12,12 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 
 
 @pytest.fixture(autouse=True, scope="session")
-def load_env():
+def load_env() -> None:
     load_dotenv()
 
 
 @pytest.fixture(scope="session")
-def local_web3(load_env) -> Web3:
+def local_web3(load_env: None) -> t.Generator[Web3, None, None]:
     # if not available, throw error since we need an RPC with historical state for almost all tests
     node = LocalNode(GNOSIS_RPC_URL)
     node_daemon = _local_node(node, True)

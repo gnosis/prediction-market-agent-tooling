@@ -27,4 +27,4 @@ class CowswapKey(BaseSettings):
 def cowswap_test_account() -> t.Generator[LocalAccount, None, None]:
     # We use as cowswap account the market creator from a hackathon (public_key 0xa7E93F5A0e718bDDC654e525ea668c64Fd572882).
     key = CowswapKey()
-    return Account.from_key(key.cowswap_test_private_key.get_secret_value())
+    yield Account.from_key(key.cowswap_test_private_key.get_secret_value())

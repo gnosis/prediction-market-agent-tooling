@@ -1,7 +1,5 @@
-import re  # noqa: F401
-from enum import StrEnum
+from enum import Enum
 from typing import Optional
-from typing import Self
 
 from pydantic import (
     BaseModel,
@@ -9,14 +7,15 @@ from pydantic import (
     Field,
     model_validator,
 )
+from typing_extensions import Self
 
 
-class OrderKind(StrEnum):
+class OrderKind(str, Enum):
     BUY = "buy"
     SELL = "sell"
 
 
-class CowServer(StrEnum):
+class CowServer(str, Enum):
     GNOSIS_PROD = "https://api.cow.fi/xdai"
     GNOSIS_STAGING = "https://barn.api.cow.fi/xdai"
 
@@ -36,8 +35,8 @@ class BaseQuote(BaseModel):
 
 class QuoteOutput(BaseQuote):
     fee_amount: str = Field(alias="feeAmount")
-    buy_amount: Optional[str] = Field(default=None, alias="buyAmount")
-    sell_amount: Optional[str] = Field(default=None, alias="sellAmount")
+    buy_amount: str = Field(alias="buyAmount")
+    sell_amount: str = Field(alias="sellAmount")
     valid_to: int = Field(alias="validTo")
 
     @model_validator(mode="after")
@@ -58,6 +57,7 @@ class QuoteInput(BaseQuote):
     )
     buy_amount_after_fee: Optional[str] = Field(default=None, alias="buyAmountAfterFee")
     model_config = ConfigDict(populate_by_name=True)
+    valid_for: int = Field(alias="validFor")
 
     @model_validator(mode="after")
     def check_either_buy_or_sell_amount_set(self) -> Self:
@@ -70,7 +70,7 @@ class QuoteInput(BaseQuote):
         return self
 
 
-class OrderStatus(StrEnum):
+class OrderStatus(str, Enum):
     OPEN = "open"
     SCHEDULED = "scheduled"
     ACTIVE = "active"

@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
@@ -31,7 +33,7 @@ class CowClient:
         self.account = account
 
     def get_version(self) -> str:
-        r = requests.get(f"{self.api_url}/api/v1/version")
+        r = requests.get(f"{self.api_url.value}/api/v1/version")
         return r.text
 
     def build_swap_params(
@@ -42,10 +44,10 @@ class CowClient:
             sell_token=sell_token,
             buy_token=buy_token,
             receiver=self.account.address,
-            sellAmountBeforeFee=str(sell_amount),
+            sell_amount_before_fee=str(sell_amount),
             kind=OrderKind.SELL,
-            appData="0x0000000000000000000000000000000000000000000000000000000000000000",
-            validFor=1080,
+            app_data="0x0000000000000000000000000000000000000000000000000000000000000000",
+            valid_for=1080,
         )
         return quote
 
@@ -54,20 +56,20 @@ class CowClient:
         try:
             r.raise_for_status()
         except:
-            logger.error(f"Error occured on response: {r.content}")
+            logger.error(f"Error occured on response: {r.text}")
             r.raise_for_status()
 
     def post_quote(self, quote: QuoteInput) -> QuoteOutput:
         quote_dict = quote.dict(by_alias=True, exclude_none=True)
-        r = requests.post(f"{self.api_url}/api/v1/quote", json=quote_dict)
+        r = requests.post(f"{self.api_url.value}/api/v1/quote", json=quote_dict)
 
         self._if_error_log_and_raise(r)
         return QuoteOutput.model_validate(r.json()["quote"])
 
     @staticmethod
-    def build_order_with_fee_and_sell_amounts(quote: QuoteOutput) -> dict:
+    def build_order_with_fee_and_sell_amounts(quote: QuoteOutput) -> dict[str, Any]:
         quote_dict = quote.dict(by_alias=True, exclude_none=True)
-        new_sell_amount = int(quote["sellAmount"]) + int(quote["feeAmount"])
+        new_sell_amount = int(quote.sell_amount) + int(quote.fee_amount)
         order_data = {
             **quote_dict,
             "sellAmount": str(new_sell_amount),
@@ -78,10 +80,11 @@ class CowClient:
     def _assert_allowance_gt_sell_amount(
         self, quote: QuoteOutput, web3: Web3 | None = None
     ) -> None:
+        sell_token_address = quote.sell_token
         token = ContractERC20OnGnosisChain(
-            address=Web3.to_checksum_address(quote.sell_token), web3=web3
+            address=Web3.to_checksum_address(sell_token_address)
         )
-        relayer_address = RELAYER_ADDRESSES.get(GNOSIS_NETWORK_ID)
+        relayer_address = RELAYER_ADDRESSES[GNOSIS_NETWORK_ID]
         allowance = token.allowance(self.account.address, relayer_address, web3=web3)
         # We require allowance >= (sell_amount+fee) due to the way we build the order
         full_sell_amount = int(quote.sell_amount) + int(quote.fee_amount)
@@ -98,7 +101,7 @@ class CowClient:
         )
         order_data["signature"] = signed_message.signature.hex()
         # post
-        r = requests.post(f"{self.api_url}/api/v1/orders", json=order_data)
+        r = requests.post(f"{self.api_url.value}/api/v1/orders", json=order_data)
         self._if_error_log_and_raise(r)
         order_id = r.content.decode().replace('"', "")
         return order_id
@@ -121,12 +124,12 @@ class CowClient:
             return
 
         r = requests.delete(
-            f"{self.api_url}/api/v1/orders", json=cancellation_request_obj
+            f"{self.api_url.value}/api/v1/orders", json=cancellation_request_obj
         )
         r.raise_for_status()
 
     def get_order_status(self, order_uid: str) -> OrderStatus:
-        r = requests.get(f"{self.api_url}/api/v1/orders/{order_uid}/status")
+        r = requests.get(f"{self.api_url.value}/api/v1/orders/{order_uid}/status")
         r.raise_for_status()
 
         order_type = r.json()["type"]

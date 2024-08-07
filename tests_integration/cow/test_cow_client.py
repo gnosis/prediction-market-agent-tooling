@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Generator, Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.tools.cowswap.models import (
     QuoteOutput,
     OrderStatus,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 wxDAI = Web3.to_checksum_address("0xe91d153e0b41518a2ce8dd3d7944fa863463a97d")
 COW = Web3.to_checksum_address("0x177127622c4A00F3d409B75571e12cB3c8973d3c")
@@ -36,8 +37,8 @@ def test_quote(cowswap_test_account: LocalAccount) -> Generator[QuoteInput, None
         receiver=cowswap_test_account.address,
         sell_amount_before_fee=str(int(0.1e18)),
         kind=OrderKind.SELL,
-        appData="0x0000000000000000000000000000000000000000000000000000000000000000",
-        validFor=1080,
+        app_data="0x0000000000000000000000000000000000000000000000000000000000000000",
+        valid_for=1080,
     )
 
 
@@ -47,8 +48,8 @@ def test_version(test_mock_client: CowClient) -> None:
 
 
 class IdHolder:
-    def __init__(self):
-        self.ids = []
+    def __init__(self) -> None:
+        self.ids: list[str] = []
 
 
 @pytest.fixture(scope="module")
@@ -66,7 +67,7 @@ def test_get_order_status(test_mock_client: CowClient) -> None:
 
 
 def test_post_order(
-    test_mock_client: CowClient, test_quote: QuoteOutput, id_holder_fixture: IdHolder
+    test_mock_client: CowClient, test_quote: QuoteInput, id_holder_fixture: IdHolder
 ) -> None:
     with patch(
         "prediction_market_agent_tooling.tools.cowswap.cow_client.CowClient.build_order_with_fee_and_sell_amounts",
@@ -80,7 +81,7 @@ def test_post_order(
         assert status != OrderStatus.CANCELLED
 
 
-def fake_build_quote(quote: QuoteOutput) -> dict:
+def fake_build_quote(quote: QuoteOutput) -> dict[str, Any]:
     # We manipulate sellAmount to have a price ridiculously small, hence that will never get filled.
     new_sell_amount = int(quote.sell_amount) + int(quote.fee_amount)
     quote.sell_amount = str(new_sell_amount // 2)
@@ -89,9 +90,10 @@ def fake_build_quote(quote: QuoteOutput) -> dict:
     return quote_dict
 
 
-def test_post_quote(test_mock_client: CowClient, test_quote: QuoteOutput) -> None:
+def test_post_quote(test_mock_client: CowClient, test_quote: QuoteInput) -> None:
     result = test_mock_client.post_quote(test_quote)
     assert result is not None
-    assert int(test_quote.sell_amount_before_fee) == (
+    sell_amount_before_fee = check_not_none(test_quote.sell_amount_before_fee)
+    assert int(sell_amount_before_fee) == (
         int(result.sell_amount) + int(result.fee_amount)
     )

@@ -1,0 +1,44 @@
+name: prediction-market-agent-tooling
+
+plugins:
+  - name: foundry
+
+
+default_ecosystem: ethereum
+
+ethereum:
+  mainnet:
+    default_provider: geth
+
+node:
+  ethereum:
+    mainnet:
+      uri: https://rpc.ankr.com/eth
+  gnosis:
+    mainnet:
+      uri: https://gnosis-rpc.publicnode.com
+
+
+networks:
+  custom:
+     - name: mainnet                   # Required
+       chain_id: 100                   # Required
+       ecosystem: gnosis            # The ecosystem name, can either be new or an existing
+       base_ecosystem_plugin: ethereum  # The ecosystem base-class, defaults to the default ecosystem
+       default_provider: node          # Default is the generic node provider
+
+
+foundry:
+  host: auto
+  fork:
+    ethereum:
+      mainnet:
+        upstream_provider: node
+    gnosis:
+      mainnet:
+        upstream_provider: node
+  gnosis:
+    mainnet:
+      upstream_provider: http://localhost:8545/
+      uri: https://gnosis-rpc.publicnode.com
+

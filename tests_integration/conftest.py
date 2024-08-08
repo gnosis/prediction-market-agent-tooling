@@ -4,11 +4,10 @@ import pytest
 from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
-from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from web3 import Web3
 
+from local_chain_utils import LocalNode, _local_node, get_anvil_test_accounts
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -19,7 +18,7 @@ def load_env() -> None:
 @pytest.fixture(scope="session")
 def local_web3(load_env: None) -> t.Generator[Web3, None, None]:
     # if not available, throw error since we need an RPC with historical state for almost all tests
-    node = LocalNode(GNOSIS_RPC_URL)
+    node = LocalNode("https://rpc.gnosis.gateway.fm")
     node_daemon = _local_node(node, True)
     yield node.w3
     if node_daemon:

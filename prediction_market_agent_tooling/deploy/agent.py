@@ -22,7 +22,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import Probability, xdai_type
+from prediction_market_agent_tooling.gtypes import Probability, xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -35,6 +35,7 @@ from prediction_market_agent_tooling.markets.markets import (
     have_bet_on_market_since,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
+    is_minimum_required_balance,
     redeem_from_all_user_positions,
     withdraw_wxdai_to_xdai_to_keep_balance,
 )
@@ -71,6 +72,10 @@ def to_boolean_outcome(value: str | bool) -> bool:
 
 
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
+
+
+class OutOfFundsError(ValueError):
+    pass
 
 
 class Answer(BaseModel):
@@ -201,6 +206,8 @@ def {entrypoint_function_name}(request) -> str:
 
 class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
+    min_required_balance_to_operate: xDai | None = xdai_type(1)
+    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
 
     def __init__(self, place_bet: bool = True) -> None:
         super().__init__()
@@ -273,10 +280,22 @@ class DeployableTraderAgent(DeployableAgent):
         if market_type == MarketType.OMEN:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
             redeem_from_all_user_positions(api_keys)
+            # Check if we have enough of balance to operate.
+            if self.min_required_balance_to_operate is not None:
+                if not is_minimum_required_balance(
+                    api_keys.public_key,
+                    min_required_balance=self.min_required_balance_to_operate,
+                ):
+                    raise OutOfFundsError(
+                        f"Minimum required balance {self.min_required_balance_to_operate} is not met."
+                    )
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
-            withdraw_wxdai_to_xdai_to_keep_balance(
-                api_keys, min_required_balance=xdai_type(1), withdraw_multiplier=2
-            )
+            if self.min_balance_to_keep_in_native_currency is not None:
+                withdraw_wxdai_to_xdai_to_keep_balance(
+                    api_keys,
+                    min_required_balance=self.min_balance_to_keep_in_native_currency,
+                    withdraw_multiplier=2,
+                )
 
     def process_bets(self, market_type: MarketType) -> None:
         """

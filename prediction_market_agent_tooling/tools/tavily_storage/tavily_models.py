@@ -27,8 +27,8 @@ class TavilyResponse(BaseModel):
     response_time: float
 
 
-class TavilyResponseCacheModel(SQLModel, table=True):
-    __tablename__ = "tavily_response_cache"
+class TavilyResponseModel(SQLModel, table=True):
+    __tablename__ = "tavily_response"
     __table_args__ = {"extend_existing": True}
     id: int | None = Field(None, primary_key=True)
     agent_id: str = Field(index=True, nullable=False)
@@ -65,8 +65,8 @@ class TavilyResponseCacheModel(SQLModel, table=True):
         include_images: bool,
         use_cache: bool,
         response: TavilyResponse,
-    ) -> "TavilyResponseCacheModel":
-        return TavilyResponseCacheModel(
+    ) -> "TavilyResponseModel":
+        return TavilyResponseModel(
             agent_id=agent_id,
             query=query,
             search_depth=search_depth,
@@ -83,7 +83,7 @@ class TavilyResponseCacheModel(SQLModel, table=True):
         )
 
 
-class TavilyResponseCache:
+class TavilyStorage:
     def __init__(self, agent_id: str, sqlalchemy_db_url: str | None = None):
         self.agent_id = agent_id
         self.engine = create_engine(
@@ -99,7 +99,7 @@ class TavilyResponseCache:
         """
 
         # trick for making models import mandatory - models must be imported for metadata.create_all to work
-        logger.debug(f"tables being added {TavilyResponseCacheModel}")
+        logger.debug(f"tables being added {TavilyResponseModel}")
         SQLModel.metadata.create_all(self.engine)
 
     def save(
@@ -116,7 +116,7 @@ class TavilyResponseCache:
         use_cache: bool,
         response: TavilyResponse,
     ) -> None:
-        db_item = TavilyResponseCacheModel.from_model(
+        db_item = TavilyResponseModel.from_model(
             agent_id=self.agent_id,
             query=query,
             search_depth=search_depth,

@@ -4,9 +4,9 @@ import tenacity
 from tavily import TavilyClient
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.tools.tavily_cached.tavily_models import (
+from prediction_market_agent_tooling.tools.tavily_storage.tavily_models import (
     TavilyResponse,
-    TavilyResponseCache,
+    TavilyStorage,
 )
 
 
@@ -22,7 +22,7 @@ def tavily_search(
     include_images: bool = True,
     use_cache: bool = False,
     api_keys: APIKeys | None = None,
-    response_cache: TavilyResponseCache | None = None,
+    tavily_storage: TavilyStorage | None = None,
 ) -> TavilyResponse:
     """
     Wrapper around Tavily's search method that will save the response to `TavilyResponseCache`, if provided.
@@ -43,8 +43,8 @@ def tavily_search(
         api_keys=api_keys,
     )
     response_parsed = TavilyResponse.model_validate(response)
-    if response_cache:
-        response_cache.save(
+    if tavily_storage:
+        tavily_storage.save(
             query=query,
             search_depth=search_depth,
             topic=topic,

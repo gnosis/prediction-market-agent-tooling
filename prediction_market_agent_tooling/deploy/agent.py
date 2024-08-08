@@ -287,7 +287,8 @@ class DeployableTraderAgent(DeployableAgent):
                     min_required_balance=self.min_required_balance_to_operate,
                 ):
                     raise OutOfFundsError(
-                        f"Minimum required balance {self.min_required_balance_to_operate} is not met."
+                        f"Minimum required balance {self.min_required_balance_to_operate} "
+                        f"for agent with address {api_keys.bet_from_address} is not met."
                     )
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
             if self.min_balance_to_keep_in_native_currency is not None:

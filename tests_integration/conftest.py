@@ -1,7 +1,6 @@
 import typing as t
 
 import pytest
-from ape.api import ProviderAPI
 from ape.managers import ChainManager
 from dotenv import load_dotenv
 from gnosis.eth import EthereumClient
@@ -16,10 +15,8 @@ def load_env() -> None:
     load_dotenv()
 
 
-@pytest.fixture(scope="class")
-def local_web3(
-    load_env: None, chain: ChainManager
-) -> t.Generator[ProviderAPI, None, None]:
+@pytest.fixture(scope="module")
+def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, None]:
     # with chain.network_manager.fork(provider_name="foundry") as provider:
     with chain.network_manager.parse_network_choice(
         "gnosis:mainnet_fork:foundry"
@@ -29,11 +26,11 @@ def local_web3(
 
     # clean-up
     # We have to add this hacky solution to avoid an eth-ape bug (https://github.com/ApeWorX/ape/issues/2215)
-    # chain.restore = lambda x: None
+    chain.restore = lambda x: None
     # chain.network_manager.active_provider.disconnect()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def local_ethereum_client(local_web3: Web3) -> EthereumClient:
     return EthereumClient()
 

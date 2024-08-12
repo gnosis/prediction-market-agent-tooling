@@ -13,7 +13,6 @@ from web3.types import RPCEndpoint
 
 from prediction_market_agent_tooling.loggers import logger
 
-
 # Local chain setup for tests.
 # Heavily inspired by Kartpatkey's Roles Royce (https://github.com/karpatkey/roles_royce/blob/main/tests/utils.py)
 

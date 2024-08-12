@@ -25,7 +25,8 @@ def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, N
 
     # clean-up
     # We have to add this hacky solution to avoid an eth-ape bug (https://github.com/ApeWorX/ape/issues/2215)
-    chain.network_manager.active_provider.disconnect()
+    if chain.network_manager.active_provider:
+        chain.network_manager.active_provider.disconnect()
 
 
 @pytest.fixture(scope="module")

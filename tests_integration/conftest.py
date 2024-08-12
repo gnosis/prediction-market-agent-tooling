@@ -1,6 +1,8 @@
 import typing as t
 
 import pytest
+from ape.api import ProviderAPI
+from ape.managers import ChainManager
 from dotenv import load_dotenv
 from eth_typing import ChecksumAddress
 from gnosis.eth import EthereumClient
@@ -16,13 +18,26 @@ def load_env() -> None:
 
 
 @pytest.fixture(scope="session")
-def local_web3(load_env: None) -> t.Generator[Web3, None, None]:
+def local_web3_old(load_env: None) -> t.Generator[Web3, None, None]:
     # if not available, throw error since we need an RPC with historical state for almost all tests
     node = LocalNode("https://rpc.gnosis.gateway.fm")
     node_daemon = _local_node(node, True)
     yield node.w3
     if node_daemon:
         node_daemon.stop()
+
+
+@pytest.fixture(scope="class")
+def local_web3(
+    load_env: None, chain: ChainManager
+) -> t.Generator[ProviderAPI, None, None]:
+    with chain.network_manager.fork(provider_name="foundry") as provider:
+        print(provider)
+        w3 = Web3(Web3.HTTPProvider(provider.http_uri))
+        yield w3
+
+    # clean-up
+    chain.network_manager.active_provider.disconnect()
 
 
 @pytest.fixture(scope="session")

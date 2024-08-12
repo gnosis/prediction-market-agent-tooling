@@ -4,9 +4,9 @@ import pytest
 from ape.managers import ChainManager
 from dotenv import load_dotenv
 from gnosis.eth import EthereumClient
+from local_chain_utils import get_anvil_test_accounts
 from web3 import Web3
 
-from local_chain_utils import get_anvil_test_accounts
 from prediction_market_agent_tooling.config import APIKeys
 
 

@@ -19,6 +19,8 @@ networks:
        base_ecosystem_plugin: ethereum
        default_provider: node
 
+gnosis:
+  default_network: gnosis_fork
 
 foundry:
   host: http://localhost:8545/

@@ -1,0 +1,2 @@
+Tests located inside this folder are executed with the ![ape-test](https://docs.apeworx.io/ape/stable/userguides/testing.html) pytest plugin.
+Note that the plugin, regardless of test logic, connects to the RPC of the default ecosystem provider. Hence, tests which do not require a local chain should not be pasted in this folder.

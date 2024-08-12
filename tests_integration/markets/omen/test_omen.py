@@ -4,11 +4,16 @@ from datetime import timedelta
 
 import numpy as np
 import pytest
-from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import (
+    xDai,
+    xdai_type,
+    ChecksumAddress,
+    HexAddress,
+    HexStr,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
@@ -42,9 +47,13 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
-from tests_integration.conftest import is_contract
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
+
+
+def is_contract(web3: Web3, contract_address: ChecksumAddress) -> bool:
+    # From gnosis.eth.EthereumClient
+    return bool(web3.eth.get_code(contract_address))
 
 
 @pytest.mark.skip(reason=DEFAULT_REASON)

@@ -25,7 +25,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     xdai_to_wei,
     xdai_type,
 )
-from tests_local_chain.safe.conftest import print_current_block
+from tests_integration.safe.conftest import print_current_block
 
 
 def test_create_safe(

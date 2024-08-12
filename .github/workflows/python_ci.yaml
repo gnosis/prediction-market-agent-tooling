@@ -44,8 +44,6 @@ jobs:
         run: poetry run python -m pytest tests/ -p no:ape_test
       - name: Run pytest integration tests
         run: poetry run python -m pytest tests_integration/ -p no:ape_test
-      - name: Run pytest integration tests with local chain
-        run: poetry run python -m pytest tests_local_chain/
 
   black:
     runs-on: ubuntu-latest

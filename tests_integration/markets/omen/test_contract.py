@@ -1,5 +1,4 @@
 import pytest
-from _pytest.fixtures import FixtureRequest
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
@@ -87,7 +86,7 @@ def test_contract_implements_function(
     function_name: str,
     function_arg_types: list[str],
     expected: bool,
-    request: FixtureRequest,
+    request: pytest.FixtureRequest,
 ) -> None:
     web3 = request.getfixturevalue("local_web3")
     assert (

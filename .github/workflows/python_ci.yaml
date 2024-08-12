@@ -43,7 +43,7 @@ jobs:
       - name: Run pytest unit tests
         run: poetry run python -m pytest tests/ -p no:ape_test
       - name: Run pytest integration tests
-        run: poetry run python -m pytest tests_integration/ -p no:ape_test
+        run: poetry run python -m pytest tests_integration/
 
   black:
     runs-on: ubuntu-latest

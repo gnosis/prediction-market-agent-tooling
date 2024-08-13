@@ -124,6 +124,37 @@ class DeployableAgent:
             enabled=self.enable_langfuse,
         )
 
+    def langfuse_update_current_trace(
+        self,
+        name: str | None = None,
+        input: t.Any | None = None,
+        output: t.Any | None = None,
+        user_id: str | None = None,
+        session_id: str | None = None,
+        version: str | None = None,
+        release: str | None = None,
+        metadata: t.Any | None = None,
+        tags: list[str] | None = None,
+        public: bool | None = None,
+    ) -> None:
+        """
+        Provide some useful default arguments when updating the current trace in our agents.
+        """
+        langfuse_context.update_current_trace(
+            name=name,
+            input=input,
+            output=output,
+            user_id=user_id or getpass.getuser(),
+            session_id=session_id
+            or self.session_id,  # All traces within a single run execution will be grouped under a single session.
+            version=version
+            or APIKeys().LANGFUSE_DEPLOYMENT_VERSION,  # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
+            release=release,
+            metadata=metadata,
+            tags=tags,
+            public=public,
+        )
+
     @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
     @cached_property
     def session_id(self) -> str:
@@ -253,15 +284,10 @@ class DeployableTraderAgent(DeployableAgent):
         super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
 
-    def update_langfuse_observation_by_market(
+    def update_langfuse_trace_by_market(
         self, market_type: MarketType, market: AgentMarket
     ) -> None:
-        langfuse_context.update_current_trace(
-            # All traces within a single run execution will be grouped under a single session.
-            session_id=self.session_id,
-            # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
-            release=APIKeys().LANGFUSE_DEPLOYMENT_VERSION,
-            user_id=getpass.getuser(),
+        self.langfuse_update_current_trace(
             # UI allows to do filtering by these.
             metadata={
                 "agent_class": self.__class__.__name__,
@@ -271,10 +297,10 @@ class DeployableTraderAgent(DeployableAgent):
             },
         )
 
-    def update_langfuse_observation_by_processed_market(
+    def update_langfuse_trace_by_processed_market(
         self, market_type: MarketType, processed_market: ProcessedMarket | None
     ) -> None:
-        langfuse_context.update_current_trace(
+        self.langfuse_update_current_trace(
             tags=[
                 TRADER_TAG,
                 (
@@ -365,7 +391,7 @@ class DeployableTraderAgent(DeployableAgent):
     def before_process_market(
         self, market_type: MarketType, market: AgentMarket
     ) -> None:
-        self.update_langfuse_observation_by_market(market_type, market)
+        self.update_langfuse_trace_by_market(market_type, market)
 
     @observe()
     def _process_market(
@@ -380,14 +406,14 @@ class DeployableTraderAgent(DeployableAgent):
 
         if verify_market and not self.verify_market(market_type, market):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
-            self.update_langfuse_observation_by_processed_market(market_type, None)
+            self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
         answer = self.answer_binary_market(market)
 
         if answer is None:
             logger.info(f"No answer for market '{market.question}'.")
-            self.update_langfuse_observation_by_processed_market(market_type, None)
+            self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
         amount = self.calculate_bet_amount(answer, market)
@@ -407,9 +433,7 @@ class DeployableTraderAgent(DeployableAgent):
             answer=answer,
             amount=amount,
         )
-        self.update_langfuse_observation_by_processed_market(
-            market_type, processed_market
-        )
+        self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 
         return processed_market
 

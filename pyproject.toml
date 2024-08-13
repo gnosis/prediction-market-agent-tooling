@@ -43,7 +43,6 @@ safe-cli = "^1.0.0"
 langfuse = "^2.27.1"
 openai = { version = "^1.0.0", optional = true}
 base58 = ">=1.0.2,<2.0"
-cowswap-python-client ="^0.1.1"
 
 
 [tool.poetry.extras]
@@ -53,7 +52,7 @@ google = ["google-api-python-client"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
-mypy = "^1.9.0"
+mypy = ">=1.10.1, <1.11.1"
 black = "^23.12.1"
 ape-foundry = "^0.8.2"
 eth-ape = "^0.8.10"

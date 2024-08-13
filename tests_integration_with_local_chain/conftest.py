@@ -2,9 +2,9 @@ import typing as t
 
 import pytest
 from ape.managers import ChainManager
+from ape_test import TestAccount
 from dotenv import load_dotenv
 from gnosis.eth import EthereumClient
-from local_chain_utils import get_anvil_test_accounts
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -33,8 +33,8 @@ def local_ethereum_client(local_web3: Web3) -> EthereumClient:
 
 
 @pytest.fixture(scope="session")
-def test_keys() -> APIKeys:
-    account = get_anvil_test_accounts()[0]
+def test_keys(accounts: list[TestAccount]) -> APIKeys:
+    account = accounts[0]
 
     # Using a standard Anvil account with enough xDAI.
-    return APIKeys(BET_FROM_PRIVATE_KEY=account.key.hex(), SAFE_ADDRESS=None)
+    return APIKeys(BET_FROM_PRIVATE_KEY=account.private_key, SAFE_ADDRESS=None)

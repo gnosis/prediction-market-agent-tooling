@@ -264,6 +264,7 @@ class DeployableTraderAgent(DeployableAgent):
             # UI allows to do filtering by these.
             metadata={
                 "agent_class": self.__class__.__name__,
+                "trader": True,
                 "market_id": market.id,
                 "market_question": market.question,
                 "market_outcomes": market.outcomes,

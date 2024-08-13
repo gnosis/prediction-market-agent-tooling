@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -140,6 +142,7 @@ def claim_bonds_on_realitio_question(
 def finalize_markets(
     api_keys: APIKeys,
     markets_with_resolutions: list[tuple[OmenMarket, Resolution | None]],
+    wait_n_days_before_invalid: int = 30,
     web3: Web3 | None = None,
 ) -> list[HexAddress]:
     finalized_markets: list[HexAddress] = []
@@ -148,9 +151,24 @@ def finalize_markets(
         logger.info(
             f"[{idx+1} / {len(markets_with_resolutions)}] Looking into {market.url=} {market.question_title=}"
         )
+        closed_before_days = (datetime.now() - market.close_time).days
 
         if resolution is None:
-            logger.warning(f"No resolution provided for {market.url=}")
+            if closed_before_days > wait_n_days_before_invalid:
+                logger.warning(
+                    f"Finalizing as invalid, market closed before {closed_before_days} days: {market.url=}"
+                )
+                omen_submit_invalid_answer_market_tx(
+                    api_keys,
+                    market,
+                    OMEN_DEFAULT_REALITIO_BOND_VALUE,
+                    web3=web3,
+                )
+
+            else:
+                logger.warning(
+                    f"Skipping, no resolution provided, market closed before {closed_before_days} days: {market.url=}"
+                )
 
         elif resolution in (Resolution.YES, Resolution.NO):
             logger.info(f"Found resolution {resolution.value=} for {market.url=}")
@@ -165,7 +183,15 @@ def finalize_markets(
             logger.info(f"Finalized {market.url=}")
 
         else:
-            logger.error(f"Invalid resolution found, {resolution=}, for {market.url=}")
+            logger.warning(
+                f"Invalid resolution found, {resolution=}, for {market.url=}, finalizing as invalid."
+            )
+            omen_submit_invalid_answer_market_tx(
+                api_keys,
+                market,
+                OMEN_DEFAULT_REALITIO_BOND_VALUE,
+                web3=web3,
+            )
 
     return finalized_markets
 
@@ -199,11 +225,30 @@ def omen_submit_answer_market_tx(
     And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
     """
     realitio_contract = OmenRealitioContract()
-    realitio_contract.submitAnswer(
+    realitio_contract.submit_answer(
         api_keys=api_keys,
         question_id=market.question.id,
         answer=resolution.value,
         outcomes=market.question.outcomes,
+        bond=xdai_to_wei(bond),
+        web3=web3,
+    )
+
+
+def omen_submit_invalid_answer_market_tx(
+    api_keys: APIKeys,
+    market: OmenMarket,
+    bond: xDai,
+    web3: Web3 | None = None,
+) -> None:
+    """
+    After the answer is submitted, there is 24h waiting period where the answer can be challenged by others.
+    And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
+    """
+    realitio_contract = OmenRealitioContract()
+    realitio_contract.submit_answer_invalid(
+        api_keys=api_keys,
+        question_id=market.question.id,
         bond=xdai_to_wei(bond),
         web3=web3,
     )

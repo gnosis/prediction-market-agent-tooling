@@ -44,7 +44,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     Arbitrator,
-    ContractDepositableWrapperERC20OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -57,9 +56,10 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
-    asset_or_shares,
+    ContractDepositableWrapperERC20BaseClass,
+    ContractERC4626BaseClass,
     auto_deposit_collateral_token,
-    init_erc4626_or_wrappererc20_or_erc20_contract,
+    init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -549,13 +549,9 @@ def omen_buy_outcome_tx(
     Bets the given amount of xDai for the given outcome in the given market.
     """
     amount_wei = xdai_to_wei(amount)
-    from_address_checksummed = api_keys.bet_from_address
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
-    assert isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
@@ -573,16 +569,12 @@ def omen_buy_outcome_tx(
         amount_wei=amount_wei,
         web3=web3,
     )
-    # Deposit xDai to the collateral token,
-    # this can be skipped, if we know we already have enough collateral tokens.
-    collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=from_address_checksummed, web3=web3
-    )
-    if auto_deposit and collateral_token_balance < amount_wei:
-        deposit_amount_wei = Wei(amount_wei - collateral_token_balance)
-        collateral_token_contract.deposit(
-            api_keys=api_keys, amount_wei=deposit_amount_wei, web3=web3
+
+    if auto_deposit:
+        auto_deposit_collateral_token(
+            collateral_token_contract, amount_wei, api_keys, web3
         )
+
     # Buy shares using the deposited xDai in the collateral token.
     market_contract.buy(
         api_keys=api_keys,
@@ -631,9 +623,6 @@ def omen_sell_outcome_tx(
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
-    assert isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
     # Verify, that markets uses conditional tokens that we expect.
     if (
@@ -669,10 +658,19 @@ def omen_sell_outcome_tx(
         max_outcome_tokens_to_sell,
         web3=web3,
     )
-    if auto_withdraw:
-        # Optionally, withdraw from the collateral token back to the `from_address` wallet.
+    if auto_withdraw and (
+        isinstance(collateral_token_contract, ContractERC4626BaseClass)
+        or isinstance(
+            collateral_token_contract, ContractDepositableWrapperERC20BaseClass
+        )
+    ):
         collateral_token_contract.withdraw(
-            api_keys=api_keys, amount_wei=amount_wei, web3=web3
+            api_keys,
+            remove_fraction(
+                amount_wei,
+                0.001,  # Allow 0.1% slippage.
+            ),
+            web3,
         )
 
 
@@ -718,7 +716,7 @@ def omen_create_market_tx(
     realitio_contract = OmenRealitioContract()
     conditional_token_contract = OmenConditionalTokenContract()
     collateral_token_contract = to_gnosis_chain_contract(
-        init_erc4626_or_wrappererc20_or_erc20_contract(collateral_token_address, web3)
+        init_collateral_token_contract(collateral_token_address, web3)
     )
     factory_contract = OmenFixedProductMarketMakerFactoryContract()
     oracle_contract = OmenOracleContract()
@@ -735,7 +733,6 @@ def omen_create_market_tx(
             "The oracle's conditional tokens address is not the same as we are using."
         )
 
-    # If auto deposit is enabled.
     if auto_deposit:
         auto_deposit_collateral_token(
             collateral_token_contract=collateral_token_contract,
@@ -772,19 +769,15 @@ def omen_create_market_tx(
             web3=web3,
         )
 
-    # Use shares as the initial funds, if the collateral is erc-4626.
-    # We need to do this, because for example for 1 xDai in erc-20 token, we could receive <1 shares in the vault,
-    # and then, providing liquidity would fail, because we would not have enough shares.
-    initial_funds_in_asset_or_shares = wei_type(
-        asset_or_shares(collateral_token_contract, initial_funds_wei)
-        * 0.999  # Allow some slippage.
+    initial_funds_in_shares = collateral_token_contract.get_in_shares(
+        amount=initial_funds_wei, web3=web3
     )
 
     # Approve the market maker to withdraw our collateral token.
     collateral_token_contract.approve(
         api_keys=api_keys,
         for_address=factory_contract.address,
-        amount_wei=initial_funds_in_asset_or_shares,
+        amount_wei=initial_funds_in_shares,
         web3=web3,
     )
 
@@ -793,7 +786,7 @@ def omen_create_market_tx(
         api_keys=api_keys,
         condition_id=condition_id,
         fee=fee,
-        initial_funds_wei=initial_funds_in_asset_or_shares,
+        initial_funds_wei=initial_funds_in_shares,
         collateral_token_address=collateral_token_contract.address,
         web3=web3,
     )
@@ -816,21 +809,11 @@ def omen_fund_market_tx(
     auto_deposit: bool,
     web3: Web3 | None = None,
 ) -> None:
-    from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
-    assert isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "TODO: Implement for the ERC-20 and ERC-4626 case."
 
-    # Deposit xDai to the collateral token,
-    # this can be skipped, if we know we already have enough collateral tokens.
-    if (
-        auto_deposit
-        and collateral_token_contract.balanceOf(for_address=from_address, web3=web3)
-        < funds
-    ):
-        collateral_token_contract.deposit(api_keys, funds, web3=web3)
+    if auto_deposit:
+        auto_deposit_collateral_token(collateral_token_contract, funds, api_keys, web3)
 
     collateral_token_contract.approve(
         api_keys=api_keys,
@@ -942,7 +925,8 @@ def omen_remove_fund_market_tx(
     """
     from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
-    original_balances = get_balances(from_address, web3=web3)
+    market_collateral_token_contract = market_contract.get_collateral_token_contract()
+    original_balance = market_collateral_token_contract.balanceOf(from_address)
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -977,11 +961,11 @@ def omen_remove_fund_market_tx(
         web3=web3,
     )
 
-    new_balances = get_balances(from_address, web3)
+    new_balance = market_collateral_token_contract.balanceOf(from_address)
 
     logger.debug(f"Result from merge positions {result}")
     logger.info(
-        f"Withdrawn {new_balances.wxdai - original_balances.wxdai} wxDai from liquidity at {market.url=}."
+        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached()} from liquidity at {market.url=}."
     )
 
 
@@ -1057,6 +1041,20 @@ def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability
             )
 
     return history
+
+
+def is_minimum_required_balance(
+    address: ChecksumAddress,
+    min_required_balance: xDai,
+    web3: Web3 | None = None,
+) -> bool:
+    """
+    Checks if the total balance of xDai and wxDai in the wallet is above the minimum required balance.
+    """
+    current_balances = get_balances(address, web3)
+    # xDai and wxDai have equal value and can be exchanged for almost no cost, so we can sum them up.
+    total_balance = current_balances.xdai + current_balances.wxdai
+    return total_balance >= min_required_balance
 
 
 def withdraw_wxdai_to_xdai_to_keep_balance(

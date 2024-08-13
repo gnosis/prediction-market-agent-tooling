@@ -1,3 +1,4 @@
+import pytest
 from eth_account import Account
 from numpy import isclose
 from pydantic import SecretStr
@@ -5,7 +6,15 @@ from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+    xDai,
+    xdai_type,
+)
+from prediction_market_agent_tooling.markets.omen.omen import (
+    is_minimum_required_balance,
+)
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.web3_utils import (
     send_xdai_to,
@@ -47,7 +56,7 @@ def test_send_xdai(local_web3: Web3) -> None:
 def test_send_xdai_from_locked_account(
     local_web3: Web3,
     test_keys: APIKeys,
-):
+) -> None:
     from_account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     fund_value = xdai_to_wei(xDai(10))
     transfer_back_value = xdai_to_wei(xDai(5))
@@ -75,3 +84,22 @@ def test_send_xdai_from_locked_account(
         wei_to_xdai(Wei(fund_value - transfer_back_value)),
         rtol=0.001,
     )
+
+
+@pytest.mark.parametrize(
+    "address, expected",
+    [
+        (
+            Web3.to_checksum_address(get_anvil_test_accounts()[0].address),
+            True,
+        ),
+        (
+            Web3.to_checksum_address("0x184ca44A6c3cfc05bCF7246ac14101Ddb9423eAa"),
+            False,
+        ),
+    ],
+)
+def test_is_minimum_required_balance(
+    address: ChecksumAddress, expected: bool, local_web3: Web3
+) -> None:
+    assert is_minimum_required_balance(address, xdai_type(0.5), local_web3) == expected

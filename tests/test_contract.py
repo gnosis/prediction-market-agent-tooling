@@ -11,12 +11,12 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC20BaseClass,
     ContractERC4626BaseClass,
     contract_implements_function,
-    init_erc4626_or_wrappererc20_or_erc20_contract,
+    init_collateral_token_contract,
 )
 
 
 def test_init_erc4626_erc20_contract_return_erc4626_instance() -> None:
-    contract = init_erc4626_or_wrappererc20_or_erc20_contract(
+    contract = init_collateral_token_contract(
         sDaiContract().address, sDaiContract.get_web3()
     )
     assert isinstance(
@@ -25,7 +25,7 @@ def test_init_erc4626_erc20_contract_return_erc4626_instance() -> None:
 
 
 def test_init_erc4626_erc20_contract_return_wrappererc20_instance() -> None:
-    contract = init_erc4626_or_wrappererc20_or_erc20_contract(
+    contract = init_collateral_token_contract(
         WrappedxDaiContract().address, WrappedxDaiContract.get_web3()
     )
     assert isinstance(
@@ -34,7 +34,7 @@ def test_init_erc4626_erc20_contract_return_wrappererc20_instance() -> None:
 
 
 def test_init_erc4626_erc20_contract_return_erc20_instance() -> None:
-    contract = init_erc4626_or_wrappererc20_or_erc20_contract(
+    contract = init_collateral_token_contract(
         Web3.to_checksum_address("0x4ecaba5870353805a9f068101a40e0f32ed605c6"),
         WrappedxDaiContract.get_web3(),
     )
@@ -45,11 +45,11 @@ def test_init_erc4626_erc20_contract_return_erc20_instance() -> None:
 
 def test_init_erc4626_erc20_contract_throws_on_unknown_contract() -> None:
     with pytest.raises(ValueError) as e:
-        init_erc4626_or_wrappererc20_or_erc20_contract(
+        init_collateral_token_contract(
             Web3.to_checksum_address("0x7d3A0DA18e14CCb63375cdC250E8A8399997816F"),
             WrappedxDaiContract.get_web3(),
         )
-    assert "is neither WrapperERC-20, ERC-20 nor ERC-4626" in str(e)
+    assert "is neither Depositable ERC-20, ERC-20 nor ERC-4626" in str(e)
 
 
 @pytest.mark.parametrize(

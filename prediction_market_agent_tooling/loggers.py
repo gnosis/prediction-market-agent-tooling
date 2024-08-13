@@ -31,6 +31,11 @@ class LogConfig(BaseSettings):
     LOG_LEVEL: LogLevel = LogLevel.DEBUG
 
 
+class NoNewLineStreamHandler(logging.StreamHandler):  # type: ignore # StreamHandler is not typed in the standard library.
+    def format(self, record: logging.LogRecord) -> str:
+        return super().format(record).replace("\n", " ")
+
+
 GCP_LOG_LOGURU_FORMAT = (
     "{level:<.1}{time:MMDD HH:mm:ss} {process} {name}:{line}] {message}"
 )
@@ -40,6 +45,10 @@ GCP_LOG_LOGGING_FORMAT, GCP_LOG_FORMAT_LOGGING_DATEFMT = (
 
 
 def patch_logger() -> None:
+    """
+    Function to patch loggers according to the deployed environment.
+    Patches Loguru's logger, Python's default logger, warnings library and also monkey-patch print function as many libraries just use it.
+    """
     config = LogConfig()
 
     if config.LOG_FORMAT == LogFormat.GCP:
@@ -47,10 +56,12 @@ def patch_logger() -> None:
         format_logging = GCP_LOG_LOGGING_FORMAT
         datefmt_logging = GCP_LOG_FORMAT_LOGGING_DATEFMT
         print_logging = print_using_loguru_info
+        handlers = [NoNewLineStreamHandler()]
 
     elif config.LOG_FORMAT == LogFormat.DEFAULT:
         format_loguru, format_logging, datefmt_logging = None, None, None
         print_logging = None
+        handlers = None
 
     else:
         raise ValueError(f"Unknown log format: {config.LOG_FORMAT}")
@@ -58,7 +69,10 @@ def patch_logger() -> None:
     # Change built-in logging.
     if format_logging is not None:
         logging.basicConfig(
-            level=config.LOG_LEVEL.value, format=format_logging, datefmt=datefmt_logging
+            level=config.LOG_LEVEL.value,
+            format=format_logging,
+            datefmt=datefmt_logging,
+            handlers=handlers,
         )
 
     # Change loguru.

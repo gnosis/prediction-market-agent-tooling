@@ -397,11 +397,6 @@ class DeployableTraderAgent(DeployableAgent):
     def _process_market(
         self, market_type: MarketType, market: AgentMarket, verify_market: bool
     ) -> ProcessedMarket | None:
-        return self.process_market(market_type, market, verify_market)
-
-    def process_market(
-        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
-    ) -> ProcessedMarket | None:
         self.before_process_market(market_type, market)
 
         if verify_market and not self.verify_market(market_type, market):
@@ -436,6 +431,11 @@ class DeployableTraderAgent(DeployableAgent):
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 
         return processed_market
+
+    def process_market(
+        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
+    ) -> ProcessedMarket | None:
+        return self._process_market(market_type, market, verify_market)
 
     def after_process_market(
         self, market_type: MarketType, market: AgentMarket

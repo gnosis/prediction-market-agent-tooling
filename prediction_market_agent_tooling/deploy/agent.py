@@ -401,12 +401,12 @@ class DeployableTraderAgent(DeployableAgent):
 
     @observe()
     def process_market_observed(
-        self, market_type: MarketType, market: AgentMarket, verify_market: bool
+        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
     ) -> ProcessedMarket | None:
         return self.process_market(market_type, market, verify_market)
 
     def process_market(
-        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
+        self, market_type: MarketType, market: AgentMarket, verify_market: bool
     ) -> ProcessedMarket | None:
         self.before_process_market(market_type, market)
 

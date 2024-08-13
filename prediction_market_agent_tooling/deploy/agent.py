@@ -52,6 +52,7 @@ from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, ob
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
 
 MAX_AVAILABLE_MARKETS = 20
+TRADER_TAG = "trader"
 
 
 def to_boolean_outcome(value: str | bool) -> bool:
@@ -264,7 +265,6 @@ class DeployableTraderAgent(DeployableAgent):
             # UI allows to do filtering by these.
             metadata={
                 "agent_class": self.__class__.__name__,
-                "trader": True,
                 "market_id": market.id,
                 "market_question": market.question,
                 "market_outcomes": market.outcomes,
@@ -276,6 +276,7 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         langfuse_context.update_current_trace(
             tags=[
+                TRADER_TAG,
                 (
                     AnsweredEnum.ANSWERED
                     if processed_market is not None

@@ -326,19 +326,26 @@ class DeployableTraderAgent(DeployableAgent):
             )
 
     @observe()
-    def _have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
-        return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
+    def have_bet_on_market_since_observed(
+        self, market: AgentMarket, since: timedelta
+    ) -> bool:
+        return self.have_bet_on_market_since(market, since)
 
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
-        return self._have_bet_on_market_since(market, since)
+        return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
 
     @observe()
-    def _verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:
+    def verify_market_observed(
+        self, market_type: MarketType, market: AgentMarket
+    ) -> bool:
+        return self.verify_market(market_type, market)
+
+    def verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:
         """
         Subclasses can implement their own logic instead of this one, or on top of this one.
         By default, it allows only markets where user didn't bet recently and it's a reasonable question.
         """
-        if self.have_bet_on_market_since(market, since=timedelta(hours=24)):
+        if self.have_bet_on_market_since_observed(market, since=timedelta(hours=24)):
             return False
 
         # Manifold allows to bet only on markets with probability between 1 and 99.
@@ -351,11 +358,8 @@ class DeployableTraderAgent(DeployableAgent):
 
         return True
 
-    def verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:
-        return self._verify_market(market_type, market)
-
     @observe()
-    def _answer_binary_market(self, market: AgentMarket) -> Answer | None:
+    def answer_binary_market_observed(self, market: AgentMarket) -> Answer | None:
         return self.answer_binary_market(market)
 
     def answer_binary_market(self, market: AgentMarket) -> Answer | None:
@@ -365,7 +369,9 @@ class DeployableTraderAgent(DeployableAgent):
         raise NotImplementedError("This method must be implemented by the subclass")
 
     @observe()
-    def _calculate_bet_amount(self, answer: Answer, market: AgentMarket) -> BetAmount:
+    def calculate_bet_amount_observed(
+        self, answer: Answer, market: AgentMarket
+    ) -> BetAmount:
         return self.calculate_bet_amount(answer, market)
 
     def calculate_bet_amount(self, answer: Answer, market: AgentMarket) -> BetAmount:
@@ -394,24 +400,29 @@ class DeployableTraderAgent(DeployableAgent):
         self.update_langfuse_trace_by_market(market_type, market)
 
     @observe()
-    def _process_market(
+    def process_market_observed(
         self, market_type: MarketType, market: AgentMarket, verify_market: bool
+    ) -> ProcessedMarket | None:
+        return self.process_market(market_type, market, verify_market)
+
+    def process_market(
+        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
     ) -> ProcessedMarket | None:
         self.before_process_market(market_type, market)
 
-        if verify_market and not self.verify_market(market_type, market):
+        if verify_market and not self.verify_market_observed(market_type, market):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
             self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
-        answer = self.answer_binary_market(market)
+        answer = self.answer_binary_market_observed(market)
 
         if answer is None:
             logger.info(f"No answer for market '{market.question}'.")
             self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
-        amount = self.calculate_bet_amount(answer, market)
+        amount = self.calculate_bet_amount_observed(answer, market)
 
         if self.place_bet:
             logger.info(
@@ -431,11 +442,6 @@ class DeployableTraderAgent(DeployableAgent):
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 
         return processed_market
-
-    def process_market(
-        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
-    ) -> ProcessedMarket | None:
-        return self._process_market(market_type, market, verify_market)
 
     def after_process_market(
         self, market_type: MarketType, market: AgentMarket
@@ -470,7 +476,7 @@ class DeployableTraderAgent(DeployableAgent):
             # We need to check it again before each market bet, as the balance might have changed.
             self.check_min_required_balance_to_operate(market_type)
 
-            processed_market = self.process_market(market_type, market)
+            processed_market = self.process_market_observed(market_type, market)
 
             if processed_market is not None:
                 processed += 1

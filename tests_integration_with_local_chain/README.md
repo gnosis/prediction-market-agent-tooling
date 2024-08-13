@@ -4,7 +4,7 @@ These tests use a local chain (powered by the ![ape-test](https://docs.apeworx.i
 
 Note that the plugin, regardless of test logic, connects to the RPC of the default ecosystem provider. Hence, tests which do not require a local chain should not be pasted in this folder.
 
-Also note that it's mandatory to use the fixture `local_web3` inside every test inside this folder, otherwise the test fails due to an issue with ape (see comment inside fixture).
+Additionally, note the pytest scope of the fixture `local_web3` for fork duration.
 
 ## Requirements
 

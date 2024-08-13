@@ -7,7 +7,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, xdai_type
-from tests_integration.local_chain_utils import get_anvil_test_accounts
+from tests_integration_with_local_chain.local_chain_utils import get_anvil_test_accounts
 
 
 def test_erc20_send_updates_balance(

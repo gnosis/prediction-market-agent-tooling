@@ -1,4 +1,5 @@
 import pytest
+from ape_test import TestAccount
 from eth_account import Account
 from numpy import isclose
 from pydantic import SecretStr
@@ -21,15 +22,13 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     wei_to_xdai,
     xdai_to_wei,
 )
-from tests_integration.local_chain_utils import get_anvil_test_accounts
 
 
 def test_connect_local_chain(local_web3: Web3) -> None:
     assert local_web3.is_connected()
 
 
-def test_send_xdai(local_web3: Web3) -> None:
-    accounts = get_anvil_test_accounts()
+def test_send_xdai(local_web3: Web3, accounts: list[TestAccount]) -> None:
     value = xdai_to_wei(xDai(10))
     from_account = accounts[0]
     to_account = accounts[1]
@@ -38,7 +37,7 @@ def test_send_xdai(local_web3: Web3) -> None:
 
     send_xdai_to(
         web3=local_web3,
-        from_private_key=PrivateKey(SecretStr(from_account.key.hex())),
+        from_private_key=PrivateKey(SecretStr(from_account.private_key)),
         to_address=to_account.address,
         value=value,
     )
@@ -90,7 +89,9 @@ def test_send_xdai_from_locked_account(
     "address, expected",
     [
         (
-            Web3.to_checksum_address(get_anvil_test_accounts()[0].address),
+            Web3.to_checksum_address(
+                "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+            ),  # anvil test account 0
             True,
         ),
         (

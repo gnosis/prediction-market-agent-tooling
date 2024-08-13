@@ -283,6 +283,19 @@ class DeployableTraderAgent(DeployableAgent):
                 market_type.value,
             ]
         )
+        
+    def check_min_required_balance_to_operate(self, market_type: MarketType) -> None:
+        api_keys = APIKeys()
+        if self.min_required_balance_to_operate is None:
+            return
+        if market_type == MarketType.OMEN and not is_minimum_required_balance(
+            api_keys.public_key,
+            min_required_balance=self.min_required_balance_to_operate,
+        ):
+            raise OutOfFundsError(
+                f"Minimum required balance {self.min_required_balance_to_operate} "
+                f"for agent with address {api_keys.public_key} is not met."
+            )
 
     @observe()
     def _have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
@@ -411,16 +424,7 @@ class DeployableTraderAgent(DeployableAgent):
         if market_type == MarketType.OMEN:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
             redeem_from_all_user_positions(api_keys)
-            # Check if we have enough of balance to operate.
-            if self.min_required_balance_to_operate is not None:
-                if not is_minimum_required_balance(
-                    api_keys.public_key,
-                    min_required_balance=self.min_required_balance_to_operate,
-                ):
-                    raise OutOfFundsError(
-                        f"Minimum required balance {self.min_required_balance_to_operate} "
-                        f"for agent with address {api_keys.bet_from_address} is not met."
-                    )
+            self.check_min_required_balance_to_operate(market_type)
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
             if self.min_balance_to_keep_in_native_currency is not None:
                 withdraw_wxdai_to_xdai_to_keep_balance(
@@ -437,6 +441,9 @@ class DeployableTraderAgent(DeployableAgent):
         processed = 0
 
         for market in available_markets:
+            # We need to check it again before each market bet, as the balance might have changed.
+            self.check_min_required_balance_to_operate(market_type)
+          
             processed_market = self.process_market(market_type, market)
 
             if processed_market is not None:

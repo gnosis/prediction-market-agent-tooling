@@ -283,7 +283,7 @@ class DeployableTraderAgent(DeployableAgent):
                 market_type.value,
             ]
         )
-        
+
     def check_min_required_balance_to_operate(self, market_type: MarketType) -> None:
         api_keys = APIKeys()
         if self.min_required_balance_to_operate is None:
@@ -443,7 +443,7 @@ class DeployableTraderAgent(DeployableAgent):
         for market in available_markets:
             # We need to check it again before each market bet, as the balance might have changed.
             self.check_min_required_balance_to_operate(market_type)
-          
+
             processed_market = self.process_market(market_type, market)
 
             if processed_market is not None:

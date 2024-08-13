@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.47.0"
+version = "0.48.0"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -40,9 +40,10 @@ safe-eth-py = "^6.0.0b14"
 eth-account = "^0.8.0"
 prompt-toolkit = "^3.0.43"
 safe-cli = "^1.0.0"
-langfuse = "^2.27.1"
+langfuse = "^2.42.0"
 openai = { version = "^1.0.0", optional = true}
 base58 = "^2.1.1"
+pymongo = "^4.8.0"
 
 [tool.poetry.extras]
 openai = ["openai"]
@@ -51,7 +52,7 @@ google = ["google-api-python-client"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
-mypy = "^1.9.0"
+mypy = "^1.11.1"
 black = "^23.12.1"
 
 [build-system]

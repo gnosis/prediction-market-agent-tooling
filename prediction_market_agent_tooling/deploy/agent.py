@@ -1,11 +1,14 @@
+import getpass
 import inspect
 import os
 import tempfile
 import time
 import typing as t
 from datetime import datetime, timedelta
+from enum import Enum
+from functools import cached_property
 
-from pydantic import BaseModel, BeforeValidator
+from pydantic import BaseModel, BeforeValidator, computed_field
 from typing_extensions import Annotated
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -39,13 +42,13 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     redeem_from_all_user_positions,
     withdraw_wxdai_to_xdai_to_keep_balance,
 )
-from prediction_market_agent_tooling.monitor.langfuse.langfuse_wrapper import (
-    LangfuseWrapper,
-)
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
-from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
+from prediction_market_agent_tooling.tools.is_predictable import (
+    is_predictable_binary_observed,
+)
+from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
 
 MAX_AVAILABLE_MARKETS = 20
@@ -89,10 +92,42 @@ class Answer(BaseModel):
         return Probability(1 - self.p_yes)
 
 
+class ProcessedMarket(BaseModel):
+    answer: Answer
+    amount: BetAmount
+
+
+class AnsweredEnum(str, Enum):
+    ANSWERED = "answered"
+    NOT_ANSWERED = "not_answered"
+
+
 class DeployableAgent:
-    def __init__(self) -> None:
-        self.langfuse_wrapper = LangfuseWrapper(agent_name=self.__class__.__name__)
+    def __init__(
+        self,
+        enable_langfuse: bool = APIKeys().default_enable_langfuse,
+    ) -> None:
         self.load()
+        self.start_time = utcnow()
+        self.enable_langfuse = enable_langfuse
+        self.initialize_langfuse()
+
+    def initialize_langfuse(self) -> None:
+        # Configure Langfuse singleton with our APIKeys.
+        # If langfuse is disabled, it will just ignore all the calls, so no need to do if-else around the code.
+        keys = APIKeys()
+        langfuse_context.configure(
+            public_key=keys.langfuse_public_key,
+            secret_key=keys.langfuse_secret_key.get_secret_value(),
+            host=keys.langfuse_host,
+            enabled=self.enable_langfuse,
+        )
+
+    @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
+    @cached_property
+    def session_id(self) -> str:
+        # Each agent should be an unique class.
+        return f"{self.__class__.__name__} - {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}"
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
         if "DeployableAgent" not in str(
@@ -209,48 +244,88 @@ class DeployableTraderAgent(DeployableAgent):
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
 
-    def __init__(self, place_bet: bool = True) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        enable_langfuse: bool = APIKeys().default_enable_langfuse,
+        place_bet: bool = True,
+    ) -> None:
+        super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
 
-    def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
+    def update_langfuse_observation_by_market(
+        self, market_type: MarketType, market: AgentMarket
+    ) -> None:
+        langfuse_context.update_current_trace(
+            # All traces within a single run execution will be grouped under a single session.
+            session_id=self.session_id,
+            # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
+            release=APIKeys().LANGFUSE_DEPLOYMENT_VERSION,
+            user_id=getpass.getuser(),
+            # UI allows to do filtering by these.
+            metadata={
+                "agent_class": self.__class__.__name__,
+                "market_id": market.id,
+                "market_question": market.question,
+                "market_outcomes": market.outcomes,
+            },
+        )
+
+    def update_langfuse_observation_by_processed_market(
+        self, market_type: MarketType, processed_market: ProcessedMarket | None
+    ) -> None:
+        langfuse_context.update_current_trace(
+            tags=[
+                (
+                    AnsweredEnum.ANSWERED
+                    if processed_market is not None
+                    else AnsweredEnum.NOT_ANSWERED
+                ),
+                market_type.value,
+            ]
+        )
+
+    @observe()
+    def _have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
         return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
 
-    def pick_markets(
-        self, market_type: MarketType, markets: t.Sequence[AgentMarket]
-    ) -> t.Sequence[AgentMarket]:
+    def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
+        return self._have_bet_on_market_since(market, since)
+
+    @observe()
+    def _verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:
         """
         Subclasses can implement their own logic instead of this one, or on top of this one.
-        By default, it picks only the first {n_markets_per_run} markets where user didn't bet recently and it's a reasonable question.
+        By default, it allows only markets where user didn't bet recently and it's a reasonable question.
         """
-        picked: list[AgentMarket] = []
+        if self.have_bet_on_market_since(market, since=timedelta(hours=24)):
+            return False
 
-        for market in markets:
-            if len(picked) >= self.bet_on_n_markets_per_run:
-                break
+        # Manifold allows to bet only on markets with probability between 1 and 99.
+        if market_type == MarketType.MANIFOLD and not (1 < market.current_p_yes < 99):
+            return False
 
-            if self.have_bet_on_market_since(market, since=timedelta(hours=24)):
-                continue
+        # Do as a last check, as it uses paid OpenAI API.
+        if not is_predictable_binary_observed(market.question):
+            return False
 
-            # Do as a last check, as it uses paid OpenAI API.
-            if not is_predictable_binary(market.question):
-                continue
+        return True
 
-            # Manifold allows to bet only on markets with probability between 1 and 99.
-            if market_type == MarketType.MANIFOLD and not (
-                1 < market.current_p_yes < 99
-            ):
-                continue
+    def verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:
+        return self._verify_market(market_type, market)
 
-            picked.append(market)
-
-        return picked
+    @observe()
+    def _answer_binary_market(self, market: AgentMarket) -> Answer | None:
+        return self.answer_binary_market(market)
 
     def answer_binary_market(self, market: AgentMarket) -> Answer | None:
         """
         Answer the binary market. This method must be implemented by the subclass.
         """
         raise NotImplementedError("This method must be implemented by the subclass")
+
+    @observe()
+    def _calculate_bet_amount(self, answer: Answer, market: AgentMarket) -> BetAmount:
+        return self.calculate_bet_amount(answer, market)
 
     def calculate_bet_amount(self, answer: Answer, market: AgentMarket) -> BetAmount:
         """
@@ -272,7 +347,63 @@ class DeployableTraderAgent(DeployableAgent):
         )
         return available_markets
 
-    def before(self, market_type: MarketType) -> None:
+    def before_process_market(
+        self, market_type: MarketType, market: AgentMarket
+    ) -> None:
+        self.update_langfuse_observation_by_market(market_type, market)
+
+    @observe()
+    def _process_market(
+        self, market_type: MarketType, market: AgentMarket, verify_market: bool
+    ) -> ProcessedMarket | None:
+        return self.process_market(market_type, market, verify_market)
+
+    def process_market(
+        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
+    ) -> ProcessedMarket | None:
+        self.before_process_market(market_type, market)
+
+        if verify_market and not self.verify_market(market_type, market):
+            logger.info(f"Market '{market.question}' doesn't meet the criteria.")
+            self.update_langfuse_observation_by_processed_market(market_type, None)
+            return None
+
+        answer = self.answer_binary_market(market)
+
+        if answer is None:
+            logger.info(f"No answer for market '{market.question}'.")
+            self.update_langfuse_observation_by_processed_market(market_type, None)
+            return None
+
+        amount = self.calculate_bet_amount(answer, market)
+
+        if self.place_bet:
+            logger.info(
+                f"Placing bet on {market} with result {answer} and amount {amount}"
+            )
+            market.place_bet(
+                amount=amount,
+                outcome=answer.decision,
+            )
+
+        self.after_process_market(market_type, market)
+
+        processed_market = ProcessedMarket(
+            answer=answer,
+            amount=amount,
+        )
+        self.update_langfuse_observation_by_processed_market(
+            market_type, processed_market
+        )
+
+        return processed_market
+
+    def after_process_market(
+        self, market_type: MarketType, market: AgentMarket
+    ) -> None:
+        pass
+
+    def before_process_markets(self, market_type: MarketType) -> None:
         """
         Executes actions that occur before bets are placed.
         """
@@ -298,31 +429,26 @@ class DeployableTraderAgent(DeployableAgent):
                     withdraw_multiplier=2,
                 )
 
-    def process_bets(self, market_type: MarketType) -> None:
+    def process_markets(self, market_type: MarketType) -> None:
         """
         Processes bets placed by agents on a given market.
         """
         available_markets = self.get_markets(market_type)
-        markets = self.pick_markets(market_type, available_markets)
-        for market in markets:
-            result = self.answer_binary_market(market)
-            if result is None:
-                logger.info(f"Skipping market {market} as no answer was provided")
-                continue
-            if self.place_bet:
-                amount = self.calculate_bet_amount(result, market)
-                logger.info(
-                    f"Placing bet on {market} with result {result} and amount {amount}"
-                )
-                market.place_bet(
-                    amount=amount,
-                    outcome=result.decision,
-                )
+        processed = 0
 
-    def after(self, market_type: MarketType) -> None:
+        for market in available_markets:
+            processed_market = self.process_market(market_type, market)
+
+            if processed_market is not None:
+                processed += 1
+
+            if processed == self.bet_on_n_markets_per_run:
+                break
+
+    def after_process_markets(self, market_type: MarketType) -> None:
         pass
 
     def run(self, market_type: MarketType) -> None:
-        self.before(market_type)
-        self.process_bets(market_type)
-        self.after(market_type)
+        self.before_process_markets(market_type)
+        self.process_markets(market_type)
+        self.after_process_markets(market_type)

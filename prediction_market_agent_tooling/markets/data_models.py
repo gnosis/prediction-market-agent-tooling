@@ -48,7 +48,7 @@ class ResolvedBet(Bet):
     resolved_time: datetime
     profit: ProfitAmount
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def is_correct(self) -> bool:
         return self.outcome == self.market_outcome

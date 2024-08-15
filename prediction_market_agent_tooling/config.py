@@ -43,6 +43,10 @@ class APIKeys(BaseSettings):
     LANGFUSE_PUBLIC_KEY: t.Optional[SecretStr] = None
     LANGFUSE_HOST: t.Optional[str] = None
 
+    TAVILY_API_KEY: t.Optional[SecretStr] = None
+
+    SQLALCHEMY_DB_URL: t.Optional[SecretStr] = None
+
     ENABLE_CACHE: bool = True
     CACHE_DIR: str = "./.cache"
 
@@ -132,6 +136,18 @@ class APIKeys(BaseSettings):
     def langfuse_host(self) -> str:
         return check_not_none(
             self.LANGFUSE_HOST, "LANGFUSE_HOST missing in the environment."
+        )
+
+    @property
+    def tavily_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.TAVILY_API_KEY, "TAVILY_API_KEY missing in the environment."
+        )
+
+    @property
+    def sqlalchemy_db_url(self) -> SecretStr:
+        return check_not_none(
+            self.SQLALCHEMY_DB_URL, "SQLALCHEMY_DB_URL missing in the environment."
         )
 
     def model_dump_public(self) -> dict[str, t.Any]:

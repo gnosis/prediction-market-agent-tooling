@@ -117,12 +117,15 @@ class DeployableAgent:
         # Configure Langfuse singleton with our APIKeys.
         # If langfuse is disabled, it will just ignore all the calls, so no need to do if-else around the code.
         keys = APIKeys()
-        langfuse_context.configure(
-            public_key=keys.langfuse_public_key,
-            secret_key=keys.langfuse_secret_key.get_secret_value(),
-            host=keys.langfuse_host,
-            enabled=self.enable_langfuse,
-        )
+        if self.enable_langfuse:
+            langfuse_context.configure(
+                public_key=keys.langfuse_public_key,
+                secret_key=keys.langfuse_secret_key.get_secret_value(),
+                host=keys.langfuse_host,
+                enabled=self.enable_langfuse,
+            )
+        else:
+            langfuse_context.configure(enabled=self.enable_langfuse)
 
     def langfuse_update_current_trace(
         self,

@@ -1,4 +1,4 @@
-import pytest
+from ape_test import TestAccount
 from eth_account import Account
 from numpy import isclose
 from pydantic import SecretStr
@@ -6,12 +6,7 @@ from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    PrivateKey,
-    xDai,
-    xdai_type,
-)
+from prediction_market_agent_tooling.gtypes import PrivateKey, xDai, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     is_minimum_required_balance,
 )
@@ -21,15 +16,13 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     wei_to_xdai,
     xdai_to_wei,
 )
-from tests_integration.local_chain_utils import get_anvil_test_accounts
 
 
 def test_connect_local_chain(local_web3: Web3) -> None:
     assert local_web3.is_connected()
 
 
-def test_send_xdai(local_web3: Web3) -> None:
-    accounts = get_anvil_test_accounts()
+def test_send_xdai(local_web3: Web3, accounts: list[TestAccount]) -> None:
     value = xdai_to_wei(xDai(10))
     from_account = accounts[0]
     to_account = accounts[1]
@@ -38,7 +31,7 @@ def test_send_xdai(local_web3: Web3) -> None:
 
     send_xdai_to(
         web3=local_web3,
-        from_private_key=PrivateKey(SecretStr(from_account.key.hex())),
+        from_private_key=PrivateKey(SecretStr(from_account.private_key)),
         to_address=to_account.address,
         value=value,
     )
@@ -86,20 +79,18 @@ def test_send_xdai_from_locked_account(
     )
 
 
-@pytest.mark.parametrize(
-    "address, expected",
-    [
-        (
-            Web3.to_checksum_address(get_anvil_test_accounts()[0].address),
-            True,
-        ),
-        (
-            Web3.to_checksum_address("0x184ca44A6c3cfc05bCF7246ac14101Ddb9423eAa"),
-            False,
-        ),
-    ],
-)
-def test_is_minimum_required_balance(
-    address: ChecksumAddress, expected: bool, local_web3: Web3
+def test_anvil_account_has_more_than_minimum_required_balance(
+    local_web3: Web3,
+    accounts: list[TestAccount],
 ) -> None:
-    assert is_minimum_required_balance(address, xdai_type(0.5), local_web3) == expected
+    account_adr = Web3.to_checksum_address(accounts[0].address)
+    assert is_minimum_required_balance(account_adr, xdai_type(0.5), local_web3)
+
+
+def test_fresh_account_has_less_than_minimum_required_balance(
+    local_web3: Web3,
+    accounts: list[TestAccount],
+) -> None:
+    fresh_account_adr = Account.create().address
+    account_adr = Web3.to_checksum_address(fresh_account_adr)
+    assert not is_minimum_required_balance(account_adr, xdai_type(0.5), local_web3)

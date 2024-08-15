@@ -13,7 +13,7 @@ def print_current_block(web3: Web3) -> None:
     logger.debug(f"current block {web3.eth.block_number}")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def test_safe(local_web3: Web3, test_keys: APIKeys) -> Safe:
     web3 = local_web3
     print_current_block(web3)

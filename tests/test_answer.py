@@ -17,4 +17,4 @@ from prediction_market_agent_tooling.deploy.agent import Answer
     ],
 )
 def test_answer_decision(obj: dict[str, t.Any], expected_decision: bool) -> None:
-    Answer.model_validate(obj).decision == expected_decision
+    assert Answer.model_validate(obj).decision == expected_decision

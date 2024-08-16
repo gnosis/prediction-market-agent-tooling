@@ -145,7 +145,9 @@ class APIKeys(BaseSettings):
             self.LANGFUSE_SECRET_KEY is not None
             and self.LANGFUSE_PUBLIC_KEY is not None
             and self.LANGFUSE_HOST is not None
+        )
 
+    @property
     def tavily_api_key(self) -> SecretStr:
         return check_not_none(
             self.TAVILY_API_KEY, "TAVILY_API_KEY missing in the environment."

@@ -2,7 +2,10 @@ from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
-from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
+from prediction_market_agent_tooling.tools.langfuse_ import (
+    get_langfuse_langchain_config,
+    observe,
+)
 from prediction_market_agent_tooling.tools.utils import LLM_SUPER_LOW_TEMPERATURE
 
 # I tried to make it return a JSON, but it didn't work well in combo with asking it to do chain of thought.
@@ -73,19 +76,18 @@ Finally, write your final decision, write `decision: ` followed by either "yes i
 
 
 @persistent_inmemory_cache
+@observe()
 def is_predictable_binary(
     question: str,
     engine: str = "gpt-4-1106-preview",
     prompt_template: str = QUESTION_IS_PREDICTABLE_BINARY_PROMPT,
     max_tokens: int = 1024,
-    enable_langfuse: bool = False,
 ) -> bool:
     """
     Evaluate if the question is actually answerable.
     """
     try:
         from langchain.prompts import ChatPromptTemplate
-        from langchain_core.runnables.config import RunnableConfig
         from langchain_openai import ChatOpenAI
     except ImportError:
         logger.error("langchain not installed, skipping is_predictable_binary")
@@ -99,45 +101,29 @@ def is_predictable_binary(
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
     messages = prompt.format_messages(question=question)
-    config: RunnableConfig = {}
-    if enable_langfuse:
-        config["callbacks"] = [langfuse_context.get_current_langchain_handler()]
-    completion = str(llm.invoke(messages, max_tokens=max_tokens, config=config).content)
+    completion = str(
+        llm.invoke(
+            messages, max_tokens=max_tokens, config=get_langfuse_langchain_config()
+        ).content
+    )
 
     return parse_decision_yes_no_completion(question, completion)
 
 
-@observe()
-def is_predictable_binary_observed(
-    question: str,
-    engine: str = "gpt-4-1106-preview",
-    prompt_template: str = QUESTION_IS_PREDICTABLE_BINARY_PROMPT,
-    max_tokens: int = 1024,
-) -> bool:
-    return is_predictable_binary(
-        question=question,
-        enable_langfuse=True,
-        engine=engine,
-        prompt_template=prompt_template,
-        max_tokens=max_tokens,
-    )
-
-
 @persistent_inmemory_cache
+@observe()
 def is_predictable_without_description(
     question: str,
     description: str,
     engine: str = "gpt-4-1106-preview",
     prompt_template: str = QUESTION_IS_PREDICTABLE_WITHOUT_DESCRIPTION_PROMPT,
     max_tokens: int = 1024,
-    enable_langfuse: bool = False,
 ) -> bool:
     """
     Evaluate if the question is fully self-contained.
     """
     try:
         from langchain.prompts import ChatPromptTemplate
-        from langchain_core.runnables.config import RunnableConfig
         from langchain_openai import ChatOpenAI
     except ImportError:
         logger.error(
@@ -156,30 +142,13 @@ def is_predictable_without_description(
         question=question,
         description=description,
     )
-    config: RunnableConfig = {}
-    if enable_langfuse:
-        config["callbacks"] = [langfuse_context.get_current_langchain_handler()]
-    completion = str(llm(messages, max_tokens=max_tokens, config=config).content)
+    completion = str(
+        llm(
+            messages, max_tokens=max_tokens, config=get_langfuse_langchain_config()
+        ).content
+    )
 
     return parse_decision_yes_no_completion(question, completion)
-
-
-@observe()
-def is_predictable_without_description_observed(
-    question: str,
-    description: str,
-    engine: str = "gpt-4-1106-preview",
-    prompt_template: str = QUESTION_IS_PREDICTABLE_WITHOUT_DESCRIPTION_PROMPT,
-    max_tokens: int = 1024,
-) -> bool:
-    return is_predictable_without_description(
-        question=question,
-        description=description,
-        enable_langfuse=True,
-        engine=engine,
-        prompt_template=prompt_template,
-        max_tokens=max_tokens,
-    )
 
 
 def parse_decision_yes_no_completion(question: str, completion: str) -> bool:

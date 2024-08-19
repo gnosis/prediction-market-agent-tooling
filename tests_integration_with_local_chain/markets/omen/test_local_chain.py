@@ -82,15 +82,14 @@ def test_send_xdai_from_locked_account(
 
 def test_anvil_account_has_more_than_minimum_required_balance(
     local_web3: Web3,
-    accounts: list[TestAccount],
 ) -> None:
+    accounts = get_anvil_test_accounts()
     account_adr = Web3.to_checksum_address(accounts[0].address)
     assert is_minimum_required_balance(account_adr, xdai_type(0.5), local_web3)
 
 
 def test_fresh_account_has_less_than_minimum_required_balance(
     local_web3: Web3,
-    accounts: list[TestAccount],
 ) -> None:
     fresh_account_adr = Account.create().address
     account_adr = Web3.to_checksum_address(fresh_account_adr)

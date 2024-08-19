@@ -32,7 +32,7 @@ def test_send_xdai(local_web3: Web3) -> None:
 
     send_xdai_to(
         web3=local_web3,
-        from_private_key=PrivateKey(SecretStr(from_account.private_key)),
+        from_private_key=PrivateKey(SecretStr(from_account.key.hex())),
         to_address=to_account.address,
         value=value,
     )

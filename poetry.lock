@@ -265,15 +265,17 @@ files = [
 
 [[package]]
 name = "base58"
-version = "1.0.3"
-description = "Base58 and Base58Check implementation"
+version = "2.1.1"
+description = "Base58 and Base58Check implementation."
 optional = false
-python-versions = "*"
+python-versions = ">=3.5"
 files = [
-    {file = "base58-1.0.3-py2-none-any.whl", hash = "sha256:1e42993c0628ed4f898c03b522b26af78fb05115732549b21a028bc4633d19ab"},
-    {file = "base58-1.0.3-py3-none-any.whl", hash = "sha256:6aa0553e477478993588303c54659d15e3c17ae062508c854a8b752d07c716bd"},
-    {file = "base58-1.0.3.tar.gz", hash = "sha256:9a793c599979c497800eb414c852b80866f28daaed5494703fc129592cc83e60"},
+    {file = "base58-2.1.1-py3-none-any.whl", hash = "sha256:11a36f4d3ce51dfc1043f3218591ac4eb1ceb172919cebe05b52a5bcc8d245c2"},
+    {file = "base58-2.1.1.tar.gz", hash = "sha256:c5d0cb3f5b6e81e8e35da5754388ddcc6d0d14b6c6a132cb93d69ed580a7278c"},
 ]
+
+[package.extras]
+tests = ["PyHamcrest (>=2.0.2)", "mypy", "pytest (>=4.6)", "pytest-benchmark", "pytest-cov", "pytest-flake8"]
 
 [[package]]
 name = "bitarray"
@@ -4900,4 +4902,4 @@ openai = ["openai"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "8fb8e27b89f310eebe37eb9b1a6855116ef8eb51f5eaf354c817638510a8b2d9"
+content-hash = "12fc05e437c647591b59718cc053c2d44ea47f820b4ef3a156c4839bc6b79d69"

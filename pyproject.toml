@@ -45,7 +45,7 @@ openai = { version = "^1.0.0", optional = true}
 tavily-python = "^0.3.9"
 sqlmodel = "^0.0.21"
 psycopg2-binary = "^2.9.9"
-base58 = ">=1.0.2,<2.0"
+base58 = "^2.1.1"
 
 [tool.poetry.extras]
 openai = ["openai"]

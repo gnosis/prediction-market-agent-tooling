@@ -41,9 +41,11 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
       - name: Run pytest unit tests
-        run: poetry run python -m pytest tests/
+        run: poetry run python -m pytest tests/ -p no:ape_test
       - name: Run pytest integration tests
-        run: poetry run python -m pytest tests_integration/
+        run: poetry run python -m pytest tests_integration/ -p no:ape_test
+      - name: Run pytest local chain integration tests
+        run: poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation
 
 
   black:

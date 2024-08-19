@@ -45,6 +45,7 @@ jobs:
       - name: Run pytest integration tests
         run: poetry run python -m pytest tests_integration/
 
+
   black:
     runs-on: ubuntu-latest
     steps:

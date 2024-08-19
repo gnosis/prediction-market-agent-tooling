@@ -73,6 +73,21 @@ def to_boolean_outcome(value: str | bool) -> bool:
         raise ValueError(f"Expected a boolean or a string, but got {value}")
 
 
+def initialize_langfuse(enable_langfuse: bool) -> None:
+    # Configure Langfuse singleton with our APIKeys.
+    # If langfuse is disabled, it will just ignore all the calls, so no need to do if-else around the code.
+    keys = APIKeys()
+    if enable_langfuse:
+        langfuse_context.configure(
+            public_key=keys.langfuse_public_key,
+            secret_key=keys.langfuse_secret_key.get_secret_value(),
+            host=keys.langfuse_host,
+            enabled=enable_langfuse,
+        )
+    else:
+        langfuse_context.configure(enabled=enable_langfuse)
+
+
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
@@ -106,24 +121,13 @@ class DeployableAgent:
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
     ) -> None:
-        self.load()
         self.start_time = utcnow()
         self.enable_langfuse = enable_langfuse
         self.initialize_langfuse()
+        self.load()
 
     def initialize_langfuse(self) -> None:
-        # Configure Langfuse singleton with our APIKeys.
-        # If langfuse is disabled, it will just ignore all the calls, so no need to do if-else around the code.
-        keys = APIKeys()
-        if self.enable_langfuse:
-            langfuse_context.configure(
-                public_key=keys.langfuse_public_key,
-                secret_key=keys.langfuse_secret_key.get_secret_value(),
-                host=keys.langfuse_host,
-                enabled=self.enable_langfuse,
-            )
-        else:
-            langfuse_context.configure(enabled=self.enable_langfuse)
+        initialize_langfuse(self.enable_langfuse)
 
     def langfuse_update_current_trace(
         self,

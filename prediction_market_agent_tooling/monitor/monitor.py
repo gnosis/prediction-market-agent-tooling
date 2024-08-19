@@ -229,7 +229,8 @@ def monitor_agent(agent: DeployedAgent) -> None:
         )
         .interactive()
     )
-    st.altair_chart(
+
+    st.altair_chart(  # type: ignore
         per_day_accuracy_chart.mark_line()
         + per_day_accuracy_chart.transform_loess("x-axis-day", "Is Correct").mark_line(
             color="red", strokeDash=[5, 5]

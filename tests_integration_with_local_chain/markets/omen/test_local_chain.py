@@ -1,4 +1,3 @@
-from ape_test import TestAccount
 from eth_account import Account
 from numpy import isclose
 from pydantic import SecretStr
@@ -16,13 +15,15 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     wei_to_xdai,
     xdai_to_wei,
 )
+from tests_integration_with_local_chain.local_chain_utils import get_anvil_test_accounts
 
 
 def test_connect_local_chain(local_web3: Web3) -> None:
     assert local_web3.is_connected()
 
 
-def test_send_xdai(local_web3: Web3, accounts: list[TestAccount]) -> None:
+def test_send_xdai(local_web3: Web3) -> None:
+    accounts = get_anvil_test_accounts()
     value = xdai_to_wei(xDai(10))
     from_account = accounts[0]
     to_account = accounts[1]

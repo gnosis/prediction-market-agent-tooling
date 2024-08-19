@@ -1,4 +1,3 @@
-from ape_test import TestAccount
 from eth_account import Account
 from gnosis.safe import Safe
 from web3 import Web3
@@ -8,15 +7,16 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, xdai_type
+from tests_integration_with_local_chain.local_chain_utils import get_anvil_test_accounts
 
 
 def test_erc20_send_updates_balance(
-    test_safe: Safe, test_keys: APIKeys, local_web3: Web3, accounts: list[TestAccount]
+    test_safe: Safe, test_keys: APIKeys, local_web3: Web3
 ) -> None:
     # Deploy safe
     # send 10 xDAI to safe
     account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
-    account2 = accounts[1]
+    account2 = get_anvil_test_accounts()[1]
 
     collateral_token_contract = WrappedxDaiContract()
     # deposit from account 1

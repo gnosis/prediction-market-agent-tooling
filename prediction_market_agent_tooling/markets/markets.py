@@ -30,8 +30,9 @@ from prediction_market_agent_tooling.tools.utils import should_not_happen, utcno
 
 
 class MarketType(str, Enum):
-    MANIFOLD = "manifold"
+    # Note: Always keep the omen market first, as it is the main market for us.
     OMEN = "omen"
+    MANIFOLD = "manifold"
     POLYMARKET = "polymarket"
     METACULUS = "metaculus"
 

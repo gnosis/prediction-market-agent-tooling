@@ -2,7 +2,7 @@ import typing as t
 
 import pytest
 
-from prediction_market_agent_tooling.deploy.agent import Answer
+from prediction_market_agent_tooling.markets.data_models import Answer
 
 
 @pytest.mark.parametrize(

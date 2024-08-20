@@ -5,9 +5,6 @@ import time
 import typing as t
 from datetime import datetime, timedelta
 
-from pydantic import BaseModel, BeforeValidator
-from typing_extensions import Annotated
-
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
@@ -26,7 +23,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import Probability, xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -34,6 +31,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Answer,
     TokenAmount,
     TokenAmountAndDirection,
 )
@@ -62,42 +60,8 @@ from prediction_market_agent_tooling.tools.utils import (
 MAX_AVAILABLE_MARKETS = 20
 
 
-def to_boolean_outcome(value: str | bool) -> bool:
-    if isinstance(value, bool):
-        return value
-
-    elif isinstance(value, str):
-        value = value.lower().strip()
-
-        if value in {"true", "yes", "y", "1"}:
-            return True
-
-        elif value in {"false", "no", "n", "0"}:
-            return False
-
-        else:
-            raise ValueError(f"Expected a boolean string, but got {value}")
-
-    else:
-        raise ValueError(f"Expected a boolean or a string, but got {value}")
-
-
-Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
-
-
 class OutOfFundsError(ValueError):
     pass
-
-
-class Answer(BaseModel):
-    decision: Decision  # Warning: p_yes > 0.5 doesn't necessarily mean decision is True! For example, if our p_yes is 55%, but market's p_yes is 80%, then it might be profitable to bet on False.
-    p_yes: Probability
-    confidence: float
-    reasoning: str | None = None
-
-    @property
-    def p_no(self) -> Probability:
-        return Probability(1 - self.p_yes)
 
 
 class DeployableAgent:

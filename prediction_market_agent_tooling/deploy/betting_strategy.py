@@ -1,8 +1,10 @@
 from abc import ABC, ABCMeta, abstractmethod
 
-from prediction_market_agent_tooling.deploy.agent import Answer
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
-from prediction_market_agent_tooling.markets.data_models import TokenAmountAndDirection
+from prediction_market_agent_tooling.markets.data_models import (
+    Answer,
+    TokenAmountAndDirection,
+)
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )

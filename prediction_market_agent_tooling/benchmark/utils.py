@@ -3,8 +3,7 @@ import typing as t
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.deploy.agent import Answer
-from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.data_models import Answer, Resolution
 
 
 class OutcomePrediction(Answer):

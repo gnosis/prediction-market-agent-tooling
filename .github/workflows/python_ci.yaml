@@ -28,6 +28,7 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         python-version: [ '3.10.x', '3.11.x', '3.12.x' ]
     name: pytest - Python ${{ matrix.python-version }} 

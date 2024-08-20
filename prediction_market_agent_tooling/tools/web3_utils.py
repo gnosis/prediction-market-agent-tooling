@@ -157,7 +157,7 @@ def _prepare_tx_params(
     # Retry only for the transaction errors that match the given patterns,
     # add other retrieable errors gradually to be safe.
     retry=tenacity.retry_if_exception_message(
-        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)"
+        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)|(ALREADY_EXISTS.*)"
     ),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
     stop=tenacity.stop_after_attempt(9),

@@ -30,7 +30,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
-    BetDirection,
     get_kelly_bet,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
@@ -204,9 +203,7 @@ def test_kelly_bet(est_p_yes: Probability, omen_market: OmenMarket) -> None:
     max_bet = 10
     confidence = 1.0
     market_p_yes = omen_market.current_p_yes
-    expected_bet_direction = (
-        BetDirection.NO if est_p_yes < market_p_yes else BetDirection.YES
-    )
+    expected_bet_direction = False if est_p_yes < market_p_yes else True
 
     # Kelly estimates the best bet for maximizing the expected value of the
     # logarithm of the wealth. We don't know the real best bet amount, but at

@@ -13,6 +13,7 @@ from web3.types import RPCEndpoint
 
 from prediction_market_agent_tooling.loggers import logger
 
+
 # Local chain setup for tests.
 # Heavily inspired by Kartpatkey's Roles Royce (https://github.com/karpatkey/roles_royce/blob/main/tests/utils.py)
 
@@ -148,7 +149,13 @@ def _local_node(
     """Run a local node_daemon for testing"""
     node_daemon = None
     if start_local_node:
+        print(
+            f"starting anvil {node.remote_url} - block {node.default_block} port {node.port}"
+        )
         node_daemon = run_anvil(node.remote_url, node.default_block, node.port)
+        print(
+            f"started anvil {node.remote_url} - block {node.default_block} port {node.port}"
+        )
 
     wait_for_port(node.port, timeout=60)
     return node_daemon

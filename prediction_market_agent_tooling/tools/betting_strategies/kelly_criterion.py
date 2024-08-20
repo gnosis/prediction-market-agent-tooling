@@ -1,4 +1,4 @@
-from prediction_market_agent_tooling.markets.data_models import KellyBet
+from prediction_market_agent_tooling.markets.data_models import KellyResult
 
 
 def check_is_valid_probability(probability: float) -> None:
@@ -11,7 +11,7 @@ def get_kelly_bet(
     market_p_yes: float,
     estimated_p_yes: float,
     confidence: float,
-) -> KellyBet:
+) -> KellyResult:
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
 
@@ -52,4 +52,4 @@ def get_kelly_bet(
     # Ensure bet size is non-negative does not exceed the wallet balance
     bet_size = min(kelly_fraction * max_bet, max_bet)
 
-    return KellyBet(direction=bet_direction, size=bet_size)
+    return KellyResult(direction=bet_direction, size=bet_size)

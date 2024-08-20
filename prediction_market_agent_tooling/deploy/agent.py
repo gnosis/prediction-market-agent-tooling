@@ -11,7 +11,6 @@ from typing_extensions import Annotated
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    TinyBetBettingStrategy,
 )
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -33,6 +32,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.data_models import TokenAmountAndDirection
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     have_bet_on_market_since,
@@ -49,7 +49,11 @@ from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
-from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeWithTimezone,
+    utcnow,
+    check_not_none,
+)
 
 MAX_AVAILABLE_MARKETS = 20
 
@@ -211,7 +215,7 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
-    strategy: BettingStrategy = TinyBetBettingStrategy()
+    strategy: BettingStrategy
 
     def __init__(
         self,
@@ -219,6 +223,7 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         super().__init__()
         self.place_bet = place_bet
+        check_not_none(self.strategy)
 
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
         return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
@@ -303,6 +308,18 @@ class DeployableTraderAgent(DeployableAgent):
                     withdraw_multiplier=2,
                 )
 
+    def calculate_bet_amount_and_direction(
+        self, answer: Answer, market: AgentMarket
+    ) -> TokenAmountAndDirection:
+        amount_and_direction = self.strategy.calculate_bet_amount_and_direction(
+            answer, market
+        )
+        if amount_and_direction.currency != market.currency:
+            raise ValueError(
+                f"Currency mismatch. Strategy yields {amount_and_direction.currency}, market has currency {market.currency}"
+            )
+        return amount_and_direction
+
     def process_bets(self, market_type: MarketType) -> None:
         """
         Processes bets placed by agents on a given market.
@@ -317,14 +334,14 @@ class DeployableTraderAgent(DeployableAgent):
                 logger.info(f"Skipping market {market} as no answer was provided")
                 continue
             if self.place_bet:
-                amount_and_direction = self.strategy.calculate_bet_amount_and_direction(
+                amount_and_direction = self.calculate_bet_amount_and_direction(
                     result, market
                 )
                 logger.info(
-                    f"Placing bet on {market} with direction {amount_and_direction.direction} and amount {amount_and_direction.size}"
+                    f"Placing bet on {market} with direction {amount_and_direction.direction} and amount {amount_and_direction.token_amount}"
                 )
                 market.place_bet(
-                    amount=amount_and_direction.size,
+                    amount=amount_and_direction.token_amount,
                     outcome=result.decision,
                 )
 

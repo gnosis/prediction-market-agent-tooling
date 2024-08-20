@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
 
 from prediction_market_agent_tooling.deploy.agent import Answer
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
@@ -18,9 +18,11 @@ class BettingStrategy(ABC):
         pass
 
 
-# ToDo - Make this abstract
-class FixedBetBettingStrategy(BettingStrategy):
-    bet_amount: float
+class FixedBetBettingStrategy(BettingStrategy, metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def bet_amount(self) -> float:
+        pass
 
     def calculate_bet_amount_and_direction(
         self, answer: Answer, market: AgentMarket
@@ -33,16 +35,23 @@ class FixedBetBettingStrategy(BettingStrategy):
 
 
 class ManifoldFixedBetBettingStrategy(FixedBetBettingStrategy):
-    bet_amount = 1.0  # 1 Mana
+    @property
+    def bet_amount(self) -> float:
+        return 1.0  # Mana
 
 
 class OmenFixedBetBettingStrategy(FixedBetBettingStrategy):
-    bet_amount = 0.00001  # xDAI
+    @property
+    def bet_amount(self) -> float:
+        return 0.00001  # xDAI
 
 
 # ToDo - Make this abstract
-class KellyBettingStrategy(BettingStrategy):
-    max_bet_amount: float
+class KellyBettingStrategy(BettingStrategy, metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def max_bet_amount(self) -> float:
+        pass
 
     def calculate_bet_amount_and_direction(
         self, answer: Answer, market: AgentMarket
@@ -58,8 +67,12 @@ class KellyBettingStrategy(BettingStrategy):
 
 
 class OmenKellyBettingStrategy(KellyBettingStrategy):
-    max_bet_amount = 10  # xDAI
+    @property
+    def max_bet_amount(self) -> float:
+        return 10  # xDAI
 
 
 class ManifoldKellyBettingStrategy(KellyBettingStrategy):
-    max_bet_amount = 10  # Mana
+    @property
+    def max_bet_amount(self) -> float:
+        return 10  # Mana

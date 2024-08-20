@@ -211,15 +211,14 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+    strategy: BettingStrategy = TinyBetBettingStrategy()
 
     def __init__(
         self,
         place_bet: bool = True,
-        strategy: BettingStrategy = TinyBetBettingStrategy(),
     ) -> None:
         super().__init__()
         self.place_bet = place_bet
-        self.strategy = strategy
 
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
         return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)

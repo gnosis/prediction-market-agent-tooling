@@ -29,7 +29,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import Probability, xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -104,19 +104,8 @@ class OutOfFundsError(ValueError):
     pass
 
 
-class Answer(BaseModel):
-    decision: Decision  # Warning: p_yes > 0.5 doesn't necessarily mean decision is True! For example, if our p_yes is 55%, but market's p_yes is 80%, then it might be profitable to bet on False.
-    p_yes: Probability
-    confidence: float
-    reasoning: str | None = None
-
-    @property
-    def p_no(self) -> Probability:
-        return Probability(1 - self.p_yes)
-
-
 class ProcessedMarket(BaseModel):
-    answer: Answer
+    answer: ProbabilisticAnswer
     amount: BetAmount
 
 
@@ -391,7 +380,9 @@ class DeployableTraderAgent(DeployableAgent):
         """
         raise NotImplementedError("This method must be implemented by the subclass")
 
-    def calculate_bet_amount(self, answer: Answer, market: AgentMarket) -> BetAmount:
+    def calculate_bet_amount(
+        self, answer: ProbabilisticAnswer, market: AgentMarket
+    ) -> BetAmount:
         """
         Calculate the bet amount. By default, it returns the minimum bet amount.
         """

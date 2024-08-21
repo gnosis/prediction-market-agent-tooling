@@ -3,6 +3,8 @@ from abc import ABC, ABCMeta, abstractmethod
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     Answer,
+    Currency,
+    TokenAmount,
     TokenAmountAndDirection,
 )
 from prediction_market_agent_tooling.markets.manifold.manifold import (
@@ -22,12 +24,16 @@ class BettingStrategy(ABC):
         pass
 
 
+MINIMUM_BET_OMEN = TokenAmount(amount=0.00001, currency=Currency.xDai)
+MINIMUM_BET_MANIFOLD = TokenAmount(amount=1, currency=Currency.Mana)
+
+
 class FixedBetBettingStrategy(BettingStrategy, metaclass=ABCMeta):
     def get_bet_amount_for_market(self, market: AgentMarket) -> float:
         if isinstance(market, ManifoldAgentMarket):
-            return 1.0  # Mana
+            return MINIMUM_BET_MANIFOLD.amount
         elif isinstance(market, OmenAgentMarket):
-            return 0.00001  # xDAI
+            return MINIMUM_BET_OMEN.amount
         else:
             raise ValueError(f"Cannot process market: {market}")
 

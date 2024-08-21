@@ -1,9 +1,14 @@
-from prediction_market_agent_tooling.markets.data_models import KellyResult
+from pydantic import BaseModel
 
 
 def check_is_valid_probability(probability: float) -> None:
     if not 0 <= probability <= 1:
         raise ValueError("Probability must be between 0 and 1")
+
+
+class KellyResult(BaseModel):
+    direction: bool
+    size: float
 
 
 def get_kelly_bet(

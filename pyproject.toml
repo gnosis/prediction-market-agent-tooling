@@ -46,8 +46,7 @@ tavily-python = "^0.3.9"
 sqlmodel = "^0.0.21"
 psycopg2-binary = "^2.9.9"
 base58 = ">=1.0.2,<2.0"
-eth-ape = "^0.8.12"
-ape-foundry = "^0.8.4"
+
 
 [tool.poetry.extras]
 openai = ["openai"]
@@ -58,6 +57,8 @@ google = ["google-api-python-client"]
 pytest = "*"
 mypy = "^1.11.1"
 black = "^23.12.1"
+eth-ape = "^0.8.12"
+ape-foundry = "^0.8.4"
 
 [build-system]
 requires = ["poetry-core"]

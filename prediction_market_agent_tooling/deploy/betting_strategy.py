@@ -28,7 +28,7 @@ MINIMUM_BET_OMEN = TokenAmount(amount=0.00001, currency=Currency.xDai)
 MINIMUM_BET_MANIFOLD = TokenAmount(amount=1, currency=Currency.Mana)
 
 
-class FixedBetBettingStrategy(BettingStrategy, metaclass=ABCMeta):
+class FixedBetBettingStrategy(BettingStrategy):
     def get_bet_amount_for_market(self, market: AgentMarket) -> float:
         if isinstance(market, ManifoldAgentMarket):
             return MINIMUM_BET_MANIFOLD.amount

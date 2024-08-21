@@ -30,7 +30,14 @@ T = TypeVar(
 )  # Not possible to use bound due to OmenMarket and ManifoldMarket not sharing a base class
 
 
-class BaseCalculator(ABC, Generic[T]):
+class DirectionBaseCalculator(ABC, Generic[T]):
+    """
+    Class responsible for determining the direction of the bet (True, False) based on the expected return of the bet.
+    The calculation is rather simple:
+        expected_value = (probability_yes * payoff_yes) - (probability_no * payoff_no)
+        return True if expected_value >=0 else False
+    """
+
     choices: dict[Resolution, str]
 
     @abstractmethod
@@ -51,10 +58,10 @@ class BaseCalculator(ABC, Generic[T]):
         )
         return (estimate_p_yes * num_tokens_yes) - (
             (1 - estimate_p_yes) * num_tokens_no
-        ) > 0
+        ) >= 0
 
 
-class OmenCalculator(BaseCalculator[OmenMarket]):
+class OmenDirectionCalculator(DirectionBaseCalculator[OmenMarket]):
     choices: dict[Resolution, str] = {
         Resolution.YES: "Yes",
         Resolution.NO: "No",
@@ -71,7 +78,7 @@ class OmenCalculator(BaseCalculator[OmenMarket]):
         return outcome_tokens
 
 
-class ManifoldCalculator(BaseCalculator[ManifoldMarket]):
+class ManifoldDirectionCalculator(DirectionBaseCalculator[ManifoldMarket]):
     choices: dict[Resolution, str] = {
         Resolution.YES: "YES",
         Resolution.NO: "NO",
@@ -106,11 +113,11 @@ class BettingStrategy(ABC):
 class FixedBetBettingStrategy(BettingStrategy):
     def calculate_direction(self, market: AgentMarket, estimate_p_yes: float) -> bool:
         if isinstance(market, ManifoldAgentMarket):
-            calculator = ManifoldCalculator()
+            calculator = ManifoldDirectionCalculator()
             manifold_data_model = get_manifold_market(market.id)
             return calculator.calculate_direction(manifold_data_model, estimate_p_yes)
         elif isinstance(market, OmenAgentMarket):
-            calculator = OmenCalculator()
+            calculator = OmenDirectionCalculator()
             sh = OmenSubgraphHandler()
             omen_market = sh.get_omen_market_by_market_id(
                 market.market_maker_contract_address_checksummed

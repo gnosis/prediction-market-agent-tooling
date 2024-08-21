@@ -2,7 +2,7 @@ import typing as t
 
 import pytest
 
-from prediction_market_agent_tooling.markets.data_models import Answer
+from prediction_market_agent_tooling.markets.data_models import ProbabilisticAnswer
 
 
 @pytest.mark.parametrize(
@@ -17,4 +17,4 @@ from prediction_market_agent_tooling.markets.data_models import Answer
     ],
 )
 def test_answer_decision(obj: dict[str, t.Any], expected_decision: bool) -> None:
-    assert Answer.model_validate(obj).decision == expected_decision
+    assert ProbabilisticAnswer.model_validate(obj).decision == expected_decision

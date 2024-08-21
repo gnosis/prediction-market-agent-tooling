@@ -31,7 +31,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
-    Answer,
+    ProbabilisticAnswer,
     TokenAmount,
     TokenAmountAndDirection,
 )
@@ -53,7 +53,6 @@ from prediction_market_agent_tooling.monitor.monitor_app import (
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
-    check_not_none,
     utcnow,
 )
 
@@ -238,7 +237,7 @@ class DeployableTraderAgent(DeployableAgent):
 
         return picked
 
-    def answer_binary_market(self, market: AgentMarket) -> Answer | None:
+    def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
         """
         Answer the binary market. This method must be implemented by the subclass.
         """
@@ -276,7 +275,7 @@ class DeployableTraderAgent(DeployableAgent):
                 )
 
     def calculate_bet_amount_and_direction(
-        self, answer: Answer, market: AgentMarket
+        self, answer: ProbabilisticAnswer, market: AgentMarket
     ) -> TokenAmountAndDirection:
         amount_and_direction = self.strategy.calculate_bet_amount_and_direction(
             answer, market

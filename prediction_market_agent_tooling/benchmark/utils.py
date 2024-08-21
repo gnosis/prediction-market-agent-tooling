@@ -3,10 +3,13 @@ import typing as t
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.markets.data_models import Answer, Resolution
+from prediction_market_agent_tooling.markets.data_models import (
+    ProbabilisticAnswer,
+    Resolution,
+)
 
 
-class OutcomePrediction(Answer):
+class OutcomePrediction(ProbabilisticAnswer):
     info_utility: t.Optional[float]
 
     @property

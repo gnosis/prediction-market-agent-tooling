@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
-    Answer,
+    ProbabilisticAnswer,
     TokenAmountAndDirection,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
@@ -13,14 +13,14 @@ from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion im
 class BettingStrategy(ABC):
     @abstractmethod
     def calculate_bet_amount_and_direction(
-        self, answer: Answer, market: AgentMarket
+        self, answer: ProbabilisticAnswer, market: AgentMarket
     ) -> TokenAmountAndDirection:
         pass
 
 
 class FixedBetBettingStrategy(BettingStrategy):
     def calculate_bet_amount_and_direction(
-        self, answer: Answer, market: AgentMarket
+        self, answer: ProbabilisticAnswer, market: AgentMarket
     ) -> TokenAmountAndDirection:
         bet_amount = market.get_tiny_bet_amount().amount
         return TokenAmountAndDirection(
@@ -37,7 +37,7 @@ class KellyBettingStrategy(BettingStrategy):
         return 10  # Mana or xDAI
 
     def calculate_bet_amount_and_direction(
-        self, answer: Answer, market: AgentMarket
+        self, answer: ProbabilisticAnswer, market: AgentMarket
     ) -> TokenAmountAndDirection:
         max_bet_amount = self.get_max_bet_amount_for_market()
         kelly_bet = get_kelly_bet(

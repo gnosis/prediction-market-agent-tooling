@@ -84,8 +84,7 @@ def to_boolean_outcome(value: str | bool) -> bool:
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
-class Answer(BaseModel):
-    decision: Decision  # Warning: p_yes > 0.5 doesn't necessarily mean decision is True! For example, if our p_yes is 55%, but market's p_yes is 80%, then it might be profitable to bet on False.
+class ProbabilisticAnswer(BaseModel):
     p_yes: Probability
     confidence: float
     reasoning: str | None = None

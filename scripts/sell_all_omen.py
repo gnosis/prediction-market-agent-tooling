@@ -4,7 +4,6 @@ import typer
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.deploy.betting_strategy import MINIMUM_BET_OMEN
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -62,8 +61,7 @@ def sell_all(
         outcome = agent_market.outcomes[bet.outcomeIndex]
         current_token_balance = agent_market.get_token_balance(better_address, outcome)
 
-        minimum_token_amount_for_selling = MINIMUM_BET_OMEN
-        if current_token_balance.amount <= minimum_token_amount_for_selling.amount:
+        if current_token_balance.amount <= OmenAgentMarket.get_tiny_bet_amount().amount:
             logger.info(
                 f"Skipping bet on {bet.fpmm.url} because the actual balance is unreasonably low {current_token_balance.amount}."
             )

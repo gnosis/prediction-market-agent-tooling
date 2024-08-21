@@ -145,6 +145,10 @@ class OmenAgentMarket(AgentMarket):
             currency=self.currency,
         )
 
+    @classmethod
+    def get_tiny_bet_amount(cls) -> BetAmount:
+        return BetAmount(amount=0.00001, currency=cls.currency)
+
     def place_bet(
         self,
         outcome: bool,

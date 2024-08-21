@@ -1,16 +1,10 @@
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     Answer,
-    Currency,
-    TokenAmount,
     TokenAmountAndDirection,
 )
-from prediction_market_agent_tooling.markets.manifold.manifold import (
-    ManifoldAgentMarket,
-)
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet,
 )
@@ -24,23 +18,11 @@ class BettingStrategy(ABC):
         pass
 
 
-MINIMUM_BET_OMEN = TokenAmount(amount=0.00001, currency=Currency.xDai)
-MINIMUM_BET_MANIFOLD = TokenAmount(amount=1, currency=Currency.Mana)
-
-
 class FixedBetBettingStrategy(BettingStrategy):
-    def get_bet_amount_for_market(self, market: AgentMarket) -> float:
-        if isinstance(market, ManifoldAgentMarket):
-            return MINIMUM_BET_MANIFOLD.amount
-        elif isinstance(market, OmenAgentMarket):
-            return MINIMUM_BET_OMEN.amount
-        else:
-            raise ValueError(f"Cannot process market: {market}")
-
     def calculate_bet_amount_and_direction(
         self, answer: Answer, market: AgentMarket
     ) -> TokenAmountAndDirection:
-        bet_amount = self.get_bet_amount_for_market(market)
+        bet_amount = market.get_tiny_bet_amount().amount
         return TokenAmountAndDirection(
             amount=bet_amount,
             currency=market.currency,
@@ -49,7 +31,8 @@ class FixedBetBettingStrategy(BettingStrategy):
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def get_max_bet_amount_for_market(self) -> float:
+    @staticmethod
+    def get_max_bet_amount_for_market() -> float:
         # No difference between markets.
         return 10  # Mana or xDAI
 

@@ -41,6 +41,10 @@ class ManifoldAgentMarket(AgentMarket):
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
         return self.current_p_no
 
+    @classmethod
+    def get_tiny_bet_amount(cls) -> BetAmount:
+        return BetAmount(amount=1, currency=cls.currency)
+
     def get_minimum_bet_to_win(self, answer: bool, amount_to_win: float) -> Mana:
         # Manifold lowest bet is 1 Mana, so we need to ceil the result.
         return mana_type(ceil(minimum_bet_to_win(answer, amount_to_win, self)))

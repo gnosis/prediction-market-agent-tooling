@@ -191,7 +191,6 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         super().__init__()
         self.place_bet = place_bet
-        check_not_none(self.strategy)
 
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
         return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)

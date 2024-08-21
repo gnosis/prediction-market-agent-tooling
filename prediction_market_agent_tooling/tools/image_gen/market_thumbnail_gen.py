@@ -2,8 +2,13 @@ from PIL.Image import Image as ImageType
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.image_gen.image_gen import generate_image
+from prediction_market_agent_tooling.tools.langfuse_ import (
+    get_langfuse_langchain_config,
+    observe,
+)
 
 
+@observe()
 def rewrite_question_into_image_generation_prompt(question: str) -> str:
     try:
         from langchain_openai import ChatOpenAI
@@ -19,7 +24,8 @@ def rewrite_question_into_image_generation_prompt(question: str) -> str:
     rewritten = str(
         llm.invoke(
             f"Rewrite this prediction market question '{question}' into a form that will generate nice thumbnail with DALL-E-3."
-            "The thumbnail should be catchy and visually appealing. With a large object in the center of the image."
+            "The thumbnail should be catchy and visually appealing. With a large object in the center of the image.",
+            config=get_langfuse_langchain_config(),
         ).content
     )
     return rewritten

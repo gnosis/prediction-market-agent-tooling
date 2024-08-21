@@ -48,7 +48,7 @@ class FixedBetBettingStrategy(BettingStrategy):
         )
 
 
-class KellyBettingStrategy(BettingStrategy, metaclass=ABCMeta):
+class KellyBettingStrategy(BettingStrategy):
     def get_max_bet_amount_for_market(self) -> float:
         # No difference between markets.
         return 10  # Mana or xDAI

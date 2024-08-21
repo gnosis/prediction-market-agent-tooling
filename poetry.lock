@@ -2451,13 +2451,13 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-core"
-version = "0.2.33"
+version = "0.2.34"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.2.33-py3-none-any.whl", hash = "sha256:c8de411336c13fa440b7a52895bfd1c064f04d315344855962988483902cc532"},
-    {file = "langchain_core-0.2.33.tar.gz", hash = "sha256:dd2659e0a560fc987b210107bf989aa14a6f4b67dd214c13a2c9669036cda975"},
+    {file = "langchain_core-0.2.34-py3-none-any.whl", hash = "sha256:c4fd158273e28cef758b4eccc956b424b76d4bb9117ce6014ae6eb2fb985801d"},
+    {file = "langchain_core-0.2.34.tar.gz", hash = "sha256:50048d90b175c0d5a7e28164628b3c7f8c82b0dc2cd766a663d346a18d5c9eb2"},
 ]
 
 [package.dependencies]
@@ -2526,13 +2526,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.100"
+version = "0.1.101"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.100-py3-none-any.whl", hash = "sha256:cae44a884a4166c4d8b9cc5ff99f5d520337bd90b9dadfe3706ed31415d559a7"},
-    {file = "langsmith-0.1.100.tar.gz", hash = "sha256:20ff0126253a5a1d621635a3bc44ccacc036e855f52185ae983420f14eb6c605"},
+    {file = "langsmith-0.1.101-py3-none-any.whl", hash = "sha256:572e2c90709cda1ad837ac86cedda7295f69933f2124c658a92a35fb890477cc"},
+    {file = "langsmith-0.1.101.tar.gz", hash = "sha256:caf4d95f314bb6cd3c4e0632eed821fd5cd5d0f18cb824772fce6d7a9113895b"},
 ]
 
 [package.dependencies]
@@ -3647,18 +3647,18 @@ test = ["pytest (>=7.0.0)", "pytest-xdist (>=2.4.0)"]
 
 [[package]]
 name = "py-evm"
-version = "0.10.1b1"
+version = "0.10.1b2"
 description = "Python implementation of the Ethereum Virtual Machine"
 optional = false
 python-versions = "<4,>=3.8"
 files = [
-    {file = "py_evm-0.10.1b1-py3-none-any.whl", hash = "sha256:f0fc4a4b904917b40e6a06f87925017dc48ea6582e95f88d28be38f3566e2bae"},
-    {file = "py_evm-0.10.1b1.tar.gz", hash = "sha256:aeb889514af12b6a8cb5091fe93008642eadf7c19999859dad3191eaf451647c"},
+    {file = "py_evm-0.10.1b2-py3-none-any.whl", hash = "sha256:511bd52c9c08837ae2a02cce923a756e85330dc14cc6abb15986ea99dc2832ac"},
+    {file = "py_evm-0.10.1b2.tar.gz", hash = "sha256:7a06fbd1d966eb0cd4f6c6d9e7fe1e2c43473804ac12b12325b0a31cbab5670f"},
 ]
 
 [package.dependencies]
 cached-property = ">=1.5.1"
-ckzg = ">=0.4.3"
+ckzg = ">=2.0.0"
 eth-bloom = ">=1.0.3"
 eth-keys = ">=0.4.0"
 eth-typing = ">=3.3.0"
@@ -3670,9 +3670,9 @@ trie = ">=2.0.0"
 
 [package.extras]
 benchmark = ["termcolor (>=1.1.0)", "web3 (>=6.0.0)"]
-dev = ["build (>=0.9.0)", "bumpversion (>=0.5.3)", "cached-property (>=1.5.1)", "ckzg (>=0.4.3)", "eth-bloom (>=1.0.3)", "eth-keys (>=0.4.0)", "eth-typing (>=3.3.0)", "eth-utils (>=2.0.0)", "factory-boy (>=3.0.0)", "hypothesis (>=6,<7)", "ipython", "lru-dict (>=1.1.6)", "pre-commit (>=3.4.0)", "py-ecc (>=1.4.7)", "py-evm (>=0.8.0b1)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.20.0)", "pytest-cov (>=4.0.0)", "pytest-timeout (>=2.0.0)", "pytest-xdist (>=3.0)", "rlp (>=3.0.0)", "sphinx (>=6.0.0)", "sphinx-rtd-theme (>=1.0.0)", "sphinxcontrib-asyncio (>=0.2.0)", "towncrier (>=21,<22)", "tox (>=4.0.0)", "trie (>=2.0.0)", "twine", "wheel"]
+dev = ["build (>=0.9.0)", "bumpversion (>=0.5.3)", "cached-property (>=1.5.1)", "ckzg (>=2.0.0)", "eth-bloom (>=1.0.3)", "eth-keys (>=0.4.0)", "eth-typing (>=3.3.0)", "eth-utils (>=2.0.0)", "factory-boy (>=3.0.0)", "hypothesis (>=6,<7)", "ipython", "lru-dict (>=1.1.6)", "pre-commit (>=3.4.0)", "py-ecc (>=1.4.7)", "py-evm (>=0.8.0b1)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.20.0)", "pytest-cov (>=4.0.0)", "pytest-timeout (>=2.0.0)", "pytest-xdist (>=3.0)", "rlp (>=3.0.0)", "sphinx (>=6.0.0)", "sphinx-rtd-theme (>=1.0.0)", "sphinxcontrib-asyncio (>=0.2.0)", "towncrier (>=21,<22)", "tox (>=4.0.0)", "trie (>=2.0.0)", "twine", "wheel"]
 docs = ["py-evm (>=0.8.0b1)", "sphinx (>=6.0.0)", "sphinx-rtd-theme (>=1.0.0)", "sphinxcontrib-asyncio (>=0.2.0)", "towncrier (>=21,<22)"]
-eth = ["cached-property (>=1.5.1)", "ckzg (>=0.4.3)", "eth-bloom (>=1.0.3)", "eth-keys (>=0.4.0)", "eth-typing (>=3.3.0)", "eth-utils (>=2.0.0)", "lru-dict (>=1.1.6)", "py-ecc (>=1.4.7)", "rlp (>=3.0.0)", "trie (>=2.0.0)"]
+eth = ["cached-property (>=1.5.1)", "ckzg (>=2.0.0)", "eth-bloom (>=1.0.3)", "eth-keys (>=0.4.0)", "eth-typing (>=3.3.0)", "eth-utils (>=2.0.0)", "lru-dict (>=1.1.6)", "py-ecc (>=1.4.7)", "rlp (>=3.0.0)", "trie (>=2.0.0)"]
 eth-extra = ["blake2b-py (>=0.2.0)", "coincurve (>=18.0.0)"]
 test = ["factory-boy (>=3.0.0)", "hypothesis (>=6,<7)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.20.0)", "pytest-cov (>=4.0.0)", "pytest-timeout (>=2.0.0)", "pytest-xdist (>=3.0)"]
 

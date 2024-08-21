@@ -40,8 +40,9 @@ class APIKeys(BaseSettings):
     GOOGLE_SEARCH_ENGINE_ID: t.Optional[SecretStr] = None
 
     LANGFUSE_SECRET_KEY: t.Optional[SecretStr] = None
-    LANGFUSE_PUBLIC_KEY: t.Optional[SecretStr] = None
+    LANGFUSE_PUBLIC_KEY: t.Optional[str] = None
     LANGFUSE_HOST: t.Optional[str] = None
+    LANGFUSE_DEPLOYMENT_VERSION: t.Optional[str] = None
 
     TAVILY_API_KEY: t.Optional[SecretStr] = None
 
@@ -127,7 +128,7 @@ class APIKeys(BaseSettings):
         )
 
     @property
-    def langfuse_public_key(self) -> SecretStr:
+    def langfuse_public_key(self) -> str:
         return check_not_none(
             self.LANGFUSE_PUBLIC_KEY, "LANGFUSE_PUBLIC_KEY missing in the environment."
         )
@@ -136,6 +137,14 @@ class APIKeys(BaseSettings):
     def langfuse_host(self) -> str:
         return check_not_none(
             self.LANGFUSE_HOST, "LANGFUSE_HOST missing in the environment."
+        )
+
+    @property
+    def default_enable_langfuse(self) -> bool:
+        return (
+            self.LANGFUSE_SECRET_KEY is not None
+            and self.LANGFUSE_PUBLIC_KEY is not None
+            and self.LANGFUSE_HOST is not None
         )
 
     @property

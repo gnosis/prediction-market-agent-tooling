@@ -8,7 +8,7 @@ default_ecosystem: gnosis
 node:
   gnosis:
     mainnet:
-      uri: https://gnosis-rpc.publicnode.com
+      uri: https://rpc.gnosischain.com
 
 
 networks:

@@ -2,6 +2,10 @@ from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
+from prediction_market_agent_tooling.tools.langfuse_ import (
+    get_langfuse_langchain_config,
+    observe,
+)
 from prediction_market_agent_tooling.tools.utils import LLM_SUPER_LOW_TEMPERATURE
 
 # I tried to make it return a JSON, but it didn't work well in combo with asking it to do chain of thought.
@@ -72,6 +76,7 @@ Finally, write your final decision, write `decision: ` followed by either "yes i
 
 
 @persistent_inmemory_cache
+@observe()
 def is_predictable_binary(
     question: str,
     engine: str = "gpt-4-1106-preview",
@@ -96,12 +101,17 @@ def is_predictable_binary(
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
     messages = prompt.format_messages(question=question)
-    completion = str(llm(messages, max_tokens=max_tokens).content)
+    completion = str(
+        llm.invoke(
+            messages, max_tokens=max_tokens, config=get_langfuse_langchain_config()
+        ).content
+    )
 
     return parse_decision_yes_no_completion(question, completion)
 
 
 @persistent_inmemory_cache
+@observe()
 def is_predictable_without_description(
     question: str,
     description: str,
@@ -132,7 +142,11 @@ def is_predictable_without_description(
         question=question,
         description=description,
     )
-    completion = str(llm(messages, max_tokens=max_tokens).content)
+    completion = str(
+        llm(
+            messages, max_tokens=max_tokens, config=get_langfuse_langchain_config()
+        ).content
+    )
 
     return parse_decision_yes_no_completion(question, completion)
 

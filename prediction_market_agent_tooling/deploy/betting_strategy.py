@@ -11,6 +11,9 @@ from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion im
 
 
 class BettingStrategy(ABC):
+    def __init__(self, bet_amount: float | None = None):
+        self.bet_amount = bet_amount
+
     @abstractmethod
     def calculate_bet_amount_and_direction(
         self, answer: ProbabilisticAnswer, market: AgentMarket
@@ -29,7 +32,11 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
     def calculate_bet_amount_and_direction(
         self, answer: ProbabilisticAnswer, market: AgentMarket
     ) -> TokenAmountAndDirection:
-        bet_amount = market.get_tiny_bet_amount().amount
+        bet_amount = (
+            market.get_tiny_bet_amount().amount
+            if self.bet_amount is None
+            else self.bet_amount
+        )
         direction = self.calculate_direction(market.current_p_yes, answer.p_yes)
         return TokenAmountAndDirection(
             amount=bet_amount,
@@ -39,17 +46,17 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
 
 
 class KellyBettingStrategy(BettingStrategy):
-    @staticmethod
-    def get_max_bet_amount_for_market() -> float:
-        # No difference between markets.
-        return 10
+    bet_amount: float
+
+    def __init__(self, bet_amount: float = 10):
+        # We add a new default here because it represents an upper bound.
+        super().__init__(bet_amount=bet_amount)
 
     def calculate_bet_amount_and_direction(
         self, answer: ProbabilisticAnswer, market: AgentMarket
     ) -> TokenAmountAndDirection:
-        max_bet_amount = self.get_max_bet_amount_for_market()
         kelly_bet = get_kelly_bet(
-            max_bet_amount, market.current_p_yes, answer.p_yes, answer.confidence
+            self.bet_amount, market.current_p_yes, answer.p_yes, answer.confidence
         )
         return TokenAmountAndDirection(
             amount=kelly_bet.size,

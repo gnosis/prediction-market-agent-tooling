@@ -14,7 +14,7 @@ from typing_extensions import Annotated
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    FixedBetBettingStrategy,
+    MaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -278,7 +278,7 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
-    strategy: BettingStrategy = FixedBetBettingStrategy()
+    strategy: BettingStrategy = MaxAccuracyBettingStrategy()
 
     def __init__(
         self,

@@ -23,7 +23,7 @@ class BettingStrategy(ABC):
         pass
 
 
-class FixedBetBettingStrategy(BettingStrategy):
+class MaxAccuracyBettingStrategy(BettingStrategy):
     @staticmethod
     def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
         # If estimate_p_yes >= market.current_p_yes, then bet YES, else bet FALSE.

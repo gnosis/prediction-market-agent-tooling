@@ -6,7 +6,7 @@ def check_is_valid_probability(probability: float) -> None:
         raise ValueError("Probability must be between 0 and 1")
 
 
-class KellyResult(BaseModel):
+class KellyBet(BaseModel):
     direction: bool
     size: float
 
@@ -16,7 +16,7 @@ def get_kelly_bet(
     market_p_yes: float,
     estimated_p_yes: float,
     confidence: float,
-) -> KellyResult:
+) -> KellyBet:
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
 
@@ -57,4 +57,4 @@ def get_kelly_bet(
     # Ensure bet size is non-negative does not exceed the wallet balance
     bet_size = min(kelly_fraction * max_bet, max_bet)
 
-    return KellyResult(direction=bet_direction, size=bet_size)
+    return KellyBet(direction=bet_direction, size=bet_size)

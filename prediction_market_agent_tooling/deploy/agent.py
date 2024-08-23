@@ -39,8 +39,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     ProbabilisticAnswer,
-    TokenAmountAndDirection,
     TokenAmount,
+    TokenAmountAndDirection,
 )
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
@@ -295,9 +295,7 @@ class DeployableTraderAgent(DeployableAgent):
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.calculate_bet_amount = observe()(self.calculate_bet_amount)  # type: ignore[method-assign]
-        self.calculate_bet_amount_and_direction = observe()(
-            self.calculate_bet_amount_and_direction
-        )
+        self.calculate_bet_amount_and_direction = observe()(self.calculate_bet_amount_and_direction)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
@@ -442,7 +440,7 @@ class DeployableTraderAgent(DeployableAgent):
 
         processed_market = ProcessedMarket(
             answer=answer,
-            amount=amount,
+            amount=amount_and_direction,
         )
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 

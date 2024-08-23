@@ -47,7 +47,7 @@ class KellyBettingStrategy(BettingStrategy):
     @staticmethod
     def get_max_bet_amount_for_market() -> float:
         # No difference between markets.
-        return 10  # Mana or xDAI
+        return 10
 
     def calculate_bet_amount_and_direction(
         self, answer: ProbabilisticAnswer, market: AgentMarket

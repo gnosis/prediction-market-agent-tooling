@@ -10,9 +10,6 @@ from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion im
     get_kelly_bet,
 )
 
-T = TypeVar(
-    "T"
-)  # Not possible to use bound due to OmenMarket and ManifoldMarket not sharing a base class
 
 
 class BettingStrategy(ABC):

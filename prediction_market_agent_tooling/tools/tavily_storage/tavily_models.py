@@ -15,7 +15,7 @@ class TavilyResult(BaseModel):
     url: str
     content: str
     score: float
-    raw_content: str
+    raw_content: str | None
 
 
 class TavilyResponse(BaseModel):

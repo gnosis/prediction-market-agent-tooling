@@ -26,7 +26,7 @@ class BettingStrategy(ABC):
 class FixedBetBettingStrategy(BettingStrategy):
     @staticmethod
     def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
-        # If estimate_p_yes >= market.current_p_yes, then bet YES, else bet FALSE.
+        # If estimate_p_yes >= market.current_p_yes, then bet TRUE, else bet FALSE.
         # This is equivalent to saying EXPECTED_VALUE = (estimate_p_yes * num_tokens_obtained_by_betting_yes) -
         # ((1 - estimate_p_yes) * num_tokens_obtained_by_betting_no) >= 0
         return estimate_p_yes >= market_p_yes

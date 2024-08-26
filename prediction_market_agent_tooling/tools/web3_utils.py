@@ -154,11 +154,8 @@ def _prepare_tx_params(
 
 
 @tenacity.retry(
-    # Retry only for the transaction errors that match the given patterns,
-    # add other retrieable errors gradually to be safe.
-    retry=tenacity.retry_if_exception_message(
-        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)"
-    ),
+    # Don't retry on `reverted` messages, as they would always fail again.
+    retry=tenacity.retry_if_exception_message(match="^(?!.*reverted.*)$"),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
     stop=tenacity.stop_after_attempt(9),
     after=lambda x: logger.debug(
@@ -194,11 +191,8 @@ def send_function_on_contract_tx(
 
 
 @tenacity.retry(
-    # Retry only for the transaction errors that match the given patterns,
-    # add other retrieable errors gradually to be safe.
-    retry=tenacity.retry_if_exception_message(
-        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)"
-    ),
+    # Don't retry on `reverted` messages, as they would always fail again.
+    retry=tenacity.retry_if_exception_message(match="^(?!.*reverted.*)$"),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
     stop=tenacity.stop_after_attempt(9),
     after=lambda x: logger.debug(

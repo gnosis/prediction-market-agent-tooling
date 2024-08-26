@@ -1,12 +1,11 @@
 from ape_test import TestAccount
 from eth_account import Account
 from numpy import isclose
-from pydantic import SecretStr
 from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import PrivateKey, xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import private_key_type, xDai, xdai_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     is_minimum_required_balance,
 )
@@ -31,7 +30,7 @@ def test_send_xdai(local_web3: Web3, accounts: list[TestAccount]) -> None:
 
     send_xdai_to(
         web3=local_web3,
-        from_private_key=PrivateKey(SecretStr(from_account.private_key)),
+        from_private_key=private_key_type(from_account.private_key),
         to_address=to_account.address,
         value=value,
     )
@@ -57,7 +56,7 @@ def test_send_xdai_from_locked_account(
     # we fund the random account for later sending
     send_xdai_to(
         web3=local_web3,
-        from_private_key=PrivateKey(SecretStr(from_account.key.hex())),
+        from_private_key=private_key_type(from_account.key.hex()),
         to_address=random_locked_account.address,
         value=fund_value,
     )
@@ -66,7 +65,7 @@ def test_send_xdai_from_locked_account(
     assert xdai_to_wei(balance_random.xdai) == fund_value
     send_xdai_to(
         web3=local_web3,
-        from_private_key=PrivateKey(SecretStr(random_locked_account.key.hex())),
+        from_private_key=private_key_type(random_locked_account.key.hex()),
         to_address=from_account.address,
         value=transfer_back_value,
     )

@@ -294,7 +294,6 @@ class DeployableTraderAgent(DeployableAgent):
         self.have_bet_on_market_since = observe()(self.have_bet_on_market_since)  # type: ignore[method-assign]
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
-        self.calculate_bet_amount = observe()(self.calculate_bet_amount)  # type: ignore[method-assign]
         self.calculate_bet_amount_and_direction = observe()(self.calculate_bet_amount_and_direction)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
 
@@ -377,14 +376,6 @@ class DeployableTraderAgent(DeployableAgent):
         Answer the binary market. This method must be implemented by the subclass.
         """
         raise NotImplementedError("This method must be implemented by the subclass")
-
-    def calculate_bet_amount(
-        self, answer: ProbabilisticAnswer, market: AgentMarket
-    ) -> BetAmount:
-        """
-        Calculate the bet amount. By default, it returns the minimum bet amount.
-        """
-        return market.get_tiny_bet_amount()
 
     def get_markets(
         self,

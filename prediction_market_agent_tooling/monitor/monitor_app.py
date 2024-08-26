@@ -135,15 +135,16 @@ def monitor_app(
     )
 
     st.header("Market Info")
-    with st.spinner("Loading markets"):
-        open_markets, resolved_markets = get_open_and_resolved_markets(
-            start_time=oldest_start_time, market_type=market_type
+    if st.checkbox("Show Market Info"):
+        with st.spinner("Loading markets"):
+            open_markets, resolved_markets = get_open_and_resolved_markets(
+                start_time=oldest_start_time, market_type=market_type
+            )
+        (
+            monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
+            if open_markets and resolved_markets
+            else st.warning("No market data found.")
         )
-    (
-        monitor_market(open_markets=open_markets, resolved_markets=resolved_markets)
-        if open_markets and resolved_markets
-        else st.warning("No market data found.")
-    )
 
     st.header("Agent Info")
     if st.button("Export agents"):

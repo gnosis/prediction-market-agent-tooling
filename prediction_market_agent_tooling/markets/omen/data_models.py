@@ -95,6 +95,10 @@ class Question(BaseModel):
     @property
     def is_binary(self) -> bool:
         return len(self.outcomes) == 2
+    
+    @property
+    def has_valid_answer(self) -> bool:
+        return self.outcome_index is not None and self.outcome_index != INVALID_ANSWER
 
     @property
     def boolean_outcome(self) -> bool:
@@ -108,9 +112,9 @@ class Question(BaseModel):
 
         outcome_index = check_not_none(self.outcome_index)
 
-        if outcome_index not in (0, 1):
+        if not self.has_valid_answer:
             raise ValueError(
-                f"Question with title {self.title} has invalid outcome index {outcome_index}."
+                f"Question with title {self.title} has invalid answer {outcome_index}."
             )
 
         outcome: str = self.outcomes[outcome_index]

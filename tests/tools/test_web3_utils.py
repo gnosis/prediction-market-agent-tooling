@@ -1,7 +1,11 @@
+import re
+
+import pytest
 from pydantic.types import SecretStr
 
 from prediction_market_agent_tooling.gtypes import IPFSCIDVersion0
 from prediction_market_agent_tooling.tools.web3_utils import (
+    NOT_REVERTED_ICASE_REGEX_PATTERN,
     byte32_to_ipfscidv0,
     ipfscidv0_to_byte32,
     private_key_to_public_key,
@@ -27,3 +31,18 @@ def test_ipfs_hash_conversion() -> None:
 
     as_ipfs = byte32_to_ipfscidv0(as_bytes32)
     assert as_ipfs == ipfs, "The IPFS hash should be the same after conversion back"
+
+
+@pytest.mark.parametrize(
+    "string, matched",
+    [
+        ("blah blah", True),
+        ("blah blah reverted", False),
+        ("reverted blah blah", False),
+        ("reveRted", False),
+        ("", True),
+    ],
+)
+def test_not_reverted_regex(string: str, matched: bool) -> None:
+    p = re.compile(NOT_REVERTED_ICASE_REGEX_PATTERN)
+    assert bool(p.match(string)) == matched

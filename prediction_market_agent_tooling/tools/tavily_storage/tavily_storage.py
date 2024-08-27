@@ -60,9 +60,7 @@ def tavily_search(
     return response_parsed
 
 
-@tenacity.retry(
-    stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1), reraise=True
-)
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 def _tavily_search(
     query: str,
     search_depth: t.Literal["basic", "advanced"],

@@ -1,7 +1,11 @@
+import time
+
 import pytest
+from ape_test import TestAccount
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
@@ -13,6 +17,7 @@ from prediction_market_agent_tooling.tools.contract import (
     contract_implements_function,
     init_collateral_token_contract,
 )
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 def test_init_erc4626_erc20_contract_return_erc4626_instance(local_web3: Web3) -> None:
@@ -95,3 +100,25 @@ def test_contract_implements_function(
         )
         == expected
     )
+
+
+def test_wont_retry(local_web3: Web3, accounts: list[TestAccount]) -> None:
+    value = xdai_to_wei(xDai(10))
+    from_account = accounts[0]
+    to_account = accounts[1]
+
+    start_time = time.time()
+    with pytest.raises(Exception) as e:
+        WrappedxDaiContract().transferFrom(
+            api_keys=APIKeys(BET_FROM_PRIVATE_KEY=from_account.private_key),
+            sender=Web3.to_checksum_address(from_account.address),
+            recipient=Web3.to_checksum_address(to_account.address),
+            amount_wei=value,
+            web3=local_web3,
+        )
+    end_time = time.time()
+
+    assert "reverted" in str(e)
+    assert (
+        end_time - start_time < 1
+    ), "Should not retry --> should take less then 1 second to execute."

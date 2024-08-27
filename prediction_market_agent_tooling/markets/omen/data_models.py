@@ -164,7 +164,15 @@ class OmenUserPosition(BaseModel):
 
 class OmenMarket(BaseModel):
     """
-    https://aiomen.eth.limo
+    https://presagio.pages.dev
+
+    An Omen market goes through the following stages:
+
+    1. creation - can add liquidty immediately, and trade immediately if there is liquidity
+    2. closing - market is closed, and a question is simultaneously opened for answers on Reality
+    3. finalizing - the question is finalized on reality (including any disputes)
+    4. resolving - a manual step required by calling the Omen oracle contract
+    5. redeeming - a user withdraws collateral tokens from the market
     """
 
     BET_AMOUNT_CURRENCY: t.ClassVar[Currency] = Currency.xDai

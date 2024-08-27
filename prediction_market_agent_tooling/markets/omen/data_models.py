@@ -78,6 +78,10 @@ class Question(BaseModel):
         return datetime.fromtimestamp(self.openingTimestamp)
 
     @property
+    def has_answer(self) -> bool:
+        return self.currentAnswer is not None
+
+    @property
     def outcome_index(self) -> int | None:
         return (
             int(
@@ -87,6 +91,30 @@ class Question(BaseModel):
             if self.currentAnswer is not None
             else None
         )
+
+    @property
+    def is_binary(self) -> bool:
+        return len(self.outcomes) == 2
+
+    @property
+    def boolean_outcome(self) -> bool:
+        if not self.is_binary:
+            raise ValueError(
+                f"Question with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
+            )
+
+        if not self.has_answer:
+            raise ValueError(f"Question with title {self.title} is not answered.")
+
+        outcome_index = check_not_none(self.outcome_index)
+
+        if outcome_index not in (0, 1):
+            raise ValueError(
+                f"Question with title {self.title} has invalid outcome index {outcome_index}."
+            )
+
+        outcome: str = self.outcomes[outcome_index]
+        return get_boolean_outcome(outcome)
 
 
 class OmenPosition(BaseModel):
@@ -347,7 +375,7 @@ class OmenBet(BaseModel):
     collateralAmountUSD: USD
     feeAmount: Wei
     outcomeIndex: int
-    outcomeTokensTraded: int
+    outcomeTokensTraded: Wei
     transactionHash: HexAddress
     fpmm: OmenMarket
 
@@ -372,7 +400,7 @@ class OmenBet(BaseModel):
     def get_profit(self) -> ProfitAmount:
         bet_amount_xdai = wei_to_xdai(self.collateralAmount)
         profit = (
-            wei_to_xdai(Wei(self.outcomeTokensTraded)) - bet_amount_xdai
+            wei_to_xdai(self.outcomeTokensTraded) - bet_amount_xdai
             if self.boolean_outcome == self.fpmm.boolean_outcome
             else -bet_amount_xdai
         )

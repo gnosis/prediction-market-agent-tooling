@@ -169,7 +169,7 @@ class OmenMarket(BaseModel):
     An Omen market goes through the following stages:
 
     1. creation - can add liquidty immediately, and trade immediately if there is liquidity
-    2. closing - market is closed, and a question is simultaneously created on Reality
+    2. closing - market is closed, and a question is simultaneously opened on Reality
     3. finalizing - the question is finalized on reality (including any disputes)
     4. resolving - a manual step required by calling the Omen oracle contract
     5. redeeming - a user withdraws collateral tokens from the market

@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.loggers import logger
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
 ZERO_BYTES = HexBytes(HASH_ZERO)
+NOT_REVERTED_ICASE_REGEX_PATTERN = "(?i)(?!.*reverted.*)"
 
 
 def private_key_to_public_key(private_key: SecretStr) -> ChecksumAddress:
@@ -154,11 +155,8 @@ def _prepare_tx_params(
 
 
 @tenacity.retry(
-    # Retry only for the transaction errors that match the given patterns,
-    # add other retrieable errors gradually to be safe.
-    retry=tenacity.retry_if_exception_message(
-        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)"
-    ),
+    # Don't retry on `reverted` messages, as they would always fail again.
+    retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
     stop=tenacity.stop_after_attempt(9),
     after=lambda x: logger.debug(
@@ -194,11 +192,8 @@ def send_function_on_contract_tx(
 
 
 @tenacity.retry(
-    # Retry only for the transaction errors that match the given patterns,
-    # add other retrieable errors gradually to be safe.
-    retry=tenacity.retry_if_exception_message(
-        match="(.*wrong transaction nonce.*)|(.*Invalid.*)|(.*OldNonce.*)"
-    ),
+    # Don't retry on `reverted` messages, as they would always fail again.
+    retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
     stop=tenacity.stop_after_attempt(9),
     after=lambda x: logger.debug(

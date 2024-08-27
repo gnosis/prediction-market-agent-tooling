@@ -1,21 +1,14 @@
-from enum import Enum
-
 from pydantic import BaseModel
-
-
-class BetDirection(str, Enum):
-    YES = "Yes"
-    NO = "No"
-
-
-class KellyBet(BaseModel):
-    direction: BetDirection
-    size: float
 
 
 def check_is_valid_probability(probability: float) -> None:
     if not 0 <= probability <= 1:
         raise ValueError("Probability must be between 0 and 1")
+
+
+class KellyBet(BaseModel):
+    direction: bool
+    size: float
 
 
 def get_kelly_bet(
@@ -47,10 +40,10 @@ def get_kelly_bet(
     check_is_valid_probability(confidence)
 
     if estimated_p_yes > market_p_yes:
-        bet_direction = BetDirection.YES
+        bet_direction = True
         market_prob = market_p_yes
     else:
-        bet_direction = BetDirection.NO
+        bet_direction = False
         market_prob = 1 - market_p_yes
 
     # Handle the case where market_prob is 0

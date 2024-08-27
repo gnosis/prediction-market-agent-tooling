@@ -87,7 +87,6 @@ class RandomAgent(AbstractBenchmarkedAgent):
         p_yes, confidence = random.random(), random.random()
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                decision=p_yes > 0.5,
                 p_yes=Probability(p_yes),
                 confidence=confidence,
                 info_utility=None,
@@ -111,7 +110,6 @@ class FixedAgent(AbstractBenchmarkedAgent):
         p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                decision=self.fixed_answer,
                 p_yes=Probability(p_yes),
                 confidence=confidence,
                 info_utility=None,

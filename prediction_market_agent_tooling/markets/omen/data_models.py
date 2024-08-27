@@ -95,7 +95,7 @@ class Question(BaseModel):
     @property
     def is_binary(self) -> bool:
         return len(self.outcomes) == 2
-    
+
     @property
     def has_valid_answer(self) -> bool:
         return self.outcome_index is not None and self.outcome_index != INVALID_ANSWER

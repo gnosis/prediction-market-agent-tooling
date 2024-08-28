@@ -5,7 +5,11 @@ from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    private_key_type,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
@@ -110,7 +114,9 @@ def test_wont_retry(local_web3: Web3, accounts: list[TestAccount]) -> None:
     start_time = time.time()
     with pytest.raises(Exception) as e:
         WrappedxDaiContract().transferFrom(
-            api_keys=APIKeys(BET_FROM_PRIVATE_KEY=from_account.private_key),
+            api_keys=APIKeys(
+                BET_FROM_PRIVATE_KEY=private_key_type(from_account.private_key)
+            ),
             sender=Web3.to_checksum_address(from_account.address),
             recipient=Web3.to_checksum_address(to_account.address),
             amount_wei=value,

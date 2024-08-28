@@ -8,6 +8,7 @@ from gnosis.eth import EthereumClient
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import private_key_type
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -37,4 +38,6 @@ def test_keys(accounts: list[TestAccount]) -> APIKeys:
     account = accounts[0]
 
     # Using a standard Anvil account with enough xDAI.
-    return APIKeys(BET_FROM_PRIVATE_KEY=account.private_key, SAFE_ADDRESS=None)
+    return APIKeys(
+        BET_FROM_PRIVATE_KEY=private_key_type(account.private_key), SAFE_ADDRESS=None
+    )

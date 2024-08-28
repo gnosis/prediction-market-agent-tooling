@@ -1,10 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from typing import TypeAlias
+from typing import Annotated, TypeAlias
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, BeforeValidator, computed_field
 
-from prediction_market_agent_tooling.gtypes import OutcomeStr
+from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 
 
 class Currency(str, Enum):
@@ -55,6 +55,43 @@ class ResolvedBet(Bet):
 
     def __str__(self) -> str:
         return f"Resolved bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}. Bet was resolved at {self.resolved_time} and was {'correct' if self.is_correct else 'incorrect'}. Profit was {self.profit}"
+
+
+class TokenAmountAndDirection(TokenAmount):
+    direction: bool
+
+
+def to_boolean_outcome(value: str | bool) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    elif isinstance(value, str):
+        value = value.lower().strip()
+
+        if value in {"true", "yes", "y", "1"}:
+            return True
+
+        elif value in {"false", "no", "n", "0"}:
+            return False
+
+        else:
+            raise ValueError(f"Expected a boolean string, but got {value}")
+
+    else:
+        raise ValueError(f"Expected a boolean or a string, but got {value}")
+
+
+Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
+
+
+class ProbabilisticAnswer(BaseModel):
+    p_yes: Probability
+    confidence: float
+    reasoning: str | None = None
+
+    @property
+    def p_no(self) -> Probability:
+        return Probability(1 - self.p_yes)
 
 
 class Position(BaseModel):

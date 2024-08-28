@@ -78,6 +78,10 @@ class Question(BaseModel):
         return datetime.fromtimestamp(self.openingTimestamp)
 
     @property
+    def has_answer(self) -> bool:
+        return self.currentAnswer is not None
+
+    @property
     def outcome_index(self) -> int | None:
         return (
             int(
@@ -87,6 +91,34 @@ class Question(BaseModel):
             if self.currentAnswer is not None
             else None
         )
+
+    @property
+    def is_binary(self) -> bool:
+        return len(self.outcomes) == 2
+
+    @property
+    def has_valid_answer(self) -> bool:
+        return self.outcome_index is not None and self.outcome_index != INVALID_ANSWER
+
+    @property
+    def boolean_outcome(self) -> bool:
+        if not self.is_binary:
+            raise ValueError(
+                f"Question with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
+            )
+
+        if not self.has_answer:
+            raise ValueError(f"Question with title {self.title} is not answered.")
+
+        outcome_index = check_not_none(self.outcome_index)
+
+        if not self.has_valid_answer:
+            raise ValueError(
+                f"Question with title {self.title} has invalid answer {outcome_index}."
+            )
+
+        outcome: str = self.outcomes[outcome_index]
+        return get_boolean_outcome(outcome)
 
 
 class OmenPosition(BaseModel):
@@ -132,7 +164,15 @@ class OmenUserPosition(BaseModel):
 
 class OmenMarket(BaseModel):
     """
-    https://aiomen.eth.limo
+    https://presagio.pages.dev
+
+    An Omen market goes through the following stages:
+
+    1. creation - can add liquidty immediately, and trade immediately if there is liquidity
+    2. closing - market is closed, and a question is simultaneously opened for answers on Reality
+    3. finalizing - the question is finalized on reality (including any disputes)
+    4. resolving - a manual step required by calling the Omen oracle contract
+    5. redeeming - a user withdraws collateral tokens from the market
     """
 
     BET_AMOUNT_CURRENCY: t.ClassVar[Currency] = Currency.xDai
@@ -347,7 +387,7 @@ class OmenBet(BaseModel):
     collateralAmountUSD: USD
     feeAmount: Wei
     outcomeIndex: int
-    outcomeTokensTraded: int
+    outcomeTokensTraded: Wei
     transactionHash: HexAddress
     fpmm: OmenMarket
 
@@ -372,7 +412,7 @@ class OmenBet(BaseModel):
     def get_profit(self) -> ProfitAmount:
         bet_amount_xdai = wei_to_xdai(self.collateralAmount)
         profit = (
-            wei_to_xdai(Wei(self.outcomeTokensTraded)) - bet_amount_xdai
+            wei_to_xdai(self.outcomeTokensTraded) - bet_amount_xdai
             if self.boolean_outcome == self.fpmm.boolean_outcome
             else -bet_amount_xdai
         )

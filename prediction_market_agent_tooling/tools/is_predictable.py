@@ -143,7 +143,7 @@ def is_predictable_without_description(
         description=description,
     )
     completion = str(
-        llm(
+        llm.invoke(
             messages, max_tokens=max_tokens, config=get_langfuse_langchain_config()
         ).content
     )

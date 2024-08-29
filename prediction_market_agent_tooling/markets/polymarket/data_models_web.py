@@ -145,7 +145,7 @@ class Market(BaseModel):
     negRiskRequestID: t.Any | None = None
     negRiskMarketID: t.Any | None = None
     events: list[Event]
-    markets: list[Market1]
+    markets: list[Market1] | None = None
     lower_bound_date: t.Any | None = None
     upper_bound_date: t.Any | None = None
     market_type: str | None = None
@@ -312,6 +312,8 @@ class PolymarketFullMarket(BaseModel):
 
         # Parsing.
         response_dict = json.loads(response_data)
+        with open("test.json", "w") as f:
+            json.dump(response_dict, f, indent=4)
         response_model = PolymarketWebResponse.model_validate(response_dict)
 
         full_market_queries = [

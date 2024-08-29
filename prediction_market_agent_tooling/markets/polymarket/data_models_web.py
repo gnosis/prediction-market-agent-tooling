@@ -312,8 +312,6 @@ class PolymarketFullMarket(BaseModel):
 
         # Parsing.
         response_dict = json.loads(response_data)
-        with open("test.json", "w") as f:
-            json.dump(response_dict, f, indent=4)
         response_model = PolymarketWebResponse.model_validate(response_dict)
 
         full_market_queries = [

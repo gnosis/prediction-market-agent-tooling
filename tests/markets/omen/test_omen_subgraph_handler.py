@@ -173,6 +173,18 @@ def test_get_answers(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     )
 
 
+def test_get_responses(omen_subgraph_handler: OmenSubgraphHandler) -> None:
+    question_id = HexBytes.fromhex(
+        HexStr("0xdcb2691a9ec05e25a6e595a9972b482ea65b789d978b27c0c06ff97345fce919")
+    )
+    responses = omen_subgraph_handler.get_responses(question_id)
+    assert len(responses) == 1
+    answer = responses[0]
+    assert answer.question.user == HexAddress(
+        HexStr("0xdaa72a1944191a15e92218d9f00c375a8607a568")
+    )
+
+
 @pytest.mark.parametrize(
     "position_id_in",
     [

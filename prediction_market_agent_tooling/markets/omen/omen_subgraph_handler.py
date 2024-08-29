@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenUserPosition,
     RealityAnswer,
     RealityQuestion,
+    RealityResponse,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,
@@ -129,6 +130,20 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             answers_field.timestamp,
             answers_field.createdBlock,
         ] + self._get_fields_for_reality_questions(answers_field.question)
+
+    def _get_fields_for_responses(self, responses_field: FieldPath) -> list[FieldPath]:
+        return [
+            responses_field.id,
+            responses_field.timestamp,
+            responses_field.answer,
+            responses_field.isUnrevealed,
+            responses_field.isCommitment,
+            responses_field.bond,
+            responses_field.user,
+            responses_field.historyHash,
+            responses_field.createdBlock,
+            responses_field.revealedBlock,
+        ] + self._get_fields_for_reality_questions(responses_field.question)
 
     def _get_fields_for_market_questions(
         self, questions_field: FieldPath
@@ -342,8 +357,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         # TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
-        collateral_token_address_in: tuple[ChecksumAddress, ...]
-        | None = (
+        collateral_token_address_in: tuple[ChecksumAddress, ...] | None = (
             WrappedxDaiContract().address,
             sDaiContract().address,
         ),
@@ -617,6 +631,17 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
+
+    def get_responses(self, question_id: HexBytes) -> list[RealityResponse]:
+        response = self.realityeth_subgraph.Response
+        where_stms = [
+            response.question.questionId == question_id.hex(),
+        ]
+        responses = self.realityeth_subgraph.Query.responses(where=where_stms)
+        fields = self._get_fields_for_responses(responses)
+        result = self.sg.query_json(fields)
+        items = self._parse_items_from_json(result)
+        return [RealityResponse.model_validate(i) for i in items]
 
     def get_markets_from_all_user_positions(
         self, user_positions: list[OmenUserPosition]

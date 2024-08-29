@@ -119,6 +119,8 @@ def test_create_bet_withdraw_resolve_market(
     # ToDo - Instead of subgraph, fetch data directly from contract.
     answers = omen_subgraph_handler.get_answers(market.question.id)
     assert len(answers) == 1, answers
+    responses = omen_subgraph_handler.get_responses(market.question.id)
+    assert len(responses) == 1, responses
     # ToDo: Once this test is fixed, check how to assert this, currently `answer` is HexBytes and OMEN_FALSE_OUTCOME is string, so it will never be equal.
     # assert answers[0].answer == OMEN_FALSE_OUTCOME, answers[0]
 

@@ -486,6 +486,24 @@ class RealityAnswer(BaseModel):
     createdBlock: int
 
 
+class RealityResponse(BaseModel):
+    """
+    This is similar to `RealityAnswer`, but contains additional fields, most importantly `historyHash`.
+    """
+
+    id: str
+    timestamp: datetime
+    answer: HexBytes
+    isUnrevealed: bool
+    isCommitment: bool
+    bond: Wei
+    user: HexBytes
+    historyHash: HexBytes
+    question: RealityQuestion
+    createdBlock: int
+    revealedBlock: int | None
+
+
 class RealityAnswers(BaseModel):
     answers: list[RealityAnswer]
 

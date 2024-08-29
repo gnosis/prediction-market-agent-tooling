@@ -42,7 +42,6 @@ def claim_bonds_on_realitio_questions(
     questions: list[RealityQuestion],
     auto_withdraw: bool,
     web3: Web3 | None = None,
-    silent_errors: bool = False,
 ) -> list[HexBytes]:
     claimed_questions: list[HexBytes] = []
 
@@ -50,19 +49,10 @@ def claim_bonds_on_realitio_questions(
         logger.info(
             f"[{idx+1} / {len(questions)}] Claiming bond for {question.questionId=} {question.url=}"
         )
-        try:
-            claim_bonds_on_realitio_question(
-                api_keys, question, auto_withdraw=auto_withdraw, web3=web3
-            )
-            claimed_questions.append(question.questionId)
-        except Exception as e:
-            # TODO: This shouldn't be required once `claim_bonds_on_realitio_question` below is fixed.
-            if silent_errors:
-                logger.warning(
-                    f"Error while claiming bond for {question.questionId=} {question.url=}: {e}"
-                )
-            else:
-                raise
+        claim_bonds_on_realitio_question(
+            api_keys, question, auto_withdraw=auto_withdraw, web3=web3
+        )
+        claimed_questions.append(question.questionId)
 
     return claimed_questions
 
@@ -77,21 +67,13 @@ def claim_bonds_on_realitio_question(
     realitio_contract = OmenRealitioContract()
 
     # Get all answers for the question.
-    answers_objects = OmenSubgraphHandler().get_answers(question_id=question.questionId)
+    responses = OmenSubgraphHandler().get_responses(question_id=question.questionId)
 
-    if not answers_objects:
+    if not responses:
         raise ValueError(f"No answers found for {question.questionId=}")
 
-    if answers_objects[-1].question.historyHash == ZERO_BYTES:
+    if responses[-1].question.historyHash == ZERO_BYTES:
         raise ValueError(f"Already claimed {question.questionId=}.")
-
-    if len(answers_objects) > 1:
-        # As you can see below, we need `history_hash` for every answer.
-        # The trouble is, that historyHash is updated after each new answer and the contract holds only the latest one.
-        # So if we have more than 1 answer, we missing the historyHash n-1 of them and this would fail.
-        # You can find how to calculate history hash at https://realitio.github.io/docs/html/contract_explanation.html#answer-history-entries.
-        # At the moment, we support only 1 answer, as for that one answer we will have the hash.
-        raise NotImplementedError()
 
     # Logic taken from packages/valory/skills/decision_maker_abci/models.py in `def claim_params`.
     history_hashes: list[HexBytes] = []
@@ -99,28 +81,25 @@ def claim_bonds_on_realitio_question(
     bonds: list[Wei] = []
     answers: list[HexBytes] = []
 
-    for i, answer in enumerate(reversed(answers_objects)):
+    for i, response in enumerate(reversed(responses)):
         # history_hashes second-last-to-first, the hash of each history entry, calculated as described here:
         # https://realitio.github.io/docs/html/contract_explanation.html#answer-history-entries.
-        if i == len(answers_objects) - 1:
+        if i == len(responses) - 1:
             history_hashes.append(ZERO_BYTES)
         else:
-            # TODO: See `if len(answers_objects) > 1` above.
-            # This is from the original Olas implementation (https://github.com/kongzii/trader/blob/700af475a4538cc3d5d22caf9dec9e9d22d72af1/packages/valory/skills/market_manager_abci/graph_tooling/requests.py#L297),
-            # but it's most probably wrong (see comment above).
             history_hashes.append(
                 check_not_none(
-                    answers_objects[i + 1].question.historyHash,
+                    responses[i + 1].historyHash,
                     "Shouldn't be None here.",
                 )
             )
 
         # last-to-first, the address of each answerer or commitment sender
-        addresses.append(Web3.to_checksum_address(answer.question.user))
+        addresses.append(Web3.to_checksum_address(response.question.user))
         # last-to-first, the bond supplied with each answer or commitment
-        bonds.append(answer.lastBond)
+        bonds.append(response.bond)
         # last-to-first, each answer supplied, or commitment ID if the answer was supplied with commit->reveal
-        answers.append(answer.answer)
+        answers.append(response.answer)
 
     realitio_contract.claimWinnings(
         api_keys=api_keys,

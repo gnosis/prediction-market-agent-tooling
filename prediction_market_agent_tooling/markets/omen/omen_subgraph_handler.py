@@ -119,6 +119,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             questions_field.questionId,
             questions_field.contentHash,
             questions_field.historyHash,
+            questions_field.answerFinalizedTimestamp,
+            questions_field.currentScheduledFinalizationTimestamp,
         ]
 
     def _get_fields_for_answers(self, answers_field: FieldPath) -> list[FieldPath]:
@@ -596,6 +598,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
+        id_in: list[str] | None = None,
+        question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityQuestion]:
         where_stms: dict[str, t.Any] = {}
 
@@ -612,6 +616,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
                 current_answer_before
             )
+
+        if id_in is not None:
+            where_stms["id_in"] = id_in
+
+        if question_id_in is not None:
+            where_stms["questionId_in"] = [x.hex() for x in question_id_in]
 
         questions = self.realityeth_subgraph.Query.questions(where=where_stms)
         fields = self._get_fields_for_reality_questions(questions)

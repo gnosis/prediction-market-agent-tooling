@@ -470,6 +470,8 @@ class RealityQuestion(BaseModel):
     updatedTimestamp: datetime
     contentHash: HexBytes
     questionId: HexBytes
+    answerFinalizedTimestamp: datetime
+    currentScheduledFinalizationTimestamp: datetime
 
     @property
     def url(self) -> str:

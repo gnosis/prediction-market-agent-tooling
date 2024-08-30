@@ -68,6 +68,9 @@ def claim_bonds_on_realitio_question(
     # Get all answers for the question.
     responses = OmenSubgraphHandler().get_responses(question_id=question.questionId)
 
+    # They need to be processed in order.
+    responses = sorted(responses, key=lambda x: x.timestamp)
+
     if not responses:
         raise ValueError(f"No answers found for {question.questionId.hex()=}")
 
@@ -78,9 +81,6 @@ def claim_bonds_on_realitio_question(
     addresses: list[ChecksumAddress] = []
     bonds: list[Wei] = []
     answers: list[HexBytes] = []
-
-    # They need to be processed in order.
-    responses = sorted(responses, key=lambda x: x.timestamp)
 
     # Caller must provide the answer history, in reverse order.
     # See https://gnosisscan.io/address/0x79e32aE03fb27B07C89c0c568F80287C01ca2E57#code#L625 for the `claimWinnings` logic.

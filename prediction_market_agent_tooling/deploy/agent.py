@@ -48,8 +48,8 @@ from prediction_market_agent_tooling.markets.markets import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     is_minimum_required_balance,
-    redeem_from_all_user_positions,
     withdraw_wxdai_to_xdai_to_keep_balance,
+    redeem_from_all_user_positions,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
@@ -397,7 +397,11 @@ class DeployableTraderAgent(DeployableAgent):
         self.update_langfuse_trace_by_market(market_type, market)
 
     def process_market(
-        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        verify_market: bool = True,
+        allow_opposite_bets: bool = False,
     ) -> ProcessedMarket | None:
         self.before_process_market(market_type, market)
 
@@ -419,9 +423,18 @@ class DeployableTraderAgent(DeployableAgent):
             logger.info(
                 f"Placing bet on {market} with direction {amount_and_direction.direction} and amount {amount_and_direction.amount}"
             )
+            extra_bet_amount_from_opposite_bets: float = 0
+            if not allow_opposite_bets:
+                # If we have an existing position, sell it first if they bet on a different outcome.
+                sold_amount = market.sell_existing_positions(
+                    amount_and_direction.direction
+                )
+                extra_bet_amount_from_opposite_bets += sold_amount
+
             market.place_bet(
                 amount=TokenAmount(
-                    amount=amount_and_direction.amount,
+                    amount=amount_and_direction.amount
+                    + extra_bet_amount_from_opposite_bets,
                     currency=amount_and_direction.currency,
                 ),
                 outcome=amount_and_direction.direction,

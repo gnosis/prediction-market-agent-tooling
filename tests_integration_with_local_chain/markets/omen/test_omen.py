@@ -4,9 +4,14 @@ from datetime import timedelta
 
 import numpy as np
 import pytest
+from ape_test import TestAccount
+from pydantic import SecretStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.agent_example import (
+    DeployableAlwaysYesAgent,
+)
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
@@ -19,7 +24,9 @@ from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
     TokenAmount,
+    Position,
 )
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -262,7 +269,7 @@ def test_omen_buy_and_sell_outcome(
     # You can double check your address at https://gnosisscan.io/ afterwards.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     outcome = True
-    outcome_str = OMEN_TRUE_OUTCOME if outcome else OMEN_FALSE_OUTCOME
+    outcome_str = OmenAgentMarket.get_bet_outcome(outcome)
     bet_amount = market.get_bet_amount(amount=0.4)
 
     # TODO hack until https://github.com/gnosis/prediction-market-agent-tooling/issues/266 is complete
@@ -348,3 +355,39 @@ def test_place_bet_with_autodeposit(
         web3=local_web3,
         api_keys=test_keys,
     )
+
+
+def test_place_bet_with_prev_existing_positions(
+    local_web3: Web3,
+    test_keys: APIKeys,
+    accounts: list[TestAccount],
+) -> None:
+    # ToDo get a open binary market where better has a position
+    # place bet on contrary outcome (amount X)
+    # assert bet amount is X + prev_position_amount
+
+    m = OmenSubgraphHandler().get_omen_market_by_market_id(market_id)
+    market = OmenAgentMarket.from_data_model(m)
+
+    # sell prev False positions
+    market.sell_existing_positions(False)
+
+    # place a bet of 1 wxDAI on YES
+    bet_amount = BetAmount(amount=xdai_to_wei(xDai(1)), currency=Currency.xDai)
+    # account 0xe7aa88a1d044e5c987ecce55ae8d2b562a41b72d
+    # private d459e4b81c6daaef4a34ade0b15f30b99ce486efdc44fcb869481668f5c8f66b
+    private_key = "d459e4b81c6daaef4a34ade0b15f30b99ce486efdc44fcb869481668f5c8f66b"
+
+    keys = APIKeys(BET_FROM_PRIVATE_KEY=SecretStr(private_key), SAFE_ADDRESS=None)
+
+    # ToDo # assert that 2nd bet had size 2 wxDAI - call contract directly
+    positions = market.get_positions(
+        user_id=test_keys.bet_from_address, liquid_only=True
+    )
+    position_in_market: Position = next(
+        [i for i in positions if i.market_id == market.id]
+    )
+    assert position_in_market
+    # # assert final user position is only on outcome NO
+    assert position_in_market.amounts[OMEN_FALSE_OUTCOME] == xDai(2)
+    assert position_in_market.amounts[OMEN_TRUE_OUTCOME] == xDai(0)

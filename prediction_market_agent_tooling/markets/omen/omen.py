@@ -149,6 +149,36 @@ class OmenAgentMarket(AgentMarket):
     def get_tiny_bet_amount(cls) -> BetAmount:
         return BetAmount(amount=0.00001, currency=cls.currency)
 
+    @staticmethod
+    def get_bet_outcome(binary_outcome: bool) -> str:
+        return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
+
+    def sell_existing_positions(self, outcome: bool, web3: Web3 | None = None) -> float:
+        better_address = APIKeys().public_key
+        sold_amount = xDai(0)
+        prev_positions = self.get_positions(user_id=better_address, liquid_only=True)
+        prev_positions_for_market = [
+            i for i in prev_positions if i.market_id == self.id
+        ]  # ToDo filter by market when fetching from subgraph
+        for prev_position in prev_positions_for_market:
+            for outcome_str, token_amount in prev_position.amounts.items():
+                outcome_str = True if outcome_str == OMEN_TRUE_OUTCOME else False
+                if outcome_str != outcome:
+                    sell_amount_in_collateral = (
+                        self.calculate_sell_amount_in_collateral(
+                            amount=token_amount, outcome=outcome_str, web3=web3
+                        )
+                    )
+                    # We keep it as collateral since we want to place a bet immediately after this function.
+                    self.sell_tokens(
+                        outcome=outcome_str,
+                        amount=token_amount,
+                        auto_withdraw=False,
+                        web3=web3,
+                    )
+                    sold_amount = sold_amount + sell_amount_in_collateral
+        return sold_amount
+
     def place_bet(
         self,
         outcome: bool,
@@ -597,7 +627,7 @@ def binary_omen_buy_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
+        outcome=OmenAgentMarket.get_bet_outcome(binary_outcome),
         auto_deposit=auto_deposit,
         web3=web3,
     )
@@ -686,7 +716,7 @@ def binary_omen_sell_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
+        outcome=OmenAgentMarket.get_bet_outcome(binary_outcome),
         auto_withdraw=auto_withdraw,
         web3=web3,
     )

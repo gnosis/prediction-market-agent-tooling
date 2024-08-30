@@ -33,7 +33,6 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.markets.polymarket.utils import (
     find_resolution_on_polymarket,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
 
 
@@ -70,32 +69,32 @@ def claim_bonds_on_realitio_question(
     responses = OmenSubgraphHandler().get_responses(question_id=question.questionId)
 
     if not responses:
-        raise ValueError(f"No answers found for {question.questionId=}")
+        raise ValueError(f"No answers found for {question.questionId.hex()=}")
 
     if responses[-1].question.historyHash == ZERO_BYTES:
-        raise ValueError(f"Already claimed {question.questionId=}.")
+        raise ValueError(f"Already claimed {question.questionId.hex()=}.")
 
-    # Logic taken from packages/valory/skills/decision_maker_abci/models.py in `def claim_params`.
     history_hashes: list[HexBytes] = []
     addresses: list[ChecksumAddress] = []
     bonds: list[Wei] = []
     answers: list[HexBytes] = []
 
-    for i, response in enumerate(reversed(responses)):
-        # history_hashes second-last-to-first, the hash of each history entry, calculated as described here:
-        # https://realitio.github.io/docs/html/contract_explanation.html#answer-history-entries.
-        if i == len(responses) - 1:
+    # They need to be processed in order.
+    responses = sorted(responses, key=lambda x: x.timestamp)
+
+    # Caller must provide the answer history, in reverse order.
+    # See https://gnosisscan.io/address/0x79e32aE03fb27B07C89c0c568F80287C01ca2E57#code#L625 for the `claimWinnings` logic.
+    reversed_responses = list(reversed(responses))
+
+    for i, response in enumerate(reversed_responses):
+        # second-last-to-first, the hash of each history entry. (Final one should be empty).
+        if i == len(reversed_responses) - 1:
             history_hashes.append(ZERO_BYTES)
         else:
-            history_hashes.append(
-                check_not_none(
-                    responses[i + 1].historyHash,
-                    "Shouldn't be None here.",
-                )
-            )
+            history_hashes.append(reversed_responses[i + 1].historyHash)
 
         # last-to-first, the address of each answerer or commitment sender
-        addresses.append(Web3.to_checksum_address(response.question.user))
+        addresses.append(Web3.to_checksum_address(response.user))
         # last-to-first, the bond supplied with each answer or commitment
         bonds.append(response.bond)
         # last-to-first, each answer supplied, or commitment ID if the answer was supplied with commit->reveal

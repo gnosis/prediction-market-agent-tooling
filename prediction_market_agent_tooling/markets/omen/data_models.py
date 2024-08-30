@@ -499,7 +499,7 @@ class RealityResponse(BaseModel):
     isUnrevealed: bool
     isCommitment: bool
     bond: Wei
-    user: HexBytes
+    user: HexAddress
     historyHash: HexBytes
     question: RealityQuestion
     createdBlock: int

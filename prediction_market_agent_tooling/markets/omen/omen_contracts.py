@@ -1,7 +1,7 @@
 import os
 import random
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 from web3 import Web3
@@ -521,6 +521,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         language: str,
         arbitrator: Arbitrator,
         opening: datetime,
+        timeout: timedelta = timedelta(days=1),
         nonce: int | None = None,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
@@ -547,7 +548,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
                 template_id=template_id,
                 question=realitio_question,
                 arbitrator=arbitrator_contract_address,
-                timeout=86400,  # See https://github.com/protofire/omen-exchange/blob/2cfdf6bfe37afa8b169731d51fea69d42321d66c/app/src/util/networks.ts#L278.
+                timeout=int(timeout.total_seconds()),
                 opening_ts=int(opening.timestamp()),
                 nonce=(
                     nonce if nonce is not None else random.randint(0, 1000000)

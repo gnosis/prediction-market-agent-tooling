@@ -145,7 +145,7 @@ class Market(BaseModel):
     negRiskRequestID: t.Any | None = None
     negRiskMarketID: t.Any | None = None
     events: list[Event]
-    markets: list[Market1]
+    markets: list[Market1] | None = None
     lower_bound_date: t.Any | None = None
     upper_bound_date: t.Any | None = None
     market_type: str | None = None

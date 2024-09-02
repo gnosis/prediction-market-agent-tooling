@@ -49,6 +49,10 @@ class ManifoldAgentMarket(AgentMarket):
         # Manifold lowest bet is 1 Mana, so we need to ceil the result.
         return mana_type(ceil(minimum_bet_to_win(answer, amount_to_win, self)))
 
+    def sell_existing_positions(self, outcome: bool) -> float:
+        # Not implemented for Manifold.
+        return 0
+
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:
         if amount.currency != self.currency:
             raise ValueError(f"Manifold bets are made in Mana. Got {amount.currency}.")

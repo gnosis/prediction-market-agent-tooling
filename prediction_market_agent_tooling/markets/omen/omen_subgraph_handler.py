@@ -6,11 +6,16 @@ import requests
 import tenacity
 from PIL import Image
 from PIL.Image import Image as ImageType
-from eth_typing import ChecksumAddress
 from subgrounds import FieldPath, Subgrounds
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    HexAddress,
+    HexBytes,
+    Wei,
+    wei_type,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -461,7 +466,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self,
         better_address: ChecksumAddress,
         position_id_in: list[HexBytes] | None = None,
-        condition_id: HexBytes | None = None,
         total_balance_bigger_than: Wei | None = None,
     ) -> list[OmenUserPosition]:
         where_stms: dict[str, t.Any] = {
@@ -474,9 +478,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         if position_id_in is not None:
             where_stms["position_"]["positionId_in"] = [x.hex() for x in position_id_in]
-
-        if condition_id is not None:
-            where_stms["position_"]["conditionIdsStr"] = condition_id
 
         positions = self.conditional_tokens_subgraph.Query.userPositions(
             first=sys.maxsize, where=where_stms

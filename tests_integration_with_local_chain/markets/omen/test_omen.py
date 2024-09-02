@@ -12,17 +12,18 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexStr,
+    OutcomeStr,
+    Wei,
     xDai,
     xdai_type,
-    Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
-    TokenAmount,
     Position,
+    TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -40,18 +41,18 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     ContractDepositableWrapperERC20OnGnosisChain,
+    OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenRealitioContract,
     WrappedxDaiContract,
     sDaiContract,
-    OmenConditionalTokenContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, wei_to_xdai
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
 
@@ -355,70 +356,67 @@ def test_place_bet_with_autodeposit(
     )
 
 
-def get_position_balance(
+def get_position_balance_by_position_id(
     from_address: ChecksumAddress, position_id: int, web3: Web3
 ) -> int:
-    conditional_token = OmenConditionalTokenContract()
-    position_balance = conditional_token.balanceOf(
+    """Fetches balance from a given position in the ConditionalTokens contract."""
+    return OmenConditionalTokenContract().balanceOf(
         from_address=from_address,
         position_id=position_id,
         web3=web3,
     )
-    return position_balance
 
 
-class A:
-    def foo(self):
-        return "bar"
-
-
-def test_place_bet_with_prev_existing_positions(local_web3: Web3, test_keys: APIKeys):
+def test_place_bet_with_prev_existing_positions(
+    local_web3: Web3, test_keys: APIKeys
+) -> None:
+    # Fetch an open binary market.
     sh = OmenSubgraphHandler()
     market = sh.get_omen_binary_markets_simple(
         limit=1, filter_by=FilterBy.OPEN, sort_by=SortBy.CLOSING_SOONEST
     )[0]
-
     omen_agent_market = OmenAgentMarket.from_data_model(market)
 
-    # places a bet
+    # Place a bet using a standard account (from .env)
     bet_amount = BetAmount(amount=1, currency=Currency.xDai)
     omen_agent_market.place_bet(True, bet_amount, web3=local_web3)
 
     conditional_token = OmenConditionalTokenContract()
-    c = local_web3.eth.contract(
+    conditional_tokens_contract = local_web3.eth.contract(
         address=conditional_token.address, abi=conditional_token.abi
     )
     # We fetch the transfer single event emitted when outcome tokens were bought
-    ls = c.events.TransferSingle().get_logs()
+    ls = conditional_tokens_contract.events.TransferSingle().get_logs()  # type: ignore[attr-defined]
     pos_id = ls[-1]["args"]["id"]
     # check position
-    position_balance = get_position_balance(
+    position_balance = get_position_balance_by_position_id(
         from_address=test_keys.bet_from_address, position_id=pos_id, web3=local_web3
     )
+    # Assert that there is a positive balance since a bet was placed.
     assert position_balance > 0
 
-    # We now want to sell the recently opened position.
     mock_positions = [
         Position(
             market_id=omen_agent_market.id,
             amounts={
-                OMEN_TRUE_OUTCOME: TokenAmount(
+                OutcomeStr(OMEN_TRUE_OUTCOME): TokenAmount(
                     amount=wei_to_xdai(Wei(position_balance)), currency=Currency.xDai
                 )
             },
         )
     ]
 
-    # We patch get_positions since it comes from the subgraph in the function.
+    # We patch get_positions since the function logic uses the subgraph.
     with patch(
         "prediction_market_agent_tooling.markets.omen.omen.OmenAgentMarket.get_positions",
         return_value=mock_positions,
     ):
-        omen_agent_market.sell_existing_positions(False, web3=local_web3)
+        # We now want to sell the recently opened position.
+        omen_agent_market.liquidate_existing_positions(False, web3=local_web3)
 
-    # Assert positions were liquidated
-    position_balance_after_sell = get_position_balance(
+    position_balance_after_sell = get_position_balance_by_position_id(
         from_address=test_keys.bet_from_address, position_id=pos_id, web3=local_web3
     )
 
+    # Assert positions were liquidated
     assert wei_to_xdai(Wei(position_balance_after_sell)) < 0.001  # xDAI

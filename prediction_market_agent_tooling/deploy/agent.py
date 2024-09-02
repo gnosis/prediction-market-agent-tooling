@@ -48,8 +48,8 @@ from prediction_market_agent_tooling.markets.markets import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     is_minimum_required_balance,
-    withdraw_wxdai_to_xdai_to_keep_balance,
     redeem_from_all_user_positions,
+    withdraw_wxdai_to_xdai_to_keep_balance,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
@@ -426,7 +426,7 @@ class DeployableTraderAgent(DeployableAgent):
             extra_bet_amount_from_opposite_bets: float = 0
             if not allow_opposite_bets:
                 # If we have an existing position, sell it first if they bet on a different outcome.
-                sold_amount = market.sell_existing_positions(
+                sold_amount = market.liquidate_existing_positions(
                     amount_and_direction.direction
                 )
                 extra_bet_amount_from_opposite_bets += sold_amount

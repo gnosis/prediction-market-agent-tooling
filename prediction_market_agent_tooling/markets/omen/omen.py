@@ -153,31 +153,45 @@ class OmenAgentMarket(AgentMarket):
     def get_bet_outcome(binary_outcome: bool) -> str:
         return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
 
-    def sell_existing_positions(self, outcome: bool, web3: Web3 | None = None) -> float:
-        # ToDo - Check if better_address can be passed as arg
+    @staticmethod
+    def get_bet_outcome_bool(bet_outcome: OutcomeStr) -> bool:
+        return True if bet_outcome == OMEN_TRUE_OUTCOME else False
+
+    def liquidate_existing_positions(
+        self, bet_outcome: bool, web3: Web3 | None = None
+    ) -> float:
+        """
+        Liquidates all previously existing positions.
+        Returns the amount in collateral obtained by selling the positions.
+        """
         better_address = APIKeys().public_key
-        sold_amount = xDai(0)
-        prev_positions = self.get_positions(user_id=better_address, liquid_only=True)
-        prev_positions_for_market = [
-            i for i in prev_positions if i.market_id == self.id
-        ]  # ToDo filter by market when fetching from subgraph
+
+        prev_positions_for_market = self.get_positions(
+            user_id=better_address, liquid_only=True
+        )
+        sold_amount = 0.0
         for prev_position in prev_positions_for_market:
-            for outcome_str, token_amount in prev_position.amounts.items():
-                outcome_str = True if outcome_str == OMEN_TRUE_OUTCOME else False
-                if outcome_str != outcome:
+            for position_outcome, token_amount in prev_position.amounts.items():
+                position_outcome_bool = self.get_bet_outcome_bool(position_outcome)
+                if position_outcome_bool != bet_outcome:
+                    # Calculate collateral amount from selling this position and add to
+                    # total amount sold (in collateral tokens).
                     sell_amount_in_collateral = (
                         self.calculate_sell_amount_in_collateral(
-                            amount=token_amount, outcome=outcome_str, web3=web3
+                            amount=token_amount,
+                            outcome=position_outcome_bool,
+                            web3=web3,
                         )
                     )
+
                     # We keep it as collateral since we want to place a bet immediately after this function.
                     self.sell_tokens(
-                        outcome=outcome_str,
+                        outcome=position_outcome_bool,
                         amount=token_amount,
                         auto_withdraw=False,
                         web3=web3,
                     )
-                    sold_amount = sold_amount + sell_amount_in_collateral
+                    sold_amount += sell_amount_in_collateral
         return sold_amount
 
     def place_bet(

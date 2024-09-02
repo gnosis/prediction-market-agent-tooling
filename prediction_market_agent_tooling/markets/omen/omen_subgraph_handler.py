@@ -371,8 +371,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         # TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
-        collateral_token_address_in: tuple[ChecksumAddress, ...]
-        | None = (
+        collateral_token_address_in: tuple[ChecksumAddress, ...] | None = (
             WrappedxDaiContract().address,
             sDaiContract().address,
         ),
@@ -613,6 +612,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
+        finalized_before: datetime | None = None,
+        finalized_after: datetime | None = None,
         id_in: list[str] | None = None,
         question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityQuestion]:
@@ -630,6 +631,16 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
                 current_answer_before
+            )
+
+        if finalized_before is not None:
+            where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
+                finalized_before
+            )
+
+        if finalized_after is not None:
+            where_stms["answerFinalizedTimestamp_gt"] = to_int_timestamp(
+                finalized_after
             )
 
         if id_in is not None:

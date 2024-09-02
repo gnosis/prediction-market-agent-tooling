@@ -1,10 +1,10 @@
 import os
 import time
 from datetime import timedelta
+from unittest.mock import patch
 
 import numpy as np
 import pytest
-from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
     TokenAmount,
+    Position,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -50,7 +51,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, wei_to_xdai
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
 
@@ -354,44 +355,70 @@ def test_place_bet_with_autodeposit(
     )
 
 
-def test_place_bet_with_prev_existing_positions(
-    local_web3: Web3,
-    test_keys: APIKeys,
-    accounts: list[TestAccount],
-) -> None:
-    # prediction_prophet_public_key = Web3.to_checksum_address(
-    #     "0xe7aa88a1d044e5c987ecce55ae8d2b562a41b72d"
-    # )
+def get_position_balance(
+    from_address: ChecksumAddress, position_id: int, web3: Web3
+) -> int:
+    conditional_token = OmenConditionalTokenContract()
+    position_balance = conditional_token.balanceOf(
+        from_address=from_address,
+        position_id=position_id,
+        web3=web3,
+    )
+    return position_balance
 
-    # create position in a random market
 
+class A:
+    def foo(self):
+        return "bar"
+
+
+def test_place_bet_with_prev_existing_positions(local_web3: Web3, test_keys: APIKeys):
     sh = OmenSubgraphHandler()
     market = sh.get_omen_binary_markets_simple(
         limit=1, filter_by=FilterBy.OPEN, sort_by=SortBy.CLOSING_SOONEST
-    )
-    # get a open binary market where better has a position
-    live_positions = sh.get_user_positions(
-        better_address=prediction_prophet_public_key, total_balance_bigger_than=Wei(0)
-    )
-    # We check that there is at least one position
-    assert live_positions
-    position = live_positions[0]
-    market = sh.get_market_from_user_position(position)
+    )[0]
 
-    # We should have only 1 position (1 direction) - we want to sell this
-    current_position_index = live_positions[0].position.index_set
     omen_agent_market = OmenAgentMarket.from_data_model(market)
-    outcome_bool_to_sell = (
-        False if current_position_index == omen_agent_market.yes_index else True
+
+    # places a bet
+    bet_amount = BetAmount(amount=1, currency=Currency.xDai)
+    omen_agent_market.place_bet(True, bet_amount, web3=local_web3)
+
+    conditional_token = OmenConditionalTokenContract()
+    c = local_web3.eth.contract(
+        address=conditional_token.address, abi=conditional_token.abi
+    )
+    # We fetch the transfer single event emitted when outcome tokens were bought
+    ls = c.events.TransferSingle().get_logs()
+    pos_id = ls[-1]["args"]["id"]
+    # check position
+    position_balance = get_position_balance(
+        from_address=test_keys.bet_from_address, position_id=pos_id, web3=local_web3
+    )
+    assert position_balance > 0
+
+    # We now want to sell the recently opened position.
+    mock_positions = [
+        Position(
+            market_id=omen_agent_market.id,
+            amounts={
+                OMEN_TRUE_OUTCOME: TokenAmount(
+                    amount=wei_to_xdai(Wei(position_balance)), currency=Currency.xDai
+                )
+            },
+        )
+    ]
+
+    # We patch get_positions since it comes from the subgraph in the function.
+    with patch(
+        "prediction_market_agent_tooling.markets.omen.omen.OmenAgentMarket.get_positions",
+        return_value=mock_positions,
+    ):
+        omen_agent_market.sell_existing_positions(False, web3=local_web3)
+
+    # Assert positions were liquidated
+    position_balance_after_sell = get_position_balance(
+        from_address=test_keys.bet_from_address, position_id=pos_id, web3=local_web3
     )
 
-    omen_agent_market.sell_existing_positions(outcome_bool_to_sell, web3=local_web3)
-
-    # assert that position has been liquidated
-    cd = OmenConditionalTokenContract()
-    position_balance = cd.balanceOf(
-        from_address=prediction_prophet_public_key,
-        position_id=int(position.position.id.hex(), 16),
-        web3=local_web3,
-    )
-    assert position_balance == 0
+    assert wei_to_xdai(Wei(position_balance_after_sell)) < 0.001  # xDAI

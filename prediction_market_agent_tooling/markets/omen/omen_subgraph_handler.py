@@ -192,7 +192,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def _build_where_statements(
         self,
         creator: t.Optional[HexAddress] = None,
-        creator_in: t.Optional[list[HexAddress]] = None,
+        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
@@ -362,7 +362,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         finalized: bool | None = None,
         resolved: bool | None = None,
         creator: t.Optional[HexAddress] = None,
-        creator_in: t.Optional[list[HexAddress]] = None,
+        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
         id_in: list[str] | None = None,

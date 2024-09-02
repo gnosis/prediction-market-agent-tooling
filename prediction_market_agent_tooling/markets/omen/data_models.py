@@ -505,6 +505,14 @@ class RealityResponse(BaseModel):
     createdBlock: int
     revealedBlock: int | None
 
+    @property
+    def bond_xdai(self) -> xDai:
+        return wei_to_xdai(self.bond)
+
+    @property
+    def user_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.user)
+
 
 class RealityAnswers(BaseModel):
     answers: list[RealityAnswer]

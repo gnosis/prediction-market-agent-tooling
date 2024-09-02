@@ -19,6 +19,10 @@ class Resolution(str, Enum):
     CANCEL = "CANCEL"
     MKT = "MKT"
 
+    @staticmethod
+    def from_bool(value: bool) -> "Resolution":
+        return Resolution.YES if value else Resolution.NO
+
 
 class TokenAmount(BaseModel):
     amount: float

@@ -192,11 +192,13 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def _build_where_statements(
         self,
         creator: t.Optional[HexAddress] = None,
+        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
         opened_after: t.Optional[datetime] = None,
         finalized_before: t.Optional[datetime] = None,
+        finalized_after: t.Optional[datetime] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
         liquidity_bigger_than: Wei | None = None,
@@ -219,7 +221,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             ]
 
         if creator:
-            where_stms["creator"] = creator
+            where_stms["creator"] = creator.lower()
+
+        if creator_in:
+            where_stms["creator_in"] = [x.lower() for x in creator_in]
 
         if created_after:
             where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
@@ -259,6 +264,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if finalized_before:
             where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
                 finalized_before
+            )
+
+        if finalized_after:
+            where_stms["answerFinalizedTimestamp_gt"] = to_int_timestamp(
+                finalized_after
             )
 
         # `excluded_question_titles` can not be an empty list, otherwise the API bugs out and returns nothing.
@@ -348,9 +358,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         opened_before: t.Optional[datetime] = None,
         opened_after: t.Optional[datetime] = None,
         finalized_before: t.Optional[datetime] = None,
+        finalized_after: t.Optional[datetime] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
         creator: t.Optional[HexAddress] = None,
+        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
         id_in: list[str] | None = None,
@@ -370,11 +382,13 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         """
         where_stms = self._build_where_statements(
             creator=creator,
+            creator_in=creator_in,
             outcomes=outcomes,
             created_after=created_after,
             opened_before=opened_before,
             opened_after=opened_after,
             finalized_before=finalized_before,
+            finalized_after=finalized_after,
             finalized=finalized,
             resolved=resolved,
             condition_id_in=condition_id_in,
@@ -599,6 +613,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
+        finalized_before: datetime | None = None,
+        finalized_after: datetime | None = None,
         id_in: list[str] | None = None,
         question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityQuestion]:
@@ -616,6 +632,16 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
                 current_answer_before
+            )
+
+        if finalized_before is not None:
+            where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
+                finalized_before
+            )
+
+        if finalized_after is not None:
+            where_stms["answerFinalizedTimestamp_gt"] = to_int_timestamp(
+                finalized_after
             )
 
         if id_in is not None:

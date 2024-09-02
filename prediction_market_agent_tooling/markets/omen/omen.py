@@ -154,6 +154,7 @@ class OmenAgentMarket(AgentMarket):
         return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
 
     def sell_existing_positions(self, outcome: bool, web3: Web3 | None = None) -> float:
+        # ToDo - Check if better_address can be passed as arg
         better_address = APIKeys().public_key
         sold_amount = xDai(0)
         prev_positions = self.get_positions(user_id=better_address, liquid_only=True)

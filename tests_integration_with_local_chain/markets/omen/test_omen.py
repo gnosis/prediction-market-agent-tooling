@@ -5,28 +5,24 @@ from datetime import timedelta
 import numpy as np
 import pytest
 from ape_test import TestAccount
-from pydantic import SecretStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.deploy.agent_example import (
-    DeployableAlwaysYesAgent,
-)
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexStr,
     xDai,
     xdai_type,
+    Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
     TokenAmount,
-    Position,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -47,6 +43,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
     WrappedxDaiContract,
     sDaiContract,
+    OmenConditionalTokenContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -362,32 +359,39 @@ def test_place_bet_with_prev_existing_positions(
     test_keys: APIKeys,
     accounts: list[TestAccount],
 ) -> None:
-    # ToDo get a open binary market where better has a position
-    # place bet on contrary outcome (amount X)
-    # assert bet amount is X + prev_position_amount
+    # prediction_prophet_public_key = Web3.to_checksum_address(
+    #     "0xe7aa88a1d044e5c987ecce55ae8d2b562a41b72d"
+    # )
 
-    m = OmenSubgraphHandler().get_omen_market_by_market_id(market_id)
-    market = OmenAgentMarket.from_data_model(m)
+    # create position in a random market
 
-    # sell prev False positions
-    market.sell_existing_positions(False)
-
-    # place a bet of 1 wxDAI on YES
-    bet_amount = BetAmount(amount=xdai_to_wei(xDai(1)), currency=Currency.xDai)
-    # account 0xe7aa88a1d044e5c987ecce55ae8d2b562a41b72d
-    # private d459e4b81c6daaef4a34ade0b15f30b99ce486efdc44fcb869481668f5c8f66b
-    private_key = "d459e4b81c6daaef4a34ade0b15f30b99ce486efdc44fcb869481668f5c8f66b"
-
-    keys = APIKeys(BET_FROM_PRIVATE_KEY=SecretStr(private_key), SAFE_ADDRESS=None)
-
-    # ToDo # assert that 2nd bet had size 2 wxDAI - call contract directly
-    positions = market.get_positions(
-        user_id=test_keys.bet_from_address, liquid_only=True
+    sh = OmenSubgraphHandler()
+    market = sh.get_omen_binary_markets_simple(
+        limit=1, filter_by=FilterBy.OPEN, sort_by=SortBy.CLOSING_SOONEST
     )
-    position_in_market: Position = next(
-        [i for i in positions if i.market_id == market.id]
+    # get a open binary market where better has a position
+    live_positions = sh.get_user_positions(
+        better_address=prediction_prophet_public_key, total_balance_bigger_than=Wei(0)
     )
-    assert position_in_market
-    # # assert final user position is only on outcome NO
-    assert position_in_market.amounts[OMEN_FALSE_OUTCOME] == xDai(2)
-    assert position_in_market.amounts[OMEN_TRUE_OUTCOME] == xDai(0)
+    # We check that there is at least one position
+    assert live_positions
+    position = live_positions[0]
+    market = sh.get_market_from_user_position(position)
+
+    # We should have only 1 position (1 direction) - we want to sell this
+    current_position_index = live_positions[0].position.index_set
+    omen_agent_market = OmenAgentMarket.from_data_model(market)
+    outcome_bool_to_sell = (
+        False if current_position_index == omen_agent_market.yes_index else True
+    )
+
+    omen_agent_market.sell_existing_positions(outcome_bool_to_sell, web3=local_web3)
+
+    # assert that position has been liquidated
+    cd = OmenConditionalTokenContract()
+    position_balance = cd.balanceOf(
+        from_address=prediction_prophet_public_key,
+        position_id=int(position.position.id.hex(), 16),
+        web3=local_web3,
+    )
+    assert position_balance == 0

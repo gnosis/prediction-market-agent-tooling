@@ -44,7 +44,7 @@ def test_claim_bonds() -> None:
 
     # Add multiple answers
     bond = xdai_to_wei(xdai_type(0.00001))
-    answers = [outcomes[0], outcomes[1], outcomes[0]]
+    answers = [outcomes[0], outcomes[1], outcomes[0], outcomes[1]]
     for answer in answers:
         realitio_contract.submit_answer(
             api_keys=api_keys,

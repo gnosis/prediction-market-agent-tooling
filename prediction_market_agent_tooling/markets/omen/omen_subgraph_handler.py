@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenUserPosition,
     RealityAnswer,
     RealityQuestion,
+    RealityResponse,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,
@@ -123,6 +124,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             questions_field.questionId,
             questions_field.contentHash,
             questions_field.historyHash,
+            questions_field.answerFinalizedTimestamp,
+            questions_field.currentScheduledFinalizationTimestamp,
         ]
 
     def _get_fields_for_answers(self, answers_field: FieldPath) -> list[FieldPath]:
@@ -134,6 +137,20 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             answers_field.timestamp,
             answers_field.createdBlock,
         ] + self._get_fields_for_reality_questions(answers_field.question)
+
+    def _get_fields_for_responses(self, responses_field: FieldPath) -> list[FieldPath]:
+        return [
+            responses_field.id,
+            responses_field.timestamp,
+            responses_field.answer,
+            responses_field.isUnrevealed,
+            responses_field.isCommitment,
+            responses_field.bond,
+            responses_field.user,
+            responses_field.historyHash,
+            responses_field.createdBlock,
+            responses_field.revealedBlock,
+        ] + self._get_fields_for_reality_questions(responses_field.question)
 
     def _get_fields_for_market_questions(
         self, questions_field: FieldPath
@@ -180,11 +197,13 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def _build_where_statements(
         self,
         creator: t.Optional[HexAddress] = None,
+        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
         opened_after: t.Optional[datetime] = None,
         finalized_before: t.Optional[datetime] = None,
+        finalized_after: t.Optional[datetime] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
         liquidity_bigger_than: Wei | None = None,
@@ -207,7 +226,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             ]
 
         if creator:
-            where_stms["creator"] = creator
+            where_stms["creator"] = creator.lower()
+
+        if creator_in:
+            where_stms["creator_in"] = [x.lower() for x in creator_in]
 
         if created_after:
             where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
@@ -247,6 +269,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if finalized_before:
             where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
                 finalized_before
+            )
+
+        if finalized_after:
+            where_stms["answerFinalizedTimestamp_gt"] = to_int_timestamp(
+                finalized_after
             )
 
         # `excluded_question_titles` can not be an empty list, otherwise the API bugs out and returns nothing.
@@ -336,9 +363,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         opened_before: t.Optional[datetime] = None,
         opened_after: t.Optional[datetime] = None,
         finalized_before: t.Optional[datetime] = None,
+        finalized_after: t.Optional[datetime] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
         creator: t.Optional[HexAddress] = None,
+        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
         id_in: list[str] | None = None,
@@ -358,11 +387,13 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         """
         where_stms = self._build_where_statements(
             creator=creator,
+            creator_in=creator_in,
             outcomes=outcomes,
             created_after=created_after,
             opened_before=opened_before,
             opened_after=opened_after,
             finalized_before=finalized_before,
+            finalized_after=finalized_after,
             finalized=finalized,
             resolved=resolved,
             condition_id_in=condition_id_in,
@@ -587,6 +618,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
+        finalized_before: datetime | None = None,
+        finalized_after: datetime | None = None,
+        id_in: list[str] | None = None,
+        question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityQuestion]:
         where_stms: dict[str, t.Any] = {}
 
@@ -603,6 +638,22 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
                 current_answer_before
             )
+
+        if finalized_before is not None:
+            where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
+                finalized_before
+            )
+
+        if finalized_after is not None:
+            where_stms["answerFinalizedTimestamp_gt"] = to_int_timestamp(
+                finalized_after
+            )
+
+        if id_in is not None:
+            where_stms["id_in"] = id_in
+
+        if question_id_in is not None:
+            where_stms["questionId_in"] = [x.hex() for x in question_id_in]
 
         questions = self.realityeth_subgraph.Query.questions(where=where_stms)
         fields = self._get_fields_for_reality_questions(questions)
@@ -622,6 +673,17 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
+
+    def get_responses(self, question_id: HexBytes) -> list[RealityResponse]:
+        response = self.realityeth_subgraph.Response
+        where_stms = [
+            response.question.questionId == question_id.hex(),
+        ]
+        responses = self.realityeth_subgraph.Query.responses(where=where_stms)
+        fields = self._get_fields_for_responses(responses)
+        result = self.sg.query_json(fields)
+        items = self._parse_items_from_json(result)
+        return [RealityResponse.model_validate(i) for i in items]
 
     def get_markets_from_all_user_positions(
         self, user_positions: list[OmenUserPosition]

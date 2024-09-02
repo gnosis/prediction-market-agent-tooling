@@ -470,6 +470,8 @@ class RealityQuestion(BaseModel):
     updatedTimestamp: datetime
     contentHash: HexBytes
     questionId: HexBytes
+    answerFinalizedTimestamp: datetime
+    currentScheduledFinalizationTimestamp: datetime
 
     @property
     def url(self) -> str:
@@ -484,6 +486,32 @@ class RealityAnswer(BaseModel):
     bondAggregate: Wei
     question: RealityQuestion
     createdBlock: int
+
+
+class RealityResponse(BaseModel):
+    """
+    This is similar to `RealityAnswer`, but contains additional fields, most importantly `historyHash`.
+    """
+
+    id: str
+    timestamp: datetime
+    answer: HexBytes
+    isUnrevealed: bool
+    isCommitment: bool
+    bond: Wei
+    user: HexAddress
+    historyHash: HexBytes
+    question: RealityQuestion
+    createdBlock: int
+    revealedBlock: int | None
+
+    @property
+    def bond_xdai(self) -> xDai:
+        return wei_to_xdai(self.bond)
+
+    @property
+    def user_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.user)
 
 
 class RealityAnswers(BaseModel):

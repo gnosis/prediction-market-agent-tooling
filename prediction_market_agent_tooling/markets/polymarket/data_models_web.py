@@ -38,7 +38,7 @@ class Event(BaseModel):
 
 
 class Event1(BaseModel):
-    startDate: datetime
+    startDate: datetime | None = None
     slug: str
 
 
@@ -78,13 +78,13 @@ class Market(BaseModel):
     conditionId: str
     slug: str
     twitterCardImage: t.Any | None = None
-    resolutionSource: str
+    resolutionSource: str | None = None
     endDate: datetime
     category: t.Any | None = None
     ammType: t.Any | None = None
     description: str
     liquidity: str | None = None
-    startDate: datetime
+    startDate: datetime | None = None
     createdAt: datetime
     xAxisValue: t.Any | None = None
     yAxisValue: t.Any | None = None
@@ -93,8 +93,8 @@ class Market(BaseModel):
     lowerBound: t.Any | None = None
     upperBound: t.Any | None = None
     outcomes: list[str]
-    image: str
-    icon: str
+    image: str | None = None
+    icon: str | None = None
     imageOptimized: t.Any | None = None
     iconOptimized: t.Any | None = None
     outcomePrices: list[USDC]
@@ -108,23 +108,23 @@ class Market(BaseModel):
     marketMakerAddress: HexAddress
     closedTime: datetime | None = None
     wideFormat: bool | None = None
-    new: bool
+    new: bool | None = None
     sentDiscord: t.Any | None = None
     mailchimpTag: t.Any | None = None
-    featured: bool
-    submitted_by: str
+    featured: bool | None = None
+    submitted_by: str | None = None
     subcategory: t.Any | None = None
     categoryMailchimpTag: t.Any | None = None
-    archived: bool
-    resolvedBy: str
-    restricted: bool
-    groupItemTitle: str
-    groupItemThreshold: str
-    questionID: str
+    archived: bool | None = None
+    resolvedBy: str | None = None
+    restricted: bool | None = None
+    groupItemTitle: str | None = None
+    groupItemThreshold: str | None = None
+    questionID: str | None = None
     umaEndDate: t.Any | None = None
-    enableOrderBook: bool
-    orderPriceMinTickSize: float
-    orderMinSize: int
+    enableOrderBook: bool | None = None
+    orderPriceMinTickSize: float | None = None
+    orderMinSize: int | None = None
     umaResolutionStatus: t.Any | None = None
     curationOrder: t.Any | None = None
     volumeNum: USDC | None = None
@@ -134,9 +134,9 @@ class Market(BaseModel):
     umaEndDateIso: datetime | None = None
     commentsEnabled: bool | None = None
     disqusThread: t.Any | None = None
-    gameStartTime: datetime | None = None
+    gameStartTime: t.Any | None = None
     secondsDelay: int | None = None
-    clobTokenIds: list[str]
+    clobTokenIds: list[str] | None = None
     liquidityAmm: float | None = None
     liquidityClob: float | None = None
     makerBaseFee: int | None = None
@@ -144,27 +144,27 @@ class Market(BaseModel):
     negRisk: t.Any | None = None
     negRiskRequestID: t.Any | None = None
     negRiskMarketID: t.Any | None = None
-    events: list[Event]
+    events: list[Event] | None = None
     markets: list[Market1] | None = None
     lower_bound_date: t.Any | None = None
     upper_bound_date: t.Any | None = None
     market_type: str | None = None
-    resolution_source: str
-    end_date: str
+    resolution_source: str | None = None
+    end_date: str | None = None
     amm_type: t.Any | None = None
     x_axis_value: t.Any | None = None
     y_axis_value: t.Any | None = None
     denomination_token: t.Any | None = None
-    resolved_by: str
+    resolved_by: str | None = None
     upper_bound: t.Any | None = None
     lower_bound: t.Any | None = None
-    created_at: str
+    created_at: str | None = None
     updated_at: t.Any | None = None
     closed_time: t.Any | None = None
     wide_format: bool | None = None
     volume_num: USDC | None = None
     liquidity_num: USDC | None = None
-    image_raw: str
+    image_raw: str | None = None
     resolutionData: ResolutionData
 
     @field_validator("closedTime", mode="before")
@@ -234,19 +234,19 @@ class PolymarketFullMarket(BaseModel):
     title: str
     subtitle: t.Any | None = None
     description: str
-    commentCount: int
-    resolutionSource: str
-    startDate: datetime
+    commentCount: int | None = None
+    resolutionSource: str | None = None
+    startDate: datetime | None = None
     endDate: datetime
-    image: str
-    icon: str
+    image: str | None = None
+    icon: str | None = None
     featuredImage: str | None = None
     active: bool
     closed: bool
-    archived: bool
-    new: bool
-    featured: bool
-    restricted: bool
+    archived: bool | None = None
+    new: bool | None = None
+    featured: bool | None = None
+    restricted: bool | None = None
     liquidity: USDC | None = None
     volume: USDC | None = None
     volume24hr: USDC | None = None
@@ -257,7 +257,7 @@ class PolymarketFullMarket(BaseModel):
     commentsEnabled: bool | None = None
     disqusThread: t.Any | None = None
     updatedAt: datetime
-    enableOrderBook: bool
+    enableOrderBook: bool | None = None
     liquidityAmm: float | None = None
     liquidityClob: float | None = None
     imageOptimized: ImageOptimized | None = None
@@ -269,7 +269,7 @@ class PolymarketFullMarket(BaseModel):
     markets: list[Market]
     categories: list[Category] | None = None
     series: t.Any | None = None
-    image_raw: str
+    image_raw: str | None = None
 
     @property
     def url(self) -> str:
@@ -298,6 +298,8 @@ class PolymarketFullMarket(BaseModel):
 
         Warning: This is a very slow operation, as it requires fetching the website. Use it only when necessary.
         """
+        logger.info(f"Fetching full market from {url}")
+
         # Fetch the website as a normal browser would.
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
@@ -352,7 +354,8 @@ class State(BaseModel):
         | dict[str, MarketBidsAndAsks]
         | dict[str, PriceSide]
         | None
-    )  # It's none if you go to the website and it says "Oops...we didn't forecast this".
+        # It's none if you go to the website and it says "Oops...we didn't forecast this".
+    )
     dataUpdateCount: int
     dataUpdatedAt: int
     error: t.Any | None = None

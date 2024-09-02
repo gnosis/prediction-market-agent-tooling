@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenUserPosition,
     RealityAnswer,
     RealityQuestion,
+    RealityResponse,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,
@@ -118,6 +119,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             questions_field.questionId,
             questions_field.contentHash,
             questions_field.historyHash,
+            questions_field.answerFinalizedTimestamp,
+            questions_field.currentScheduledFinalizationTimestamp,
         ]
 
     def _get_fields_for_answers(self, answers_field: FieldPath) -> list[FieldPath]:
@@ -129,6 +132,20 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             answers_field.timestamp,
             answers_field.createdBlock,
         ] + self._get_fields_for_reality_questions(answers_field.question)
+
+    def _get_fields_for_responses(self, responses_field: FieldPath) -> list[FieldPath]:
+        return [
+            responses_field.id,
+            responses_field.timestamp,
+            responses_field.answer,
+            responses_field.isUnrevealed,
+            responses_field.isCommitment,
+            responses_field.bond,
+            responses_field.user,
+            responses_field.historyHash,
+            responses_field.createdBlock,
+            responses_field.revealedBlock,
+        ] + self._get_fields_for_reality_questions(responses_field.question)
 
     def _get_fields_for_market_questions(
         self, questions_field: FieldPath
@@ -582,6 +599,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
+        id_in: list[str] | None = None,
+        question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityQuestion]:
         where_stms: dict[str, t.Any] = {}
 
@@ -598,6 +617,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
                 current_answer_before
             )
+
+        if id_in is not None:
+            where_stms["id_in"] = id_in
+
+        if question_id_in is not None:
+            where_stms["questionId_in"] = [x.hex() for x in question_id_in]
 
         questions = self.realityeth_subgraph.Query.questions(where=where_stms)
         fields = self._get_fields_for_reality_questions(questions)
@@ -617,6 +642,17 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
+
+    def get_responses(self, question_id: HexBytes) -> list[RealityResponse]:
+        response = self.realityeth_subgraph.Response
+        where_stms = [
+            response.question.questionId == question_id.hex(),
+        ]
+        responses = self.realityeth_subgraph.Query.responses(where=where_stms)
+        fields = self._get_fields_for_responses(responses)
+        result = self.sg.query_json(fields)
+        items = self._parse_items_from_json(result)
+        return [RealityResponse.model_validate(i) for i in items]
 
     def get_markets_from_all_user_positions(
         self, user_positions: list[OmenUserPosition]

@@ -1,3 +1,4 @@
+import copy
 import sys
 import typing as t
 from datetime import datetime
@@ -623,11 +624,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if user is not None:
             where_stms["user"] = user.lower()
 
-        if claimed is not None:
-            if claimed:
-                where_stms["historyHash"] = ZERO_BYTES.hex()
-            else:
-                where_stms["historyHash_not"] = ZERO_BYTES.hex()
+        where_stms = self.apply_question_claimed_filter(where_stms, claimed)
 
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
@@ -669,11 +666,38 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
 
-    def get_responses(self, question_id: HexBytes) -> list[RealityResponse]:
-        response = self.realityeth_subgraph.Response
-        where_stms = [
-            response.question.questionId == question_id.hex(),
-        ]
+    @staticmethod
+    def apply_question_claimed_filter(
+        where_stms: dict[str, t.Any], claimed: bool | None
+    ) -> dict[str, t.Any]:
+        where_stms = copy.deepcopy(where_stms)
+
+        if claimed is not None:
+            if claimed:
+                where_stms["historyHash"] = ZERO_BYTES.hex()
+            else:
+                where_stms["historyHash_not"] = ZERO_BYTES.hex()
+
+        return where_stms
+
+    def get_responses(
+        self,
+        user: HexAddress | None = None,
+        question_id: HexBytes | None = None,
+        claimed: bool | None = None,
+    ) -> list[RealityResponse]:
+        where_stms: dict[str, t.Any] = {"question_": {}}
+
+        if user is not None:
+            where_stms["user"] = user.lower()
+
+        if question_id is not None:
+            where_stms["question_"]["questionId"] = question_id.hex()
+
+        where_stms["question_"] = self.apply_question_claimed_filter(
+            where_stms["question_"], claimed
+        )
+
         responses = self.realityeth_subgraph.Query.responses(where=where_stms)
         fields = self._get_fields_for_responses(responses)
         result = self.sg.query_json(fields)

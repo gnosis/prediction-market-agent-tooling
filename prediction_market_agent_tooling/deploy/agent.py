@@ -348,25 +348,32 @@ class DeployableTraderAgent(DeployableAgent):
         check_for_trades: bool = True,
     ) -> None:
         api_keys = APIKeys()
-        if self.min_required_balance_to_operate is None:
-            return
-        if market_type == MarketType.OMEN:
-            if check_for_gas and not is_minimum_required_balance(
+        if (
+            market_type == MarketType.OMEN
+            and check_for_gas
+            and not is_minimum_required_balance(
                 api_keys.public_key,
                 min_required_balance=xdai_type(0.001),
                 sum_wxdai=False,
-            ):
-                raise CantPayForGasError(
-                    f"{api_keys.public_key=} doesn't have enough xDai to pay for gas."
-                )
-            if check_for_trades and not is_minimum_required_balance(
+            )
+        ):
+            raise CantPayForGasError(
+                f"{api_keys.public_key=} doesn't have enough xDai to pay for gas."
+            )
+        if self.min_required_balance_to_operate is None:
+            return
+        if (
+            market_type == MarketType.OMEN
+            and check_for_trades
+            and not is_minimum_required_balance(
                 api_keys.bet_from_address,
                 min_required_balance=self.min_required_balance_to_operate,
-            ):
-                raise OutOfFundsError(
-                    f"Minimum required balance {self.min_required_balance_to_operate} "
-                    f"for agent with address {api_keys.bet_from_address=} is not met."
-                )
+            )
+        ):
+            raise OutOfFundsError(
+                f"Minimum required balance {self.min_required_balance_to_operate} "
+                f"for agent with address {api_keys.bet_from_address=} is not met."
+            )
 
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
         return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)

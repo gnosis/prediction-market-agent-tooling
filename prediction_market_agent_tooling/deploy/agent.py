@@ -100,6 +100,10 @@ def initialize_langfuse(enable_langfuse: bool) -> None:
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
+class CantPayForGasError(ValueError):
+    pass
+
+
 class OutOfFundsError(ValueError):
     pass
 
@@ -337,17 +341,38 @@ class DeployableTraderAgent(DeployableAgent):
             ]
         )
 
-    def check_min_required_balance_to_operate(self, market_type: MarketType) -> None:
+    def check_min_required_balance_to_operate(
+        self,
+        market_type: MarketType,
+        check_for_gas: bool = True,
+        check_for_trades: bool = True,
+    ) -> None:
         api_keys = APIKeys()
+        if (
+            market_type == MarketType.OMEN
+            and check_for_gas
+            and not is_minimum_required_balance(
+                api_keys.public_key,
+                min_required_balance=xdai_type(0.001),
+                sum_wxdai=False,
+            )
+        ):
+            raise CantPayForGasError(
+                f"{api_keys.public_key=} doesn't have enough xDai to pay for gas."
+            )
         if self.min_required_balance_to_operate is None:
             return
-        if market_type == MarketType.OMEN and not is_minimum_required_balance(
-            api_keys.public_key,
-            min_required_balance=self.min_required_balance_to_operate,
+        if (
+            market_type == MarketType.OMEN
+            and check_for_trades
+            and not is_minimum_required_balance(
+                api_keys.bet_from_address,
+                min_required_balance=self.min_required_balance_to_operate,
+            )
         ):
             raise OutOfFundsError(
                 f"Minimum required balance {self.min_required_balance_to_operate} "
-                f"for agent with address {api_keys.public_key} is not met."
+                f"for agent with address {api_keys.bet_from_address=} is not met."
             )
 
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
@@ -448,8 +473,13 @@ class DeployableTraderAgent(DeployableAgent):
         """
         api_keys = APIKeys()
         if market_type == MarketType.OMEN:
+            # First, check if we have enough xDai to pay for gas, there is no way of doing anything without it.
+            self.check_min_required_balance_to_operate(
+                market_type, check_for_trades=False
+            )
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
             redeem_from_all_user_positions(api_keys)
+            # After redeeming, check if we have enough xDai to pay for gas and place bets.
             self.check_min_required_balance_to_operate(market_type)
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
             if self.min_balance_to_keep_in_native_currency is not None:

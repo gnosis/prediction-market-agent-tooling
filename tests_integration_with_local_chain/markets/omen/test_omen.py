@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.data_models import (
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
+    get_bet_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -270,7 +271,7 @@ def test_omen_buy_and_sell_outcome(
     # You can double check your address at https://gnosisscan.io/ afterwards.
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     outcome = True
-    outcome_str = OmenAgentMarket.get_bet_outcome(outcome)
+    outcome_str = get_bet_outcome(outcome)
     bet_amount = market.get_bet_amount(amount=0.4)
 
     # TODO hack until https://github.com/gnosis/prediction-market-agent-tooling/issues/266 is complete

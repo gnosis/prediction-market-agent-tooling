@@ -137,7 +137,7 @@ class AgentMarket(BaseModel):
     def get_tiny_bet_amount(cls) -> BetAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def liquidate_existing_positions(self, outcome: bool) -> float:
+    def liquidate_existing_positions(self, outcome: bool) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:

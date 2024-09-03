@@ -423,18 +423,17 @@ class DeployableTraderAgent(DeployableAgent):
             logger.info(
                 f"Placing bet on {market} with direction {amount_and_direction.direction} and amount {amount_and_direction.amount}"
             )
-            extra_bet_amount_from_opposite_bets: float = 0
+
             if not allow_opposite_bets:
-                # If we have an existing position, sell it first if they bet on a different outcome.
-                sold_amount = market.liquidate_existing_positions(
-                    amount_and_direction.direction
+                logger.info(
+                    f"Liquidating existing positions contrary to direction {amount_and_direction.direction}"
                 )
-                extra_bet_amount_from_opposite_bets += sold_amount
+                # If we have an existing position, sell it first if they bet on a different outcome.
+                market.liquidate_existing_positions(amount_and_direction.direction)
 
             market.place_bet(
                 amount=TokenAmount(
-                    amount=amount_and_direction.amount
-                    + extra_bet_amount_from_opposite_bets,
+                    amount=amount_and_direction.amount,
                     currency=amount_and_direction.currency,
                 ),
                 outcome=amount_and_direction.direction,

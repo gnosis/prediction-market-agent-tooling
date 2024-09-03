@@ -2,6 +2,8 @@ import typing as t
 from datetime import datetime
 from math import ceil
 
+from loguru import logger
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -49,9 +51,9 @@ class ManifoldAgentMarket(AgentMarket):
         # Manifold lowest bet is 1 Mana, so we need to ceil the result.
         return mana_type(ceil(minimum_bet_to_win(answer, amount_to_win, self)))
 
-    def liquidate_existing_positions(self, outcome: bool) -> float:
+    def liquidate_existing_positions(self, outcome: bool) -> None:
         # Not implemented for Manifold.
-        return 0
+        logger.info("Liquidating positions on Manifold is not implemented yet.")
 
     def place_bet(self, outcome: bool, amount: BetAmount) -> None:
         if amount.currency != self.currency:

@@ -40,6 +40,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
     OmenUserPosition,
+    get_boolean_outcome,
+    get_bet_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
@@ -149,20 +151,12 @@ class OmenAgentMarket(AgentMarket):
     def get_tiny_bet_amount(cls) -> BetAmount:
         return BetAmount(amount=0.00001, currency=cls.currency)
 
-    @staticmethod
-    def get_bet_outcome(binary_outcome: bool) -> str:
-        return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
-
-    @staticmethod
-    def get_bet_outcome_bool(bet_outcome: OutcomeStr) -> bool:
-        return True if bet_outcome == OMEN_TRUE_OUTCOME else False
-
     def liquidate_existing_positions(
         self,
         bet_outcome: bool,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-    ) -> float:
+    ) -> None:
         """
         Liquidates all previously existing positions.
         Returns the amount in collateral obtained by selling the positions.
@@ -173,21 +167,11 @@ class OmenAgentMarket(AgentMarket):
         prev_positions_for_market = self.get_positions(
             user_id=better_address, liquid_only=True
         )
-        sold_amount = 0.0
+
         for prev_position in prev_positions_for_market:
             for position_outcome, token_amount in prev_position.amounts.items():
-                position_outcome_bool = self.get_bet_outcome_bool(position_outcome)
+                position_outcome_bool = get_boolean_outcome(position_outcome)
                 if position_outcome_bool != bet_outcome:
-                    # Calculate collateral amount from selling this position and add to
-                    # total amount sold (in collateral tokens).
-                    sell_amount_in_collateral = (
-                        self.calculate_sell_amount_in_collateral(
-                            amount=token_amount,
-                            outcome=position_outcome_bool,
-                            web3=web3,
-                        )
-                    )
-
                     # We keep it as collateral since we want to place a bet immediately after this function.
                     self.sell_tokens(
                         outcome=position_outcome_bool,
@@ -195,8 +179,6 @@ class OmenAgentMarket(AgentMarket):
                         auto_withdraw=False,
                         web3=web3,
                     )
-                    sold_amount += sell_amount_in_collateral
-        return sold_amount
 
     def place_bet(
         self,
@@ -646,7 +628,7 @@ def binary_omen_buy_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=OmenAgentMarket.get_bet_outcome(binary_outcome),
+        outcome=get_bet_outcome(binary_outcome),
         auto_deposit=auto_deposit,
         web3=web3,
     )
@@ -735,7 +717,7 @@ def binary_omen_sell_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=OmenAgentMarket.get_bet_outcome(binary_outcome),
+        outcome=get_bet_outcome(binary_outcome),
         auto_withdraw=auto_withdraw,
         web3=web3,
     )

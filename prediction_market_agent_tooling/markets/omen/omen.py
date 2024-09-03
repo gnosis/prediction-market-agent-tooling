@@ -158,13 +158,17 @@ class OmenAgentMarket(AgentMarket):
         return True if bet_outcome == OMEN_TRUE_OUTCOME else False
 
     def liquidate_existing_positions(
-        self, bet_outcome: bool, web3: Web3 | None = None
+        self,
+        bet_outcome: bool,
+        web3: Web3 | None = None,
+        api_keys: APIKeys | None = None,
     ) -> float:
         """
         Liquidates all previously existing positions.
         Returns the amount in collateral obtained by selling the positions.
         """
-        better_address = APIKeys().bet_from_address
+        api_keys = api_keys if api_keys is not None else APIKeys()
+        better_address = api_keys.bet_from_address
 
         prev_positions_for_market = self.get_positions(
             user_id=better_address, liquid_only=True

@@ -381,7 +381,7 @@ def test_place_bet_with_prev_existing_positions(
 
     # Place a bet using a standard account (from .env)
     bet_amount = BetAmount(amount=1, currency=Currency.xDai)
-    omen_agent_market.place_bet(True, bet_amount, web3=local_web3)
+    omen_agent_market.place_bet(True, bet_amount, web3=local_web3, api_keys=test_keys)
 
     conditional_token = OmenConditionalTokenContract()
     conditional_tokens_contract = local_web3.eth.contract(
@@ -414,7 +414,9 @@ def test_place_bet_with_prev_existing_positions(
         return_value=mock_positions,
     ):
         # We now want to sell the recently opened position.
-        omen_agent_market.liquidate_existing_positions(False, web3=local_web3)
+        omen_agent_market.liquidate_existing_positions(
+            False, web3=local_web3, api_keys=test_keys
+        )
 
     position_balance_after_sell = get_position_balance_by_position_id(
         from_address=test_keys.bet_from_address, position_id=pos_id, web3=local_web3

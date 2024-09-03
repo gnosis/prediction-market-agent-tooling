@@ -360,7 +360,7 @@ def test_place_bet_with_autodeposit(
 
 def get_position_balance_by_position_id(
     from_address: ChecksumAddress, position_id: int, web3: Web3
-) -> int:
+) -> Wei:
     """Fetches balance from a given position in the ConditionalTokens contract."""
     return OmenConditionalTokenContract().balanceOf(
         from_address=from_address,

@@ -164,7 +164,7 @@ class OmenAgentMarket(AgentMarket):
         Liquidates all previously existing positions.
         Returns the amount in collateral obtained by selling the positions.
         """
-        better_address = APIKeys().public_key
+        better_address = APIKeys().bet_from_address
 
         prev_positions_for_market = self.get_positions(
             user_id=better_address, liquid_only=True

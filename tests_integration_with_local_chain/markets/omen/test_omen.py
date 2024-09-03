@@ -421,4 +421,4 @@ def test_place_bet_with_prev_existing_positions(
     )
 
     # Assert positions were liquidated
-    assert wei_to_xdai(Wei(position_balance_after_sell)) < 0.001  # xDAI
+    assert wei_to_xdai(position_balance_after_sell) < 0.001  # xDAI

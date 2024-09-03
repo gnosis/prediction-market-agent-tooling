@@ -423,5 +423,7 @@ def test_place_bet_with_prev_existing_positions(
         from_address=test_keys.bet_from_address, position_id=pos_id, web3=local_web3
     )
 
-    # Assert positions were liquidated
-    assert wei_to_xdai(position_balance_after_sell) < 0.001  # xDAI
+    # We assert that positions were liquidated if < 1% of the original outcome tokens bought remain
+    # in the position. This is because of implementation details in the ConditionalTokens contract,
+    # avoiding the position to be fully sold.
+    assert position_balance_after_sell < 0.01 * position_balance  # xDAI

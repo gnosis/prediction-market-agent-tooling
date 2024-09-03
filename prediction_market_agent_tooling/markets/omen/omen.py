@@ -40,8 +40,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
     OmenUserPosition,
-    get_boolean_outcome,
     get_bet_outcome,
+    get_boolean_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,

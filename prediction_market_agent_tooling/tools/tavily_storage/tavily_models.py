@@ -1,6 +1,7 @@
 import typing as t
 from datetime import datetime, timedelta
 
+import tenacity
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import Column
@@ -112,6 +113,7 @@ class TavilyStorage:
         logger.debug(f"tables being added {TavilyResponseModel}")
         SQLModel.metadata.create_all(self.engine)
 
+    @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
     def save(
         self,
         query: str,
@@ -144,6 +146,7 @@ class TavilyStorage:
             session.add(db_item)
             session.commit()
 
+    @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
     def find(
         self,
         query: str,

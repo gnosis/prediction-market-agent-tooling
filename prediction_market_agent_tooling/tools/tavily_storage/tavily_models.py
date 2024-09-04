@@ -44,7 +44,7 @@ class TavilyResponseModel(SQLModel, table=True):
     id: int | None = Field(None, primary_key=True)
     agent_id: str = Field(index=True, nullable=False)
     # Parameters used to execute the search
-    query: str
+    query: str = Field(index=True, nullable=False)
     search_depth: str
     topic: str
     max_results: int

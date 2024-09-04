@@ -1,4 +1,3 @@
-import copy
 import sys
 import typing as t
 from datetime import datetime
@@ -372,8 +371,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
         # TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
-        collateral_token_address_in: tuple[ChecksumAddress, ...]
-        | None = (
+        collateral_token_address_in: tuple[ChecksumAddress, ...] | None = (
             WrappedxDaiContract().address,
             sDaiContract().address,
         ),
@@ -610,8 +608,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         return [b for b in bets if b.fpmm.is_resolved_with_valid_answer]
 
     @staticmethod
-    def apply_question_filters(
-        where_stms: dict[str, t.Any] | None = None,
+    def get_question_filters(
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
@@ -621,7 +618,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
     ) -> dict[str, t.Any]:
-        where_stms = copy.deepcopy(where_stms) if where_stms is not None else {}
+        where_stms: dict[str, t.Any] = {}
 
         if user is not None:
             where_stms["user"] = user.lower()
@@ -668,7 +665,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         id_in: list[str] | None = None,
         question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityQuestion]:
-        where_stms: dict[str, t.Any] = self.apply_question_filters(
+        where_stms: dict[str, t.Any] = self.get_question_filters(
             user=user,
             claimed=claimed,
             finalized_before=finalized_before,
@@ -708,7 +705,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if user is not None:
             where_stms["user"] = user.lower()
 
-        where_stms["question_"] = self.apply_question_filters(
+        where_stms["question_"] = self.get_question_filters(
             question_id=question_id,
             claimed=question_claimed,
             finalized_before=question_finalized_before,

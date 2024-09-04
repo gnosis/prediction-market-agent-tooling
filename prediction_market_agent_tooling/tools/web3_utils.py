@@ -154,7 +154,7 @@ def _prepare_tx_params(
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
     if access_list is not None:
-        tx_params_new["access_list"] = access_list
+        tx_params_new["accessList"] = access_list
 
     return tx_params_new
 

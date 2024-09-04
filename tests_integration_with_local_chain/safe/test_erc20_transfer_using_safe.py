@@ -7,7 +7,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, xdai_type
+from prediction_market_agent_tooling.tools.web3_utils import Wei, xdai_to_wei, xdai_type
 
 
 def test_erc20_send_updates_balance(
@@ -60,3 +60,6 @@ def test_erc20_send_updates_balance(
         account2.address, local_web3
     )
     assert updated_balance_account2 == amount_deposit
+    # Withdraw Safe's wxdai to Safe's xdai
+    amount_withdraw = Wei(updated_balance_safe // 2)
+    collateral_token_contract.withdraw(test_keys, amount_withdraw, web3=local_web3)

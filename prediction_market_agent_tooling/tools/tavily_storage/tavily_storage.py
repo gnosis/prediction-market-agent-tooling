@@ -29,6 +29,21 @@ def tavily_search(
 
     Argument default values are different from the original method, to return everything by default, because it can be handy in the future and it doesn't increase the costs.
     """
+    if tavily_storage and (
+        response_parsed := tavily_storage.find(
+            query=query,
+            search_depth=search_depth,
+            topic=topic,
+            max_results=max_results,
+            include_domains=include_domains,
+            exclude_domains=exclude_domains,
+            include_answer=include_answer,
+            include_raw_content=include_raw_content,
+            include_images=include_images,
+            use_cache=use_cache,
+        )
+    ):
+        return response_parsed
     response = _tavily_search(
         query=query,
         search_depth=search_depth,

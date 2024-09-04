@@ -1,13 +1,23 @@
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import ARRAY, Field, Session, SQLModel, String, create_engine
+from sqlmodel import (
+    ARRAY,
+    Field,
+    Session,
+    SQLModel,
+    String,
+    create_engine,
+    desc,
+    select,
+)
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class TavilyResult(BaseModel):
@@ -133,3 +143,37 @@ class TavilyStorage:
         with Session(self.engine) as session:
             session.add(db_item)
             session.commit()
+
+    def find(
+        self,
+        query: str,
+        search_depth: t.Literal["basic", "advanced"],
+        topic: t.Literal["general", "news"],
+        max_results: int,
+        include_domains: t.Sequence[str] | None,
+        exclude_domains: t.Sequence[str] | None,
+        include_answer: bool,
+        include_raw_content: bool,
+        include_images: bool,
+        use_cache: bool,
+        max_age: timedelta = timedelta(days=1),
+    ) -> TavilyResponse | None:
+        with Session(self.engine) as session:
+            sql_query = (
+                select(TavilyResponseModel)
+                .where(TavilyResponseModel.query == query)
+                .where(TavilyResponseModel.search_depth == search_depth)
+                .where(TavilyResponseModel.topic == topic)
+                .where(TavilyResponseModel.max_results == max_results)
+                .where(TavilyResponseModel.include_domains == include_domains)
+                .where(TavilyResponseModel.exclude_domains == exclude_domains)
+                .where(TavilyResponseModel.include_answer == include_answer)
+                .where(TavilyResponseModel.include_raw_content == include_raw_content)
+                .where(TavilyResponseModel.include_images == include_images)
+                .where(TavilyResponseModel.use_cache == use_cache)
+                .where(TavilyResponseModel.datetime_ >= utcnow() - max_age)
+            )
+            item = session.exec(
+                sql_query.order_by(desc(TavilyResponseModel.datetime_))
+            ).first()
+            return TavilyResponse.model_validate(item.response) if item else None

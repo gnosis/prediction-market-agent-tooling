@@ -118,10 +118,10 @@ def prepare_tx(
     from_address: ChecksumAddress | None,
     function_name: str,
     function_params: Optional[list[Any] | dict[str, Any]] = None,
-    accessList: Optional[AccessList] = None,
+    access_list: Optional[AccessList] = None,
     tx_params: Optional[TxParams] = None,
 ) -> TxParams:
-    tx_params_new = _prepare_tx_params(web3, from_address, accessList, tx_params)
+    tx_params_new = _prepare_tx_params(web3, from_address, access_list, tx_params)
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
     # Build the transaction.
@@ -133,7 +133,7 @@ def prepare_tx(
 def _prepare_tx_params(
     web3: Web3,
     from_address: ChecksumAddress | None,
-    accessList: Optional[AccessList] = None,
+    access_list: Optional[AccessList] = None,
     tx_params: Optional[TxParams] = None,
 ) -> TxParams:
     # Fill in required defaults, if not provided.
@@ -153,8 +153,8 @@ def _prepare_tx_params(
         from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
-    if accessList is not None:
-        tx_params_new["accessList"] = accessList
+    if access_list is not None:
+        tx_params_new["access_list"] = access_list
 
     return tx_params_new
 
@@ -224,7 +224,7 @@ def send_function_on_contract_tx_using_safe(
     eoa_public_key = private_key_to_public_key(from_private_key)
     # See https://ethereum.stackexchange.com/questions/123750/how-to-implement-eip-2930-access-list for details,
     # required to not go out-of-gas when calling a contract functions using Safe.
-    accessList = AccessList(
+    access_list = AccessList(
         [
             AccessListEntry(
                 {
@@ -253,7 +253,7 @@ def send_function_on_contract_tx_using_safe(
         from_address=safe_address,
         function_name=function_name,
         function_params=function_params,
-        accessList=accessList,
+        access_list=access_list,
         tx_params=tx_params,
     )
     safe_tx = s.build_multisig_tx(

@@ -156,6 +156,7 @@ class OmenAgentMarket(AgentMarket):
         bet_outcome: bool,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
+        larger_than: float = 0.01,
     ) -> None:
         """
         Liquidates all previously existing positions.
@@ -165,7 +166,7 @@ class OmenAgentMarket(AgentMarket):
         better_address = api_keys.bet_from_address
 
         prev_positions_for_market = self.get_positions(
-            user_id=better_address, liquid_only=True
+            user_id=better_address, liquid_only=True, larger_than=larger_than
         )
 
         for prev_position in prev_positions_for_market:

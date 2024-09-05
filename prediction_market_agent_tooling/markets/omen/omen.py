@@ -77,6 +77,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
 )
 
 OMEN_DEFAULT_REALITIO_BOND_VALUE = xdai_type(0.01)
+OMEN_TINY_BET_AMOUNT = xdai_type(0.00001)
 
 
 class OmenAgentMarket(AgentMarket):
@@ -149,14 +150,16 @@ class OmenAgentMarket(AgentMarket):
 
     @classmethod
     def get_tiny_bet_amount(cls) -> BetAmount:
-        return BetAmount(amount=0.00001, currency=cls.currency)
+        return BetAmount(amount=OMEN_TINY_BET_AMOUNT, currency=cls.currency)
 
     def liquidate_existing_positions(
         self,
         bet_outcome: bool,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-        larger_than_in_xdai: float = 1e-6,  # should be smaller than tiny_bet_amount
+        larger_than: xDai = xdai_type(
+            OMEN_TINY_BET_AMOUNT / 10
+        ),  # should be smaller than tiny_bet_amount
     ) -> None:
         """
         Liquidates all previously existing positions.
@@ -166,7 +169,7 @@ class OmenAgentMarket(AgentMarket):
         better_address = api_keys.bet_from_address
 
         prev_positions_for_market = self.get_positions(
-            user_id=better_address, liquid_only=True, larger_than=larger_than_in_xdai
+            user_id=better_address, liquid_only=True, larger_than=larger_than
         )
 
         for prev_position in prev_positions_for_market:

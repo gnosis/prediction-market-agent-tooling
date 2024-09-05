@@ -49,6 +49,7 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: list[str]
+    # outcome_tokens: list[TokenAmount]
     resolution: Resolution | None
     created_time: datetime | None
     close_time: datetime | None

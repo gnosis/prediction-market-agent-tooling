@@ -177,7 +177,7 @@ def test_get_responses(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     question_id = HexBytes.fromhex(
         HexStr("0xdcb2691a9ec05e25a6e595a9972b482ea65b789d978b27c0c06ff97345fce919")
     )
-    responses = omen_subgraph_handler.get_responses(question_id)
+    responses = omen_subgraph_handler.get_responses(question_id=question_id)
     assert len(responses) == 1
     answer = responses[0]
     assert answer.question.user == HexAddress(

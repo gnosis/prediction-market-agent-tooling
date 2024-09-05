@@ -613,20 +613,24 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         )
         return [b for b in bets if b.fpmm.is_resolved_with_valid_answer]
 
-    def get_questions(
-        self,
+    @staticmethod
+    def get_reality_question_filters(
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
         finalized_before: datetime | None = None,
         finalized_after: datetime | None = None,
         id_in: list[str] | None = None,
+        question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
-    ) -> list[RealityQuestion]:
+    ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {}
 
         if user is not None:
             where_stms["user"] = user.lower()
+
+        if question_id is not None:
+            where_stms["questionId"] = question_id.hex()
 
         if claimed is not None:
             if claimed:
@@ -655,6 +659,27 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if question_id_in is not None:
             where_stms["questionId_in"] = [x.hex() for x in question_id_in]
 
+        return where_stms
+
+    def get_questions(
+        self,
+        user: HexAddress | None = None,
+        claimed: bool | None = None,
+        current_answer_before: datetime | None = None,
+        finalized_before: datetime | None = None,
+        finalized_after: datetime | None = None,
+        id_in: list[str] | None = None,
+        question_id_in: list[HexBytes] | None = None,
+    ) -> list[RealityQuestion]:
+        where_stms: dict[str, t.Any] = self.get_reality_question_filters(
+            user=user,
+            claimed=claimed,
+            finalized_before=finalized_before,
+            finalized_after=finalized_after,
+            current_answer_before=current_answer_before,
+            id_in=id_in,
+            question_id_in=question_id_in,
+        )
         questions = self.realityeth_subgraph.Query.questions(where=where_stms)
         fields = self._get_fields_for_reality_questions(questions)
         result = self.sg.query_json(fields)
@@ -674,11 +699,24 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         items = self._parse_items_from_json(result)
         return [RealityAnswer.model_validate(i) for i in items]
 
-    def get_responses(self, question_id: HexBytes) -> list[RealityResponse]:
-        response = self.realityeth_subgraph.Response
-        where_stms = [
-            response.question.questionId == question_id.hex(),
-        ]
+    def get_responses(
+        self,
+        user: HexAddress | None = None,
+        question_id: HexBytes | None = None,
+        question_claimed: bool | None = None,
+        question_finalized_before: datetime | None = None,
+    ) -> list[RealityResponse]:
+        where_stms: dict[str, t.Any] = {}
+
+        if user is not None:
+            where_stms["user"] = user.lower()
+
+        where_stms["question_"] = self.get_reality_question_filters(
+            question_id=question_id,
+            claimed=question_claimed,
+            finalized_before=question_finalized_before,
+        )
+
         responses = self.realityeth_subgraph.Query.responses(where=where_stms)
         fields = self._get_fields_for_responses(responses)
         result = self.sg.query_json(fields)

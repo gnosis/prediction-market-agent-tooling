@@ -1079,13 +1079,19 @@ def is_minimum_required_balance(
     address: ChecksumAddress,
     min_required_balance: xDai,
     web3: Web3 | None = None,
+    sum_xdai: bool = True,
+    sum_wxdai: bool = True,
 ) -> bool:
     """
     Checks if the total balance of xDai and wxDai in the wallet is above the minimum required balance.
     """
     current_balances = get_balances(address, web3)
     # xDai and wxDai have equal value and can be exchanged for almost no cost, so we can sum them up.
-    total_balance = current_balances.xdai + current_balances.wxdai
+    total_balance = 0.0
+    if sum_xdai:
+        total_balance += current_balances.xdai
+    if sum_wxdai:
+        total_balance += current_balances.wxdai
     return total_balance >= min_required_balance
 
 

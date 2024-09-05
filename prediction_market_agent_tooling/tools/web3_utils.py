@@ -10,7 +10,7 @@ from gnosis.safe.safe import Safe
 from pydantic.types import SecretStr
 from web3 import Web3
 from web3.constants import HASH_ZERO
-from web3.types import Nonce, TxParams, TxReceipt, Wei
+from web3.types import AccessList, AccessListEntry, Nonce, TxParams, TxReceipt, Wei
 
 from prediction_market_agent_tooling.gtypes import (
     ABI,
@@ -118,9 +118,10 @@ def prepare_tx(
     from_address: ChecksumAddress | None,
     function_name: str,
     function_params: Optional[list[Any] | dict[str, Any]] = None,
+    access_list: Optional[AccessList] = None,
     tx_params: Optional[TxParams] = None,
 ) -> TxParams:
-    tx_params_new = _prepare_tx_params(web3, from_address, tx_params)
+    tx_params_new = _prepare_tx_params(web3, from_address, access_list, tx_params)
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
     # Build the transaction.
@@ -132,6 +133,7 @@ def prepare_tx(
 def _prepare_tx_params(
     web3: Web3,
     from_address: ChecksumAddress | None,
+    access_list: Optional[AccessList] = None,
     tx_params: Optional[TxParams] = None,
 ) -> TxParams:
     # Fill in required defaults, if not provided.
@@ -150,6 +152,9 @@ def _prepare_tx_params(
     if not tx_params_new.get("nonce"):
         from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
+
+    if access_list is not None:
+        tx_params_new["accessList"] = access_list
 
     return tx_params_new
 
@@ -211,6 +216,36 @@ def send_function_on_contract_tx_using_safe(
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
 ) -> TxReceipt:
+    if not web3.provider.endpoint_uri:  # type: ignore
+        raise EnvironmentError("RPC_URL not available in web3 object.")
+    ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
+    s = Safe(safe_address, ethereum_client)  # type: ignore
+    safe_master_copy_address = s.retrieve_master_copy_address()
+    eoa_public_key = private_key_to_public_key(from_private_key)
+    # See https://ethereum.stackexchange.com/questions/123750/how-to-implement-eip-2930-access-list for details,
+    # required to not go out-of-gas when calling a contract functions using Safe.
+    access_list = AccessList(
+        [
+            AccessListEntry(
+                {
+                    "address": eoa_public_key,
+                    "storageKeys": [HASH_ZERO],
+                }
+            ),
+            AccessListEntry(
+                {
+                    "address": safe_address,
+                    "storageKeys": [HASH_ZERO],
+                }
+            ),
+            AccessListEntry(
+                {
+                    "address": safe_master_copy_address,
+                    "storageKeys": [],
+                }
+            ),
+        ]
+    )
     tx_params = prepare_tx(
         web3=web3,
         contract_address=contract_address,
@@ -218,13 +253,9 @@ def send_function_on_contract_tx_using_safe(
         from_address=safe_address,
         function_name=function_name,
         function_params=function_params,
+        access_list=access_list,
         tx_params=tx_params,
     )
-
-    if not web3.provider.endpoint_uri:  # type: ignore
-        raise EnvironmentError(f"RPC_URL not available in web3 object.")
-    ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
-    s = Safe(safe_address, ethereum_client)  # type: ignore
     safe_tx = s.build_multisig_tx(
         to=Web3.to_checksum_address(tx_params["to"]),
         data=HexBytes(tx_params["data"]),
@@ -270,7 +301,7 @@ def send_xdai_to(
     tx_params_new: TxParams = {"value": value, "to": to_address}
     if tx_params:
         tx_params_new.update(tx_params)
-    tx_params_new = _prepare_tx_params(web3, from_address, tx_params_new)
+    tx_params_new = _prepare_tx_params(web3, from_address, tx_params=tx_params_new)
 
     # We need gas and gasPrice here (and not elsewhere) because we are not calling
     # contract.functions.myFunction().build_transaction, which autofills some params

@@ -24,6 +24,9 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
 from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
@@ -185,7 +188,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
     col3.markdown(f"Public ID: `{agent.public_id}`")
 
     show_agent_bets = st.checkbox(
-        "Show resolved bets statistics", value=False, key=f"{agent.name}_show_bets"
+        "Show resolved bets statistics", value=True, key=f"{agent.name}_show_bets"
     )
     if not show_agent_bets:
         return
@@ -196,6 +199,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
         return
     bets_info = {
         "Market Question": [bet.market_question for bet in agent_bets],
+        "Market ID": [bet.market_id for bet in agent_bets],
         "Bet Amount": [bet.amount.amount for bet in agent_bets],
         "Bet Outcome": [bet.outcome for bet in agent_bets],
         "Created Time": [bet.created_time for bet in agent_bets],
@@ -207,7 +211,7 @@ def monitor_agent(agent: DeployedAgent) -> None:
     # Time column to use for x-axes and sorting
     x_axis_column = st.selectbox(
         "X-axis column",
-        ["Created Time", "Resolved Time"],
+        ["Resolved Time", "Created Time"],
         key=f"{agent.name}_x_axis_column",
     )
 
@@ -261,11 +265,34 @@ def monitor_agent(agent: DeployedAgent) -> None:
 
     # Table of resolved bets
     show_bet_history = st.checkbox(
-        "Show resolved bet history", value=False, key=f"{agent.name}_show_bet_history"
+        "Show resolved bet history", value=True, key=f"{agent.name}_show_bet_history"
     )
     if show_bet_history:
+        bets_df = bets_df.drop(columns=["x-axis-day"]).reset_index(drop=True)
+
+        # drop rows where "Is Correct" is not false
+        bets_df = bets_df[~bets_df["Is Correct"]]
+
+        market_ids_list = list(set(bets_df["Market ID"].tolist()))
+        omen_markets = OmenSubgraphHandler().get_omen_binary_markets(
+            id_in=market_ids_list,
+            limit=None,
+        )
+        creators_map = {
+            "0x89c5cc945dd550bcffb72fe42bff002429f46fec": "Olas 1",
+            "0xffc8029154ecd55abed15bd428ba596e7d23f557": "Olas 0",
+            "0x993dfce14768e4de4c366654be57c21d9ba54748": "Replicator",
+        }
+        market_ids_to_creators = {
+            market.id: creators_map[market.creator] for market in omen_markets
+        }
+        bets_df["Creator"] = bets_df["Market ID"].map(market_ids_to_creators)
+
+        # drop all rows unless "Creator" is "Replicator"
+        # bets_df = bets_df[bets_df["Creator"] == "Replicator"]
+
         st.subheader("Resolved Bet History")
-        st.table(bets_df.drop(columns=["x-axis-day"]))
+        st.table(bets_df)
 
 
 def monitor_market(

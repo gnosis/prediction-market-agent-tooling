@@ -349,10 +349,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             sort_by_field=sort_by_field,
             created_after=created_after,
             excluded_questions=excluded_questions,
-            creator_in=[
-                "0x89c5cc945dd550bcffb72fe42bff002429f46fec",
-                "0xffc8029154ecd55abed15bd428ba596e7d23f557",
-            ],
+            creator_in=["0x993dfce14768e4de4c366654be57c21d9ba54748"],
         )
 
     def get_omen_binary_markets(

@@ -55,39 +55,40 @@ for market in open_markets:
         max_bet=total_balance,
     ).size
     print(
-        f"{market.title[:20]}..., p_yes: {market.current_p_yes:.2f} mm_95: {market_moving_bet_95:.2f}, kelly_yes: {kelly_bet_yes:.2f}, mm_05: {market_moving_bet_05:.2f} kelly_no: {kelly_bet_no:.2f}"
+        f"{market.title[:20]}..., p_yes: {market.current_p_yes:.2f}, market_volume: {market.usdVolume:.2f}, mm_95: {market_moving_bet_95:.2f}, kelly_yes: {kelly_bet_yes:.2f}, mm_05: {market_moving_bet_05:.2f} kelly_no: {kelly_bet_no:.2f}"
     )
 
 
 """
 ## Replicator
 
-Will Nvidia be the l..., p_yes: 0.46 mm_95: 31.38, kelly_yes: 76.80, mm_05: 31.38 kelly_no: 91.85
-Will Kamala Harris g..., p_yes: 0.59 mm_95: 31.71, kelly_yes: 98.66, mm_05: 39.64 kelly_no: 69.99
-Will any part of the..., p_yes: 0.57 mm_95: 31.55, kelly_yes: 95.92, mm_05: 31.55 kelly_no: 72.73
-Will Trump replace J..., p_yes: 0.43 mm_95: 31.54, kelly_yes: 72.83, mm_05: 31.54 kelly_no: 95.82
-Will Donald Trump be..., p_yes: 0.51 mm_95: 31.26, kelly_yes: 86.03, mm_05: 31.26 kelly_no: 82.62
-Will Manifold hire a..., p_yes: 0.50 mm_95: 31.25, kelly_yes: 84.33, mm_05: 31.25 kelly_no: 84.33
-Will OpenAI release ..., p_yes: 0.50 mm_95: 31.25, kelly_yes: 84.33, mm_05: 31.25 kelly_no: 84.33
-Will creator of Tele..., p_yes: 0.49 mm_95: 31.26, kelly_yes: 82.29, mm_05: 31.26 kelly_no: 86.37
-Will the Fed make an..., p_yes: 0.48 mm_95: 31.27, kelly_yes: 81.48, mm_05: 31.27 kelly_no: 87.17
-Will Maduro lose pow..., p_yes: 0.49 mm_95: 31.26, kelly_yes: 82.29, mm_05: 31.26 kelly_no: 86.37
+Will Nvidia be the l..., p_yes: 0.46, market_volume: 5.88, mm_95: 31.38, kelly_yes: 76.80, mm_05: 31.38 kelly_no: 91.85
+Will Kamala Harris g..., p_yes: 0.59, market_volume: 3.92, mm_95: 31.71, kelly_yes: 98.66, mm_05: 39.64 kelly_no: 69.99
+Will any part of the..., p_yes: 0.57, market_volume: 3.92, mm_95: 31.55, kelly_yes: 95.92, mm_05: 31.55 kelly_no: 72.73
+Will Trump replace J..., p_yes: 0.43, market_volume: 1.47, mm_95: 31.54, kelly_yes: 72.83, mm_05: 31.54 kelly_no: 95.82
+Will Donald Trump be..., p_yes: 0.51, market_volume: 2.25, mm_95: 31.26, kelly_yes: 86.03, mm_05: 31.26 kelly_no: 82.62
+Will Manifold hire a..., p_yes: 0.50, market_volume: 0.00, mm_95: 31.25, kelly_yes: 84.33, mm_05: 31.25 kelly_no: 84.33
+Will OpenAI release ..., p_yes: 0.50, market_volume: 0.00, mm_95: 31.25, kelly_yes: 84.33, mm_05: 31.25 kelly_no: 84.33
+Will creator of Tele..., p_yes: 0.49, market_volume: 0.24, mm_95: 31.26, kelly_yes: 82.29, mm_05: 31.26 kelly_no: 86.37
+Will the Fed make an..., p_yes: 0.48, market_volume: 0.34, mm_95: 31.27, kelly_yes: 81.48, mm_05: 31.27 kelly_no: 87.17
+Will Maduro lose pow..., p_yes: 0.49, market_volume: 0.24, mm_95: 31.26, kelly_yes: 82.29, mm_05: 31.26 kelly_no: 86.37
 
 ## Olas creator
 
-Will the Chinese sta..., p_yes: 0.12 mm_95: 29.95, kelly_yes: 19.47, mm_05: 8.56 kelly_no: 149.18
-Will the sales of LG..., p_yes: 0.51 mm_95: 21.88, kelly_yes: 85.40, mm_05: 21.88 kelly_no: 83.25
-Will the Arsenal vs ..., p_yes: 0.53 mm_95: 21.92, kelly_yes: 89.60, mm_05: 21.92 kelly_no: 79.05
-Will Coco Gauff win ..., p_yes: 0.14 mm_95: 31.45, kelly_yes: 23.73, mm_05: 15.73 kelly_no: 144.92
-Will the average rat..., p_yes: 0.50 mm_95: 21.88, kelly_yes: 84.33, mm_05: 21.88 kelly_no: 84.33
-Will Mohamed Salah s..., p_yes: 0.49 mm_95: 21.88, kelly_yes: 82.28, mm_05: 21.88 kelly_no: 86.37
-Will the court case ..., p_yes: 0.50 mm_95: 21.88, kelly_yes: 84.33, mm_05: 21.88 kelly_no: 84.33
-Will the content car..., p_yes: 0.73 mm_95: 18.42, kelly_yes: 122.66, mm_05: 24.56 kelly_no: 45.99
-Will the California ..., p_yes: 0.57 mm_95: 22.06, kelly_yes: 95.31, mm_05: 22.06 kelly_no: 73.34
-Will Liverpool forwa..., p_yes: 0.50 mm_95: 21.88, kelly_yes: 83.49, mm_05: 21.88 kelly_no: 85.16
+Will the Chinese sta..., p_yes: 0.12, market_volume: 12.38, mm_95: 29.95, kelly_yes: 19.47, mm_05: 8.56 kelly_no: 149.18
+Will the sales of LG..., p_yes: 0.52, market_volume: 22.65, mm_95: 21.90, kelly_yes: 88.40, mm_05: 21.90 kelly_no: 80.25
+Will the Arsenal vs ..., p_yes: 0.53, market_volume: 28.58, mm_95: 21.92, kelly_yes: 89.60, mm_05: 21.92 kelly_no: 79.05
+Will Coco Gauff win ..., p_yes: 0.14, market_volume: 24.11, mm_95: 31.45, kelly_yes: 23.73, mm_05: 15.73 kelly_no: 144.92
+Will the average rat..., p_yes: 0.50, market_volume: 0.00, mm_95: 21.88, kelly_yes: 84.33, mm_05: 21.88 kelly_no: 84.33
+Will Mohamed Salah s..., p_yes: 0.60, market_volume: 24.92, mm_95: 22.34, kelly_yes: 101.36, mm_05: 27.92 kelly_no: 67.29
+Will the court case ..., p_yes: 0.50, market_volume: 0.00, mm_95: 21.88, kelly_yes: 84.33, mm_05: 21.88 kelly_no: 84.33
+Will the content car..., p_yes: 0.73, market_volume: 40.38, mm_95: 18.42, kelly_yes: 122.66, mm_05: 24.56 kelly_no: 45.99
+Will the California ..., p_yes: 0.57, market_volume: 0.98, mm_95: 22.06, kelly_yes: 95.31, mm_05: 22.06 kelly_no: 73.34
+Will Liverpool forwa..., p_yes: 0.50, market_volume: 1.91, mm_95: 21.88, kelly_yes: 83.49, mm_05: 21.88 kelly_no: 85.16
 
 ## key
 
+market_volume: volume in USD of the market
 mm_95: bet size to move the market to p_yes = 0.95
 mm_05: bet size to move the market to p_yes = 0.05
 kelly_yes: bet size on 'yes' outcome if using KellyBettingStrategy and max_bet==KnownOutcomeAgent.balance

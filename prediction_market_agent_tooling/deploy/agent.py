@@ -442,7 +442,16 @@ class DeployableTraderAgent(DeployableAgent):
             self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
-        amount_and_direction = self.calculate_bet_amount_and_direction(answer, market)
+        # amount_and_direction = self.calculate_bet_amount_and_direction(answer, market)
+
+        target_position = self.strategy.calculate_target_position(answer, market)
+        # ToDo - Retrieve existing position from market - market.get_positions
+        existing_position = None
+        trades = self.strategy.build_trades(existing_position, target_position)
+
+        # ToDo
+        #  - get target trades (strategy.build_trades)
+        #  - execute them with either market.buy/sell
 
         if self.place_bet:
             logger.info(

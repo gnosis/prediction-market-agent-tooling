@@ -40,6 +40,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
     OmenUserPosition,
+    get_bet_outcome,
+    get_boolean_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
@@ -75,6 +77,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
 )
 
 OMEN_DEFAULT_REALITIO_BOND_VALUE = xdai_type(0.01)
+OMEN_TINY_BET_AMOUNT = xdai_type(0.00001)
 
 
 class OmenAgentMarket(AgentMarket):
@@ -147,7 +150,39 @@ class OmenAgentMarket(AgentMarket):
 
     @classmethod
     def get_tiny_bet_amount(cls) -> BetAmount:
-        return BetAmount(amount=0.00001, currency=cls.currency)
+        return BetAmount(amount=OMEN_TINY_BET_AMOUNT, currency=cls.currency)
+
+    def liquidate_existing_positions(
+        self,
+        bet_outcome: bool,
+        web3: Web3 | None = None,
+        api_keys: APIKeys | None = None,
+        larger_than: xDai = xdai_type(
+            OMEN_TINY_BET_AMOUNT / 10
+        ),  # should be smaller than tiny_bet_amount
+    ) -> None:
+        """
+        Liquidates all previously existing positions.
+        Returns the amount in collateral obtained by selling the positions.
+        """
+        api_keys = api_keys if api_keys is not None else APIKeys()
+        better_address = api_keys.bet_from_address
+
+        prev_positions_for_market = self.get_positions(
+            user_id=better_address, liquid_only=True, larger_than=larger_than
+        )
+
+        for prev_position in prev_positions_for_market:
+            for position_outcome, token_amount in prev_position.amounts.items():
+                position_outcome_bool = get_boolean_outcome(position_outcome)
+                if position_outcome_bool != bet_outcome:
+                    # We keep it as collateral since we want to place a bet immediately after this function.
+                    self.sell_tokens(
+                        outcome=position_outcome_bool,
+                        amount=token_amount,
+                        auto_withdraw=False,
+                        web3=web3,
+                    )
 
     def place_bet(
         self,
@@ -597,7 +632,7 @@ def binary_omen_buy_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
+        outcome=get_bet_outcome(binary_outcome),
         auto_deposit=auto_deposit,
         web3=web3,
     )
@@ -686,7 +721,7 @@ def binary_omen_sell_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME,
+        outcome=get_bet_outcome(binary_outcome),
         auto_withdraw=auto_withdraw,
         web3=web3,
     )

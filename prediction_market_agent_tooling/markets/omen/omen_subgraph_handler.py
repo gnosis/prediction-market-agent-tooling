@@ -4,13 +4,18 @@ from datetime import datetime
 
 import requests
 import tenacity
-from eth_typing import ChecksumAddress
 from PIL import Image
 from PIL.Image import Image as ImageType
 from subgrounds import FieldPath, Subgrounds
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, wei_type
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    HexAddress,
+    HexBytes,
+    Wei,
+    wei_type,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -756,7 +761,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_market_image(self, market_id: HexAddress) -> ImageType | None:
         image_url = self.get_market_image_url(market_id)
         return (
-            Image.open(requests.get(image_url, stream=True).raw)
+            Image.open(requests.get(image_url, stream=True).raw)  # type: ignore[arg-type]
             if image_url is not None
             else None
         )

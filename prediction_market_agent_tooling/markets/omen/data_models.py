@@ -44,6 +44,10 @@ def get_boolean_outcome(outcome_str: str) -> bool:
     raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
 
 
+def get_bet_outcome(binary_outcome: bool) -> str:
+    return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
+
+
 class Condition(BaseModel):
     id: HexBytes
     outcomeSlotCount: int

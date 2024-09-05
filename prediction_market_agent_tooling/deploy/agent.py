@@ -283,6 +283,7 @@ class DeployableTraderAgent(DeployableAgent):
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
     strategy: BettingStrategy = MaxAccuracyBettingStrategy()
+    allow_opposite_bets: bool = False
 
     def __init__(
         self,
@@ -422,7 +423,10 @@ class DeployableTraderAgent(DeployableAgent):
         self.update_langfuse_trace_by_market(market_type, market)
 
     def process_market(
-        self, market_type: MarketType, market: AgentMarket, verify_market: bool = True
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        verify_market: bool = True,
     ) -> ProcessedMarket | None:
         self.before_process_market(market_type, market)
 
@@ -444,6 +448,14 @@ class DeployableTraderAgent(DeployableAgent):
             logger.info(
                 f"Placing bet on {market} with direction {amount_and_direction.direction} and amount {amount_and_direction.amount}"
             )
+
+            if not self.allow_opposite_bets:
+                logger.info(
+                    f"Liquidating existing positions contrary to direction {amount_and_direction.direction}"
+                )
+                # If we have an existing position, sell it first if they bet on a different outcome.
+                market.liquidate_existing_positions(amount_and_direction.direction)
+
             market.place_bet(
                 amount=TokenAmount(
                     amount=amount_and_direction.amount,

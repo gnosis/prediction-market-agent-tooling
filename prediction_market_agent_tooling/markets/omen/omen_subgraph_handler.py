@@ -761,7 +761,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_market_image(self, market_id: HexAddress) -> ImageType | None:
         image_url = self.get_market_image_url(market_id)
         return (
-            Image.open(requests.get(image_url, stream=True).raw)
+            Image.open(requests.get(image_url, stream=True).raw)  # type: ignore[arg-type]
             if image_url is not None
             else None
         )

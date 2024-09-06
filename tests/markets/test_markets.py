@@ -1,5 +1,6 @@
 import pytest
 
+from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -28,7 +29,7 @@ def test_valid_token_pool() -> None:
         resolution=None,
         created_time=None,
         close_time=None,
-        current_p_yes=0.5,
+        current_p_yes=Probability(0.5),
         url="https://example.com",
         volume=None,
     )
@@ -48,7 +49,7 @@ def test_invalid_token_pool() -> None:
             resolution=None,
             created_time=None,
             close_time=None,
-            current_p_yes=0.5,
+            current_p_yes=Probability(0.5),
             url="https://example.com",
             volume=None,
         )

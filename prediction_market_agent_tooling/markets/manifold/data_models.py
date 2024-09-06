@@ -4,7 +4,7 @@ from enum import Enum
 
 from pydantic import BaseModel, field_validator
 
-from prediction_market_agent_tooling.gtypes import Mana, OutcomeStr, Probability
+from prediction_market_agent_tooling.gtypes import Mana, Probability
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     ProfitAmount,
@@ -19,9 +19,9 @@ class ManifoldPool(BaseModel):
     NO: float
     YES: float
 
-    def size_for_outcome(self, outcome: OutcomeStr) -> float:
+    def size_for_outcome(self, outcome: str) -> float:
         if hasattr(self, outcome):
-            return getattr(self, outcome)
+            return float(getattr(self, outcome))
         else:
             should_not_happen(f"Unexpected outcome string, '{outcome}'.")
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
+from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     BetAmount,
@@ -49,9 +49,9 @@ class AgentMarket(BaseModel):
     id: str
     question: str
     description: str | None
-    outcomes: list[OutcomeStr]
+    outcomes: list[str]
     outcome_token_pool: dict[
-        OutcomeStr, float
+        str, float
     ] | None  # Should be in currency of `currency` above.
     resolution: Resolution | None
     created_time: datetime | None
@@ -70,13 +70,13 @@ class AgentMarket(BaseModel):
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(
         cls,
-        outcome_token_pool: dict[OutcomeStr, float] | None,
+        outcome_token_pool: dict[str, float] | None,
         info: FieldValidationInfo,
-    ):
-        outcomes = info.data.get("outcomes")
+    ) -> dict[str, float] | None:
+        outcomes: list[str] = check_not_none(info.data.get("outcomes"))
         if outcome_token_pool is not None:
             outcome_keys = set(outcome_token_pool.keys())
-            expected_keys = set(check_not_none(outcomes))
+            expected_keys = set(outcomes)
             if outcome_keys != expected_keys:
                 raise ValueError(
                     f"Keys of outcome_token_pool ({outcome_keys}) do not match outcomes ({expected_keys})."
@@ -221,13 +221,13 @@ class AgentMarket(BaseModel):
                 f"Outcome index `{outcome_index}` out of range for `{self.outcomes}`: `{self.outcomes}`."
             )
 
-    def get_outcome_index(self, outcome: OutcomeStr) -> int:
+    def get_outcome_index(self, outcome: str) -> int:
         try:
             return self.outcomes.index(outcome)
         except ValueError:
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
 
-    def get_token_balance(self, user_id: str, outcome: OutcomeStr) -> TokenAmount:
+    def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
     @classmethod
@@ -263,7 +263,7 @@ class AgentMarket(BaseModel):
     def has_token_pool(self) -> bool:
         return self.outcome_token_pool is not None
 
-    def get_pool_tokens(self, outcome: OutcomeStr) -> float:
+    def get_pool_tokens(self, outcome: str) -> float:
         if not self.outcome_token_pool:
             raise ValueError("Outcome token pool is not available.")
 

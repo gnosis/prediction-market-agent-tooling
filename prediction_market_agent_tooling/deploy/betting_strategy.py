@@ -1,29 +1,17 @@
 from abc import ABC, abstractmethod
-from enum import Enum
-
-from pydantic import BaseModel
 
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     Position,
     ProbabilisticAnswer,
     TokenAmount,
+    Trade,
+    TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet,
 )
-
-
-class TradeType(str, Enum):
-    SELL = "sell"
-    BUY = "buy"
-
-
-class Trade(BaseModel):
-    trade_type: TradeType
-    outcome: bool
-    amount: TokenAmount
 
 
 class BettingStrategy(ABC):
@@ -35,6 +23,16 @@ class BettingStrategy(ABC):
         market: AgentMarket,
     ) -> list[Trade]:
         pass
+
+    @staticmethod
+    def _assert_trades_currency_match_markets(
+        market: AgentMarket, trades: list[Trade]
+    ) -> None:
+        currencies_match = all([t.amount.currency == market.currency for t in trades])
+        if not currencies_match:
+            raise ValueError(
+                "Cannot handle trades with currencies that deviate from market's currency"
+            )
 
     @staticmethod
     def _build_rebalance_trades_from_positions(
@@ -74,7 +72,7 @@ class BettingStrategy(ABC):
                 continue
             trade_type = TradeType.SELL if diff_amount < 0 else TradeType.BUY
             trade = Trade(
-                amount=TokenAmount(amount=diff_amount, currency=prev_amount.currency),
+                amount=TokenAmount(amount=diff_amount, currency=market.currency),
                 outcome=outcome_bool,
                 trade_type=trade_type,
             )
@@ -83,6 +81,7 @@ class BettingStrategy(ABC):
 
         # Sort inplace with SELL last
         trades.sort(key=lambda t: t.trade_type == TradeType.SELL)
+        BettingStrategy._assert_trades_currency_match_markets(market, trades)
         return trades
 
 

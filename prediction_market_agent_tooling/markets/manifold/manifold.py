@@ -72,6 +72,9 @@ class ManifoldAgentMarket(AgentMarket):
             current_p_yes=model.probability,
             url=model.url,
             volume=model.volume,
+            outcome_token_pool={
+                o: model.pool.size_for_outcome(o) for o in model.outcomes
+            },
         )
 
     @staticmethod

@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.markets.manifold.api import (
     manifold_to_generic_resolved_bet,
     place_bet,
 )
+from prediction_market_agent_tooling.markets.manifold.data_models import ManifoldPool
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -68,3 +69,13 @@ def test_resolved_manifold_bets(a_user_id: str) -> None:
     # Verify that all bets convert to generic resolved bets.
     for bet, market in zip(resolved_bets, markets):
         manifold_to_generic_resolved_bet(bet, market)
+
+
+def test_manifold_pool() -> None:
+    pool = ManifoldPool(NO=1, YES=2)
+    assert pool.size_for_outcome("NO") == 1.0
+    assert pool.size_for_outcome("YES") == 2.0
+
+    with pytest.raises(ValueError) as e:
+        pool.size_for_outcome("FOO")
+    assert "Unexpected outcome string" in str(e.value)

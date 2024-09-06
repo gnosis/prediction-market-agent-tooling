@@ -39,6 +39,7 @@ class PolymarketAgentMarket(AgentMarket):
             close_time=model.end_date_iso,
             url=model.url,
             volume=None,
+            outcome_token_pool=None,
         )
 
     @classmethod

@@ -345,6 +345,10 @@ class OmenAgentMarket(AgentMarket):
             volume=wei_to_xdai(model.collateralVolume),
             close_time=model.close_time,
             fee=float(wei_to_xdai(model.fee)) if model.fee is not None else 0.0,
+            outcome_token_pool={
+                model.outcomes[i]: wei_to_xdai(model.outcomeTokenAmounts[i])
+                for i in range(len(model.outcomes))
+            },
         )
 
     @staticmethod
@@ -417,7 +421,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     def get_token_balance(
-        self, user_id: str, outcome: str, web3: Web3 | None = None
+        self, user_id: str, outcome: OutcomeStr, web3: Web3 | None = None
     ) -> TokenAmount:
         index_set = self.get_index_set(outcome)
         balances = get_conditional_tokens_balance_for_market(

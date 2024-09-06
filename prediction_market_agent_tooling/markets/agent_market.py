@@ -6,7 +6,7 @@ from eth_typing import ChecksumAddress
 from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     BetAmount,
@@ -192,6 +192,9 @@ class AgentMarket(BaseModel):
 
     def has_unsuccessful_resolution(self) -> bool:
         return self.resolution in [Resolution.CANCEL, Resolution.MKT]
+
+    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+        raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_str(self, outcome_index: int) -> str:
         try:

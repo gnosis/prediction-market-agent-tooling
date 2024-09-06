@@ -5,15 +5,11 @@ from pydantic import BaseModel
 
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
-    ProbabilisticAnswer,
     Position,
+    ProbabilisticAnswer,
     TokenAmount,
 )
-from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_TRUE_OUTCOME,
-    OMEN_FALSE_OUTCOME,
-    get_boolean_outcome,
-)
+from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet,
 )
@@ -31,18 +27,43 @@ class Trade(BaseModel):
 
 
 class BettingStrategy(ABC):
-    @staticmethod
-    def build_trades(
-        existing_position: Position | None, target_position: Position
+    @abstractmethod
+    def calculate_trades(
+        self,
+        existing_position: Position | None,
+        answer: ProbabilisticAnswer,
+        market: AgentMarket,
     ) -> list[Trade]:
+        pass
+
+    @staticmethod
+    def _build_rebalance_trades_from_positions(
+        existing_position: Position | None,
+        target_position: Position,
+        market: AgentMarket,
+    ) -> list[Trade]:
+        """
+        This helper method builds trades by rebalancing token allocations to each outcome.
+        For example, if we have an existing position with 10 tokens in outcome 0 and 5 in outcome 1,
+        and our target position is 20 tokens in outcome 0 and 0 in outcome 1, we would return these trades:
+        trades = [
+            Trade(outcome=0, amount=10, trade_type=TradeType.BUY),
+            Trade(outcome=1, amount=5, trade_type=TradeType.SELL)
+            ]
+        Note that we order the trades to first buy then sell, in order to minimally tilt the odds so that
+        sell price is higher.
+        """
         trades = []
 
-        # ToDo - make market-agnostic
-        outcomes = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
-        for outcome in outcomes:
+        for outcome in [
+            market.get_outcome_str_from_bool(True),
+            market.get_outcome_str_from_bool(False),
+        ]:
             outcome_bool = get_boolean_outcome(outcome)
             prev_amount: TokenAmount = (
-                existing_position.amounts[outcome] if existing_position else 0
+                existing_position.amounts[outcome]
+                if existing_position
+                else TokenAmount(amount=0, currency=market.currency)
             )
             new_amount: TokenAmount = target_position.amounts[outcome]
 
@@ -60,29 +81,21 @@ class BettingStrategy(ABC):
 
             trades.append(trade)
 
+        # Sort inplace with SELL last
+        trades.sort(key=lambda t: t.trade_type == TradeType.SELL)
         return trades
-
-    @abstractmethod
-    def calculate_target_position(
-        self, answer: ProbabilisticAnswer, market: AgentMarket
-    ) -> Position:
-        pass
 
 
 class MaxAccuracyBettingStrategy(BettingStrategy):
     def __init__(self, bet_amount: float | None = None):
         self.bet_amount = bet_amount
 
-    @staticmethod
-    def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
-        # If estimate_p_yes >= market.current_p_yes, then bet TRUE, else bet FALSE.
-        # This is equivalent to saying EXPECTED_VALUE = (estimate_p_yes * num_tokens_obtained_by_betting_yes) -
-        # ((1 - estimate_p_yes) * num_tokens_obtained_by_betting_no) >= 0
-        return estimate_p_yes >= market_p_yes
-
-    def calculate_target_position(
-        self, answer: ProbabilisticAnswer, market: AgentMarket
-    ) -> Position:
+    def calculate_trades(
+        self,
+        existing_position: Position | None,
+        answer: ProbabilisticAnswer,
+        market: AgentMarket,
+    ) -> list[Trade]:
         bet_amount = (
             market.get_tiny_bet_amount().amount
             if self.bet_amount is None
@@ -91,44 +104,52 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
         direction = self.calculate_direction(market.current_p_yes, answer.p_yes)
 
         amounts = {
-            direction: TokenAmount(
+            market.get_outcome_str_from_bool(direction): TokenAmount(
                 amount=bet_amount,
                 currency=market.currency,
             ),
-            not direction: TokenAmount(amount=0, currency=market.currency),
+            market.get_outcome_str_from_bool(not direction): TokenAmount(
+                amount=0, currency=market.currency
+            ),
         }
         target_position = Position(market_id=market.id, amounts=amounts)
-        return target_position
+        trades = self._build_rebalance_trades_from_positions(
+            existing_position, target_position, market=market
+        )
+        return trades
+
+    @staticmethod
+    def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
+        # If estimate_p_yes >= market.current_p_yes, then bet TRUE, else bet FALSE.
+        # This is equivalent to saying EXPECTED_VALUE = (estimate_p_yes * num_tokens_obtained_by_betting_yes) -
+        # ((1 - estimate_p_yes) * num_tokens_obtained_by_betting_no) >= 0
+        return estimate_p_yes >= market_p_yes
 
 
 class KellyBettingStrategy(BettingStrategy):
     def __init__(self, max_bet_amount: float = 10):
         self.max_bet_amount = max_bet_amount
 
-    def calculate_target_position(
-        self, answer: ProbabilisticAnswer, market: AgentMarket
-    ) -> Position:
+    def calculate_trades(
+        self,
+        existing_position: Position | None,
+        answer: ProbabilisticAnswer,
+        market: AgentMarket,
+    ) -> list[Trade]:
         kelly_bet = get_kelly_bet(
             self.max_bet_amount, market.current_p_yes, answer.p_yes, answer.confidence
         )
 
         amounts = {
-            kelly_bet.direction: TokenAmount(
+            market.get_outcome_str_from_bool(kelly_bet.direction): TokenAmount(
                 amount=kelly_bet.size, currency=market.currency
             ),
-            not kelly_bet.direction: TokenAmount(amount=0, currency=market.currency),
+            market.get_outcome_str_from_bool(not kelly_bet.direction): TokenAmount(
+                amount=0, currency=market.currency
+            ),
         }
         target_position = Position(market_id=market.id, amounts=amounts)
-        return target_position
-
-    # def calculate_bet_amount_and_direction(
-    #     self, answer: ProbabilisticAnswer, market: AgentMarket
-    # ) -> TokenAmountAndDirection:
-    #     kelly_bet = get_kelly_bet(
-    #         self.max_bet_amount, market.current_p_yes, answer.p_yes, answer.confidence
-    #     )
-    #     return TokenAmountAndDirection(
-    #         amount=kelly_bet.size,
-    #         currency=market.currency,
-    #         direction=kelly_bet.direction,
-    #     )
+        trades = self._build_rebalance_trades_from_positions(
+            existing_position, target_position, market=market
+        )
+        return trades

@@ -416,6 +416,11 @@ class OmenAgentMarket(AgentMarket):
             cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
         )
 
+    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+        return (
+            OutcomeStr(OMEN_TRUE_OUTCOME) if outcome else OutcomeStr(OMEN_FALSE_OUTCOME)
+        )
+
     def get_token_balance(
         self, user_id: str, outcome: str, web3: Web3 | None = None
     ) -> TokenAmount:

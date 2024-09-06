@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     MaxAccuracyBettingStrategy,
+    TradeType,
 )
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -37,10 +38,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
+    Position,
     ProbabilisticAnswer,
-    TokenAmount,
-    TokenAmountAndDirection,
 )
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
@@ -110,7 +109,6 @@ class OutOfFundsError(ValueError):
 
 class ProcessedMarket(BaseModel):
     answer: ProbabilisticAnswer
-    amount: BetAmount
 
 
 class AnsweredEnum(str, Enum):
@@ -299,7 +297,6 @@ class DeployableTraderAgent(DeployableAgent):
         self.have_bet_on_market_since = observe()(self.have_bet_on_market_since)  # type: ignore[method-assign]
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
-        self.calculate_bet_amount_and_direction = observe()(self.calculate_bet_amount_and_direction)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
@@ -314,18 +311,6 @@ class DeployableTraderAgent(DeployableAgent):
                 "market_outcomes": market.outcomes,
             },
         )
-
-    def calculate_bet_amount_and_direction(
-        self, answer: ProbabilisticAnswer, market: AgentMarket
-    ) -> TokenAmountAndDirection:
-        amount_and_direction = self.strategy.calculate_bet_amount_and_direction(
-            answer, market
-        )
-        if amount_and_direction.currency != market.currency:
-            raise ValueError(
-                f"Currency mismatch. Strategy yields {amount_and_direction.currency}, market has currency {market.currency}"
-            )
-        return amount_and_direction
 
     def update_langfuse_trace_by_processed_market(
         self, market_type: MarketType, processed_market: ProcessedMarket | None
@@ -422,6 +407,19 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         self.update_langfuse_trace_by_market(market_type, market)
 
+    @staticmethod
+    def get_existing_position_for_market(
+        market: AgentMarket, user_id: str
+    ) -> Position | None:
+        minimum_liquidatable_amount = market.get_tiny_bet_amount().amount / 10
+        existing_positions = market.get_positions(
+            user_id=user_id, liquid_only=True, larger_than=minimum_liquidatable_amount
+        )
+        existing_position = next(
+            iter([i for i in existing_positions if i.market_id == market.id]), None
+        )
+        return existing_position
+
     def process_market(
         self,
         market_type: MarketType,
@@ -442,42 +440,23 @@ class DeployableTraderAgent(DeployableAgent):
             self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
-        # amount_and_direction = self.calculate_bet_amount_and_direction(answer, market)
-
-        target_position = self.strategy.calculate_target_position(answer, market)
-        # ToDo - Retrieve existing position from market - market.get_positions
-        existing_position = None
-        trades = self.strategy.build_trades(existing_position, target_position)
-
-        # ToDo
-        #  - get target trades (strategy.build_trades)
-        #  - execute them with either market.buy/sell
+        existing_position = self.get_existing_position_for_market(
+            market=market, user_id=APIKeys().public_key
+        )
+        trades = self.strategy.calculate_trades(existing_position, answer, market)
 
         if self.place_bet:
-            logger.info(
-                f"Placing bet on {market} with direction {amount_and_direction.direction} and amount {amount_and_direction.amount}"
-            )
-
-            if not self.allow_opposite_bets:
-                logger.info(
-                    f"Liquidating existing positions contrary to direction {amount_and_direction.direction}"
-                )
-                # If we have an existing position, sell it first if they bet on a different outcome.
-                market.liquidate_existing_positions(amount_and_direction.direction)
-
-            market.place_bet(
-                amount=TokenAmount(
-                    amount=amount_and_direction.amount,
-                    currency=amount_and_direction.currency,
-                ),
-                outcome=amount_and_direction.direction,
-            )
+            for trade in trades:
+                logger.info(f"Executing trade {trade}")
+                if trade.trade_type == TradeType.SELL:
+                    market.sell_tokens(outcome=trade.outcome, amount=trade.amount)
+                else:
+                    market.buy_tokens(outcome=trade.outcome, amount=trade.amount)
 
         self.after_process_market(market_type, market)
 
         processed_market = ProcessedMarket(
             answer=answer,
-            amount=amount_and_direction,
         )
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 

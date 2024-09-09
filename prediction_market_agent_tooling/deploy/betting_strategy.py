@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
+    Currency,
     Position,
     ProbabilisticAnswer,
     TokenAmount,
@@ -24,6 +25,9 @@ class BettingStrategy(ABC):
     ) -> list[Trade]:
         pass
 
+    def build_zero_token_amount(self, currency: Currency) -> TokenAmount:
+        return TokenAmount(amount=0, currency=currency)
+
     @abstractmethod
     def adjust_bet_amount(
         self, existing_position: Position | None, market: AgentMarket
@@ -40,8 +44,8 @@ class BettingStrategy(ABC):
                 "Cannot handle trades with currencies that deviate from market's currency"
             )
 
-    @staticmethod
     def _build_rebalance_trades_from_positions(
+        self,
         existing_position: Position | None,
         target_position: Position,
         market: AgentMarket,
@@ -66,9 +70,11 @@ class BettingStrategy(ABC):
             prev_amount: TokenAmount = (
                 existing_position.amounts[outcome]
                 if existing_position and outcome in existing_position.amounts
-                else TokenAmount(amount=0, currency=market.currency)
+                else self.build_zero_token_amount(currency=market.currency)
             )
-            new_amount: TokenAmount = target_position.amounts[outcome]
+            new_amount: TokenAmount = target_position.amounts.get(
+                outcome, self.build_zero_token_amount(currency=market.currency)
+            )
 
             if prev_amount.currency != new_amount.currency:
                 raise ValueError("Cannot handle positions with different currencies")

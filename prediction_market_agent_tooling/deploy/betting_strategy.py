@@ -53,7 +53,7 @@ class BettingStrategy(ABC):
         trades = [
             Trade(outcome=0, amount=10, trade_type=TradeType.BUY),
             Trade(outcome=1, amount=5, trade_type=TradeType.SELL)
-            ]
+        ]
         Note that we order the trades to first buy then sell, in order to minimally tilt the odds so that
         sell price is higher.
         """

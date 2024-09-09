@@ -122,9 +122,6 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
                 amount=adjusted_bet_amount,
                 currency=market.currency,
             ),
-            market.get_outcome_str_from_bool(not direction): TokenAmount(
-                amount=0, currency=market.currency
-            ),
         }
         target_position = Position(market_id=market.id, amounts=amounts)
         trades = self._build_rebalance_trades_from_positions(
@@ -175,9 +172,6 @@ class KellyBettingStrategy(BettingStrategy):
         amounts = {
             market.get_outcome_str_from_bool(kelly_bet.direction): TokenAmount(
                 amount=kelly_bet.size, currency=market.currency
-            ),
-            market.get_outcome_str_from_bool(not kelly_bet.direction): TokenAmount(
-                amount=0, currency=market.currency
             ),
         }
         target_position = Position(market_id=market.id, amounts=amounts)

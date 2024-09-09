@@ -119,6 +119,7 @@ def test_minimum_bet_to_win(
             volume=None,
             finalized_time=None,
             fee=0.02,
+            outcome_token_pool=None,
         ),
     )
     assert (
@@ -151,6 +152,7 @@ def test_minimum_bet_to_win_manifold(
         resolution=None,
         url="url",
         volume=None,
+        outcome_token_pool=None,
     ).get_minimum_bet_to_win(outcome, amount_to_win)
     assert min_bet == expected_min_bet, f"Expected {expected_min_bet}, got {min_bet}."
 

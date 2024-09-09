@@ -345,6 +345,10 @@ class OmenAgentMarket(AgentMarket):
             volume=wei_to_xdai(model.collateralVolume),
             close_time=model.close_time,
             fee=float(wei_to_xdai(model.fee)) if model.fee is not None else 0.0,
+            outcome_token_pool={
+                model.outcomes[i]: wei_to_xdai(Wei(model.outcomeTokenAmounts[i]))
+                for i in range(len(model.outcomes))
+            },
         )
 
     @staticmethod

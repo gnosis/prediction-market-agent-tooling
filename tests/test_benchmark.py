@@ -75,6 +75,7 @@ def test_benchmark_run(
                 close_time=utcnow() + timedelta(hours=48),
                 resolution=None,
                 created_time=utcnow() - timedelta(hours=48),
+                outcome_token_pool=None,
             )
         ],
         agents=[dummy_agent, dummy_agent_no_prediction],
@@ -121,6 +122,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
                 close_time=utcnow(),
                 resolution=Resolution.NO,
                 created_time=utcnow() - timedelta(hours=48),
+                outcome_token_pool=None,
             )
         ]
         benchmarker = bm.Benchmarker(
@@ -188,6 +190,7 @@ def test_benchmarker_cancelled_markets() -> None:
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
             resolution=Resolution.CANCEL,
+            outcome_token_pool=None,
         )
     ]
     with pytest.raises(ValueError) as e:
@@ -214,6 +217,7 @@ def test_market_probable_resolution() -> None:
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
             resolution=Resolution.CANCEL,
+            outcome_token_pool=None,
         ).probable_resolution
     assert "Unknown resolution" in str(e)
     assert (
@@ -228,6 +232,7 @@ def test_market_probable_resolution() -> None:
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
             resolution=Resolution.YES,
+            outcome_token_pool=None,
         ).probable_resolution
         == Resolution.YES
     )
@@ -243,6 +248,7 @@ def test_market_probable_resolution() -> None:
             close_time=utcnow(),
             resolution=Resolution.NO,
             created_time=utcnow() - timedelta(hours=48),
+            outcome_token_pool=None,
         ).probable_resolution
         == Resolution.NO
     )
@@ -258,6 +264,7 @@ def test_market_probable_resolution() -> None:
             close_time=utcnow(),
             resolution=Resolution.NO,
             created_time=utcnow() - timedelta(hours=48),
+            outcome_token_pool=None,
         ).probable_resolution
         == Resolution.NO
     )
@@ -273,6 +280,7 @@ def test_market_probable_resolution() -> None:
             close_time=utcnow(),
             resolution=Resolution.YES,
             created_time=utcnow() - timedelta(hours=48),
+            outcome_token_pool=None,
         ).probable_resolution
         == Resolution.YES
     )

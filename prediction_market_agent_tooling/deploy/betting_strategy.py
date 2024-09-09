@@ -5,9 +5,12 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProbabilisticAnswer,
     TokenAmountAndDirection,
 )
+from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
-    get_kelly_bet,
+    get_kelly_bet_full,
+    get_kelly_bet_simplified,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class BettingStrategy(ABC):
@@ -52,8 +55,26 @@ class KellyBettingStrategy(BettingStrategy):
     def calculate_bet_amount_and_direction(
         self, answer: ProbabilisticAnswer, market: AgentMarket
     ) -> TokenAmountAndDirection:
-        kelly_bet = get_kelly_bet(
-            self.max_bet_amount, market.current_p_yes, answer.p_yes, answer.confidence
+        # TODO use market.get_outcome_str_from_bool after https://github.com/gnosis/prediction-market-agent-tooling/pull/387 merges
+        kelly_bet = (
+            get_kelly_bet_full(
+                yes_outcome_pool_size=check_not_none(market.outcome_token_pool)[
+                    OMEN_TRUE_OUTCOME
+                ],
+                no_outcome_pool_size=check_not_none(market.outcome_token_pool)[
+                    OMEN_TRUE_OUTCOME
+                ],
+                estimated_p_yes=answer.p_yes,
+                max_bet=self.max_bet_amount,
+                confidence=answer.confidence,
+            )
+            if market.has_token_pool()
+            else get_kelly_bet_simplified(
+                self.max_bet_amount,
+                market.current_p_yes,
+                answer.p_yes,
+                answer.confidence,
+            )
         )
         return TokenAmountAndDirection(
             amount=kelly_bet.size,

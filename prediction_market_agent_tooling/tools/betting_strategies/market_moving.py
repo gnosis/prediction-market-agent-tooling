@@ -43,7 +43,7 @@ def get_market_moving_bet(
 
     # Binary search for the optimal bet amount
     for _ in range(max_iters):
-        bet_amount = (min_bet_amount + max_bet_amount) // 2
+        bet_amount = (min_bet_amount + max_bet_amount) / 2
         amounts_diff = bet_amount * (1 - fee)
 
         # Initial new amounts are old amounts + equal new amounts for each outcome

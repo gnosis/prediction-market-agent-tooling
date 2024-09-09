@@ -90,11 +90,6 @@ class BettingStrategy(ABC):
         return trades
 
 
-"""aaa
-Option 1 - add Mixin with adjust_bet_amount or similar
-Option 2 - rename max_bet_amount and bet_amount -> bet_amount
-Option 3 - whatever, do everything I can in the base class
-"""
 
 
 class MaxAccuracyBettingStrategy(BettingStrategy):

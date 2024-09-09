@@ -90,8 +90,6 @@ class BettingStrategy(ABC):
         return trades
 
 
-
-
 class MaxAccuracyBettingStrategy(BettingStrategy):
     def adjust_bet_amount(
         self, existing_position: Position | None, market: AgentMarket

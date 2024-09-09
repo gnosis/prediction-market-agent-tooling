@@ -152,12 +152,6 @@ class OmenAgentMarket(AgentMarket):
     def get_tiny_bet_amount(cls) -> BetAmount:
         return BetAmount(amount=OMEN_TINY_BET_AMOUNT, currency=cls.currency)
 
-    @classmethod
-    def get_liquidatable_amount(cls) -> BetAmount:
-        tiny_amount = cls.get_tiny_bet_amount()
-        tiny_amount.amount = tiny_amount.amount / 10
-        return tiny_amount
-
     def liquidate_existing_positions(
         self,
         bet_outcome: bool,

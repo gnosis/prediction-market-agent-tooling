@@ -428,7 +428,7 @@ class DeployableTraderAgent(DeployableAgent):
             self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
-        existing_position = market.get_existing_position_for_market(api_keys=APIKeys())
+        existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.strategy.calculate_trades(existing_position, answer, market)
         BettingStrategy.assert_trades_currency_match_markets(market, trades)
 

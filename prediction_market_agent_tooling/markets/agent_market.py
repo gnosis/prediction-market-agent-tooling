@@ -239,8 +239,7 @@ class AgentMarket(BaseModel):
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
-    @classmethod
-    def get_existing_position_for_market(cls, api_keys: APIKeys) -> Position | None:
+    def get_existing_position_for_market(self, api_keys: APIKeys) -> Position | None:
         raise NotImplementedError("Subclasses must implement this method")
 
     @classmethod

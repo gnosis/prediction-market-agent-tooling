@@ -445,17 +445,16 @@ class OmenAgentMarket(AgentMarket):
             currency=self.currency,
         )
 
-    @classmethod
-    def get_existing_position_for_market(cls, api_keys: APIKeys) -> Position | None:
-        liquidatable_amount = cls.get_liquidatable_amount()
+    def get_existing_position_for_market(self, api_keys: APIKeys) -> Position | None:
+        liquidatable_amount = self.get_liquidatable_amount()
         better_address = api_keys.bet_from_address
-        existing_positions = cls.get_positions(
+        existing_positions = self.get_positions(
             user_id=better_address,
             liquid_only=True,
             larger_than=liquidatable_amount.amount,
         )
         existing_position = next(
-            iter([i for i in existing_positions if i.market_id == cls.id]), None
+            iter([i for i in existing_positions if i.market_id == self.id]), None
         )
         return existing_position
 

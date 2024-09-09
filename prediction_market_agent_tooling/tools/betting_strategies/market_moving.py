@@ -65,7 +65,7 @@ def get_market_moving_bet(
             float(fixed_product),
         )
 
-        new_p_yes = Probability(new_amounts[False] / sum(new_amounts))
+        new_p_yes = Probability(new_amounts[False] / sum(list(new_amounts.values())))
         if abs(target_p_yes - new_p_yes) < 0.01:
             break
         elif new_p_yes > target_p_yes:

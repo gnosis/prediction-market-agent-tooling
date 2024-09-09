@@ -34,7 +34,7 @@ def get_market_moving_bet(
     dx = (new_product - fixed_product) / na_y
     """
     fixed_product = yes_outcome_pool_size * no_outcome_pool_size
-    bet_direction: bool = True if target_p_yes > market_p_yes else False
+    bet_direction: bool = target_p_yes > market_p_yes
 
     min_bet_amount = 0.0
     max_bet_amount = 100 * (

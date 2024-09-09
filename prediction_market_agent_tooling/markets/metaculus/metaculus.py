@@ -43,6 +43,7 @@ class MetaculusAgentMarket(AgentMarket):
             volume=None,
             have_predicted=model.my_predictions is not None
             and len(model.my_predictions.predictions) > 0,
+            outcome_token_pool=None,
         )
 
     @staticmethod

@@ -19,6 +19,12 @@ class ManifoldPool(BaseModel):
     NO: float
     YES: float
 
+    def size_for_outcome(self, outcome: str) -> float:
+        if hasattr(self, outcome):
+            return float(getattr(self, outcome))
+        else:
+            should_not_happen(f"Unexpected outcome string, '{outcome}'.")
+
 
 class ManifoldAnswersMode(str, Enum):
     ANYONE = "ANYONE"

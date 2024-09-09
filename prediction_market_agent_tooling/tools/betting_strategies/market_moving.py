@@ -3,7 +3,9 @@ from functools import reduce
 import numpy as np
 
 from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 
 def get_market_moving_bet(
@@ -80,3 +82,53 @@ def get_market_moving_bet(
                 max_bet_amount = bet_amount
 
     return SimpleBet(direction=bet_direction, size=bet_amount)
+
+
+def _sanity_check_omen_market_moving_bet(
+    bet_to_check: SimpleBet, market: OmenAgentMarket, target_p_yes: float
+) -> None:
+    """
+    A util function for checking that a bet moves the market to the target_p_yes
+    by calling the market's calcBuyAmount method from the smart contract, and
+    using the adjusted outcome pool sizes to calculate the new p_yes.
+    """
+    buy_amount = market.get_contract().calcBuyAmount(
+        investment_amount=xdai_to_wei(bet_to_check.size),
+        outcome_index=market.get_outcome_index(
+            market.get_outcome_str_from_bool(bet_to_check.direction)
+        ),
+    )
+    buy_amount = float(wei_to_xdai(buy_amount))
+
+    yes_outcome_pool_size = market.outcome_token_pool[
+        market.get_outcome_str_from_bool(True)
+    ]
+    no_outcome_pool_size = market.outcome_token_pool[
+        market.get_outcome_str_from_bool(False)
+    ]
+    market_const = yes_outcome_pool_size * no_outcome_pool_size
+
+    # When you buy 'yes' tokens, you add your bet size to the both pools, then
+    # subtract `buy_amount` from the 'yes' pool. And vice versa for 'no' tokens.
+    new_yes_outcome_pool_size = (
+        yes_outcome_pool_size
+        + (bet_to_check.size * (1 - market.fee))
+        - float(bet_to_check.direction) * buy_amount
+    )
+    new_no_outcome_pool_size = (
+        no_outcome_pool_size
+        + (bet_to_check.size * (1 - market.fee))
+        - float(not bet_to_check.direction) * buy_amount
+    )
+    new_market_const = new_yes_outcome_pool_size * new_no_outcome_pool_size
+    # Check the invariant is restored
+    assert np.isclose(new_market_const, market_const)
+
+    # Now check that the market's new p_yes is equal to the target_p_yes
+    new_p_yes = new_no_outcome_pool_size / (
+        new_yes_outcome_pool_size + new_no_outcome_pool_size
+    )
+    if not np.isclose(new_p_yes, target_p_yes, atol=0.01):
+        raise ValueError(
+            f"Bet does not move market to target_p_yes {target_p_yes=}. Got {new_p_yes=}"
+        )

@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     wei_type,
     xdai_type,
 )
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )
@@ -33,6 +34,7 @@ from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion im
     get_kelly_bet_simplified,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
+    _sanity_check_omen_market_moving_bet,
     get_market_moving_bet,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
@@ -188,6 +190,31 @@ def test_get_market_moving_bet(
         atol=2.0,  # We don't expect it to be 100% accurate, but close enough.
     )
     assert bet.direction == expected_bet_direction
+
+
+@pytest.mark.parametrize("target_p_yes", [0.1, 0.51, 0.9])
+def test_sanity_check_market_moving_bet(target_p_yes: float) -> None:
+    market = OmenAgentMarket.get_binary_markets(
+        limit=1,
+        sort_by=SortBy.CLOSING_SOONEST,
+        filter_by=FilterBy.OPEN,
+    )[0]
+
+    yes_outcome_pool_size = market.outcome_token_pool[
+        market.get_outcome_str_from_bool(True)
+    ]
+    no_outcome_pool_size = market.outcome_token_pool[
+        market.get_outcome_str_from_bool(False)
+    ]
+
+    market_moving_bet = get_market_moving_bet(
+        yes_outcome_pool_size=yes_outcome_pool_size,
+        no_outcome_pool_size=no_outcome_pool_size,
+        market_p_yes=market.current_p_yes,
+        target_p_yes=target_p_yes,
+        fee=market.fee,
+    )
+    _sanity_check_omen_market_moving_bet(market_moving_bet, market, target_p_yes)
 
 
 @pytest.mark.parametrize(

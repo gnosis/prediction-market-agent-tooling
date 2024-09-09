@@ -115,3 +115,14 @@ class Position(BaseModel):
             for outcome, amount in self.amounts.items()
         )
         return f"Position for market id {self.market_id}: {amounts_str}"
+
+
+class TradeType(str, Enum):
+    SELL = "sell"
+    BUY = "buy"
+
+
+class Trade(BaseModel):
+    trade_type: TradeType
+    outcome: bool
+    amount: TokenAmount

@@ -7,7 +7,7 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     BetAmount,
@@ -154,6 +154,12 @@ class AgentMarket(BaseModel):
         return BetAmount(amount=amount, currency=self.currency)
 
     @classmethod
+    def get_liquidatable_amount(cls) -> BetAmount:
+        tiny_amount = cls.get_tiny_bet_amount()
+        tiny_amount.amount /= 10
+        return tiny_amount
+
+    @classmethod
     def get_tiny_bet_amount(cls) -> BetAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -213,6 +219,9 @@ class AgentMarket(BaseModel):
     def has_unsuccessful_resolution(self) -> bool:
         return self.resolution in [Resolution.CANCEL, Resolution.MKT]
 
+    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+        raise NotImplementedError("Subclasses must implement this method")
+
     def get_outcome_str(self, outcome_index: int) -> str:
         try:
             return self.outcomes[outcome_index]
@@ -228,6 +237,9 @@ class AgentMarket(BaseModel):
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
 
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def get_position(self, user_id: str) -> Position | None:
         raise NotImplementedError("Subclasses must implement this method")
 
     @classmethod

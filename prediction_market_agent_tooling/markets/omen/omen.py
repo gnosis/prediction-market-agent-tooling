@@ -157,9 +157,7 @@ class OmenAgentMarket(AgentMarket):
         bet_outcome: bool,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-        larger_than: xDai = xdai_type(
-            OMEN_TINY_BET_AMOUNT / 10
-        ),  # should be smaller than tiny_bet_amount
+        larger_than: float | None = None,
     ) -> None:
         """
         Liquidates all previously existing positions.
@@ -167,7 +165,11 @@ class OmenAgentMarket(AgentMarket):
         """
         api_keys = api_keys if api_keys is not None else APIKeys()
         better_address = api_keys.bet_from_address
-
+        larger_than = (
+            larger_than
+            if larger_than is not None
+            else self.get_liquidatable_amount().amount
+        )
         prev_positions_for_market = self.get_positions(
             user_id=better_address, liquid_only=True, larger_than=larger_than
         )
@@ -420,6 +422,11 @@ class OmenAgentMarket(AgentMarket):
             cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
         )
 
+    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+        return (
+            OutcomeStr(OMEN_TRUE_OUTCOME) if outcome else OutcomeStr(OMEN_FALSE_OUTCOME)
+        )
+
     def get_token_balance(
         self, user_id: str, outcome: str, web3: Web3 | None = None
     ) -> TokenAmount:
@@ -431,6 +438,18 @@ class OmenAgentMarket(AgentMarket):
             amount=wei_to_xdai(balances[index_set]),
             currency=self.currency,
         )
+
+    def get_position(self, user_id: str) -> Position | None:
+        liquidatable_amount = self.get_liquidatable_amount()
+        existing_positions = self.get_positions(
+            user_id=user_id,
+            liquid_only=True,
+            larger_than=liquidatable_amount.amount,
+        )
+        existing_position = next(
+            iter([i for i in existing_positions if i.market_id == self.id]), None
+        )
+        return existing_position
 
     @classmethod
     def get_positions(

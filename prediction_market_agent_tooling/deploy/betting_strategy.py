@@ -65,7 +65,7 @@ class BettingStrategy(ABC):
             outcome_bool = get_boolean_outcome(outcome)
             prev_amount: TokenAmount = (
                 existing_position.amounts[outcome]
-                if existing_position
+                if existing_position and outcome in existing_position.amounts
                 else TokenAmount(amount=0, currency=market.currency)
             )
             new_amount: TokenAmount = target_position.amounts[outcome]

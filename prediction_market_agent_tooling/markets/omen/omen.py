@@ -152,14 +152,18 @@ class OmenAgentMarket(AgentMarket):
     def get_tiny_bet_amount(cls) -> BetAmount:
         return BetAmount(amount=OMEN_TINY_BET_AMOUNT, currency=cls.currency)
 
+    @classmethod
+    def get_liquidatable_amount(cls) -> BetAmount:
+        tiny_amount = cls.get_tiny_bet_amount()
+        tiny_amount.amount = tiny_amount.amount / 10
+        return tiny_amount
+
     def liquidate_existing_positions(
         self,
         bet_outcome: bool,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-        larger_than: xDai = xdai_type(
-            OMEN_TINY_BET_AMOUNT / 10
-        ),  # should be smaller than tiny_bet_amount
+        larger_than: float | None = None,
     ) -> None:
         """
         Liquidates all previously existing positions.
@@ -167,7 +171,11 @@ class OmenAgentMarket(AgentMarket):
         """
         api_keys = api_keys if api_keys is not None else APIKeys()
         better_address = api_keys.bet_from_address
-
+        larger_than = (
+            larger_than
+            if larger_than is not None
+            else self.get_liquidatable_amount().amount
+        )
         prev_positions_for_market = self.get_positions(
             user_id=better_address, liquid_only=True, larger_than=larger_than
         )
@@ -432,6 +440,20 @@ class OmenAgentMarket(AgentMarket):
             amount=wei_to_xdai(balances[index_set]),
             currency=self.currency,
         )
+
+    @classmethod
+    def get_existing_position_for_market(cls, api_keys: APIKeys) -> Position | None:
+        liquidatable_amount = cls.get_liquidatable_amount()
+        better_address = api_keys.bet_from_address
+        existing_positions = cls.get_positions(
+            user_id=better_address,
+            liquid_only=True,
+            larger_than=liquidatable_amount.amount,
+        )
+        existing_position = next(
+            iter([i for i in existing_positions if i.market_id == cls.id]), None
+        )
+        return existing_position
 
     @classmethod
     def get_positions(

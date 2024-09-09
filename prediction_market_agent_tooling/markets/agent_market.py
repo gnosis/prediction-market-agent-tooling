@@ -134,6 +134,12 @@ class AgentMarket(BaseModel):
         return BetAmount(amount=amount, currency=self.currency)
 
     @classmethod
+    def get_liquidatable_amount(cls) -> BetAmount:
+        tiny_amount = cls.get_tiny_bet_amount()
+        tiny_amount.amount /= 10
+        return tiny_amount
+
+    @classmethod
     def get_tiny_bet_amount(cls) -> BetAmount:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -211,6 +217,10 @@ class AgentMarket(BaseModel):
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
 
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @classmethod
+    def get_existing_position_for_market(cls, api_keys: APIKeys) -> Position | None:
         raise NotImplementedError("Subclasses must implement this method")
 
     @classmethod

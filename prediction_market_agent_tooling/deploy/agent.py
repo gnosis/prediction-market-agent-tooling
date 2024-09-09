@@ -38,8 +38,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
-    Position,
     ProbabilisticAnswer,
+    Trade,
 )
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,
@@ -109,6 +109,7 @@ class OutOfFundsError(ValueError):
 
 class ProcessedMarket(BaseModel):
     answer: ProbabilisticAnswer
+    trades: list[Trade]
 
 
 class AnsweredEnum(str, Enum):
@@ -298,7 +299,6 @@ class DeployableTraderAgent(DeployableAgent):
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
-        self.get_existing_position_for_market = observe()(self.get_existing_position_for_market)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
         self, market_type: MarketType, market: AgentMarket
@@ -408,19 +408,6 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         self.update_langfuse_trace_by_market(market_type, market)
 
-    @staticmethod
-    def get_existing_position_for_market(
-        market: AgentMarket, user_id: str
-    ) -> Position | None:
-        minimum_liquidatable_amount = market.get_tiny_bet_amount().amount / 10
-        existing_positions = market.get_positions(
-            user_id=user_id, liquid_only=True, larger_than=minimum_liquidatable_amount
-        )
-        existing_position = next(
-            iter([i for i in existing_positions if i.market_id == market.id]), None
-        )
-        return existing_position
-
     def process_market(
         self,
         market_type: MarketType,
@@ -441,24 +428,25 @@ class DeployableTraderAgent(DeployableAgent):
             self.update_langfuse_trace_by_processed_market(market_type, None)
             return None
 
-        existing_position = self.get_existing_position_for_market(
-            market=market, user_id=APIKeys().public_key
-        )
+        existing_position = market.get_existing_position_for_market(api_keys=APIKeys())
         trades = self.strategy.calculate_trades(existing_position, answer, market)
+        BettingStrategy.assert_trades_currency_match_markets(market, trades)
 
         if self.place_bet:
             for trade in trades:
                 logger.info(f"Executing trade {trade}")
-                if trade.trade_type == TradeType.SELL:
-                    market.sell_tokens(outcome=trade.outcome, amount=trade.amount)
-                else:
-                    market.buy_tokens(outcome=trade.outcome, amount=trade.amount)
+
+                match trade.trade_type:
+                    case TradeType.BUY:
+                        market.buy_tokens(outcome=trade.outcome, amount=trade.amount)
+                    case TradeType.SELL:
+                        market.sell_tokens(outcome=trade.outcome, amount=trade.amount)
+                    case _:
+                        raise ValueError(f"Unexpected trade type {trade.trade_type}.")
 
         self.after_process_market(market_type, market)
 
-        processed_market = ProcessedMarket(
-            answer=answer,
-        )
+        processed_market = ProcessedMarket(answer=answer, trades=trades)
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 
         return processed_market

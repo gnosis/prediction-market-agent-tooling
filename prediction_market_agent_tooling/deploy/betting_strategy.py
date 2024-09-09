@@ -24,8 +24,14 @@ class BettingStrategy(ABC):
     ) -> list[Trade]:
         pass
 
+    @abstractmethod
+    def adjust_bet_amount(
+        self, existing_position: Position | None, market: AgentMarket
+    ) -> float:
+        pass
+
     @staticmethod
-    def _assert_trades_currency_match_markets(
+    def assert_trades_currency_match_markets(
         market: AgentMarket, trades: list[Trade]
     ) -> None:
         currencies_match = all([t.amount.currency == market.currency for t in trades])
@@ -52,7 +58,6 @@ class BettingStrategy(ABC):
         sell price is higher.
         """
         trades = []
-
         for outcome in [
             market.get_outcome_str_from_bool(True),
             market.get_outcome_str_from_bool(False),
@@ -81,11 +86,31 @@ class BettingStrategy(ABC):
 
         # Sort inplace with SELL last
         trades.sort(key=lambda t: t.trade_type == TradeType.SELL)
-        BettingStrategy._assert_trades_currency_match_markets(market, trades)
+        BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 
 
+"""aaa
+Option 1 - add Mixin with adjust_bet_amount or similar
+Option 2 - rename max_bet_amount and bet_amount -> bet_amount
+Option 3 - whatever, do everything I can in the base class
+"""
+
+
 class MaxAccuracyBettingStrategy(BettingStrategy):
+    def adjust_bet_amount(
+        self, existing_position: Position | None, market: AgentMarket
+    ) -> float:
+        existing_position_total_amount = (
+            existing_position.total_amount.amount if existing_position else 0
+        )
+        bet_amount = (
+            market.get_tiny_bet_amount().amount
+            if self.bet_amount is None
+            else self.bet_amount
+        )
+        return bet_amount + existing_position_total_amount
+
     def __init__(self, bet_amount: float | None = None):
         self.bet_amount = bet_amount
 
@@ -95,16 +120,13 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
         answer: ProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
-        bet_amount = (
-            market.get_tiny_bet_amount().amount
-            if self.bet_amount is None
-            else self.bet_amount
-        )
+        adjusted_bet_amount = self.adjust_bet_amount(existing_position, market)
+
         direction = self.calculate_direction(market.current_p_yes, answer.p_yes)
 
         amounts = {
             market.get_outcome_str_from_bool(direction): TokenAmount(
-                amount=bet_amount,
+                amount=adjusted_bet_amount,
                 currency=market.currency,
             ),
             market.get_outcome_str_from_bool(not direction): TokenAmount(
@@ -119,6 +141,12 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
 
     @staticmethod
     def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
+        return estimate_p_yes >= 0.5
+
+
+class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
+    @staticmethod
+    def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
         # If estimate_p_yes >= market.current_p_yes, then bet TRUE, else bet FALSE.
         # This is equivalent to saying EXPECTED_VALUE = (estimate_p_yes * num_tokens_obtained_by_betting_yes) -
         # ((1 - estimate_p_yes) * num_tokens_obtained_by_betting_no) >= 0
@@ -129,14 +157,26 @@ class KellyBettingStrategy(BettingStrategy):
     def __init__(self, max_bet_amount: float = 10):
         self.max_bet_amount = max_bet_amount
 
+    def adjust_bet_amount(
+        self, existing_position: Position | None, market: AgentMarket
+    ) -> float:
+        existing_position_total_amount = (
+            existing_position.total_amount.amount if existing_position else 0
+        )
+        return self.max_bet_amount + existing_position_total_amount
+
     def calculate_trades(
         self,
         existing_position: Position | None,
         answer: ProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
+        adjusted_bet_amount = self.adjust_bet_amount(existing_position, market)
         kelly_bet = get_kelly_bet(
-            self.max_bet_amount, market.current_p_yes, answer.p_yes, answer.confidence
+            adjusted_bet_amount,
+            market.current_p_yes,
+            answer.p_yes,
+            answer.confidence,
         )
 
         amounts = {

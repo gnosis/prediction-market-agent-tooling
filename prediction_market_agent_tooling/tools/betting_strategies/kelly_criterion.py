@@ -131,7 +131,6 @@ def get_kelly_bet_full(
     )
     denominator = 2 * (x**2 * f - y**2 * f)
     if denominator == 0:
-        breakpoint()
         return SimpleBet(direction=True, size=0)
     kelly_bet_amount = numerator / denominator
 

@@ -38,6 +38,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Position,
     ProbabilisticAnswer,
     Trade,
 )
@@ -299,6 +300,7 @@ class DeployableTraderAgent(DeployableAgent):
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
+        self.build_trades = observe()(self.build_trades)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
         self, market_type: MarketType, market: AgentMarket
@@ -403,6 +405,16 @@ class DeployableTraderAgent(DeployableAgent):
         )
         return available_markets
 
+    def build_trades(
+        self,
+        market: AgentMarket,
+        answer: ProbabilisticAnswer,
+        existing_position: Position | None,
+    ) -> list[Trade]:
+        trades = self.strategy.calculate_trades(existing_position, answer, market)
+        BettingStrategy.assert_trades_currency_match_markets(market, trades)
+        return trades
+
     def before_process_market(
         self, market_type: MarketType, market: AgentMarket
     ) -> None:
@@ -429,8 +441,9 @@ class DeployableTraderAgent(DeployableAgent):
             return None
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
-        trades = self.strategy.calculate_trades(existing_position, answer, market)
-        BettingStrategy.assert_trades_currency_match_markets(market, trades)
+        trades = self.build_trades(
+            market=market, answer=answer, existing_position=existing_position
+        )
 
         if self.place_bet:
             for trade in trades:

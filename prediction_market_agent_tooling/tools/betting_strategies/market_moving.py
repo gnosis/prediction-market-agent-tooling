@@ -69,7 +69,7 @@ def get_market_moving_bet(
         )
 
         new_p_yes = Probability(new_amounts[False] / sum(list(new_amounts.values())))
-        if abs(target_p_yes - new_p_yes) < 0.01:
+        if abs(target_p_yes - new_p_yes) < 1e-6:
             break
         elif new_p_yes > target_p_yes:
             if bet_direction:

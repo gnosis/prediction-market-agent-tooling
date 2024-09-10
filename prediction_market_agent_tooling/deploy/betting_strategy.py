@@ -78,7 +78,7 @@ class BettingStrategy(ABC):
 
             if prev_amount.currency != new_amount.currency:
                 raise ValueError("Cannot handle positions with different currencies")
-            diff_amount = prev_amount.amount - new_amount.amount
+            diff_amount = new_amount.amount - prev_amount.amount
             if diff_amount == 0:
                 continue
             trade_type = TradeType.SELL if diff_amount < 0 else TradeType.BUY

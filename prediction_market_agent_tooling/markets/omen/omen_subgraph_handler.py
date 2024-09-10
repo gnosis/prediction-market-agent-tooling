@@ -324,7 +324,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         # Additional filters, these can not be modified by the enums above.
         created_after: datetime | None = None,
         excluded_questions: set[str] | None = None,  # question titles
-        collateral_token_address_in: tuple[ChecksumAddress, ...] | None = SAFE_COLLATERAL_TOKEN_MARKETS,
+        collateral_token_address_in: tuple[ChecksumAddress, ...]
+        | None = SAFE_COLLATERAL_TOKEN_MARKETS,
     ) -> t.List[OmenMarket]:
         """
         Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
@@ -383,7 +384,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
-        collateral_token_address_in: tuple[ChecksumAddress, ...] | None = SAFE_COLLATERAL_TOKEN_MARKETS,
+        collateral_token_address_in: tuple[ChecksumAddress, ...]
+        | None = SAFE_COLLATERAL_TOKEN_MARKETS,
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.

@@ -1,7 +1,6 @@
 name: prediction-market-agent-tooling
 
-plugins:
-  - name: foundry
+
 
 default_ecosystem: gnosis
 

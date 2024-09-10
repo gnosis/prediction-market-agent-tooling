@@ -170,12 +170,13 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         adjusted_bet_amount = self.adjust_bet_amount(existing_position, market)
+        outcome_token_pool = check_not_none(market.outcome_token_pool)
         kelly_bet = (
             get_kelly_bet_full(
-                yes_outcome_pool_size=check_not_none(market.outcome_token_pool)[
+                yes_outcome_pool_size=outcome_token_pool[
                     market.get_outcome_str_from_bool(True)
                 ],
-                no_outcome_pool_size=check_not_none(market.outcome_token_pool)[
+                no_outcome_pool_size=outcome_token_pool[
                     market.get_outcome_str_from_bool(False)
                 ],
                 estimated_p_yes=answer.p_yes,

@@ -13,3 +13,6 @@ runs:
     - name: Install dependencies
       shell: bash
       run: poetry install --all-extras
+    - name: extra install ape foundry
+      shell: bash
+      run: poetry run pip install ape-foundry

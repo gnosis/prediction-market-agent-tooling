@@ -41,6 +41,12 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     byte32_to_ipfscidv0,
 )
 
+# TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
+SAFE_COLLATERAL_TOKEN_MARKETS = (
+    WrappedxDaiContract().address,
+    sDaiContract().address,
+)
+
 
 class OmenSubgraphHandler(metaclass=SingletonMeta):
     """
@@ -318,6 +324,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         # Additional filters, these can not be modified by the enums above.
         created_after: datetime | None = None,
         excluded_questions: set[str] | None = None,  # question titles
+        collateral_token_address_in: tuple[ChecksumAddress, ...]
+        | None = SAFE_COLLATERAL_TOKEN_MARKETS,
     ) -> t.List[OmenMarket]:
         """
         Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
@@ -354,6 +362,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             sort_by_field=sort_by_field,
             created_after=created_after,
             excluded_questions=excluded_questions,
+            collateral_token_address_in=collateral_token_address_in,
         )
 
     def get_omen_binary_markets(
@@ -375,12 +384,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
         outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
-        # TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
         collateral_token_address_in: tuple[ChecksumAddress, ...]
-        | None = (
-            WrappedxDaiContract().address,
-            sDaiContract().address,
-        ),
+        | None = SAFE_COLLATERAL_TOKEN_MARKETS,
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.

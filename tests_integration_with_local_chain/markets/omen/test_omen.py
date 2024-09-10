@@ -42,6 +42,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     ContractDepositableWrapperERC20OnGnosisChain,
+    ContractERC4626OnGnosisChain,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenRealitioContract,
@@ -309,23 +310,41 @@ def test_omen_buy_and_sell_outcome(
     assert np.isclose(remaining_tokens.amount, 0, atol=1e-5)
 
 
+@pytest.mark.parametrize(
+    "collateral_token_address, expected_symbol",
+    [
+        (WrappedxDaiContract().address, "WXDAI"),
+        (sDaiContract().address, "sDAI"),
+    ],
+)
 def test_place_bet_with_autodeposit(
+    collateral_token_address: ChecksumAddress,
+    expected_symbol: str,
     local_web3: Web3,
     test_keys: APIKeys,
 ) -> None:
-    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    market = OmenAgentMarket.from_data_model(
+        OmenSubgraphHandler().get_omen_binary_markets_simple(
+            limit=1,
+            filter_by=FilterBy.OPEN,
+            sort_by=SortBy.CLOSING_SOONEST,
+            collateral_token_address_in=(collateral_token_address,),
+        )[0]
+    )
     initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     collateral_token_contract = market.get_contract().get_collateral_token_contract()
     assert (
-        collateral_token_contract.symbol() == "WXDAI"
-    ), "Should have retrieve wxDai market."
+        collateral_token_contract.symbol() == expected_symbol
+    ), f"Should have retrieve {expected_symbol} market."
     assert isinstance(
         collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
-    ), "wxDai market should adhere to this class."
+    ) or isinstance(
+        collateral_token_contract, ContractERC4626OnGnosisChain
+    ), "Omen market should adhere to one of these classes."
 
     # Start by moving all funds from wxdai to xdai
     if initial_balances.wxdai > 0:
-        collateral_token_contract.withdraw(
+        WrappedxDaiContract().withdraw(
             api_keys=test_keys,
             amount_wei=xdai_to_wei(initial_balances.wxdai),
             web3=local_web3,
@@ -336,20 +355,8 @@ def test_place_bet_with_autodeposit(
     assert initial_balances.wxdai == xdai_type(0)
     assert initial_balances.xdai > xdai_type(0)
 
-    # Convert half of the xDai to wxDai
-    collateral_token_contract.deposit(
-        api_keys=test_keys,
-        amount_wei=xdai_to_wei(xdai_type(initial_balances.xdai * 0.5)),
-        web3=local_web3,
-    )
-    new_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
-    assert np.allclose(new_balances.total, initial_balances.total)
-
     # Try to place a bet with 90% of the xDai funds
     bet_amount = BetAmount(amount=initial_balances.xdai * 0.9, currency=Currency.xDai)
-    assert new_balances.xdai < bet_amount.amount
-    assert new_balances.wxdai < bet_amount.amount
-    assert new_balances.total > bet_amount.amount
     market.place_bet(
         outcome=True,
         amount=bet_amount,

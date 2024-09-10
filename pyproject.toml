@@ -57,8 +57,8 @@ google = ["google-api-python-client"]
 pytest = "*"
 mypy = "^1.11.1"
 black = "^23.12.1"
-ape-foundry = "^0.8.2"
-eth-ape = "^0.8.10"
+ape-foundry = "0.8.4"
+eth-ape = "0.8.10"
 
 [build-system]
 requires = ["poetry-core"]

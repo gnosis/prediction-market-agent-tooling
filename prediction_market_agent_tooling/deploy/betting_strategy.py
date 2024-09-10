@@ -170,7 +170,6 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         adjusted_bet_amount = self.adjust_bet_amount(existing_position, market)
-        # TODO use market.get_outcome_str_from_bool after https://github.com/gnosis/prediction-market-agent-tooling/pull/387 merges
         kelly_bet = (
             get_kelly_bet_full(
                 yes_outcome_pool_size=check_not_none(market.outcome_token_pool)[

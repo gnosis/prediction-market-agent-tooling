@@ -7,11 +7,11 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
 )
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.data_models import (
+    Currency,
     Position,
     ProbabilisticAnswer,
-    TradeType,
-    Currency,
     TokenAmount,
+    TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 

@@ -219,7 +219,8 @@ class AgentMarket(BaseModel):
     def has_unsuccessful_resolution(self) -> bool:
         return self.resolution in [Resolution.CANCEL, Resolution.MKT]
 
-    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_str(self, outcome_index: int) -> str:

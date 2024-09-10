@@ -632,6 +632,7 @@ def omen_buy_outcome_tx(
     )
 
     if auto_deposit:
+        # In auto-depositing, we need to deposit the original `amount_wei`, e.g. we can deposit 2 xDai, but receive 1.8 sDai, so for the bet we will use `amount_wei_to_buy`.
         auto_deposit_collateral_token(
             collateral_token_contract, amount_wei, api_keys, web3
         )

@@ -179,12 +179,12 @@ class KellyBettingStrategy(BettingStrategy):
                     market.get_outcome_str_from_bool(False)
                 ],
                 estimated_p_yes=answer.p_yes,
-                max_bet=self.max_bet_amount,
+                max_bet=adjusted_bet_amount,
                 confidence=answer.confidence,
             )
             if market.has_token_pool()
             else get_kelly_bet_simplified(
-                self.max_bet_amount,
+                adjusted_bet_amount,
                 market.current_p_yes,
                 answer.p_yes,
                 answer.confidence,

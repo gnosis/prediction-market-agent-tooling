@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
 
 
 def test_connect_local_chain(local_web3: Web3) -> None:
+    print("test connect starting")
     assert local_web3.is_connected()
 
 

@@ -200,12 +200,9 @@ def test_sanity_check_market_moving_bet(target_p_yes: float) -> None:
         filter_by=FilterBy.OPEN,
     )[0]
 
-    yes_outcome_pool_size = market.outcome_token_pool[
-        market.get_outcome_str_from_bool(True)
-    ]
-    no_outcome_pool_size = market.outcome_token_pool[
-        market.get_outcome_str_from_bool(False)
-    ]
+    outcome_token_pool = check_not_none(market.outcome_token_pool)
+    yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
+    no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
 
     market_moving_bet = get_market_moving_bet(
         yes_outcome_pool_size=yes_outcome_pool_size,

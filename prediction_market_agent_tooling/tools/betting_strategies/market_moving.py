@@ -2,9 +2,10 @@ from functools import reduce
 
 import numpy as np
 
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import Probability, Wei, xDai
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 
@@ -92,20 +93,17 @@ def _sanity_check_omen_market_moving_bet(
     by calling the market's calcBuyAmount method from the smart contract, and
     using the adjusted outcome pool sizes to calculate the new p_yes.
     """
-    buy_amount = market.get_contract().calcBuyAmount(
-        investment_amount=xdai_to_wei(bet_to_check.size),
+    buy_amount_ = market.get_contract().calcBuyAmount(
+        investment_amount=xdai_to_wei(xDai(bet_to_check.size)),
         outcome_index=market.get_outcome_index(
             market.get_outcome_str_from_bool(bet_to_check.direction)
         ),
     )
-    buy_amount = float(wei_to_xdai(buy_amount))
+    buy_amount = float(wei_to_xdai(Wei(buy_amount_)))
 
-    yes_outcome_pool_size = market.outcome_token_pool[
-        market.get_outcome_str_from_bool(True)
-    ]
-    no_outcome_pool_size = market.outcome_token_pool[
-        market.get_outcome_str_from_bool(False)
-    ]
+    outcome_token_pool = check_not_none(market.outcome_token_pool)
+    yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
+    no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
     market_const = yes_outcome_pool_size * no_outcome_pool_size
 
     # When you buy 'yes' tokens, you add your bet size to the both pools, then

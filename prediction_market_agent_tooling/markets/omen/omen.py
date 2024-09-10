@@ -611,12 +611,15 @@ def omen_buy_outcome_tx(
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
 
+    # In case of ERC4626, obtained (for example) sDai out of xDai could be lower than the `amount_wei`, so we need to handle it.
+    amount_wei_to_buy = collateral_token_contract.get_in_shares(amount_wei, web3)
+
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
 
     # Calculate the amount of shares we will get for the given investment amount.
     expected_shares = market_contract.calcBuyAmount(
-        amount_wei, outcome_index, web3=web3
+        amount_wei_to_buy, outcome_index, web3=web3
     )
     # Allow 1% slippage.
     expected_shares = remove_fraction(expected_shares, 0.01)
@@ -624,11 +627,12 @@ def omen_buy_outcome_tx(
     collateral_token_contract.approve(
         api_keys=api_keys,
         for_address=market_contract.address,
-        amount_wei=amount_wei,
+        amount_wei=amount_wei_to_buy,
         web3=web3,
     )
 
     if auto_deposit:
+        # In auto-depositing, we need to deposit the original `amount_wei`, e.g. we can deposit 2 xDai, but receive 1.8 sDai, so for the bet we will use `amount_wei_to_buy`.
         auto_deposit_collateral_token(
             collateral_token_contract, amount_wei, api_keys, web3
         )
@@ -636,7 +640,7 @@ def omen_buy_outcome_tx(
     # Buy shares using the deposited xDai in the collateral token.
     market_contract.buy(
         api_keys=api_keys,
-        amount_wei=amount_wei,
+        amount_wei=amount_wei_to_buy,
         outcome_index=outcome_index,
         min_outcome_tokens_to_buy=expected_shares,
         web3=web3,
@@ -827,6 +831,7 @@ def omen_create_market_tx(
             web3=web3,
         )
 
+    # In case of ERC4626, obtained (for example) sDai out of xDai could be lower than the `amount_wei`, so we need to handle it.
     initial_funds_in_shares = collateral_token_contract.get_in_shares(
         amount=initial_funds_wei, web3=web3
     )

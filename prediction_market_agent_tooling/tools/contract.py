@@ -351,7 +351,7 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         web3 = web3 or self.get_web3()
         contract = init_collateral_token_contract(self.asset(), web3=web3)
         assert not isinstance(
-            contract, ContractERC4626OnGnosisChain
+            contract, ContractERC4626BaseClass
         ), "Asset token should be either Depositable Wrapper ERC-20 or ERC-20."  # Shrinking down possible types.
         return contract
 
@@ -416,6 +416,11 @@ class ContractERC4626OnGnosisChain(
     """
     ERC-4626 standard base class with Gnosis Chain configuration.
     """
+
+    def get_asset_token_contract(
+        self, web3: Web3 | None = None
+    ) -> ContractERC20OnGnosisChain | ContractDepositableWrapperERC20OnGnosisChain:
+        return to_gnosis_chain_contract(super().get_asset_token_contract(web3=web3))
 
 
 def contract_implements_function(

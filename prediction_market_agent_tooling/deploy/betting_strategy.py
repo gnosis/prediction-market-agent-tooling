@@ -85,7 +85,7 @@ class BettingStrategy(ABC):
                 continue
             trade_type = TradeType.SELL if diff_amount < 0 else TradeType.BUY
             trade = Trade(
-                amount=TokenAmount(amount=diff_amount, currency=market.currency),
+                amount=TokenAmount(amount=abs(diff_amount), currency=market.currency),
                 outcome=outcome_bool,
                 trade_type=trade_type,
             )

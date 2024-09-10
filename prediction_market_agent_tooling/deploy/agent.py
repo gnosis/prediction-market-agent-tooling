@@ -38,9 +38,9 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Position,
     ProbabilisticAnswer,
     Trade,
-    Position,
 )
 from prediction_market_agent_tooling.markets.markets import (
     MarketType,

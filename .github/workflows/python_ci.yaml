@@ -46,7 +46,7 @@ jobs:
       - name: Run pytest integration tests
         run: poetry run python -m pytest tests_integration/ -p no:ape_test
       - name: Run pytest local chain integration tests
-        run: poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation --trace-config -p eth-ape
+        run: poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation
 
   black:
     runs-on: ubuntu-latest

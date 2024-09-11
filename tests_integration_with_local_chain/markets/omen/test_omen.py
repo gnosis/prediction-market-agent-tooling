@@ -259,7 +259,7 @@ def test_omen_fund_and_remove_fund_market(
     collateral_token_contract = market.get_contract().get_collateral_token_contract()
     assert (
         collateral_token_contract.symbol() == expected_symbol
-    ), f"Should have retrieve {expected_symbol} market."
+    ), f"Should have retrieved {expected_symbol} market."
     logger.debug(
         "Fund and remove funding market test address:",
         market.market_maker_contract_address_checksummed,

@@ -56,5 +56,5 @@ def test_rebalance() -> None:
     assert buy_trade.trade_type == TradeType.BUY
     assert buy_trade.amount.amount == (mock_amount.amount + tiny_amount.amount)
     sell_trade = next(iter([t for t in trades if t.trade_type == TradeType.SELL]))
-    assert sell_trade
+    assert sell_trade.trade_type == TradeType.SELL
     assert sell_trade.amount.amount == (mock_amount.amount)

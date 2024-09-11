@@ -53,7 +53,7 @@ def test_rebalance() -> None:
     trades = strategy.calculate_trades(mock_existing_position, mock_answer, mock_market)
     # assert 1 buy trade and 1 sell trade
     buy_trade = next(iter([t for t in trades if t.trade_type == TradeType.BUY]))
-    assert buy_trade
+    assert buy_trade.trade_type == TradeType.BUY
     assert buy_trade.amount.amount == (mock_amount.amount + tiny_amount.amount)
     sell_trade = next(iter([t for t in trades if t.trade_type == TradeType.SELL]))
     assert sell_trade

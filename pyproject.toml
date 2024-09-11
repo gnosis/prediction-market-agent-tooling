@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.48.14"
+version = "0.48.13"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -54,7 +54,7 @@ langchain = ["langchain", "langchain-openai"]
 google = ["google-api-python-client"]
 
 [tool.poetry.group.dev.dependencies]
-pytest = "*"
+pytest = "^8.3.0"
 mypy = "^1.11.1"
 black = "^23.12.1"
 ape-foundry = "0.8.2"

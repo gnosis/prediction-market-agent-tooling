@@ -234,12 +234,32 @@ def test_balance_for_user_in_market() -> None:
     assert float(balance_no.amount) == 0
 
 
+@pytest.mark.parametrize(
+    "collateral_token_address, expected_symbol",
+    [
+        (WrappedxDaiContract().address, "WXDAI"),
+        (sDaiContract().address, "sDAI"),
+    ],
+)
 def test_omen_fund_and_remove_fund_market(
+    collateral_token_address: ChecksumAddress,
+    expected_symbol: str,
     local_web3: Web3,
     test_keys: APIKeys,
 ) -> None:
     # You can double check your address at https://gnosisscan.io/ afterwards or at the market's address.
-    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    market = OmenAgentMarket.from_data_model(
+        OmenSubgraphHandler().get_omen_binary_markets_simple(
+            limit=1,
+            filter_by=FilterBy.OPEN,
+            sort_by=SortBy.CLOSING_SOONEST,
+            collateral_token_address_in=(collateral_token_address,),
+        )[0]
+    )
+    collateral_token_contract = market.get_contract().get_collateral_token_contract()
+    assert (
+        collateral_token_contract.symbol() == expected_symbol
+    ), f"Should have retrieved {expected_symbol} market."
     logger.debug(
         "Fund and remove funding market test address:",
         market.market_maker_contract_address_checksummed,

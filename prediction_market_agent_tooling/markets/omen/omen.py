@@ -876,17 +876,20 @@ def omen_fund_market_tx(
     market_contract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract()
 
-    if auto_deposit:
-        auto_deposit_collateral_token(collateral_token_contract, funds, api_keys, web3)
+    amount_to_fund = collateral_token_contract.get_in_shares(funds, web3)
 
     collateral_token_contract.approve(
         api_keys=api_keys,
         for_address=market_contract.address,
-        amount_wei=funds,
+        amount_wei=amount_to_fund,
         web3=web3,
     )
 
-    market_contract.addFunding(api_keys, funds, web3=web3)
+    if auto_deposit:
+        # In auto-depositing, we need to deposit the original `funds`, e.g. we can deposit 2 xDai, but receive 1.8 sDai, so for the funding we will use `amount_to_fund`.
+        auto_deposit_collateral_token(collateral_token_contract, funds, api_keys, web3)
+
+    market_contract.addFunding(api_keys, amount_to_fund, web3=web3)
 
 
 def build_parent_collection_id() -> HexStr:

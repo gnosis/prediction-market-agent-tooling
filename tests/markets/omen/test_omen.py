@@ -17,6 +17,9 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
+    get_market_moving_bet,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
@@ -207,3 +210,36 @@ def test_positions_value() -> None:
         rtol=1e-3,  # relax tolerances due to fees
         atol=1e-3,
     )
+
+
+def test_get_new_p_yes() -> None:
+    market = OmenAgentMarket.get_binary_markets(
+        limit=1,
+        sort_by=SortBy.CLOSING_SOONEST,
+        filter_by=FilterBy.OPEN,
+    )[0]
+    assert (
+        market.get_new_p_yes(bet_amount=market.get_bet_amount(10.0), direction=True)
+        > market.current_p_yes
+    )
+    assert (
+        market.get_new_p_yes(bet_amount=market.get_bet_amount(11.0), direction=False)
+        < market.current_p_yes
+    )
+
+    # Sanity check vs market moving bet
+    target_p_yes = 0.95
+    outcome_token_pool = check_not_none(market.outcome_token_pool)
+    yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
+    no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
+    bet = get_market_moving_bet(
+        yes_outcome_pool_size=yes_outcome_pool_size,
+        no_outcome_pool_size=no_outcome_pool_size,
+        market_p_yes=market.current_p_yes,
+        target_p_yes=0.95,
+        fee=market.fee,
+    )
+    new_p_yes = market.get_new_p_yes(
+        bet_amount=market.get_bet_amount(bet.size), direction=bet.direction
+    )
+    assert np.isclose(new_p_yes, target_p_yes)

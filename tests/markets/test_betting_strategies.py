@@ -14,9 +14,9 @@ from prediction_market_agent_tooling.gtypes import (
     mana_type,
     usd_type,
     wei_type,
-    xDai,
     xdai_type,
 )
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )
@@ -30,9 +30,11 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
-    get_kelly_bet,
+    get_kelly_bet_full,
+    get_kelly_bet_simplified,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
+    _sanity_check_omen_market_moving_bet,
     get_market_moving_bet,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
@@ -41,7 +43,8 @@ from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win
 from prediction_market_agent_tooling.tools.betting_strategies.stretch_bet_between import (
     stretch_bet_between,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 GANACHE_ADDRESS_NR_1 = HexAddress(
     Web3.to_checksum_address("0x9B7bc47837d4061a11389267C06D829c5C97E404")
@@ -158,31 +161,57 @@ def test_minimum_bet_to_win_manifold(
 
 
 @pytest.mark.parametrize(
-    "wanted_p_yes_on_the_market, expected_buying_xdai_amount, expected_buying_outcome",
+    "target_p_yes, expected_bet_size, expected_bet_direction",
     [
-        (Probability(0.1), xdai_type(25.32), "No"),
-        (Probability(0.9), xdai_type(18.1), "Yes"),
+        (Probability(0.1), xdai_type(23.19), False),
+        (Probability(0.9), xdai_type(18.1), True),
     ],
 )
 def test_get_market_moving_bet(
-    wanted_p_yes_on_the_market: Probability,
-    expected_buying_xdai_amount: xDai,
-    expected_buying_outcome: str,
+    target_p_yes: Probability,
+    expected_bet_size: float,
+    expected_bet_direction: bool,
     omen_market: OmenMarket,
 ) -> None:
-    xdai_amount, outcome_index = get_market_moving_bet(
-        market=omen_market,
-        target_p_yes=wanted_p_yes_on_the_market,
-        verbose=True,
+    bet = get_market_moving_bet(
+        target_p_yes=target_p_yes,
+        market_p_yes=omen_market.current_p_yes,
+        yes_outcome_pool_size=wei_to_xdai(
+            Wei(omen_market.outcomeTokenAmounts[omen_market.yes_index])
+        ),
+        no_outcome_pool_size=wei_to_xdai(
+            Wei(omen_market.outcomeTokenAmounts[omen_market.no_index])
+        ),
+        fee=wei_to_xdai(check_not_none(omen_market.fee)),
     )
     assert np.isclose(
-        float(xdai_amount),
-        float(expected_buying_xdai_amount),
+        bet.size,
+        expected_bet_size,
         atol=2.0,  # We don't expect it to be 100% accurate, but close enough.
-    ), f"To move this martket to ~{wanted_p_yes_on_the_market}% for yes, the amount should be {expected_buying_xdai_amount}xDai, according to aiomen website."
-    assert outcome_index == omen_market.outcomes.index(
-        expected_buying_outcome
-    ), f"The buying outcome index should `{expected_buying_outcome}`."
+    )
+    assert bet.direction == expected_bet_direction
+
+
+@pytest.mark.parametrize("target_p_yes", [0.1, 0.51, 0.9])
+def test_sanity_check_market_moving_bet(target_p_yes: float) -> None:
+    market = OmenAgentMarket.get_binary_markets(
+        limit=1,
+        sort_by=SortBy.CLOSING_SOONEST,
+        filter_by=FilterBy.OPEN,
+    )[0]
+
+    outcome_token_pool = check_not_none(market.outcome_token_pool)
+    yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
+    no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
+
+    market_moving_bet = get_market_moving_bet(
+        yes_outcome_pool_size=yes_outcome_pool_size,
+        no_outcome_pool_size=no_outcome_pool_size,
+        market_p_yes=market.current_p_yes,
+        target_p_yes=target_p_yes,
+        fee=market.fee,
+    )
+    _sanity_check_omen_market_moving_bet(market_moving_bet, market, target_p_yes)
 
 
 @pytest.mark.parametrize(
@@ -211,7 +240,7 @@ def test_kelly_bet(est_p_yes: Probability, omen_market: OmenMarket) -> None:
     # logarithm of the wealth. We don't know the real best bet amount, but at
     # least we know which bet direction makes sense.
     assert (
-        get_kelly_bet(
+        get_kelly_bet_simplified(
             market_p_yes=omen_market.current_p_yes,
             estimated_p_yes=est_p_yes,
             max_bet=max_bet,
@@ -219,3 +248,57 @@ def test_kelly_bet(est_p_yes: Probability, omen_market: OmenMarket) -> None:
         ).direction
         == expected_bet_direction
     )
+
+    assert (
+        get_kelly_bet_full(
+            yes_outcome_pool_size=wei_to_xdai(
+                Wei(omen_market.outcomeTokenAmounts[omen_market.yes_index])
+            ),
+            no_outcome_pool_size=wei_to_xdai(
+                Wei(omen_market.outcomeTokenAmounts[omen_market.no_index])
+            ),
+            estimated_p_yes=est_p_yes,
+            max_bet=max_bet,
+            confidence=confidence,
+        ).direction
+        == expected_bet_direction
+    )
+
+
+def test_zero_bets() -> None:
+    market = OmenAgentMarket.get_binary_markets(
+        limit=1,
+        sort_by=SortBy.CLOSING_SOONEST,
+        filter_by=FilterBy.OPEN,
+    )[0]
+
+    outcome_token_pool = check_not_none(market.outcome_token_pool)
+    yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
+    no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
+
+    market_moving_bet = get_market_moving_bet(
+        yes_outcome_pool_size=yes_outcome_pool_size,
+        no_outcome_pool_size=no_outcome_pool_size,
+        market_p_yes=market.current_p_yes,
+        target_p_yes=market.current_p_yes,
+        fee=market.fee,
+    )
+    assert np.isclose(market_moving_bet.size, 0.0, atol=1e-4)
+
+    kelly_bet = get_kelly_bet_full(
+        yes_outcome_pool_size=yes_outcome_pool_size,
+        no_outcome_pool_size=no_outcome_pool_size,
+        estimated_p_yes=market.current_p_yes,
+        confidence=1.0,
+        max_bet=0,
+        fee=market.fee,
+    )
+    assert kelly_bet.size == 0
+
+    kelly_bet_simple = get_kelly_bet_simplified(
+        max_bet=100,
+        market_p_yes=market.current_p_yes,
+        estimated_p_yes=market.current_p_yes,
+        confidence=1.0,
+    )
+    assert kelly_bet_simple.size == 0

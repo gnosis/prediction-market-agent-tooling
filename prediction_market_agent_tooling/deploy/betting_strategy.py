@@ -11,8 +11,10 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
-    get_kelly_bet,
+    get_kelly_bet_full,
+    get_kelly_bet_simplified,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class BettingStrategy(ABC):
@@ -168,11 +170,26 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         adjusted_bet_amount = self.adjust_bet_amount(existing_position, market)
-        kelly_bet = get_kelly_bet(
-            adjusted_bet_amount,
-            market.current_p_yes,
-            answer.p_yes,
-            answer.confidence,
+        outcome_token_pool = check_not_none(market.outcome_token_pool)
+        kelly_bet = (
+            get_kelly_bet_full(
+                yes_outcome_pool_size=outcome_token_pool[
+                    market.get_outcome_str_from_bool(True)
+                ],
+                no_outcome_pool_size=outcome_token_pool[
+                    market.get_outcome_str_from_bool(False)
+                ],
+                estimated_p_yes=answer.p_yes,
+                max_bet=adjusted_bet_amount,
+                confidence=answer.confidence,
+            )
+            if market.has_token_pool()
+            else get_kelly_bet_simplified(
+                adjusted_bet_amount,
+                market.current_p_yes,
+                answer.p_yes,
+                answer.confidence,
+            )
         )
 
         amounts = {

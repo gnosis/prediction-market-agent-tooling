@@ -577,6 +577,49 @@ class OmenAgentMarket(AgentMarket):
     def get_user_url(cls, keys: APIKeys) -> str:
         return get_omen_user_url(keys.bet_from_address)
 
+    def get_buy_token_amount(
+        self, bet_amount: BetAmount, direction: bool
+    ) -> TokenAmount:
+        received_token_amount_wei = Wei(
+            self.get_contract().calcBuyAmount(
+                investment_amount=xdai_to_wei(xDai(bet_amount.amount)),
+                outcome_index=self.get_outcome_index(
+                    self.get_outcome_str_from_bool(direction)
+                ),
+            )
+        )
+        received_token_amount = float(wei_to_xdai(received_token_amount_wei))
+        return TokenAmount(amount=received_token_amount, currency=self.currency)
+
+    def get_new_p_yes(self, bet_amount: BetAmount, direction: bool) -> Probability:
+        """
+        Calculate the new p_yes based on the bet amount and direction.
+        """
+        if not self.has_token_pool():
+            raise ValueError("Outcome token pool is required to calculate new p_yes.")
+
+        outcome_token_pool = check_not_none(self.outcome_token_pool)
+        yes_outcome_pool_size = outcome_token_pool[self.get_outcome_str_from_bool(True)]
+        no_outcome_pool_size = outcome_token_pool[self.get_outcome_str_from_bool(False)]
+
+        new_yes_outcome_pool_size = yes_outcome_pool_size + (
+            bet_amount.amount * (1 - self.fee)
+        )
+        new_no_outcome_pool_size = no_outcome_pool_size + (
+            bet_amount.amount * (1 - self.fee)
+        )
+
+        received_token_amount = self.get_buy_token_amount(bet_amount, direction).amount
+        if direction:
+            new_yes_outcome_pool_size -= received_token_amount
+        else:
+            new_no_outcome_pool_size -= received_token_amount
+
+        new_p_yes = new_no_outcome_pool_size / (
+            new_yes_outcome_pool_size + new_no_outcome_pool_size
+        )
+        return Probability(new_p_yes)
+
 
 def get_omen_user_url(address: ChecksumAddress) -> str:
     return f"https://gnosisscan.io/address/{address}"

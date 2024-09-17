@@ -252,8 +252,8 @@ def test_get_new_p_yes() -> None:
 @pytest.mark.parametrize(
     "outcome, index",
     [
-        ("Yes", 1),
-        ("No", 0),
+        ("Yes", 0),
+        ("No", 1),
     ],
 )
 def test_get_outcome_index(outcome: str, index: int) -> None:

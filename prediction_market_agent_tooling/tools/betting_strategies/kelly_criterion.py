@@ -136,4 +136,4 @@ def get_kelly_bet_full(
     denominator = 2 * (x**2 * f - y**2 * f)
     kelly_bet_amount = numerator / denominator
 
-    return SimpleBet(direction=kelly_bet_amount > 0, size=abs(kelly_bet_amount))
+    return SimpleBet(direction=kelly_bet_amount > 0, size=min(max_bet, abs(kelly_bet_amount)))

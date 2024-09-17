@@ -517,7 +517,7 @@ class DeployableTraderAgent(DeployableAgent):
             if processed == self.bet_on_n_markets_per_run:
                 break
 
-        logger.info(f"All markets processed.")
+        logger.info("All markets processed.")
 
     def after_process_markets(self, market_type: MarketType) -> None:
         pass

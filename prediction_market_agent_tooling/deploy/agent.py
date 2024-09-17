@@ -426,6 +426,8 @@ class DeployableTraderAgent(DeployableAgent):
         market: AgentMarket,
         verify_market: bool = True,
     ) -> ProcessedMarket | None:
+        logger.info(f"Processing market {market.question=} from {market.url=}.")
+
         self.before_process_market(market_type, market)
 
         if verify_market and not self.verify_market(market_type, market):
@@ -462,6 +464,7 @@ class DeployableTraderAgent(DeployableAgent):
         processed_market = ProcessedMarket(answer=answer, trades=trades)
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 
+        logger.info(f"Processed market {market.question=} from {market.url=}.")
         return processed_market
 
     def after_process_market(
@@ -495,7 +498,11 @@ class DeployableTraderAgent(DeployableAgent):
         """
         Processes bets placed by agents on a given market.
         """
+        logger.info("Start processing of markets.")
         available_markets = self.get_markets(market_type)
+        logger.info(
+            f"Fetched {len(available_markets)=} markets to process, going to process {self.bet_on_n_markets_per_run=}."
+        )
         processed = 0
 
         for market in available_markets:
@@ -509,6 +516,8 @@ class DeployableTraderAgent(DeployableAgent):
 
             if processed == self.bet_on_n_markets_per_run:
                 break
+
+        logger.info(f"All markets processed.")
 
     def after_process_markets(self, market_type: MarketType) -> None:
         pass

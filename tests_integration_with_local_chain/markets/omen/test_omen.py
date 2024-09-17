@@ -26,6 +26,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_BINARY_MARKET_OUTCOMES,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     get_bet_outcome,
@@ -84,7 +85,7 @@ def test_create_bet_withdraw_resolve_market(
         closing_time=closing_time,
         category="cryptocurrency",
         language="en",
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        outcomes=OMEN_BINARY_MARKET_OUTCOMES,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -147,7 +148,7 @@ def test_omen_create_market_wxdai(
         closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
         language="en",
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        outcomes=OMEN_BINARY_MARKET_OUTCOMES,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -170,7 +171,7 @@ def test_omen_create_market_sdai(
         closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
         language="en",
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        outcomes=OMEN_BINARY_MARKET_OUTCOMES,
         auto_deposit=True,
         collateral_token_address=sDaiContract().address,
         web3=local_web3,

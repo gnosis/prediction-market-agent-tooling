@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import numpy as np
+import pytest
 from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
@@ -8,7 +9,10 @@ from web3 import Web3
 from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, OutcomeStr, Wei
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Position, TokenAmount
-from prediction_market_agent_tooling.markets.omen.data_models import OmenBet
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OmenBet,
+    get_outcome_index,
+)
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     get_binary_market_p_yes_history,
@@ -243,3 +247,14 @@ def test_get_new_p_yes() -> None:
         bet_amount=market.get_bet_amount(bet.size), direction=bet.direction
     )
     assert np.isclose(new_p_yes, target_p_yes)
+
+
+@pytest.mark.parametrize(
+    "outcome, index",
+    [
+        ("Yes", 1),
+        ("No", 0),
+    ],
+)
+def test_get_outcome_index(outcome: str, index: int) -> None:
+    assert get_outcome_index(outcome) == index

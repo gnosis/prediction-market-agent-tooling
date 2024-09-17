@@ -19,8 +19,7 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_FALSE_OUTCOME,
-    OMEN_TRUE_OUTCOME,
+    OMEN_BINARY_MARKET_OUTCOMES,
     OmenBet,
     OmenMarket,
     OmenPosition,
@@ -204,7 +203,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self,
         creator: t.Optional[HexAddress] = None,
         creator_in: t.Optional[t.Sequence[HexAddress]] = None,
-        outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
         created_after: t.Optional[datetime] = None,
         opened_before: t.Optional[datetime] = None,
         opened_after: t.Optional[datetime] = None,
@@ -217,6 +216,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         id_in: list[str] | None = None,
         excluded_questions: set[str] | None = None,
         collateral_token_address_in: tuple[ChecksumAddress, ...] | None = None,
+        category: str | None = None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
             "isPendingArbitration": False,
@@ -282,6 +282,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 finalized_after
             )
 
+        if category:
+            where_stms["category"] = category
+
         # `excluded_question_titles` can not be an empty list, otherwise the API bugs out and returns nothing.
         excluded_question_titles = [""]
         if excluded_questions:
@@ -324,8 +327,10 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         # Additional filters, these can not be modified by the enums above.
         created_after: datetime | None = None,
         excluded_questions: set[str] | None = None,  # question titles
-        collateral_token_address_in: tuple[ChecksumAddress, ...]
-        | None = SAFE_COLLATERAL_TOKEN_MARKETS,
+        collateral_token_address_in: (
+            tuple[ChecksumAddress, ...] | None
+        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+        category: str | None = None,
     ) -> t.List[OmenMarket]:
         """
         Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
@@ -363,6 +368,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             created_after=created_after,
             excluded_questions=excluded_questions,
             collateral_token_address_in=collateral_token_address_in,
+            category=category,
         )
 
     def get_omen_binary_markets(
@@ -383,9 +389,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         excluded_questions: set[str] | None = None,  # question titles
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
-        outcomes: list[str] = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
-        collateral_token_address_in: tuple[ChecksumAddress, ...]
-        | None = SAFE_COLLATERAL_TOKEN_MARKETS,
+        outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
+        collateral_token_address_in: (
+            tuple[ChecksumAddress, ...] | None
+        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+        category: str | None = None,
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
@@ -406,6 +414,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             excluded_questions=excluded_questions,
             liquidity_bigger_than=liquidity_bigger_than,
             collateral_token_address_in=collateral_token_address_in,
+            category=category,
         )
 
         # These values can not be set to `None`, but they can be omitted.

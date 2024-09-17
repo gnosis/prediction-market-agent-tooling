@@ -28,8 +28,11 @@ from prediction_market_agent_tooling.tools.utils import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
+OutcomeIndex = t.Literal[0, 1]
+
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
+OMEN_BINARY_MARKET_OUTCOMES = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 INVALID_ANSWER_HEX_BYTES = HexBytes(INVALID_ANSWER)
 OMEN_BASE_URL = "https://aiomen.eth.limo"
@@ -46,6 +49,12 @@ def get_boolean_outcome(outcome_str: str) -> bool:
 
 def get_bet_outcome(binary_outcome: bool) -> str:
     return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
+
+
+def get_outcome_index(outcome_str: str) -> OutcomeIndex:
+    index = OMEN_BINARY_MARKET_OUTCOMES.index(outcome_str)
+    assert index in OutcomeIndex.__args__, "Index must be from OutcomeIndex literal."  # type: ignore # It indeed has `__args__` attribute.
+    return t.cast(OutcomeIndex, index)
 
 
 class Condition(BaseModel):

@@ -100,6 +100,10 @@ def get_kelly_bet_full(
     b = max_bet
     f = 1 - fee
 
+    if x == y:
+        # Add a delta to prevent division by zero
+        y += 1e-10
+
     numerator = (
         -4 * x**2 * y
         + b * y**2 * p * c * f
@@ -130,8 +134,9 @@ def get_kelly_bet_full(
         ** (1 / 2)
     )
     denominator = 2 * (x**2 * f - y**2 * f)
-    if denominator == 0:
-        return SimpleBet(direction=True, size=0)
     kelly_bet_amount = numerator / denominator
 
-    return SimpleBet(direction=kelly_bet_amount > 0, size=abs(kelly_bet_amount))
+    # Clip the bet size to max_bet to account for rounding errors.
+    return SimpleBet(
+        direction=kelly_bet_amount > 0, size=min(max_bet, abs(kelly_bet_amount))
+    )

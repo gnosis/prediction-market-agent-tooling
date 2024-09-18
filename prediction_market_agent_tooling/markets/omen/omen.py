@@ -585,7 +585,7 @@ class OmenAgentMarket(AgentMarket):
         up-to-date with the smart contract.
         """
         outcome_token_pool = check_not_none(self.outcome_token_pool)
-        amount = get_buy_token_amount(
+        amount = get_buy_outcome_token_amount(
             investment_amount=bet_amount.amount,
             buy_direction=direction,
             yes_outcome_pool_size=outcome_token_pool[OMEN_TRUE_OUTCOME],
@@ -1227,7 +1227,7 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
     )
 
 
-def get_buy_token_amount(
+def get_buy_outcome_token_amount(
     investment_amount: float,
     buy_direction: bool,
     yes_outcome_pool_size: float,

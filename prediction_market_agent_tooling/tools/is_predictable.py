@@ -1,3 +1,4 @@
+import tenacity
 from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -76,6 +77,7 @@ Finally, write your final decision, write `decision: ` followed by either "yes i
 
 
 @persistent_inmemory_cache
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @observe()
 def is_predictable_binary(
     question: str,
@@ -111,6 +113,7 @@ def is_predictable_binary(
 
 
 @persistent_inmemory_cache
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @observe()
 def is_predictable_without_description(
     question: str,

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import numpy as np
+import pytest
 from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
@@ -243,3 +244,29 @@ def test_get_new_p_yes() -> None:
         bet_amount=market.get_bet_amount(bet.size), direction=bet.direction
     )
     assert np.isclose(new_p_yes, target_p_yes)
+
+
+@pytest.mark.parametrize("direction", [True, False])
+def test_get_buy_token_amount(direction: bool) -> None:
+    """
+    Test that the two methods of calculating buy amount are equivalent for a
+    'live' market (i.e. where the token pool matches that of the current smart
+    contract state)
+    """
+    markets = OmenAgentMarket.get_binary_markets(
+        limit=10,
+        sort_by=SortBy.CLOSING_SOONEST,
+        filter_by=FilterBy.OPEN,
+    )
+    investment_amount = 5.0
+    buy_direction = direction
+    for market in markets:
+        buy_amount0 = market.get_buy_token_amount(
+            bet_amount=market.get_bet_amount(investment_amount),
+            direction=buy_direction,
+        ).amount
+        buy_amount1 = market._get_buy_token_amount_from_smart_contract(
+            bet_amount=market.get_bet_amount(investment_amount),
+            direction=buy_direction,
+        ).amount
+        assert np.isclose(buy_amount0, buy_amount1)

@@ -3,6 +3,7 @@ from datetime import datetime
 from langfuse import Langfuse
 from langfuse.client import TraceWithDetails
 
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     ProbabilisticAnswer,
     ResolvedBet,
@@ -14,6 +15,7 @@ from prediction_market_agent_tooling.tools.utils import add_utc_timezone_validat
 
 def get_traces_for_agent(
     agent_name: str,
+    trace_name: str,
     from_timestamp: datetime,
     has_output: bool,
     client: Langfuse,
@@ -25,6 +27,7 @@ def get_traces_for_agent(
     all_agent_traces = []
     while True:
         traces = client.fetch_traces(
+            name=trace_name,
             limit=100,
             page=page,
             from_timestamp=from_timestamp,
@@ -76,7 +79,7 @@ def get_closest_datetime_from_list(
 
 def get_trace_for_bet(
     bet: ResolvedBet, traces: list[TraceWithDetails]
-) -> TraceWithDetails:
+) -> TraceWithDetails | None:
     # Get traces with the same market id
     traces_for_bet = [
         t for t in traces if trace_to_omen_agent_market(t).id == bet.market_id
@@ -88,6 +91,12 @@ def get_trace_for_bet(
         [t.timestamp for t in traces_for_bet],
     )
     # Sanity check - the trace should be after the bet
-    assert traces_for_bet[closest_trace_index].timestamp > bet.created_time
+    if traces_for_bet[closest_trace_index].timestamp < add_utc_timezone_validator(
+        bet.created_time
+    ):
+        logger.warning(
+            f"No trace for bet on market {bet.market_id} at time {bet.created_time} found"
+        )
+        return None
 
     return traces_for_bet[closest_trace_index]

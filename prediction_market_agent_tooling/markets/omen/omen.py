@@ -580,11 +580,12 @@ class OmenAgentMarket(AgentMarket):
     def get_buy_token_amount(
         self, bet_amount: BetAmount, direction: bool
     ) -> TokenAmount:
+        outcome_token_pool = check_not_none(self.outcome_token_pool)
         amount = get_buy_token_amount(
             investment_amount=bet_amount.amount,
             buy_direction=direction,
-            yes_outcome_pool_size=self.outcome_token_pool[OMEN_TRUE_OUTCOME],
-            no_outcome_pool_size=self.outcome_token_pool[OMEN_FALSE_OUTCOME],
+            yes_outcome_pool_size=outcome_token_pool[OMEN_TRUE_OUTCOME],
+            no_outcome_pool_size=outcome_token_pool[OMEN_FALSE_OUTCOME],
             fee=self.fee,
         )
         return TokenAmount(amount=amount, currency=self.currency)

@@ -101,6 +101,7 @@ def compute_job_reward(
 
     bet_amount = xdai_type(trade.amount.amount)
 
+    # TODO: Use after merged https://github.com/gnosis/prediction-market-agent-tooling/pull/415.
     outcome_tokens = market_contract.calcBuyAmount(
         investment_amount=xdai_to_wei(bet_amount),
         outcome_index=market.yes_index if trade.outcome else market.no_index,

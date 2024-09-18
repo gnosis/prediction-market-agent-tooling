@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     INVALID_ANSWER_HEX_BYTES,
+    ContractPrediction,
 )
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20OnGnosisChain,
@@ -669,6 +670,46 @@ class OmenRealitioContract(ContractOnGnosisChain):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(api_keys=api_keys, function_name="withdraw", web3=web3)
+
+
+class OmenAgentResultMappingContract(ContractOnGnosisChain):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../../abis/omen_agentresultmapping.abi.json",
+        )
+    )
+    # ToDo - update address after PR was merged
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x5fbdb2315678afecb367f032d93f642f64180aa3"
+    )
+
+    def get_predictions(
+        self,
+        market_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> list[ContractPrediction]:
+        # ToDo - Write test
+        prediction_tuples = self.call(
+            "getPredictions", function_params=[market_address], web3=web3
+        )
+        return [ContractPrediction.from_tuple(p) for p in prediction_tuples]
+
+    def add_prediction(
+        self,
+        api_keys: APIKeys,
+        market_address: ChecksumAddress,
+        prediction: ContractPrediction,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="addPrediction",
+            function_params=[market_address, prediction.model_dump(by_alias=True)],
+            web3=web3,
+        )
 
 
 class OmenThumbnailMapping(ContractOnGnosisChain):

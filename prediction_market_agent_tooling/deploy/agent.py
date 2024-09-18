@@ -13,50 +13,33 @@ from typing_extensions import Annotated
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
-    BettingStrategy,
-    MaxAccuracyBettingStrategy,
-    TradeType,
-)
-from prediction_market_agent_tooling.deploy.constants import (
-    MARKET_TYPE_KEY,
-    REPOSITORY_KEY,
-)
+    BettingStrategy, MaxAccuracyBettingStrategy, TradeType)
+from prediction_market_agent_tooling.deploy.constants import (MARKET_TYPE_KEY,
+                                                              REPOSITORY_KEY)
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
-    deploy_to_gcp,
-    run_deployed_gcp_function,
-    schedule_deployed_gcp_function,
-)
+    deploy_to_gcp, run_deployed_gcp_function, schedule_deployed_gcp_function)
 from prediction_market_agent_tooling.deploy.gcp.utils import (
-    gcp_function_is_active,
-    gcp_resolve_api_keys_secrets,
-)
+    gcp_function_is_active, gcp_resolve_api_keys_secrets)
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import (
-    AgentMarket,
-    FilterBy,
-    SortBy,
-)
+from prediction_market_agent_tooling.markets.agent_market import (AgentMarket,
+                                                                  FilterBy,
+                                                                  SortBy)
 from prediction_market_agent_tooling.markets.data_models import (
-    Position,
-    ProbabilisticAnswer,
-    Trade,
-)
+    Position, ProbabilisticAnswer, Trade)
 from prediction_market_agent_tooling.markets.markets import (
-    MarketType,
-    have_bet_on_market_since,
-)
+    MarketType, have_bet_on_market_since)
 from prediction_market_agent_tooling.markets.omen.omen import (
-    is_minimum_required_balance,
-    redeem_from_all_user_positions,
-    withdraw_wxdai_to_xdai_to_keep_balance,
-)
-from prediction_market_agent_tooling.monitor.monitor_app import (
-    MARKET_TYPE_TO_DEPLOYED_AGENT,
-)
-from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
-from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
-from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
+    is_minimum_required_balance, redeem_from_all_user_positions,
+    withdraw_wxdai_to_xdai_to_keep_balance)
+from prediction_market_agent_tooling.monitor.monitor_app import \
+    MARKET_TYPE_TO_DEPLOYED_AGENT
+from prediction_market_agent_tooling.tools.is_predictable import \
+    is_predictable_binary
+from prediction_market_agent_tooling.tools.langfuse_ import (langfuse_context,
+                                                             observe)
+from prediction_market_agent_tooling.tools.utils import (DatetimeWithTimezone,
+                                                         utcnow)
 
 MAX_AVAILABLE_MARKETS = 20
 TRADER_TAG = "trader"
@@ -449,7 +432,7 @@ class DeployableTraderAgent(DeployableAgent):
 
         if self.place_bet:
             for trade in trades:
-                logger.info(f"Executing trade {trade}")
+                logger.info(f"Executing trade {trade} on market {market.id}")
 
                 match trade.trade_type:
                     case TradeType.BUY:

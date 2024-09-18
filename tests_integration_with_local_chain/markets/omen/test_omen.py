@@ -29,6 +29,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     get_bet_outcome,
+    ContractPrediction,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -48,11 +49,13 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenRealitioContract,
     WrappedxDaiContract,
     sDaiContract,
+    OmenAgentResultMappingContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
@@ -395,6 +398,28 @@ def get_position_balance_by_position_id(
         position_id=position_id,
         web3=web3,
     )
+
+
+def test_add_predictions(local_web3: Web3, test_keys: APIKeys) -> None:
+    local_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
+    agent_result_mapping = OmenAgentResultMappingContract()
+    market_address = test_keys.public_key
+    dummy_transaction_hash = (
+        "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"
+    )
+    p = ContractPrediction(
+        tx_hash=HexBytes(dummy_transaction_hash),
+        estimated_probability_bps=5454,
+        ipfs_hash=HexBytes(dummy_transaction_hash),
+        publisher=test_keys.public_key,
+    )
+
+    agent_result_mapping.add_prediction(test_keys, market_address, p, web3=local_web3)
+    stored_predictions = agent_result_mapping.get_predictions(
+        market_address, web3=local_web3
+    )
+    assert len(stored_predictions) == 1
+    assert stored_predictions[0] == p
 
 
 def test_place_bet_with_prev_existing_positions(

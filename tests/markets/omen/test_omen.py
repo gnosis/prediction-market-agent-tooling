@@ -243,3 +243,28 @@ def test_get_new_p_yes() -> None:
         bet_amount=market.get_bet_amount(bet.size), direction=bet.direction
     )
     assert np.isclose(new_p_yes, target_p_yes)
+
+
+def test_get_buy_token_amount() -> None:
+    """
+    Test that the two methods of calculating buy amount are equivalent for a
+    'live' market (i.e. where the token pool matches that of the current smart
+    contract state)
+    """
+    market = OmenAgentMarket.get_binary_markets(
+        limit=1,
+        sort_by=SortBy.CLOSING_SOONEST,
+        filter_by=FilterBy.OPEN,
+    )[0]
+    investment_amount = 5.0
+    buy_direction = True
+
+    buy_amount0 = market.get_buy_token_amount(
+        bet_amount=market.get_bet_amount(investment_amount),
+        direction=buy_direction,
+    ).amount
+    buy_amount1 = market._get_buy_token_amount_from_smart_contract(
+        bet_amount=market.get_bet_amount(investment_amount),
+        direction=buy_direction,
+    ).amount
+    assert np.isclose(buy_amount0, buy_amount1)

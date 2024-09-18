@@ -254,7 +254,7 @@ def test_get_buy_token_amount(direction: bool) -> None:
     contract state)
     """
     markets = OmenAgentMarket.get_binary_markets(
-        limit=5,
+        limit=10,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.OPEN,
     )

@@ -53,12 +53,6 @@ def get_bet_outcome(binary_outcome: bool) -> str:
     return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
 
 
-def get_outcome_index(outcome_str: str) -> OutcomeIndex:
-    index = OMEN_BINARY_MARKET_OUTCOMES.index(outcome_str)
-    assert index in OutcomeIndex.__args__, "Index must be from OutcomeIndex literal."  # type: ignore # It indeed has `__args__` attribute.
-    return t.cast(OutcomeIndex, index)
-
-
 class Condition(BaseModel):
     id: HexBytes
     outcomeSlotCount: int

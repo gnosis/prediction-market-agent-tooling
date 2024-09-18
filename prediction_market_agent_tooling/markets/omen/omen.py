@@ -580,6 +580,10 @@ class OmenAgentMarket(AgentMarket):
     def get_buy_token_amount(
         self, bet_amount: BetAmount, direction: bool
     ) -> TokenAmount:
+        """
+        Note: this is only valid if the market instance's token pool is
+        up-to-date with the smart contract.
+        """
         outcome_token_pool = check_not_none(self.outcome_token_pool)
         amount = get_buy_token_amount(
             investment_amount=bet_amount.amount,
@@ -593,10 +597,6 @@ class OmenAgentMarket(AgentMarket):
     def _get_buy_token_amount_from_smart_contract(
         self, bet_amount: BetAmount, direction: bool
     ) -> TokenAmount:
-        """
-        Note: this is only valid if the market instance's token pool is
-        up-to-date with the smart contract.
-        """
         received_token_amount_wei = Wei(
             self.get_contract().calcBuyAmount(
                 investment_amount=xdai_to_wei(xDai(bet_amount.amount)),
@@ -1239,9 +1239,6 @@ def get_buy_token_amount(
 
     Taken from https://github.com/gnosis/conditional-tokens-market-makers/blob/6814c0247c745680bb13298d4f0dd7f5b574d0db/contracts/FixedProductMarketMaker.sol#L264
     """
-    outcome_index = float(buy_direction)  # Convert boolean to index (0 or 1)
-    other_index = 1 - outcome_index  # Get the index of the other outcome
-
     investment_amount_minus_fees = investment_amount * (1 - fee)
     buy_token_pool_balance = (
         yes_outcome_pool_size if buy_direction else no_outcome_pool_size

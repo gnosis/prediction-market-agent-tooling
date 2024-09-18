@@ -10,10 +10,6 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import Probability, xDai, xdai_type
-from prediction_market_agent_tooling.markets.omen.data_models import (
-    get_bet_outcome,
-    get_outcome_index,
-)
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     OmenMarket,

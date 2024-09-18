@@ -211,7 +211,11 @@ def monitor_agent(agent: DeployedAgent) -> None:
         key=f"{agent.name}_x_axis_column",
     )
 
-    bets_df = pd.DataFrame(bets_info).sort_values(by=x_axis_column, ascending=False)
+    bets_df = (
+        pd.DataFrame(bets_info)
+        .sort_values(by=x_axis_column, ascending=False)
+        .reset_index(drop=True)
+    )
     bets_df["x-axis-day"] = bets_df[x_axis_column].dt.date
 
     # Metrics

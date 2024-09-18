@@ -63,7 +63,7 @@ def compute_job_reward(
 
     outcome_tokens = market_contract.calcBuyAmount(
         investment_amount=xdai_to_wei(bet_amount),
-        outcome_index=get_outcome_index(get_bet_outcome(trade.outcome)),
+        outcome_index=market.yes_index() if trade.outcome else market.no_index()
         web3=web3,
     )
 

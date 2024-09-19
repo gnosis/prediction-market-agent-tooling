@@ -97,7 +97,7 @@ def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket | Non
         # If the market model is invalid (e.g. outdated), it will raise an exception
         market = OmenAgentMarket.model_validate(trace.input["args"][1])
         return market
-    except Exception as e:
+    except Exception:
         return None
 
 

@@ -36,8 +36,8 @@ class JobAgentMarket(AgentMarket, ABC):
     def get_reward(self, max_bond: float) -> float:
         """Reward for completing this job."""
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def get_jobs(
         cls, limit: int | None, filter_by: FilterBy, sort_by: SortBy
     ) -> t.Sequence["JobAgentMarket"]:

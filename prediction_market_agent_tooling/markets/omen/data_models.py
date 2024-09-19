@@ -29,8 +29,6 @@ from prediction_market_agent_tooling.tools.utils import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
-OutcomeIndex = t.Literal[0, 1]
-
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
 OMEN_BINARY_MARKET_OUTCOMES = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]

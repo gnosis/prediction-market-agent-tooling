@@ -9,9 +9,10 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     ProbabilisticAnswer,
     TradeType,
 )
-from prediction_market_agent_tooling.gtypes import Probability, xdai_type
+from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen import (
+    BetAmount,
     OmenAgentMarket,
     OmenMarket,
 )
@@ -20,7 +21,6 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
     SortBy,
 )
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 
 class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
@@ -82,8 +82,6 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
 def compute_job_reward(
     market: OmenAgentMarket, max_bond: float, web3: Web3 | None = None
 ) -> float:
-    market_contract = market.get_contract()
-
     # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
     required_trades = KellyBettingStrategy(max_bet_amount=max_bond).calculate_trades(
         existing_position=None,
@@ -102,15 +100,14 @@ def compute_job_reward(
         trade.amount.currency == Currency.xDai
     ), "Should work only on real-money markets."
 
-    bet_amount = xdai_type(trade.amount.amount)
-
-    # TODO: Use after merged https://github.com/gnosis/prediction-market-agent-tooling/pull/415.
-    outcome_tokens = market_contract.calcBuyAmount(
-        investment_amount=xdai_to_wei(bet_amount),
-        outcome_index=market.yes_index if trade.outcome else market.no_index,
-        web3=web3,
+    reward = (
+        market.get_buy_token_amount(
+            bet_amount=BetAmount(
+                amount=trade.amount.amount, currency=trade.amount.currency
+            ),
+            direction=trade.outcome,
+        ).amount
+        - trade.amount.amount
     )
-
-    reward = xdai_type(wei_to_xdai(outcome_tokens) - bet_amount)
 
     return reward

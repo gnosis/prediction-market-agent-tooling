@@ -102,7 +102,7 @@ def get_kelly_bet_full(
 
     if x == y:
         # Add a delta to prevent division by zero
-        y *= 1 + 1e-10
+        y += 1e-10
 
     numerator = (
         -4 * x**2 * y

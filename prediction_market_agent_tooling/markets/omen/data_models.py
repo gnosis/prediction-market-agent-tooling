@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
+    HexStr,
     OmenOutcomeToken,
     Probability,
     Wei,
@@ -30,8 +31,10 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 OMEN_TRUE_OUTCOME = "Yes"
 OMEN_FALSE_OUTCOME = "No"
+OMEN_BINARY_MARKET_OUTCOMES = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 INVALID_ANSWER_HEX_BYTES = HexBytes(INVALID_ANSWER)
+INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.hex())
 OMEN_BASE_URL = "https://aiomen.eth.limo"
 PRESAGIO_BASE_URL = "https://presagio.pages.dev"
 

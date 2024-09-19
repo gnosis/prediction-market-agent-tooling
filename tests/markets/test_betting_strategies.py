@@ -8,10 +8,10 @@ from web3 import Web3
 from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     Mana,
-    OmenOutcomeToken,
     Probability,
     Wei,
     mana_type,
+    omen_outcome_type,
     usd_type,
     wei_type,
     xdai_type,
@@ -64,8 +64,8 @@ def omen_market() -> OmenMarket:
         ),
         outcomes=["Yes", "No"],
         outcomeTokenAmounts=[
-            OmenOutcomeToken(7277347438897016099),
-            OmenOutcomeToken(13741270543921756242),
+            omen_outcome_type(7277347438897016099),
+            omen_outcome_type(13741270543921756242),
         ],
         outcomeTokenMarginalPrices=[
             xdai_type("0.6537666061181695741160552853310822"),

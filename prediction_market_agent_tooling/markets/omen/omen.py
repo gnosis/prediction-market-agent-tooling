@@ -97,10 +97,6 @@ class OmenAgentMarket(AgentMarket):
     close_time: datetime
     fee: float  # proportion, from 0 to 1
 
-    INVALID_MARKET_ANSWER: HexStr = HexStr(
-        "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    )
-
     _binary_market_p_yes_history: list[Probability] | None = None
     description: str | None = (
         None  # Omen markets don't have a description, so just default to None.

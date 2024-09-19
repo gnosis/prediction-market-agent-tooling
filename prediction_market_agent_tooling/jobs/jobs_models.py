@@ -4,7 +4,6 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     FilterBy,
@@ -44,7 +43,7 @@ class JobAgentMarket(AgentMarket, ABC):
     ) -> t.Sequence["JobAgentMarket"]:
         """Get all available jobs."""
 
-    def to_simple_job(self, max_bond: xDai) -> SimpleJob:
+    def to_simple_job(self, max_bond: float) -> SimpleJob:
         return SimpleJob(
             id=self.id,
             job=self.job,

@@ -89,7 +89,7 @@ if __name__ == "__main__":
             has_output=True,
             client=langfuse,
         )
-        process_market_traces = []
+        process_market_traces: list[ProcessMarketTrace] = []
         for trace in traces:
             if process_market_trace := ProcessMarketTrace.from_langfuse_trace(trace):
                 process_market_traces.append(process_market_trace)
@@ -99,7 +99,6 @@ if __name__ == "__main__":
             start_time=start_time,
             end_time=None,
         )
-        print(f"All bets: {len(bets)}")
 
         # All bets should have a trace, but not all traces should have a bet
         # (e.g. if all markets are deemed unpredictable), so iterate over bets
@@ -109,16 +108,27 @@ if __name__ == "__main__":
             if trace:
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
 
-        print(f"Matched bets with traces: {len(bets_with_traces)}")
+        print(f"Number of bets since {start_time}: {len(bets_with_traces)}")
+        if len(bets_with_traces) != len(bets):
+            raise ValueError(
+                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace"
+            )
 
         kelly_bets_outcomes: list[KellyBetOutcome] = []
         for bet_with_trace in bets_with_traces:
             bet = bet_with_trace.bet
             trace = bet_with_trace.trace
             kelly_bet_outcome = get_kelly_bet_outcome_for_trace(
-                trace=trace, market_outcome=bet.is_correct
+                trace=trace, market_outcome=bet.market_outcome
             )
             kelly_bets_outcomes.append(kelly_bet_outcome)
+
+            ## Uncomment for debug
+            # print(
+            #     f"Actual: size={bet.amount.amount:.2f}, dir={bet.outcome}, correct={bet.is_correct} profit={bet.profit.amount:.2f} | "
+            #     f"Kelly: size={kelly_bet_outcome.size:.2f}, dir={kelly_bet_outcome.direction}, correct={kelly_bet_outcome.correct}, profit={kelly_bet_outcome.profit:.2f} | "
+            #     f"outcome={bet.market_outcome}, mrkt_p_yes={trace.market.current_p_yes:.2f}, est_p_yes={trace.answer.p_yes:.2f}, conf={trace.answer.confidence:.2f}"
+            # )
 
         total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
         total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])

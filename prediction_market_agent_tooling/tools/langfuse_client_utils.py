@@ -32,7 +32,7 @@ class ProcessMarketTrace(BaseModel):
     @staticmethod
     def from_langfuse_trace(
         trace: TraceWithDetails,
-    ) -> t.Union["ProcessMarketTrace", None]:
+    ) -> t.Optional["ProcessMarketTrace"]:
         market = trace_to_omen_agent_market(trace)
         answer = trace_to_answer(trace)
         trades = trace_to_trades(trace)
@@ -88,8 +88,6 @@ def get_traces_for_agent(
 
 
 def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket | None:
-    if not hasattr(trace, "input"):
-        breakpoint()
     if not trace.input:
         return None
     if not trace.input["args"]:

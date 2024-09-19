@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from langfuse import Langfuse
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import PrivateKey
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     print("# Agent Bet vs Theoretical Kelly Bet Comparison")
     for agent_name, pkey in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
-        api_keys = APIKeys(BET_FROM_PRIVATE_KEY=PrivateKey(pkey))
+        api_keys = APIKeys(BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(pkey)))
 
         # Pick a time after pool token number is stored in OmenAgentMarket
         start_time = datetime(2024, 9, 13)

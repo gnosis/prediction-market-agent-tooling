@@ -576,6 +576,23 @@ class OmenAgentMarket(AgentMarket):
     def get_buy_token_amount(
         self, bet_amount: BetAmount, direction: bool
     ) -> TokenAmount:
+        """
+        Note: this is only valid if the market instance's token pool is
+        up-to-date with the smart contract.
+        """
+        outcome_token_pool = check_not_none(self.outcome_token_pool)
+        amount = get_buy_outcome_token_amount(
+            investment_amount=bet_amount.amount,
+            buy_direction=direction,
+            yes_outcome_pool_size=outcome_token_pool[OMEN_TRUE_OUTCOME],
+            no_outcome_pool_size=outcome_token_pool[OMEN_FALSE_OUTCOME],
+            fee=self.fee,
+        )
+        return TokenAmount(amount=amount, currency=self.currency)
+
+    def _get_buy_token_amount_from_smart_contract(
+        self, bet_amount: BetAmount, direction: bool
+    ) -> TokenAmount:
         received_token_amount_wei = Wei(
             self.get_contract().calcBuyAmount(
                 investment_amount=xdai_to_wei(xDai(bet_amount.amount)),
@@ -1204,3 +1221,33 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
     logger.info(
         f"Withdrew {need_to_withdraw} wxDai to keep the balance above the minimum required balance {min_required_balance}."
     )
+
+
+def get_buy_outcome_token_amount(
+    investment_amount: float,
+    buy_direction: bool,
+    yes_outcome_pool_size: float,
+    no_outcome_pool_size: float,
+    fee: float,
+) -> float:
+    """
+    Calculates the amount of outcome tokens received for a given investment
+
+    Taken from https://github.com/gnosis/conditional-tokens-market-makers/blob/6814c0247c745680bb13298d4f0dd7f5b574d0db/contracts/FixedProductMarketMaker.sol#L264
+    """
+    investment_amount_minus_fees = investment_amount * (1 - fee)
+    buy_token_pool_balance = (
+        yes_outcome_pool_size if buy_direction else no_outcome_pool_size
+    )
+
+    pool_balance = no_outcome_pool_size if buy_direction else yes_outcome_pool_size
+    denominator = pool_balance + investment_amount_minus_fees
+    ending_outcome_balance = buy_token_pool_balance * pool_balance / denominator
+
+    if ending_outcome_balance <= 0:
+        raise ValueError("must have non-zero balances")
+
+    result = (
+        buy_token_pool_balance + investment_amount_minus_fees - ending_outcome_balance
+    )
+    return result

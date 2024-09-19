@@ -32,9 +32,7 @@ class ProcessMarketTrace(BaseModel):
     @staticmethod
     def from_langfuse_trace(
         trace: TraceWithDetails,
-    ) -> t.Union[
-        "ProcessMarketTrace", None
-    ]:  # TypeError: unsupported operand type(s) for |: 'str' and 'NoneType'
+    ) -> t.Union["ProcessMarketTrace", None]:
         market = trace_to_omen_agent_market(trace)
         answer = trace_to_answer(trace)
         trades = trace_to_trades(trace)

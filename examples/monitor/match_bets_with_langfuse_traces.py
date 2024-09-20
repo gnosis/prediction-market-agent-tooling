@@ -41,7 +41,7 @@ def get_kelly_bet_outcome_for_trace(
             market.get_outcome_str_from_bool(False)
         ],
         estimated_p_yes=answer.p_yes,
-        confidence=1.0,
+        confidence=answer.confidence,
         max_bet=max_bet,
         fee=market.fee,
     )

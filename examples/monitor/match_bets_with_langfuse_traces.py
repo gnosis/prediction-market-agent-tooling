@@ -134,12 +134,12 @@ if __name__ == "__main__":
             kelly_bets_outcomes.append(kelly_bet_outcome)
             agent_balance += kelly_bet_outcome.profit
 
-            # Uncomment for debug
-            print(
-                f"Actual: size={bet.amount.amount:.2f}, dir={bet.outcome}, correct={bet.is_correct} profit={bet.profit.amount:.2f} | "
-                f"Kelly: size={kelly_bet_outcome.size:.2f}, dir={kelly_bet_outcome.direction}, correct={kelly_bet_outcome.correct}, profit={kelly_bet_outcome.profit:.2f} | "
-                f"outcome={bet.market_outcome}, mrkt_p_yes={trace.market.current_p_yes:.2f}, est_p_yes={trace.answer.p_yes:.2f}, conf={trace.answer.confidence:.2f}"
-            )
+            # # Uncomment for debug
+            # print(
+            #     f"Actual: size={bet.amount.amount:.2f}, dir={bet.outcome}, correct={bet.is_correct} profit={bet.profit.amount:.2f} | "
+            #     f"Kelly: size={kelly_bet_outcome.size:.2f}, dir={kelly_bet_outcome.direction}, correct={kelly_bet_outcome.correct}, profit={kelly_bet_outcome.profit:.2f} | "
+            #     f"outcome={bet.market_outcome}, mrkt_p_yes={trace.market.current_p_yes:.2f}, est_p_yes={trace.answer.p_yes:.2f}, conf={trace.answer.confidence:.2f}"
+            # )
 
         total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
         total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])

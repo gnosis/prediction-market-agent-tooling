@@ -27,5 +27,5 @@ def par_generator(
 ) -> Generator[B, None, None]:
     """Applies the function to each element using the specified executor. Yields results as they come."""
     executor = get_reusable_executor(max_workers=max_workers)
-    for fut in executor.map(func, items):
-        yield fut
+    for res in executor.map(func, items):
+        yield res

@@ -285,10 +285,9 @@ def build_incomplete_user_position_from_condition_ids(
     )
 
 
-def test_get_markets_id_in() -> None:
+def test_get_markets_id_in(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     market_id = "0x934b9f379dd9d8850e468df707d58711da2966cd"
-    sgh = OmenSubgraphHandler()
-    markets = sgh.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_binary_markets(
         limit=1,
         id_in=[market_id],
     )
@@ -296,33 +295,37 @@ def test_get_markets_id_in() -> None:
     assert markets[0].id == market_id
 
 
-def test_omen_get_non_existing_market_by_id() -> None:
+def test_omen_get_non_existing_market_by_id(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
     with pytest.raises(ValueError) as e:
-        OmenSubgraphHandler().get_omen_market_by_market_id(HexAddress(HexStr("0x123")))
+        omen_subgraph_handler.get_omen_market_by_market_id(HexAddress(HexStr("0x123")))
     assert "Fetched wrong number of markets. Expected 1 but got 0" in str(e)
 
 
-def test_get_existing_image() -> None:
+def test_get_existing_image(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     market_id = HexAddress(HexStr("0x0539590c0cf0d929e3f40b290fda04b9b4a8cf68"))
-    image_url = OmenSubgraphHandler().get_market_image_url(market_id)
+    image_url = omen_subgraph_handler.get_market_image_url(market_id)
     assert (
         image_url
         == "https://ipfs.io/ipfs/QmRiPQ4x7jAgKMyJMV8Uqw7vQir6vmgB851TXe7CgQx7cV"
     )
-    image = OmenSubgraphHandler().get_market_image(market_id)
+    image = omen_subgraph_handler.get_market_image(market_id)
     assert image is not None
 
 
-def test_get_non_existing_image() -> None:
+def test_get_non_existing_image(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     market_id = HexAddress(HexStr("0xd37dfcee94666f83d7c334658719817bf8ee1bca"))
-    image_url = OmenSubgraphHandler().get_market_image_url(market_id)
+    image_url = omen_subgraph_handler.get_market_image_url(market_id)
     assert image_url is None
-    image = OmenSubgraphHandler().get_market_image(market_id)
+    image = omen_subgraph_handler.get_market_image(market_id)
     assert image is None
 
 
-def test_wont_return_non_wxdai_markets_if_not_wanted() -> None:
-    markets = OmenSubgraphHandler().get_omen_binary_markets(
+def test_wont_return_non_wxdai_markets_if_not_wanted(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    markets = omen_subgraph_handler.get_omen_binary_markets(
         limit=None,
         id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
         collateral_token_address_in=(WrappedxDaiContract().address,),
@@ -332,10 +335,29 @@ def test_wont_return_non_wxdai_markets_if_not_wanted() -> None:
     ), "Shouldn't return markets that are not on wxDai, because of the default filter."
 
 
-def test_will_return_non_wxdai_markets_if_asked_for() -> None:
-    markets = OmenSubgraphHandler().get_omen_binary_markets(
+def test_will_return_non_wxdai_markets_if_asked_for(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    markets = omen_subgraph_handler.get_omen_binary_markets(
         limit=None,
         id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
         collateral_token_address_in=None,
     )
     assert len(markets) == 1, "Should have return that one market with the given ID."
+
+
+# ToDo - Use test_subgraph_handler everywhere
+def test_get_predictions_from_market(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    dummy_market_id = Web3.to_checksum_address(
+        "0x134f193625bbc38f31aeeecf41f5f96c1ad6ea9a"
+    )  # dummy market inserted right after contract was deployed
+    dummy_ipfs_hash = "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"  # IPFS hash is a dummy value created for testing purposes upon contract creation.
+
+    predictions = omen_subgraph_handler.get_agent_results_for_market(
+        market_id=dummy_market_id
+    )
+    assert len(predictions) == 1
+    # We can get the 0th element since we sort by block number asc.
+    assert predictions[0].ipfs_hash.hex() == dummy_ipfs_hash

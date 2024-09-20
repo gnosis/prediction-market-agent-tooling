@@ -683,7 +683,7 @@ class OmenAgentResultMappingContract(ContractOnGnosisChain):
     )
     # ToDo - update address after PR was merged
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x5fbdb2315678afecb367f032d93f642f64180aa3"
+        "0xbe1F6944496923683ca849fc0cC93fD10523cB83"
     )
 
     def get_predictions(

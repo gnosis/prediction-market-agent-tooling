@@ -1,21 +1,31 @@
 import typing as t
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import (USD, ChecksumAddress,
-                                                    HexAddress, HexBytes,
-                                                    OmenOutcomeToken,
-                                                    Probability, Wei, xDai)
-from prediction_market_agent_tooling.markets.data_models import (Bet,
-                                                                 BetAmount,
-                                                                 Currency,
-                                                                 ProfitAmount,
-                                                                 Resolution,
-                                                                 ResolvedBet)
-from prediction_market_agent_tooling.tools.utils import (check_not_none,
-                                                         should_not_happen)
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    ChecksumAddress,
+    HexAddress,
+    HexBytes,
+    OmenOutcomeToken,
+    Probability,
+    Wei,
+    xDai,
+)
+from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
+    BetAmount,
+    Currency,
+    ProfitAmount,
+    Resolution,
+    ResolvedBet,
+)
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    should_not_happen,
+)
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 OMEN_TRUE_OUTCOME = "Yes"
@@ -517,12 +527,11 @@ class RealityAnswersResponse(BaseModel):
 
 
 class ContractPrediction(BaseModel):
-    publisher: ChecksumAddress = Field(..., serialization_alias="publisherAddress")
-    ipfs_hash: HexBytes = Field(..., serialization_alias="ipfsHash")
-    tx_hash: HexBytes = Field(..., serialization_alias="txHash")
-    estimated_probability_bps: int = Field(
-        ..., serialization_alias="estimatedProbabilityBps"
-    )
+    model_config = ConfigDict(populate_by_name=True)
+    publisher: ChecksumAddress = Field(..., alias="publisherAddress")
+    ipfs_hash: HexBytes = Field(..., alias="ipfsHash")
+    tx_hash: HexBytes = Field(..., alias="txHash")
+    estimated_probability_bps: int = Field(..., alias="estimatedProbabilityBps")
 
     @staticmethod
     def from_tuple(values: tuple[t.Any]) -> "ContractPrediction":

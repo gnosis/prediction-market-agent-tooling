@@ -27,7 +27,7 @@ class KellyBetOutcome(BaseModel):
 
 
 def get_kelly_bet_outcome_for_trace(
-    trace: ProcessMarketTrace, market_outcome: bool
+    trace: ProcessMarketTrace, market_outcome: bool, max_bet: float
 ) -> KellyBetOutcome:
     market = trace.market
     answer = trace.answer
@@ -42,7 +42,7 @@ def get_kelly_bet_outcome_for_trace(
         ],
         estimated_p_yes=answer.p_yes,
         confidence=answer.confidence,
-        max_bet=2.0,
+        max_bet=max_bet,
         fee=market.fee,
     )
     received_outcome_tokens = market.get_buy_token_amount(
@@ -115,14 +115,23 @@ if __name__ == "__main__":
                 f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace"
             )
 
+        # "Born" agent with initial funding, simulate as if he was doing bets one by one.
+        agent_balance = 50.0
+
         kelly_bets_outcomes: list[KellyBetOutcome] = []
         for bet_with_trace in bets_with_traces:
+            if agent_balance <= 0:
+                print(f"Agent died with balance {agent_balance}.")
+                break
             bet = bet_with_trace.bet
             trace = bet_with_trace.trace
             kelly_bet_outcome = get_kelly_bet_outcome_for_trace(
-                trace=trace, market_outcome=bet.market_outcome
+                trace=trace,
+                market_outcome=bet.market_outcome,
+                max_bet=agent_balance * 0.9,
             )
             kelly_bets_outcomes.append(kelly_bet_outcome)
+            agent_balance += kelly_bet_outcome.profit
 
             ## Uncomment for debug
             # print(

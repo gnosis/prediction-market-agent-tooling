@@ -150,4 +150,5 @@ def get_trace_for_bet(
             add_utc_timezone_validator(bet.created_time),
             [t.timestamp for t in traces_for_bet],
         )
+
         return traces_for_bet[closest_trace_index]

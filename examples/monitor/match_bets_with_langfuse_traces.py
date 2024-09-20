@@ -1,10 +1,9 @@
 from datetime import datetime
 
 from langfuse import Langfuse
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import PrivateKey
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
@@ -16,7 +15,10 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_trace_for_bet,
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    get_private_key_from_gcp_secret,
+)
 
 
 class KellyBetOutcome(BaseModel):
@@ -60,20 +62,24 @@ def get_kelly_bet_outcome_for_trace(
 
 
 if __name__ == "__main__":
+    # Get the private keys for the agents from GCP Secret Manager
+    agent_gcp_secret_map = {
+        "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
+        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",  # no bets!
+        # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",  # no bets!
+        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+    }
     agent_pkey_map = {
-        "DeployablePredictionProphetGPT4TurboFinalAgent": "...",
-        "DeployablePredictionProphetGPT4TurboPreviewAgent": "...",
-        "DeployablePredictionProphetGPT4oAgent": "...",
-        "DeployableOlasEmbeddingOAAgent": "...",
-        # "DeployableThinkThoroughlyAgent": "...",  # no bets!
-        # "DeployableThinkThoroughlyProphetResearchAgent": "...",  # no bets!
-        "DeployableKnownOutcomeAgent": "...",
+        k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
     }
 
     print("# Agent Bet vs Theoretical Kelly Bet Comparison")
-    for agent_name, pkey in agent_pkey_map.items():
+    for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
-        api_keys = APIKeys(BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(pkey)))
+        api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
 
         # Pick a time after pool token number is stored in OmenAgentMarket
         start_time = datetime(2024, 9, 13)

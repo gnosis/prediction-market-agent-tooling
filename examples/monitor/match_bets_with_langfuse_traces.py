@@ -150,5 +150,5 @@ if __name__ == "__main__":
             f"Actual Bet: ROI={roi:.2f}%, amount={total_bet_amount:.2f}, profit={total_bet_profit:.2f}"
         )
         print(
-            f"Kelly Bet: ROI={kelly_roi:.2f}%, amount={total_kelly_amount:.2f}, profit={total_kelly_profit:.2f}"
+            f"Kelly Bet: ROI={kelly_roi:.2f}%, amount={total_kelly_amount:.2f}, profit={total_kelly_profit:.2f}, final agent balance: {agent_balance:.2f}"
         )

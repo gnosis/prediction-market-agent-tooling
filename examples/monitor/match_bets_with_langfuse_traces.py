@@ -16,7 +16,7 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
 if __name__ == "__main__":
     api_keys = APIKeys()
     assert api_keys.bet_from_address == Web3.to_checksum_address(
-        "0xe7aa88a1d044e5c987ecce55ae8d2b562a41b72d"  # prophetgpt4
+        "0xA8eFa5bb5C6ad476c9E0377dbF66cC41CB6D5bdD"  # prophet_gpt4_final
     )
     start_time = datetime(2024, 9, 13)
     langfuse = Langfuse(
@@ -44,7 +44,6 @@ if __name__ == "__main__":
         start_time=start_time,
         end_time=None,
     )
-    print(f"All bets: {len(bets)}")
 
     # All bets should have a trace, but not all traces should have a bet
     # (e.g. if all markets are deemed unpredictable), so iterate over bets
@@ -54,4 +53,8 @@ if __name__ == "__main__":
         if trace:
             bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
 
-    print(f"Matched bets with traces: {len(bets_with_traces)}")
+    print(f"Number of bets since {start_time}: {len(bets_with_traces)}")
+    if len(bets_with_traces) != len(bets):
+        raise ValueError(
+            f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace"
+        )

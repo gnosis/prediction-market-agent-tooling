@@ -1,61 +1,80 @@
 from datetime import datetime
+from typing import Any
 
+import pandas as pd
 from langfuse import Langfuse
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.betting_strategy import (
+    BettingStrategy,
+    KellyBettingStrategy,
+    MaxAccuracyBettingStrategy,
+    MaxAccuracyWithKellyScaledBetsStrategy,
+    MaxExpectedValueBettingStrategy,
+    ProbabilisticAnswer,
+    TradeType,
+)
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
-    get_kelly_bet_full,
-)
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     ProcessMarketTrace,
     ResolvedBetWithTrace,
     get_trace_for_bet,
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    check_not_none,
-    get_private_key_from_gcp_secret,
-)
+from prediction_market_agent_tooling.tools.utils import get_private_key_from_gcp_secret
 
 
-class KellyBetOutcome(BaseModel):
+class SimulatedOutcome(BaseModel):
     size: float
     direction: bool
     correct: bool
     profit: float
 
 
-def get_kelly_bet_outcome_for_trace(
-    trace: ProcessMarketTrace, market_outcome: bool, max_bet: float
-) -> KellyBetOutcome:
+def get_outcome_for_trace(
+    strategy: BettingStrategy,
+    trace: ProcessMarketTrace,
+    market_outcome: bool,
+) -> SimulatedOutcome | None:
     market = trace.market
     answer = trace.answer
-    outcome_token_pool = check_not_none(market.outcome_token_pool)
 
-    kelly_bet = get_kelly_bet_full(
-        yes_outcome_pool_size=outcome_token_pool[
-            market.get_outcome_str_from_bool(True)
-        ],
-        no_outcome_pool_size=outcome_token_pool[
-            market.get_outcome_str_from_bool(False)
-        ],
-        estimated_p_yes=answer.p_yes,
-        confidence=answer.confidence,
-        max_bet=max_bet,
-        fee=market.fee,
+    trades = strategy.calculate_trades(
+        existing_position=None,
+        answer=ProbabilisticAnswer(
+            p_yes=answer.p_yes,
+            confidence=answer.confidence,
+        ),
+        market=market,
     )
+    # For example, when our predicted p_yes is 95%, but market is already trading at 99%, and we don't have anything to sell, Kelly will yield no trades.
+    if not trades:
+        return None
+    assert (
+        len(trades) == 1
+    ), f"Should be always one trade if no existing position is given: {trades=}; {answer=}; {market=}"
+    assert (
+        trades[0].trade_type == TradeType.BUY
+    ), "Can only buy without previous position."
+    buy_trade = trades[0]
+
     received_outcome_tokens = market.get_buy_token_amount(
-        bet_amount=market.get_bet_amount(kelly_bet.size),
-        direction=kelly_bet.direction,
+        bet_amount=market.get_bet_amount(buy_trade.amount.amount),
+        direction=buy_trade.outcome,
     ).amount
-    correct = kelly_bet.direction == market_outcome
-    profit = received_outcome_tokens - kelly_bet.size if correct else -kelly_bet.size
-    return KellyBetOutcome(
-        size=kelly_bet.size,
-        direction=kelly_bet.direction,
+
+    correct = buy_trade.outcome == market_outcome
+    profit = (
+        received_outcome_tokens - buy_trade.amount.amount
+        if correct
+        else -buy_trade.amount.amount
+    )
+
+    return SimulatedOutcome(
+        size=buy_trade.amount.amount,
+        direction=buy_trade.outcome,
         correct=correct,
         profit=profit,
     )
@@ -75,8 +94,23 @@ if __name__ == "__main__":
     agent_pkey_map = {
         k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
     }
+    # Define strategies we want to test out
+    strategies = [
+        MaxAccuracyBettingStrategy(bet_amount=1),
+        MaxAccuracyBettingStrategy(bet_amount=2),
+        MaxAccuracyBettingStrategy(bet_amount=25),
+        KellyBettingStrategy(max_bet_amount=1),
+        KellyBettingStrategy(max_bet_amount=2),
+        KellyBettingStrategy(max_bet_amount=25),
+        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
+        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
+        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
+        MaxExpectedValueBettingStrategy(bet_amount=1),
+        MaxExpectedValueBettingStrategy(bet_amount=2),
+        MaxExpectedValueBettingStrategy(bet_amount=25),
+    ]
 
-    print("# Agent Bet vs Theoretical Kelly Bet Comparison")
+    print("# Agent Bet vs Simulated Bet Comparison")
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
@@ -116,46 +150,61 @@ if __name__ == "__main__":
             if trace:
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
 
-        print(f"Number of bets since {start_time}: {len(bets_with_traces)}")
+        print(f"Number of bets since {start_time}: {len(bets_with_traces)}\n")
         if len(bets_with_traces) != len(bets):
             raise ValueError(
                 f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace"
             )
 
-        # "Born" agent with initial funding, simulate as if he was doing bets one by one.
-        agent_balance = 50.0
+        simulations: list[dict[str, Any]] = []
 
-        kelly_bets_outcomes: list[KellyBetOutcome] = []
-        for bet_with_trace in bets_with_traces:
-            if agent_balance <= 0:
-                print(f"Agent died with balance {agent_balance}.")
-                break
-            bet = bet_with_trace.bet
-            trace = bet_with_trace.trace
-            kelly_bet_outcome = get_kelly_bet_outcome_for_trace(
-                trace=trace,
-                market_outcome=bet.market_outcome,
-                max_bet=agent_balance * 0.9,
+        for strategy_idx, strategy in enumerate(strategies):
+            # "Born" agent with initial funding, simulate as if he was doing bets one by one.
+            starting_balance = 50.0
+            agent_balance = starting_balance
+            simulated_outcomes: list[SimulatedOutcome] = []
+
+            for bet_with_trace in bets_with_traces:
+                bet = bet_with_trace.bet
+                trace = bet_with_trace.trace
+                simulated_outcome = get_outcome_for_trace(
+                    strategy=strategy, trace=trace, market_outcome=bet.market_outcome
+                )
+                if simulated_outcome is None:
+                    continue
+                simulated_outcomes.append(simulated_outcome)
+                agent_balance += simulated_outcome.profit
+
+            total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
+            total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
+            total_simulated_amount = sum([so.size for so in simulated_outcomes])
+            total_simulated_profit = sum([so.profit for so in simulated_outcomes])
+            roi = 100 * total_bet_profit / total_bet_amount
+            simulated_roi = 100 * total_simulated_profit / total_simulated_amount
+
+            # At the beginning, add also the agent's current strategy.
+            if strategy_idx == 0:
+                simulations.append(
+                    {
+                        "strategy": "original",
+                        "bet_amount": total_bet_amount,
+                        "bet_profit": total_bet_profit,
+                        "roi": roi,
+                        # We don't know these for the original run.
+                        "start_balance": None,
+                        "end_balance": None,
+                    }
+                )
+
+            simulations.append(
+                {
+                    "strategy": repr(strategy),
+                    "bet_amount": total_simulated_amount,
+                    "bet_profit": total_simulated_profit,
+                    "roi": simulated_roi,
+                    "start_balance": starting_balance,
+                    "end_balance": agent_balance,
+                }
             )
-            kelly_bets_outcomes.append(kelly_bet_outcome)
-            agent_balance += kelly_bet_outcome.profit
 
-            # # Uncomment for debug
-            # print(
-            #     f"Actual: size={bet.amount.amount:.2f}, dir={bet.outcome}, correct={bet.is_correct} profit={bet.profit.amount:.2f} | "
-            #     f"Kelly: size={kelly_bet_outcome.size:.2f}, dir={kelly_bet_outcome.direction}, correct={kelly_bet_outcome.correct}, profit={kelly_bet_outcome.profit:.2f} | "
-            #     f"outcome={bet.market_outcome}, mrkt_p_yes={trace.market.current_p_yes:.2f}, est_p_yes={trace.answer.p_yes:.2f}, conf={trace.answer.confidence:.2f}"
-            # )
-
-        total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
-        total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
-        total_kelly_amount = sum([kbo.size for kbo in kelly_bets_outcomes])
-        total_kelly_profit = sum([kbo.profit for kbo in kelly_bets_outcomes])
-        roi = 100 * total_bet_profit / total_bet_amount
-        kelly_roi = 100 * total_kelly_profit / total_kelly_amount
-        print(
-            f"Actual Bet: ROI={roi:.2f}%, amount={total_bet_amount:.2f}, profit={total_bet_profit:.2f}"
-        )
-        print(
-            f"Kelly Bet: ROI={kelly_roi:.2f}%, amount={total_kelly_amount:.2f}, profit={total_kelly_profit:.2f}, final agent balance: {agent_balance:.2f}"
-        )
+        print(pd.DataFrame.from_records(simulations).to_markdown(index=False))

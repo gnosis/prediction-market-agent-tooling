@@ -8,7 +8,6 @@ class Amount(ABC):
         """
         Returns the amount
         """
-        pass
 
 
 class StaticAmount(Amount):

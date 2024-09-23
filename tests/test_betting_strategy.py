@@ -13,7 +13,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
     TradeType,
 )
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.tools.amount import DynamicAmount
+from prediction_market_agent_tooling.tools.balances import get_balance_fn
 
 
 @pytest.mark.parametrize(
@@ -60,3 +63,15 @@ def test_rebalance() -> None:
     sell_trade = trades[1]
     assert sell_trade.trade_type == TradeType.SELL
     assert sell_trade.amount.amount == mock_amount.amount
+
+
+def test_dyamic_bet_amount() -> None:
+    balance_fn = get_balance_fn(market_type=MarketType.OMEN)
+    strategy = MaxAccuracyBettingStrategy(
+        bet_amount=DynamicAmount(
+            get_amount_fn=balance_fn,
+            proportion=0.1,
+        )
+    )
+    balance = balance_fn()
+    assert strategy.bet_amount.get() == balance * 0.1

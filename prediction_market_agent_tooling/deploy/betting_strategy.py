@@ -153,7 +153,7 @@ class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: Amount = StaticAmount(bet_amount=10)):
+    def __init__(self, max_bet_amount: Amount = StaticAmount(amount=10)):
         self.max_bet_amount = max_bet_amount
 
     def adjust_bet_amount(

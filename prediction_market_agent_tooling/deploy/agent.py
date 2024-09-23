@@ -54,8 +54,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
-from prediction_market_agent_tooling.tools.amount import DynamicAmount
-from prediction_market_agent_tooling.tools.balances import get_balance_fn
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
@@ -296,11 +294,7 @@ class DeployableTraderAgent(DeployableAgent):
         self.place_bet = place_bet
 
     def get_betting_strategy(self, market_type: MarketType) -> BettingStrategy:
-        return MaxAccuracyBettingStrategy(
-            bet_amount=DynamicAmount(
-                get_amount_fn=get_balance_fn(market_type=market_type)
-            )
-        )
+        return MaxAccuracyBettingStrategy()
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -455,7 +449,10 @@ class DeployableTraderAgent(DeployableAgent):
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.build_trades(
-            market=market, answer=answer, existing_position=existing_position
+            market_type=market_type,
+            market=market,
+            answer=answer,
+            existing_position=existing_position,
         )
 
         if self.place_bet:

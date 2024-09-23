@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import typing as t
@@ -6,12 +7,14 @@ from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
 import pytz
 import requests
+from google.cloud import secretmanager
 from pydantic import BaseModel, ValidationError
 from scipy.optimize import newton
 from scipy.stats import entropy
 
 from prediction_market_agent_tooling.gtypes import (
     DatetimeWithTimezone,
+    PrivateKey,
     Probability,
     SecretStr,
 )
@@ -210,3 +213,18 @@ def calculate_sell_amount_in_collateral(
 
     amount_to_sell = newton(f, 0)
     return float(amount_to_sell) * 0.999999  # Avoid rounding errors
+
+
+def get_private_key_from_gcp_secret(
+    secret_id: str,
+    project_id: str = "582587111398",  # Gnosis AI default project_id
+    version_id: str = "latest",
+) -> PrivateKey:
+    client = secretmanager.SecretManagerServiceClient()
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+    response = client.access_secret_version(request={"name": name})
+    secret_payload = response.payload.data.decode("UTF-8")
+    secret_json = json.loads(secret_payload)
+    if "private_key" not in secret_json:
+        raise ValueError(f"Private key not found in gcp secret {secret_id}")
+    return PrivateKey(SecretStr(secret_json["private_key"]))

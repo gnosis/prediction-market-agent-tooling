@@ -20,8 +20,8 @@ class StaticAmount(Amount):
 
 class DynamicAmount(Amount):
     def __init__(self, get_amount_fn: Callable[[], float], proportion: float = 1.0):
-        self.get_wallet_balance_fn = get_amount_fn
+        self.get_amount_fn = get_amount_fn
         self.proportion = proportion
 
     def get(self) -> float:
-        return self.get_wallet_balance_fn() * self.proportion
+        return self.get_amount_fn() * self.proportion

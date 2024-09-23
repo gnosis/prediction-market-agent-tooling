@@ -62,10 +62,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     OMEN_IMAGE_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/EWN14ciGK53PpUiKSm7kMWQ6G4iz3tDrRLyZ1iXMQEdu"
 
-    # OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/GoE3UFyc8Gg9xzv92oinonyhRCphpGu62qB2Eh2XvJ8F"
-    OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = (
-        "https://api.studio.thegraph.com/query/89435/omen-agentresultmapping/v0.0.1"
-    )
+    OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/GoE3UFyc8Gg9xzv92oinonyhRCphpGu62qB2Eh2XvJ8F"
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 

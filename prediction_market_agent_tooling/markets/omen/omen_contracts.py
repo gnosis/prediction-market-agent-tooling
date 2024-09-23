@@ -691,7 +691,6 @@ class OmenAgentResultMappingContract(ContractOnGnosisChain):
         market_address: ChecksumAddress,
         web3: Web3 | None = None,
     ) -> list[ContractPrediction]:
-        # ToDo - Write test
         prediction_tuples = self.call(
             "getPredictions", function_params=[market_address], web3=web3
         )

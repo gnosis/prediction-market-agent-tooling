@@ -54,6 +54,8 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
+from prediction_market_agent_tooling.tools.amount import DynamicAmount
+from prediction_market_agent_tooling.tools.balances import get_balance_fn
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
@@ -282,7 +284,7 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
-    strategy: BettingStrategy = MaxAccuracyBettingStrategy()
+    strategy: BettingStrategy
     allow_opposite_bets: bool = False
 
     def __init__(
@@ -292,6 +294,13 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
+
+    def get_betting_strategy(self, market_type: MarketType) -> BettingStrategy:
+        return MaxAccuracyBettingStrategy(
+            bet_amount=DynamicAmount(
+                get_amount_fn=get_balance_fn(market_type=market_type)
+            )
+        )
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -407,11 +416,13 @@ class DeployableTraderAgent(DeployableAgent):
 
     def build_trades(
         self,
+        market_type: MarketType,
         market: AgentMarket,
         answer: ProbabilisticAnswer,
         existing_position: Position | None,
     ) -> list[Trade]:
-        trades = self.strategy.calculate_trades(existing_position, answer, market)
+        strategy = self.get_betting_strategy(market_type=market_type)
+        trades = strategy.calculate_trades(existing_position, answer, market)
         BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 

@@ -1,8 +1,12 @@
+from typing import Callable
+
 from pydantic import BaseModel
 from web3 import Web3
 from web3.types import Wei
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
@@ -25,3 +29,11 @@ def get_balances(address: ChecksumAddress, web3: Web3 | None = None) -> Balances
     xdai = wei_to_xdai(xdai_balance)
     wxdai = wei_to_xdai(WrappedxDaiContract().balanceOf(address, web3=web3))
     return Balances(xdai=xdai, wxdai=wxdai)
+
+
+def get_balance_fn(market_type: MarketType) -> Callable[[], float]:
+    if market_type == MarketType.OMEN:
+        keys = APIKeys()
+        return float(get_balances(keys.bet_from_address).total)
+    else:
+        raise ValueError(f"Unsupported market type: {market_type}")

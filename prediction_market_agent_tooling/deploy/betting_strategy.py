@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
+from prediction_market_agent_tooling.tools.amount import Amount, StaticAmount
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet_full,
     get_kelly_bet_simplified,
@@ -99,6 +100,9 @@ class BettingStrategy(ABC):
 
 
 class MaxAccuracyBettingStrategy(BettingStrategy):
+    def __init__(self, bet_amount: Amount | None = None):
+        self.bet_amount = bet_amount
+
     def adjust_bet_amount(
         self, existing_position: Position | None, market: AgentMarket
     ) -> float:
@@ -108,12 +112,9 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
         bet_amount = (
             market.get_tiny_bet_amount().amount
             if self.bet_amount is None
-            else self.bet_amount
+            else self.bet_amount.get()
         )
         return bet_amount + existing_position_total_amount
-
-    def __init__(self, bet_amount: float | None = None):
-        self.bet_amount = bet_amount
 
     def calculate_trades(
         self,
@@ -152,7 +153,7 @@ class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: float = 10):
+    def __init__(self, max_bet_amount: Amount = StaticAmount(bet_amount=10)):
         self.max_bet_amount = max_bet_amount
 
     def adjust_bet_amount(
@@ -161,7 +162,7 @@ class KellyBettingStrategy(BettingStrategy):
         existing_position_total_amount = (
             existing_position.total_amount.amount if existing_position else 0
         )
-        return self.max_bet_amount + existing_position_total_amount
+        return self.max_bet_amount.get() + existing_position_total_amount
 
     def calculate_trades(
         self,

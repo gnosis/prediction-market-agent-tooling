@@ -16,7 +16,7 @@ from prediction_market_agent_tooling.markets.data_models import (
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.amount import DynamicAmount
-from prediction_market_agent_tooling.tools.balances import get_balance_fn
+from prediction_market_agent_tooling.tools.get_balances_fn import get_balance_fn
 
 
 @pytest.mark.parametrize(

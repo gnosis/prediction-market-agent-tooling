@@ -110,7 +110,7 @@ if __name__ == "__main__":
         MaxExpectedValueBettingStrategy(bet_amount=25),
     ]
 
-    print("# Agent Bet vs Theoretical Kelly Bet Comparison")
+    print("# Agent Bet vs Simulated Bet Comparison")
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)

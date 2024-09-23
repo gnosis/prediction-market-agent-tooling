@@ -1,12 +1,8 @@
-import concurrent
-from concurrent.futures import Executor
-from concurrent.futures.process import ProcessPoolExecutor
-from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Callable, Generator, TypeVar
 
-# Max workers to 5 to avoid rate limiting on some APIs, create a custom executor if you need more workers.
-DEFAULT_THREADPOOL_EXECUTOR = ThreadPoolExecutor(max_workers=5)
-DEFAULT_PROCESSPOOL_EXECUTOR = ProcessPoolExecutor(max_workers=5)
+from loky import get_reusable_executor
+
+from prediction_market_agent_tooling.loggers import patch_logger
 
 A = TypeVar("A")
 B = TypeVar("B")
@@ -15,14 +11,11 @@ B = TypeVar("B")
 def par_map(
     items: list[A],
     func: Callable[[A], B],
-    executor: Executor = DEFAULT_THREADPOOL_EXECUTOR,
+    max_workers: int = 5,
 ) -> "list[B]":
-    """Applies the function to each element using the specified executor. Awaits for all results.
-    If executor is ProcessPoolExecutor, make sure the function passed is pickable, e.g. no lambda functions
-    """
-    futures: list[concurrent.futures._base.Future[B]] = [
-        executor.submit(func, item) for item in items
-    ]
+    """Applies the function to each element using the specified executor. Awaits for all results."""
+    executor = get_reusable_executor(max_workers=max_workers, initializer=patch_logger)
+    futures = [executor.submit(func, item) for item in items]
     results = []
     for fut in futures:
         results.append(fut.result())
@@ -32,13 +25,9 @@ def par_map(
 def par_generator(
     items: list[A],
     func: Callable[[A], B],
-    executor: Executor = DEFAULT_THREADPOOL_EXECUTOR,
+    max_workers: int = 5,
 ) -> Generator[B, None, None]:
-    """Applies the function to each element using the specified executor. Yields results as they come.
-    If executor is ProcessPoolExecutor, make sure the function passed is pickable, e.g. no lambda functions.
-    """
-    futures: list[concurrent.futures._base.Future[B]] = [
-        executor.submit(func, item) for item in items
-    ]
-    for fut in concurrent.futures.as_completed(futures):
-        yield fut.result()
+    """Applies the function to each element using the specified executor. Yields results as they come."""
+    executor = get_reusable_executor(max_workers=max_workers, initializer=patch_logger)
+    for res in executor.map(func, items):
+        yield res

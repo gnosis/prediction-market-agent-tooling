@@ -49,6 +49,11 @@ def patch_logger() -> None:
     Function to patch loggers according to the deployed environment.
     Patches Loguru's logger, Python's default logger, warnings library and also monkey-patch print function as many libraries just use it.
     """
+    if not getattr(logger, "_patched", False):
+        logger._patched = True  # type: ignore[attr-defined] # Hacky way to store a flag on the logger object, to not patch it multiple times.
+    else:
+        return
+
     config = LogConfig()
 
     if config.LOG_FORMAT == LogFormat.GCP:
@@ -116,6 +121,4 @@ def simple_warning_format(message, category, filename, lineno, line=None):  # ty
     )  # Escape new lines, because otherwise logs will be broken.
 
 
-if not getattr(logger, "_patched", False):
-    patch_logger()
-    logger._patched = True  # type: ignore[attr-defined] # Hacky way to store a flag on the logger object, to not patch it multiple times.
+patch_logger()

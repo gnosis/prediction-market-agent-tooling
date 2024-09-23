@@ -719,6 +719,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_id: HexBytes | None = None,
         question_claimed: bool | None = None,
         question_finalized_before: datetime | None = None,
+        question_finalized_after: datetime | None = None,
+        question_current_answer_before: datetime | None = None,
+        question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityResponse]:
         where_stms: dict[str, t.Any] = {}
 
@@ -729,6 +732,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             question_id=question_id,
             claimed=question_claimed,
             finalized_before=question_finalized_before,
+            finalized_after=question_finalized_after,
+            current_answer_before=question_current_answer_before,
+            question_id_in=question_id_in,
         )
 
         responses = self.realityeth_subgraph.Query.responses(where=where_stms)

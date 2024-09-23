@@ -677,7 +677,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def get_questions(
         self,
-        limit: int | None = None,
+        limit: int | None,
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
@@ -721,7 +721,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def get_responses(
         self,
-        limit: int | None = None,
+        limit: int | None,
         user: HexAddress | None = None,
         question_id: HexBytes | None = None,
         question_claimed: bool | None = None,

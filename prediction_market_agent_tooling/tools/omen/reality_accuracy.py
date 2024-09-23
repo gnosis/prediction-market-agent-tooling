@@ -47,7 +47,7 @@ def reality_accuracy(user: ChecksumAddress, since: timedelta) -> RealityAccuracy
         is_correct = user_was_correct(user, responses)
         assert (
             is_correct is not None
-        ), f"All these questions should be challenged by provded user: {responses[0].question.url}"
+        ), f"All these questions should be challenged by provided user: {responses[0].question.url}"
 
         total += 1
         correct += int(is_correct)

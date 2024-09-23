@@ -5,13 +5,12 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.tools.balances import get_balances
 
 
-def get_balance_fn(market_type: MarketType) -> Callable[[], float]:
+def get_balance(market_type: MarketType) -> float:
+    keys = APIKeys()
     if market_type == MarketType.OMEN:
-        keys = APIKeys()
+        return float(get_balances(keys.bet_from_address).total)
+    raise ValueError(f"Unsupported market type: {market_type}")
 
-        def balance_fn() -> float:
-            return float(get_balances(keys.bet_from_address).total)
 
-        return balance_fn
-    else:
-        raise ValueError(f"Unsupported market type: {market_type}")
+def get_balance_fn(market_type: MarketType) -> Callable[[], float]:
+    return lambda: get_balance(market_type)

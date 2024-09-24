@@ -120,6 +120,9 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
     def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
         return estimate_p_yes >= 0.5
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(bet_amount={self.bet_amount})"
+
 
 class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
     @staticmethod
@@ -172,3 +175,67 @@ class KellyBettingStrategy(BettingStrategy):
             existing_position, target_position, market=market
         )
         return trades
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount})"
+
+
+class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
+    def __init__(self, max_bet_amount: float = 10):
+        self.max_bet_amount = max_bet_amount
+
+    def adjust_bet_amount(
+        self, existing_position: Position | None, market: AgentMarket
+    ) -> float:
+        existing_position_total_amount = (
+            existing_position.total_amount.amount if existing_position else 0
+        )
+        return self.max_bet_amount + existing_position_total_amount
+
+    def calculate_trades(
+        self,
+        existing_position: Position | None,
+        answer: ProbabilisticAnswer,
+        market: AgentMarket,
+    ) -> list[Trade]:
+        adjusted_bet_amount = self.adjust_bet_amount(existing_position, market)
+        outcome_token_pool = check_not_none(market.outcome_token_pool)
+
+        # Fixed direction of bet, only use Kelly to adjust the bet size based on market's outcome pool size.
+        estimated_p_yes = float(answer.p_yes > 0.5)
+        confidence = 1.0
+
+        kelly_bet = (
+            get_kelly_bet_full(
+                yes_outcome_pool_size=outcome_token_pool[
+                    market.get_outcome_str_from_bool(True)
+                ],
+                no_outcome_pool_size=outcome_token_pool[
+                    market.get_outcome_str_from_bool(False)
+                ],
+                estimated_p_yes=estimated_p_yes,
+                max_bet=adjusted_bet_amount,
+                confidence=confidence,
+            )
+            if market.has_token_pool()
+            else get_kelly_bet_simplified(
+                adjusted_bet_amount,
+                market.current_p_yes,
+                estimated_p_yes,
+                confidence,
+            )
+        )
+
+        amounts = {
+            market.get_outcome_str_from_bool(kelly_bet.direction): TokenAmount(
+                amount=kelly_bet.size, currency=market.currency
+            ),
+        }
+        target_position = Position(market_id=market.id, amounts=amounts)
+        trades = self._build_rebalance_trades_from_positions(
+            existing_position, target_position, market=market
+        )
+        return trades
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount})"

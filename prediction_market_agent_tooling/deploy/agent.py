@@ -283,7 +283,7 @@ class DeployableTraderAgent(DeployableAgent):
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
     allow_opposite_bets: bool = False
-    betting_strategy = MaxAccuracyBettingStrategy(
+    strategy = MaxAccuracyBettingStrategy(
         fixed_bet_amount=None,  # resolves to tiny bet amount
         add_balance_to_bet_amount=False,
         add_current_position_to_bet_amount=False,
@@ -415,9 +415,7 @@ class DeployableTraderAgent(DeployableAgent):
         answer: ProbabilisticAnswer,
         existing_position: Position | None,
     ) -> list[Trade]:
-        trades = self.betting_strategy.calculate_trades(
-            existing_position, answer, market
-        )
+        trades = self.strategy.calculate_trades(existing_position, answer, market)
         BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 

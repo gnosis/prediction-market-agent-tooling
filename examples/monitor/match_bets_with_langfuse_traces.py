@@ -181,6 +181,7 @@ if __name__ == "__main__":
 
                 details.append(
                     {
+                        "url": trace.market.url,
                         "market_p_yes": round(trace.market.current_p_yes, 4),
                         "agent_p_yes": round(trace.answer.p_yes, 4),
                         "agent_conf": round(trace.answer.confidence, 4),

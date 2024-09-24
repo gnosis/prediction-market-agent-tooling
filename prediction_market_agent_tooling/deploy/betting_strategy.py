@@ -108,11 +108,11 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
         bet_amount = (
             self.fixed_bet_amount
             if self.fixed_bet_amount
-            else market.get_tiny_bet_amount()
+            else market.get_tiny_bet_amount().amount
         )
         user_id = APIKeys().bet_from_address
         if self.add_balance_to_bet_amount:
-            bet_amount += market.get_user_balance()
+            bet_amount += market.get_user_balance(user_id=user_id)
         if self.add_current_position_to_bet_amount:
             if existing_position := market.get_position(user_id=user_id):
                 bet_amount += existing_position.total_amount.amount
@@ -168,7 +168,7 @@ class KellyBettingStrategy(BettingStrategy):
 
         user_id = APIKeys().bet_from_address
         if self.add_balance_to_bet_amount:
-            bet_amount += market.get_user_balance()
+            bet_amount += market.get_user_balance(user_id=user_id)
         if self.add_current_position_to_bet_amount:
             if existing_position := market.get_position(user_id=user_id):
                 bet_amount += existing_position.total_amount.amount

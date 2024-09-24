@@ -26,13 +26,21 @@ from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 def test_answer_decision(
     estimate_p_yes: float, market_p_yes: float, expected_direction: bool
 ) -> None:
-    betting_strategy = MaxAccuracyBettingStrategy(bet_amount=0.1)
+    betting_strategy = MaxAccuracyBettingStrategy(
+        fixed_bet_amount=0.1,
+        add_balance_to_bet_amount=False,
+        add_current_position_to_bet_amount=False,
+    )
     direction: bool = betting_strategy.calculate_direction(market_p_yes, estimate_p_yes)
     assert direction == expected_direction
 
 
 def test_rebalance() -> None:
-    strategy = MaxAccuracyBettingStrategy(bet_amount=0.0001)
+    strategy = MaxAccuracyBettingStrategy(
+        fixed_bet_amount=0.0001,
+        add_balance_to_bet_amount=False,
+        add_current_position_to_bet_amount=True,
+    )
 
     mock_amount = TokenAmount(amount=5, currency=Currency.xDai)
     tiny_amount = TokenAmount(amount=0.0001, currency=Currency.xDai)

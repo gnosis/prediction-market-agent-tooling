@@ -450,9 +450,7 @@ class DeployableTraderAgent(DeployableAgent):
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.build_trades(
-            market=market,
-            answer=answer,
-            existing_position=existing_position,
+            market=market, answer=answer, existing_position=existing_position
         )
 
         if self.place_bet:

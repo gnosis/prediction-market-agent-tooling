@@ -54,6 +54,7 @@ def test_rebalance() -> None:
     mock_answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=0.5)
     mock_market = Mock(OmenAgentMarket, wraps=OmenAgentMarket)
     mock_market.get_tiny_bet_amount.return_value = tiny_amount
+    mock_market.get_position.return_value = mock_existing_position
     mock_market.current_p_yes = 0.5
     mock_market.currency = Currency.xDai
     mock_market.id = "0x123"

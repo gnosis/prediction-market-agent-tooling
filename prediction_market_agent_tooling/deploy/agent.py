@@ -292,9 +292,7 @@ class DeployableTraderAgent(DeployableAgent):
         super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
 
-    def get_betting_strategy(
-        self, market_type: MarketType, market: AgentMarket
-    ) -> BettingStrategy:
+    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
         user_id = market.get_user_id(keys=APIKeys())
 
         total_amount = market.get_user_balance(user_id=user_id) * 0.1
@@ -417,12 +415,11 @@ class DeployableTraderAgent(DeployableAgent):
 
     def build_trades(
         self,
-        market_type: MarketType,
         market: AgentMarket,
         answer: ProbabilisticAnswer,
         existing_position: Position | None,
     ) -> list[Trade]:
-        strategy = self.get_betting_strategy(market_type=market_type, market=market)
+        strategy = self.get_betting_strategy(market=market)
         trades = strategy.calculate_trades(existing_position, answer, market)
         BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
@@ -456,7 +453,6 @@ class DeployableTraderAgent(DeployableAgent):
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.build_trades(
-            market_type=market_type,
             market=market,
             answer=answer,
             existing_position=existing_position,

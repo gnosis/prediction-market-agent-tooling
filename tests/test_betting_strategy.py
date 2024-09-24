@@ -33,8 +33,6 @@ def test_answer_decision(
 
 def test_rebalance() -> None:
     tiny_amount = TokenAmount(amount=0.0001, currency=Currency.xDai)
-    strategy = MaxAccuracyBettingStrategy(bet_amount=tiny_amount.amount)
-
     mock_amount = TokenAmount(amount=5, currency=Currency.xDai)
     mock_existing_position = Position(
         market_id="0x123",
@@ -43,6 +41,8 @@ def test_rebalance() -> None:
             OmenAgentMarket.get_outcome_str_from_bool(False): mock_amount,
         },
     )
+    bet_amount = tiny_amount.amount + mock_existing_position.total_amount.amount
+    strategy = MaxAccuracyBettingStrategy(bet_amount=bet_amount)
     mock_answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=0.5)
     mock_market = Mock(OmenAgentMarket, wraps=OmenAgentMarket)
     mock_market.get_tiny_bet_amount.return_value = tiny_amount

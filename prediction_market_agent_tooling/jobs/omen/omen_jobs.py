@@ -7,7 +7,6 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     Currency,
     KellyBettingStrategy,
     ProbabilisticAnswer,
-    StaticAmount,
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import Probability
@@ -84,7 +83,7 @@ def compute_job_reward(
     market: OmenAgentMarket, max_bond: float, web3: Web3 | None = None
 ) -> float:
     # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
-    strategy = KellyBettingStrategy(max_bet_amount=StaticAmount(amount=max_bond))
+    strategy = KellyBettingStrategy(max_bet_amount=max_bond)
     required_trades = strategy.calculate_trades(
         existing_position=None,
         # We assume that we finish the job and so the probability of the market happening will be 100%.

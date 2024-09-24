@@ -633,6 +633,10 @@ class OmenAgentMarket(AgentMarket):
         )
         return Probability(new_p_yes)
 
+    @staticmethod
+    def get_user_balance(user_id: str) -> float:
+        return float(get_balances(Web3.to_checksum_address(user_id)).total)
+
 
 def get_omen_user_url(address: ChecksumAddress) -> str:
     return f"https://gnosisscan.io/address/{address}"

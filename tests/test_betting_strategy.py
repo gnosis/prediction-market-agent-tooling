@@ -13,11 +13,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
     TradeType,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.tools.amount import DynamicAmount
-from prediction_market_agent_tooling.tools.get_balances_fn import get_balance_fn
-from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 @pytest.mark.parametrize(
@@ -30,13 +26,13 @@ from prediction_market_agent_tooling.tools.utils import check_not_none
 def test_answer_decision(
     estimate_p_yes: float, market_p_yes: float, expected_direction: bool
 ) -> None:
-    betting_strategy = MaxAccuracyBettingStrategy()
+    betting_strategy = MaxAccuracyBettingStrategy(bet_amount=0.1)
     direction: bool = betting_strategy.calculate_direction(market_p_yes, estimate_p_yes)
     assert direction == expected_direction
 
 
 def test_rebalance() -> None:
-    strategy = MaxAccuracyBettingStrategy()
+    strategy = MaxAccuracyBettingStrategy(bet_amount=0.0001)
 
     mock_amount = TokenAmount(amount=5, currency=Currency.xDai)
     tiny_amount = TokenAmount(amount=0.0001, currency=Currency.xDai)
@@ -64,15 +60,3 @@ def test_rebalance() -> None:
     sell_trade = trades[1]
     assert sell_trade.trade_type == TradeType.SELL
     assert sell_trade.amount.amount == mock_amount.amount
-
-
-def test_dyamic_bet_amount() -> None:
-    balance_fn = get_balance_fn(market_type=MarketType.OMEN)
-    strategy = MaxAccuracyBettingStrategy(
-        bet_amount=DynamicAmount(
-            get_amount_fn=balance_fn,
-            proportion=0.1,
-        )
-    )
-    balance = balance_fn()
-    assert check_not_none(strategy.bet_amount).get() == balance * 0.1

@@ -411,7 +411,6 @@ class DeployableTraderAgent(DeployableAgent):
 
     def build_trades(
         self,
-        market_type: MarketType,
         market: AgentMarket,
         answer: ProbabilisticAnswer,
         existing_position: Position | None,
@@ -451,7 +450,6 @@ class DeployableTraderAgent(DeployableAgent):
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.build_trades(
-            market_type=market_type,
             market=market,
             answer=answer,
             existing_position=existing_position,

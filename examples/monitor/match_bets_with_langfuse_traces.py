@@ -23,7 +23,6 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_trace_for_bet,
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.utils import get_private_key_from_gcp_secret
 
 
 class SimulatedOutcome(BaseModel):
@@ -84,30 +83,35 @@ if __name__ == "__main__":
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
         "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        # "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
         # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",  # no bets!
         # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",  # no bets!
-        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
-    agent_pkey_map = {
-        k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
-    }
+    # ToDo - Why retrieve private key from GCP?
+    # agent_pkey_map = {
+    #     k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
+    # }
+    dummy_private_key = (
+        "6524d468e0eabb7e6a4c5b67636758fc7ac8c98fc3fda12fb3cfce4f7701d519"
+    )
+    agent_pkey_map = {k: dummy_private_key for k, v in agent_gcp_secret_map.items()}
     # Define strategies we want to test out
     strategies = [
-        MaxAccuracyBettingStrategy(bet_amount=1),
+        # MaxAccuracyBettingStrategy(bet_amount=1),
         MaxAccuracyBettingStrategy(bet_amount=2),
         MaxAccuracyBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=1),
+        # KellyBettingStrategy(max_bet_amount=1),
         KellyBettingStrategy(max_bet_amount=2),
-        KellyBettingStrategy(max_bet_amount=25),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
+        # KellyBettingStrategy(max_bet_amount=25),
+        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
-        MaxExpectedValueBettingStrategy(bet_amount=1),
+        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
+        # MaxExpectedValueBettingStrategy(bet_amount=1),
         MaxExpectedValueBettingStrategy(bet_amount=2),
-        MaxExpectedValueBettingStrategy(bet_amount=25),
+        # MaxExpectedValueBettingStrategy(bet_amount=25),
     ]
 
     print("# Agent Bet vs Simulated Bet Comparison")
@@ -145,16 +149,17 @@ if __name__ == "__main__":
         # All bets should have a trace, but not all traces should have a bet
         # (e.g. if all markets are deemed unpredictable), so iterate over bets
         bets_with_traces: list[ResolvedBetWithTrace] = []
+        missing_bets = []
         for bet in bets:
             trace = get_trace_for_bet(bet, process_market_traces)
             if trace:
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
+            else:
+                missing_bets.append(bet)
 
         print(f"Number of bets since {start_time}: {len(bets_with_traces)}\n")
-        if len(bets_with_traces) != len(bets):
-            raise ValueError(
-                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace"
-            )
+        if missing_bets:
+            print(f"Bets without traces : {missing_bets}")
 
         simulations: list[dict[str, Any]] = []
 
@@ -207,4 +212,6 @@ if __name__ == "__main__":
                 }
             )
 
-        print(pd.DataFrame.from_records(simulations).to_markdown(index=False))
+        simulations_df = pd.DataFrame.from_records(simulations)
+        simulations_df.to_csv("simulations.csv")
+        print(simulations_df.to_markdown(index=False))

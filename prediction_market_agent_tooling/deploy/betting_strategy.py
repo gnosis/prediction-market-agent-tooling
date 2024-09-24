@@ -210,6 +210,27 @@ class KellyBettingStrategy(BettingStrategy):
         return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount})"
 
 
+class KellyScaledForPoolSizeBettingStrategy(KellyBettingStrategy):
+    def __init__(self, scaling_factor: float, *args, **kwargs):
+        self.scaling_factor = scaling_factor
+        super().__init__(**kwargs)
+
+    def adjust_bet_amount(
+        self, existing_position: Position | None, market: AgentMarket
+    ) -> float:
+        # We assume existing_position is always None, as is the case for simulations.
+        # We scale the betting amount by the liquidity in the pool, given by scaling_factor.
+
+        yes_outcome_pool_size = (
+            market.outcome_token_pool[market.get_outcome_str_from_bool(True)],
+        )
+        no_outcome_pool_size = (
+            market.outcome_token_pool[market.get_outcome_str_from_bool(False)],
+        )
+
+        return self.max_bet_amount * self.scaling_factor * 2
+
+
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
     def __init__(self, max_bet_amount: float = 10):
         self.max_bet_amount = max_bet_amount

@@ -102,7 +102,6 @@ if __name__ == "__main__":
         KellyBettingStrategy(max_bet_amount=1),
         KellyBettingStrategy(max_bet_amount=2),
         KellyBettingStrategy(max_bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=250),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),

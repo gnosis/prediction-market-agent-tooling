@@ -32,10 +32,10 @@ def test_answer_decision(
 
 
 def test_rebalance() -> None:
-    strategy = MaxAccuracyBettingStrategy(bet_amount=0.0001)
+    tiny_amount = TokenAmount(amount=0.0001, currency=Currency.xDai)
+    strategy = MaxAccuracyBettingStrategy(bet_amount=tiny_amount.amount)
 
     mock_amount = TokenAmount(amount=5, currency=Currency.xDai)
-    tiny_amount = TokenAmount(amount=0.0001, currency=Currency.xDai)
     mock_existing_position = Position(
         market_id="0x123",
         amounts={

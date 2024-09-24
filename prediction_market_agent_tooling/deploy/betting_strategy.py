@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
@@ -93,8 +94,29 @@ class BettingStrategy(ABC):
 
 
 class MaxAccuracyBettingStrategy(BettingStrategy):
-    def __init__(self, bet_amount: float):
-        self.bet_amount = bet_amount
+    def __init__(
+        self,
+        fixed_bet_amount: float | None,
+        add_balance_to_bet_amount: bool,
+        add_current_position_to_bet_amount: bool,
+    ):
+        self.fixed_bet_amount = fixed_bet_amount
+        self.add_balance_to_bet_amount = add_balance_to_bet_amount
+        self.add_current_position_to_bet_amount = add_current_position_to_bet_amount
+
+    def get_bet_amount(self, market: AgentMarket) -> float:
+        bet_amount = (
+            self.fixed_bet_amount
+            if self.fixed_bet_amount
+            else market.get_tiny_bet_amount()
+        )
+        user_id = APIKeys().bet_from_address
+        if self.add_balance_to_bet_amount:
+            bet_amount += market.get_user_balance()
+        if self.add_current_position_to_bet_amount:
+            if existing_position := market.get_position(user_id=user_id):
+                bet_amount += existing_position.total_amount.amount
+        return bet_amount
 
     def calculate_trades(
         self,
@@ -106,7 +128,7 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
 
         amounts = {
             market.get_outcome_str_from_bool(direction): TokenAmount(
-                amount=self.bet_amount,
+                amount=self.get_bet_amount(market=market),
                 currency=market.currency,
             ),
         }
@@ -131,8 +153,26 @@ class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: float):
-        self.max_bet_amount = max_bet_amount
+    def __init__(
+        self,
+        fixed_max_bet_amount: float,
+        add_balance_to_bet_amount: bool,
+        add_current_position_to_bet_amount: bool,
+    ):
+        self.fixed_max_bet_amount = fixed_max_bet_amount
+        self.add_balance_to_bet_amount = add_balance_to_bet_amount
+        self.add_current_position_to_bet_amount = add_current_position_to_bet_amount
+
+    def get_bet_amount(self, market: AgentMarket) -> float:
+        bet_amount = self.fixed_max_bet_amount
+
+        user_id = APIKeys().bet_from_address
+        if self.add_balance_to_bet_amount:
+            bet_amount += market.get_user_balance()
+        if self.add_current_position_to_bet_amount:
+            if existing_position := market.get_position(user_id=user_id):
+                bet_amount += existing_position.total_amount.amount
+        return bet_amount
 
     def calculate_trades(
         self,
@@ -150,12 +190,12 @@ class KellyBettingStrategy(BettingStrategy):
                     market.get_outcome_str_from_bool(False)
                 ],
                 estimated_p_yes=answer.p_yes,
-                max_bet=self.max_bet_amount,
+                max_bet=self.get_bet_amount(market=market),
                 confidence=answer.confidence,
             )
             if market.has_token_pool()
             else get_kelly_bet_simplified(
-                self.max_bet_amount,
+                self.get_bet_amount(market=market),
                 market.current_p_yes,
                 answer.p_yes,
                 answer.confidence,

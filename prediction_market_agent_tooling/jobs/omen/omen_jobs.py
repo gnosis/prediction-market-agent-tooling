@@ -83,7 +83,11 @@ def compute_job_reward(
     market: OmenAgentMarket, max_bond: float, web3: Web3 | None = None
 ) -> float:
     # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
-    strategy = KellyBettingStrategy(max_bet_amount=max_bond)
+    strategy = KellyBettingStrategy(
+        fixed_max_bet_amount=max_bond,
+        add_balance_to_bet_amount=False,
+        add_current_position_to_bet_amount=False,
+    )
     required_trades = strategy.calculate_trades(
         existing_position=None,
         # We assume that we finish the job and so the probability of the market happening will be 100%.

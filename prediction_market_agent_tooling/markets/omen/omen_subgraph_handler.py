@@ -677,6 +677,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def get_questions(
         self,
+        limit: int | None,
         user: HexAddress | None = None,
         claimed: bool | None = None,
         current_answer_before: datetime | None = None,
@@ -694,7 +695,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             id_in=id_in,
             question_id_in=question_id_in,
         )
-        questions = self.realityeth_subgraph.Query.questions(where=where_stms)
+        questions = self.realityeth_subgraph.Query.questions(
+            first=(
+                limit if limit else sys.maxsize
+            ),  # if not limit, we fetch all possible
+            where=where_stms,
+        )
         fields = self._get_fields_for_reality_questions(questions)
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
@@ -715,6 +721,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def get_responses(
         self,
+        limit: int | None,
         user: HexAddress | None = None,
         question_id: HexBytes | None = None,
         question_claimed: bool | None = None,
@@ -737,7 +744,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             question_id_in=question_id_in,
         )
 
-        responses = self.realityeth_subgraph.Query.responses(where=where_stms)
+        responses = self.realityeth_subgraph.Query.responses(
+            first=(
+                limit if limit else sys.maxsize
+            ),  # if not limit, we fetch all possible
+            where=where_stms,
+        )
         fields = self._get_fields_for_responses(responses)
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)

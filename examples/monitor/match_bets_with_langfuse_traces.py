@@ -102,6 +102,7 @@ if __name__ == "__main__":
         KellyBettingStrategy(max_bet_amount=1),
         KellyBettingStrategy(max_bet_amount=2),
         KellyBettingStrategy(max_bet_amount=25),
+        KellyBettingStrategy(max_bet_amount=250),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
@@ -109,6 +110,8 @@ if __name__ == "__main__":
         MaxExpectedValueBettingStrategy(bet_amount=2),
         MaxExpectedValueBettingStrategy(bet_amount=25),
     ]
+
+    overall_md = ""
 
     print("# Agent Bet vs Simulated Bet Comparison")
     for agent_name, private_key in agent_pkey_map.items():
@@ -152,11 +155,12 @@ if __name__ == "__main__":
 
         print(f"Number of bets since {start_time}: {len(bets_with_traces)}\n")
         if len(bets_with_traces) != len(bets):
-            raise ValueError(
-                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace"
+            print(
+                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."
             )
 
         simulations: list[dict[str, Any]] = []
+        details = []
 
         for strategy_idx, strategy in enumerate(strategies):
             # "Born" agent with initial funding, simulate as if he was doing bets one by one.
@@ -174,6 +178,25 @@ if __name__ == "__main__":
                     continue
                 simulated_outcomes.append(simulated_outcome)
                 agent_balance += simulated_outcome.profit
+
+                details.append(
+                    {
+                        "market_p_yes": round(trace.market.current_p_yes, 4),
+                        "agent_p_yes": round(trace.answer.p_yes, 4),
+                        "agent_conf": round(trace.answer.confidence, 4),
+                        "org_bet": round(bet.amount.amount, 4),
+                        "sim_bet": round(simulated_outcome.size, 4),
+                        "org_dir": bet.outcome,
+                        "sim_dir": simulated_outcome.direction,
+                        "org_profit": round(bet.profit.amount, 4),
+                        "sim_profit": round(simulated_outcome.profit, 4),
+                    }
+                )
+
+            details.sort(key=lambda x: x["sim_profit"], reverse=True)
+            pd.DataFrame.from_records(details).to_csv(
+                f"{agent_name} - {strategy} - all bets.csv", index=False
+            )
 
             total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
             total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
@@ -207,4 +230,10 @@ if __name__ == "__main__":
                 }
             )
 
-        print(pd.DataFrame.from_records(simulations).to_markdown(index=False))
+        overall_md += (
+            f"\n\n## {agent_name}\n\n{len(simulations)} bets\n\n"
+            + pd.DataFrame.from_records(simulations).to_markdown(index=False)
+        )
+
+    with open("match_bets_with_langfuse_traces_overall.md", "w") as overall_f:
+        overall_f.write(overall_md)

@@ -96,18 +96,18 @@ if __name__ == "__main__":
     }
     # Define strategies we want to test out
     strategies = [
-        MaxAccuracyBettingStrategy(bet_amount=1),
-        MaxAccuracyBettingStrategy(bet_amount=2),
-        MaxAccuracyBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=1),
-        KellyBettingStrategy(max_bet_amount=2),
-        KellyBettingStrategy(max_bet_amount=25),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
-        MaxExpectedValueBettingStrategy(bet_amount=1),
-        MaxExpectedValueBettingStrategy(bet_amount=2),
-        MaxExpectedValueBettingStrategy(bet_amount=25),
+        MaxAccuracyBettingStrategy(fixed_bet_amount=1),
+        MaxAccuracyBettingStrategy(fixed_bet_amount=2),
+        MaxAccuracyBettingStrategy(fixed_bet_amount=25),
+        KellyBettingStrategy(fixed_max_bet_amount=1),
+        KellyBettingStrategy(fixed_max_bet_amount=2),
+        KellyBettingStrategy(fixed_max_bet_amount=25),
+        MaxAccuracyWithKellyScaledBetsStrategy(fixed_max_bet_amount=1),
+        MaxAccuracyWithKellyScaledBetsStrategy(fixed_max_bet_amount=2),
+        MaxAccuracyWithKellyScaledBetsStrategy(fixed_max_bet_amount=25),
+        MaxExpectedValueBettingStrategy(fixed_bet_amount=1),
+        MaxExpectedValueBettingStrategy(fixed_bet_amount=2),
+        MaxExpectedValueBettingStrategy(fixed_bet_amount=25),
     ]
 
     overall_md = ""

@@ -12,7 +12,6 @@ from prediction_market_agent_tooling.gtypes import (
     secretstr_to_v1_secretstr,
 )
 from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
-from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import private_key_to_public_key
 
@@ -159,16 +158,6 @@ class APIKeys(BaseSettings):
         return check_not_none(
             self.SQLALCHEMY_DB_URL, "SQLALCHEMY_DB_URL missing in the environment."
         )
-
-    def get_user_id(self, market_type: MarketType) -> str:
-        if market_type == MarketType.MANIFOLD:
-            return self.manifold_user_id
-        elif market_type == MarketType.METACULUS:
-            return str(self.metaculus_user_id)
-        elif market_type in [MarketType.OMEN, MarketType.POLYMARKET]:
-            return self.bet_from_address
-        else:
-            raise ValueError(f"Unknown market type: {market_type}")
 
     def model_dump_public(self) -> dict[str, t.Any]:
         return {

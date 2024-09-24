@@ -1,6 +1,7 @@
 import typing as t
 from datetime import datetime
 
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -104,3 +105,7 @@ class MetaculusAgentMarket(AgentMarket):
     def submit_prediction(self, p_yes: Probability, reasoning: str) -> None:
         make_prediction(self.id, p_yes)
         post_question_comment(self.id, reasoning)
+
+    @staticmethod
+    def get_user_id(api_keys: APIKeys) -> str:
+        return str(api_keys.metaculus_user_id)

@@ -285,3 +285,7 @@ class AgentMarket(BaseModel):
     @staticmethod
     def get_user_balance(user_id: str) -> float:
         raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def get_user_id(keys: APIKeys) -> str:
+        raise NotImplementedError("Subclasses must implement this method")

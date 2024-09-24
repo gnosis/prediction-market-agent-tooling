@@ -66,7 +66,9 @@ def claim_bonds_on_realitio_question(
     realitio_contract = OmenRealitioContract()
 
     # Get all answers for the question.
-    responses = OmenSubgraphHandler().get_responses(question_id=question.questionId)
+    responses = OmenSubgraphHandler().get_responses(
+        limit=None, question_id=question.questionId
+    )
 
     # They need to be processed in order.
     responses = sorted(responses, key=lambda x: x.timestamp)

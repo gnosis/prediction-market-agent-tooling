@@ -119,3 +119,7 @@ class ManifoldAgentMarket(AgentMarket):
     @classmethod
     def get_user_url(cls, keys: APIKeys) -> str:
         return get_authenticated_user(keys.manifold_api_key.get_secret_value()).url
+
+    @staticmethod
+    def get_user_id(api_keys: APIKeys) -> str:
+        return api_keys.manifold_user_id

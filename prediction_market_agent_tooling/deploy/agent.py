@@ -282,7 +282,6 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
-    strategy: BettingStrategy = MaxAccuracyBettingStrategy()
 
     def __init__(
         self,
@@ -291,6 +290,15 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
+
+    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
+        user_id = market.get_user_id(api_keys=APIKeys())
+
+        total_amount = market.get_user_balance(user_id=user_id) * 0.1
+        if existing_position := market.get_position(user_id=user_id):
+            total_amount += existing_position.total_amount.amount
+
+        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -410,7 +418,8 @@ class DeployableTraderAgent(DeployableAgent):
         answer: ProbabilisticAnswer,
         existing_position: Position | None,
     ) -> list[Trade]:
-        trades = self.strategy.calculate_trades(existing_position, answer, market)
+        strategy = self.get_betting_strategy(market=market)
+        trades = strategy.calculate_trades(existing_position, answer, market)
         BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 
@@ -443,7 +452,9 @@ class DeployableTraderAgent(DeployableAgent):
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.build_trades(
-            market=market, answer=answer, existing_position=existing_position
+            market=market,
+            answer=answer,
+            existing_position=existing_position,
         )
 
         if self.place_bet:

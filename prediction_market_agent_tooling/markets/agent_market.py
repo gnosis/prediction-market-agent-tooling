@@ -281,3 +281,11 @@ class AgentMarket(BaseModel):
             raise ValueError("Outcome token pool is not available.")
 
         return self.outcome_token_pool[outcome]
+
+    @staticmethod
+    def get_user_balance(user_id: str) -> float:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def get_user_id(api_keys: APIKeys) -> str:
+        raise NotImplementedError("Subclasses must implement this method")

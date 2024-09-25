@@ -8,12 +8,13 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    KellyBettingStrategy,
-    MaxAccuracyBettingStrategy,
-    MaxAccuracyWithKellyScaledBetsStrategy,
-    MaxExpectedValueBettingStrategy,
     ProbabilisticAnswer,
     TradeType,
+    KellyMaxSlippageBettingStrategy,
+    MaxExpectedValueBettingStrategy,
+    MaxAccuracyWithKellyScaledBetsStrategy,
+    KellyBettingStrategy,
+    MaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -100,18 +101,31 @@ if __name__ == "__main__":
     agent_pkey_map = {k: dummy_private_key for k, v in agent_gcp_secret_map.items()}
     # Define strategies we want to test out
     strategies = [
-        # MaxAccuracyBettingStrategy(bet_amount=1),
+        MaxAccuracyBettingStrategy(bet_amount=1),
         MaxAccuracyBettingStrategy(bet_amount=2),
         MaxAccuracyBettingStrategy(bet_amount=25),
-        # KellyBettingStrategy(max_bet_amount=1),
+        KellyBettingStrategy(max_bet_amount=1),
         KellyBettingStrategy(max_bet_amount=2),
-        # KellyBettingStrategy(max_bet_amount=25),
-        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
+        KellyBettingStrategy(max_bet_amount=25),
+        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
-        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
-        # MaxExpectedValueBettingStrategy(bet_amount=1),
+        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
+        MaxExpectedValueBettingStrategy(bet_amount=1),
         MaxExpectedValueBettingStrategy(bet_amount=2),
-        # MaxExpectedValueBettingStrategy(bet_amount=25),
+        MaxExpectedValueBettingStrategy(bet_amount=25),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.01),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.05),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.1),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.15),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.2),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.25),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.3),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.1),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.15),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.2),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.1),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.15),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.2),
     ]
 
     print("# Agent Bet vs Simulated Bet Comparison")

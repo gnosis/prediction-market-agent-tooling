@@ -130,7 +130,7 @@ class Trade(BaseModel):
 
 
 class PlacedTrade(Trade):
-    id: str  # TODO have 'interim period with `id: str | None = None` to allow re-use of old langfuse traces?
+    id: str
 
     @staticmethod
     def from_trade(trade: Trade, id: str) -> "PlacedTrade":

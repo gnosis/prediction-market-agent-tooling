@@ -633,6 +633,14 @@ class OmenAgentMarket(AgentMarket):
         )
         return Probability(new_p_yes)
 
+    @staticmethod
+    def get_user_balance(user_id: str) -> float:
+        return float(get_balances(Web3.to_checksum_address(user_id)).total)
+
+    @staticmethod
+    def get_user_id(api_keys: APIKeys) -> str:
+        return api_keys.bet_from_address
+
 
 def get_omen_user_url(address: ChecksumAddress) -> str:
     return f"https://gnosisscan.io/address/{address}"
@@ -930,7 +938,7 @@ def omen_fund_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     market_contract = market.get_contract()
-    collateral_token_contract = market_contract.get_collateral_token_contract(web3=web3)
+    collateral_token_contract = market_contract.get_collateral_token_contract()
 
     amount_to_fund = collateral_token_contract.get_in_shares(funds, web3)
 
@@ -1048,12 +1056,8 @@ def omen_remove_fund_market_tx(
     """
     from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
-    market_collateral_token_contract = market_contract.get_collateral_token_contract(
-        web3=web3
-    )
-    original_balance = market_collateral_token_contract.balanceOf(
-        from_address, web3=web3
-    )
+    market_collateral_token_contract = market_contract.get_collateral_token_contract()
+    original_balance = market_collateral_token_contract.balanceOf(from_address)
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -1088,11 +1092,11 @@ def omen_remove_fund_market_tx(
         web3=web3,
     )
 
-    new_balance = market_collateral_token_contract.balanceOf(from_address, web3=web3)
+    new_balance = market_collateral_token_contract.balanceOf(from_address)
 
     logger.debug(f"Result from merge positions {result}")
     logger.info(
-        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached(web3=web3)} from liquidity at {market.url=}."
+        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached()} from liquidity at {market.url=}."
     )
 
 

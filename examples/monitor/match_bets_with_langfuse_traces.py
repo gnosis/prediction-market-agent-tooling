@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_trace_for_bet,
     get_traces_for_agent,
 )
+from prediction_market_agent_tooling.tools.utils import get_private_key_from_gcp_secret
 
 
 class SimulatedOutcome(BaseModel):
@@ -91,14 +92,11 @@ if __name__ == "__main__":
         # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",  # no bets!
         # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
-    # ToDo - Why retrieve private key from GCP?
-    # agent_pkey_map = {
-    #     k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
-    # }
-    dummy_private_key = (
-        "6524d468e0eabb7e6a4c5b67636758fc7ac8c98fc3fda12fb3cfce4f7701d519"
-    )
-    agent_pkey_map = {k: dummy_private_key for k, v in agent_gcp_secret_map.items()}
+
+    agent_pkey_map = {
+        k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
+    }
+
     # Define strategies we want to test out
     strategies = [
         MaxAccuracyBettingStrategy(bet_amount=1),

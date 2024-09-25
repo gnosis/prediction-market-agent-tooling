@@ -333,8 +333,8 @@ def test_omen_buy_and_sell_outcome(
     assert np.isclose(remaining_tokens.amount, 0, atol=1e-5)
 
     # Check that the IDs of buy and sell calls are valid transaction hashes
-    buy_tx = local_web3.eth.get_transaction(buy_id)
-    sell_tx = local_web3.eth.get_transaction(sell_id)
+    buy_tx = local_web3.eth.get_transaction(HexStr(buy_id))
+    sell_tx = local_web3.eth.get_transaction(HexStr(sell_id))
     for tx in [buy_tx, sell_tx]:
         assert tx is not None
         assert tx["from"] == api_keys.bet_from_address

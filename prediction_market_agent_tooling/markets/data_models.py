@@ -37,6 +37,7 @@ ProfitAmount: TypeAlias = TokenAmount
 
 
 class Bet(BaseModel):
+    id: str
     amount: BetAmount
     outcome: bool
     created_time: datetime
@@ -126,3 +127,16 @@ class Trade(BaseModel):
     trade_type: TradeType
     outcome: bool
     amount: TokenAmount
+
+
+class PlacedTrade(Trade):
+    id: str  # TODO have 'interim period with `id: str | None = None` to allow re-use of old langfuse traces?
+
+    @staticmethod
+    def from_trade(trade: Trade, id: str) -> "PlacedTrade":
+        return PlacedTrade(
+            trade_type=trade.trade_type,
+            outcome=trade.outcome,
+            amount=trade.amount,
+            id=id,
+        )

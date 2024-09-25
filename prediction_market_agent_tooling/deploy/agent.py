@@ -38,6 +38,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    PlacedTrade,
     Position,
     ProbabilisticAnswer,
     Trade,
@@ -110,7 +111,7 @@ class OutOfFundsError(ValueError):
 
 class ProcessedMarket(BaseModel):
     answer: ProbabilisticAnswer
-    trades: list[Trade]
+    trades: list[PlacedTrade]
 
 
 class AnsweredEnum(str, Enum):
@@ -457,21 +458,27 @@ class DeployableTraderAgent(DeployableAgent):
             existing_position=existing_position,
         )
 
+        placed_trades = []
         if self.place_bet:
             for trade in trades:
                 logger.info(f"Executing trade {trade}")
 
                 match trade.trade_type:
                     case TradeType.BUY:
-                        market.buy_tokens(outcome=trade.outcome, amount=trade.amount)
+                        id = market.buy_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
                     case TradeType.SELL:
-                        market.sell_tokens(outcome=trade.outcome, amount=trade.amount)
+                        id = market.sell_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
                     case _:
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")
+                placed_trades.append(PlacedTrade.from_trade(trade, id))
 
         self.after_process_market(market_type, market)
 
-        processed_market = ProcessedMarket(answer=answer, trades=trades)
+        processed_market = ProcessedMarket(answer=answer, trades=placed_trades)
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 
         logger.info(f"Processed market {market.question=} from {market.url=}.")

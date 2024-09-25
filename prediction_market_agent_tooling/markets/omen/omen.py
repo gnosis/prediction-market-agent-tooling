@@ -189,7 +189,7 @@ class OmenAgentMarket(AgentMarket):
         omen_auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-    ) -> None:
+    ) -> str:
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot place bet."
@@ -197,7 +197,7 @@ class OmenAgentMarket(AgentMarket):
         if amount.currency != self.currency:
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
         amount_xdai = xDai(amount.amount)
-        binary_omen_buy_outcome_tx(
+        return binary_omen_buy_outcome_tx(
             api_keys=api_keys if api_keys is not None else APIKeys(),
             amount=amount_xdai,
             market=self,
@@ -212,7 +212,7 @@ class OmenAgentMarket(AgentMarket):
         amount: TokenAmount,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-    ) -> None:
+    ) -> str:
         return self.place_bet(
             outcome=outcome,
             amount=amount,
@@ -245,7 +245,7 @@ class OmenAgentMarket(AgentMarket):
         auto_withdraw: bool = False,
         api_keys: APIKeys | None = None,
         web3: Web3 | None = None,
-    ) -> None:
+    ) -> str:
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot sell tokens."
@@ -258,7 +258,7 @@ class OmenAgentMarket(AgentMarket):
             outcome=outcome,
             web3=web3,
         )
-        binary_omen_sell_outcome_tx(
+        return binary_omen_sell_outcome_tx(
             amount=collateral,
             api_keys=api_keys if api_keys is not None else APIKeys(),
             market=self,
@@ -667,7 +667,7 @@ def omen_buy_outcome_tx(
     outcome: str,
     auto_deposit: bool,
     web3: Web3 | None = None,
-) -> None:
+) -> str:
     """
     Bets the given amount of xDai for the given outcome in the given market.
     """
@@ -703,13 +703,15 @@ def omen_buy_outcome_tx(
         )
 
     # Buy shares using the deposited xDai in the collateral token.
-    market_contract.buy(
+    tx_receipt = market_contract.buy(
         api_keys=api_keys,
         amount_wei=amount_wei_to_buy,
         outcome_index=outcome_index,
         min_outcome_tokens_to_buy=expected_shares,
         web3=web3,
     )
+
+    return tx_receipt["transactionHash"].hex()
 
 
 def binary_omen_buy_outcome_tx(
@@ -719,8 +721,8 @@ def binary_omen_buy_outcome_tx(
     binary_outcome: bool,
     auto_deposit: bool,
     web3: Web3 | None = None,
-) -> None:
-    omen_buy_outcome_tx(
+) -> str:
+    return omen_buy_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
@@ -737,7 +739,7 @@ def omen_sell_outcome_tx(
     outcome: str,
     auto_withdraw: bool,
     web3: Web3 | None = None,
-) -> None:
+) -> str:
     """
     Sells the given xDai value of shares corresponding to the given outcome in
     the given market.
@@ -778,7 +780,7 @@ def omen_sell_outcome_tx(
         web3=web3,
     )
     # Sell the shares.
-    market_contract.sell(
+    tx_receipt = market_contract.sell(
         api_keys,
         amount_wei,
         outcome_index,
@@ -800,6 +802,8 @@ def omen_sell_outcome_tx(
             web3,
         )
 
+    return tx_receipt["transactionHash"].hex()
+
 
 def binary_omen_sell_outcome_tx(
     api_keys: APIKeys,
@@ -808,8 +812,8 @@ def binary_omen_sell_outcome_tx(
     binary_outcome: bool,
     auto_withdraw: bool,
     web3: Web3 | None = None,
-) -> None:
-    omen_sell_outcome_tx(
+) -> str:
+    return omen_sell_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,

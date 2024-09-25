@@ -166,13 +166,13 @@ class AgentMarket(BaseModel):
     def liquidate_existing_positions(self, outcome: bool) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def place_bet(self, outcome: bool, amount: BetAmount) -> None:
+    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def buy_tokens(self, outcome: bool, amount: TokenAmount) -> None:
+    def buy_tokens(self, outcome: bool, amount: TokenAmount) -> str:
         return self.place_bet(outcome=outcome, amount=amount)
 
-    def sell_tokens(self, outcome: bool, amount: TokenAmount) -> None:
+    def sell_tokens(self, outcome: bool, amount: TokenAmount) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod

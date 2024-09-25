@@ -110,7 +110,7 @@ def get_one_manifold_binary_market() -> ManifoldMarket:
 )
 def place_bet(
     amount: Mana, market_id: str, outcome: bool, manifold_api_key: SecretStr
-) -> None:
+) -> ManifoldBet:
     outcome_str = "YES" if outcome else "NO"
     url = f"{MANIFOLD_API_BASE_URL}/v0/bet"
     params = {
@@ -131,6 +131,7 @@ def place_bet(
             raise RuntimeError(
                 f"Placing bet failed: {response.status_code} {response.reason} {response.text}"
             )
+        return ManifoldBet.model_validate(data)
     else:
         raise Exception(
             f"Placing bet failed: {response.status_code} {response.reason} {response.text}"
@@ -209,6 +210,7 @@ def manifold_to_generic_resolved_bet(
 
     market_outcome = market.get_resolved_boolean_outcome()
     return ResolvedBet(
+        id=bet.id,
         amount=BetAmount(amount=bet.amount, currency=Currency.Mana),
         outcome=bet.get_resolved_boolean_outcome(),
         created_time=bet.createdTime,

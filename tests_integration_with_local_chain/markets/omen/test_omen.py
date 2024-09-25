@@ -315,13 +315,13 @@ def test_omen_buy_and_sell_outcome(
     balances = get_balances(address=api_keys.bet_from_address, web3=local_web3)
     assert balances.xdai + balances.wxdai > bet_amount.amount
 
-    market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
+    buy_id = market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
 
     # Check that we now have a position in the market.
     outcome_tokens = get_market_outcome_tokens()
     assert outcome_tokens.amount > 0
 
-    market.sell_tokens(
+    sell_id = market.sell_tokens(
         outcome=outcome,
         amount=outcome_tokens,
         web3=local_web3,
@@ -331,6 +331,13 @@ def test_omen_buy_and_sell_outcome(
     # Check that we have sold our entire stake in the market.
     remaining_tokens = get_market_outcome_tokens()
     assert np.isclose(remaining_tokens.amount, 0, atol=1e-5)
+
+    # Check that the IDs of buy and sell calls are valid transaction hashes
+    buy_tx = local_web3.eth.get_transaction(buy_id)
+    sell_tx = local_web3.eth.get_transaction(sell_id)
+    for tx in [buy_tx, sell_tx]:
+        assert tx is not None
+        assert tx["from"] == api_keys.bet_from_address
 
 
 @pytest.mark.parametrize(

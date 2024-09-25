@@ -7,9 +7,9 @@ from langfuse.client import TraceWithDetails
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.markets.data_models import (
+    PlacedTrade,
     ProbabilisticAnswer,
     ResolvedBet,
-    Trade,
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -20,10 +20,10 @@ class ProcessMarketTrace(BaseModel):
     timestamp: datetime
     market: OmenAgentMarket
     answer: ProbabilisticAnswer
-    trades: list[Trade]
+    trades: list[PlacedTrade]
 
     @property
-    def buy_trade(self) -> Trade:
+    def buy_trade(self) -> PlacedTrade:
         buy_trades = [t for t in self.trades if t.trade_type == TradeType.BUY]
         if len(buy_trades) == 1:
             return buy_trades[0]
@@ -107,10 +107,10 @@ def trace_to_answer(trace: TraceWithDetails) -> ProbabilisticAnswer:
     return ProbabilisticAnswer.model_validate(trace.output["answer"])
 
 
-def trace_to_trades(trace: TraceWithDetails) -> list[Trade]:
+def trace_to_trades(trace: TraceWithDetails) -> list[PlacedTrade]:
     assert trace.output is not None, "Trace output is None"
     assert trace.output["trades"] is not None, "Trace output trades is None"
-    return [Trade.model_validate(t) for t in trace.output["trades"]]
+    return [PlacedTrade.model_validate(t) for t in trace.output["trades"]]
 
 
 def get_closest_datetime_from_list(

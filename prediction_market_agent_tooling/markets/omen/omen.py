@@ -938,7 +938,7 @@ def omen_fund_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     market_contract = market.get_contract()
-    collateral_token_contract = market_contract.get_collateral_token_contract()
+    collateral_token_contract = market_contract.get_collateral_token_contract(web3=web3)
 
     amount_to_fund = collateral_token_contract.get_in_shares(funds, web3)
 
@@ -1056,8 +1056,12 @@ def omen_remove_fund_market_tx(
     """
     from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
-    market_collateral_token_contract = market_contract.get_collateral_token_contract()
-    original_balance = market_collateral_token_contract.balanceOf(from_address)
+    market_collateral_token_contract = market_contract.get_collateral_token_contract(
+        web3=web3
+    )
+    original_balance = market_collateral_token_contract.balanceOf(
+        from_address, web3=web3
+    )
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -1092,11 +1096,11 @@ def omen_remove_fund_market_tx(
         web3=web3,
     )
 
-    new_balance = market_collateral_token_contract.balanceOf(from_address)
+    new_balance = market_collateral_token_contract.balanceOf(from_address, web3=web3)
 
     logger.debug(f"Result from merge positions {result}")
     logger.info(
-        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached()} from liquidity at {market.url=}."
+        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached(web3=web3)} from liquidity at {market.url=}."
     )
 
 

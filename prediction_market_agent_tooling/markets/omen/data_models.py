@@ -382,7 +382,7 @@ class OmenBetCreator(BaseModel):
 
 
 class OmenBet(BaseModel):
-    id: HexAddress  # A concatenation of: FPMM contract ID, trader ID, and trade transaction nonce. See https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/FixedProductMarketMakerMapping.ts#L109
+    id: HexAddress  # A concatenation of: FPMM contract ID, trader ID and nonce. See https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/FixedProductMarketMakerMapping.ts#L109
     title: str
     collateralToken: HexAddress
     outcomeTokenMarginalPrice: xDai

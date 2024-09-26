@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -20,10 +21,14 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     int_to_hexbytes,
     wei_type,
-    xdai_type,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     INVALID_ANSWER_HEX_BYTES,
+    ConditionPreparationEvent,
+    FPMMFundingAddedEvent,
+    OmenFixedProductMarketMakerCreationEvent,
+    RealitioLogNewQuestionEvent,
+    format_realitio_question,
 )
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20OnGnosisChain,
@@ -38,7 +43,6 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     byte32_to_ipfscidv0,
     ipfscidv0_to_byte32,
-    xdai_to_wei,
 )
 
 
@@ -82,6 +86,10 @@ class OmenOracleContract(ContractOnGnosisChain):
             ),
             web3=web3,
         )
+
+
+def build_parent_collection_id() -> HexStr:
+    return HASH_ZERO  # Taken from Olas
 
 
 class OmenConditionalTokenContract(ContractOnGnosisChain):
@@ -177,8 +185,8 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         collateral_token_address: HexAddress,
         condition_id: HexBytes,
-        parent_collection_id: HexStr,
         index_sets: t.List[int],
+        parent_collection_id: HexStr = build_parent_collection_id(),
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
@@ -247,8 +255,8 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         outcomes_slot_count: int,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
-    ) -> TxReceipt:
-        return self.send(
+    ) -> ConditionPreparationEvent:
+        receipt_tx = self.send(
             api_keys=api_keys,
             function_name="prepareCondition",
             function_params=[
@@ -259,6 +267,15 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
             tx_params=tx_params,
             web3=web3,
         )
+
+        event_logs = (
+            self.get_web3_contract(web3=web3)
+            .events.ConditionPreparation()
+            .process_receipt(receipt_tx)
+        )
+        cond_event = ConditionPreparationEvent(**event_logs[0]["args"])
+
+        return cond_event
 
 
 class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
@@ -412,7 +429,7 @@ class sDaiContract(ContractERC4626OnGnosisChain):
     )
 
 
-OMEN_DEFAULT_MARKET_FEE = 0.02  # 2% fee from the buying shares amount.
+OMEN_DEFAULT_MARKET_FEE_PERC = 0.02  # 2% fee from the buying shares amount.
 
 
 class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
@@ -433,14 +450,13 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
         condition_id: HexBytes,
         initial_funds_wei: Wei,
         collateral_token_address: ChecksumAddress,
-        fee: float = OMEN_DEFAULT_MARKET_FEE,
+        fee: Wei,  # This is actually fee in %, 'where 100% == 1 xDai'.
+        distribution_hint: list[OmenOutcomeToken] | None = None,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
-    ) -> TxReceipt:
-        fee_wei = xdai_to_wei(
-            xdai_type(fee)
-        )  # We need to convert this to the wei units, but in reality it's % fee as stated in the `OMEN_DEFAULT_MARKET_FEE` variable.
-        return self.send(
+    ) -> tuple[OmenFixedProductMarketMakerCreationEvent, FPMMFundingAddedEvent]:
+        web3 = web3 or self.get_web3()
+        receipt_tx = self.send(
             api_keys=api_keys,
             function_name="create2FixedProductMarketMaker",
             function_params=dict(
@@ -450,13 +466,30 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
                 conditionalTokens=OmenConditionalTokenContract().address,
                 collateralToken=collateral_token_address,
                 conditionIds=[condition_id],
-                fee=fee_wei,
+                fee=fee,
                 initialFunds=initial_funds_wei,
-                distributionHint=[],
+                distributionHint=distribution_hint or [],
             ),
             tx_params=tx_params,
             web3=web3,
         )
+
+        market_event_logs = (
+            self.get_web3_contract(web3=web3)
+            .events.FixedProductMarketMakerCreation()
+            .process_receipt(receipt_tx)
+        )
+        market_event = OmenFixedProductMarketMakerCreationEvent(
+            **market_event_logs[0]["args"]
+        )
+        funding_event_logs = (
+            self.get_web3_contract(web3=web3)
+            .events.FPMMFundingAdded()
+            .process_receipt(receipt_tx)
+        )
+        funding_event = FPMMFundingAddedEvent(**funding_event_logs[0]["args"])
+
+        return market_event, funding_event
 
 
 class Arbitrator(str, Enum):
@@ -521,25 +554,25 @@ class OmenRealitioContract(ContractOnGnosisChain):
         language: str,
         arbitrator: Arbitrator,
         opening: datetime,
-        timeout: timedelta = timedelta(days=1),
+        timeout: timedelta,
         nonce: int | None = None,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
-    ) -> HexBytes:
+    ) -> RealitioLogNewQuestionEvent:
         """
         After the question is created, you can find it at https://reality.eth.link/app/#!/creator/{from_address}.
         """
+        web3 = web3 or self.get_web3()
         arbitrator_contract_address = self.get_arbitrator_contract(arbitrator).address
         # See https://realitio.github.io/docs/html/contracts.html#templates
         # for possible template ids and how to format the question.
         template_id = 2
-        realitio_question = "␟".join(
-            [
-                question,
-                ",".join(f'"{o}"' for o in outcomes),
-                category,
-                language,
-            ]
+        realitio_question = format_realitio_question(
+            question=question,
+            outcomes=outcomes,
+            category=category,
+            language=language,
+            template_id=template_id,
         )
         receipt_tx = self.send(
             api_keys=api_keys,
@@ -557,10 +590,15 @@ class OmenRealitioContract(ContractOnGnosisChain):
             tx_params=tx_params,
             web3=web3,
         )
-        question_id = HexBytes(
-            receipt_tx["logs"][0]["topics"][1]
-        )  # The question id is available in the first emitted log, in the second topic.
-        return question_id
+
+        event_logs = (
+            self.get_web3_contract(web3=web3)
+            .events.LogNewQuestion()
+            .process_receipt(receipt_tx)
+        )
+        question_event = RealitioLogNewQuestionEvent(**event_logs[0]["args"])
+
+        return question_event
 
     def submitAnswer(
         self,
@@ -669,6 +707,54 @@ class OmenRealitioContract(ContractOnGnosisChain):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(api_keys=api_keys, function_name="withdraw", web3=web3)
+
+    def getOpeningTS(
+        self,
+        question_id: HexBytes,
+        web3: Web3 | None = None,
+    ) -> int:
+        ts: int = self.call(
+            function_name="getOpeningTS",
+            function_params=[question_id],
+            web3=web3,
+        )
+        return ts
+
+    def getFinalizeTS(
+        self,
+        question_id: HexBytes,
+        web3: Web3 | None = None,
+    ) -> int:
+        ts: int = self.call(
+            function_name="getFinalizeTS",
+            function_params=[question_id],
+            web3=web3,
+        )
+        return ts
+
+    def isFinalized(
+        self,
+        question_id: HexBytes,
+        web3: Web3 | None = None,
+    ) -> bool:
+        is_finalized: bool = self.call(
+            function_name="isFinalized",
+            function_params=[question_id],
+            web3=web3,
+        )
+        return is_finalized
+
+    def isPendingArbitration(
+        self,
+        question_id: HexBytes,
+        web3: Web3 | None = None,
+    ) -> bool:
+        is_pending_arbitration: bool = self.call(
+            function_name="isPendingArbitration",
+            function_params=[question_id],
+            web3=web3,
+        )
+        return is_pending_arbitration
 
 
 class OmenThumbnailMapping(ContractOnGnosisChain):

@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from pydantic import BaseModel, field_validator
 from web3 import Web3
+from web3.contract.contract import Contract as Web3Contract
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -76,6 +77,10 @@ class ContractBaseClass(BaseModel):
     ] = (
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
+
+    def get_web3_contract(self, web3: Web3 | None = None) -> Web3Contract:
+        web3 = web3 or self.get_web3()
+        return web3.eth.contract(address=self.address, abi=self.abi)
 
     def call(
         self,

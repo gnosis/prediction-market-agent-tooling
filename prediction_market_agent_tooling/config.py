@@ -35,6 +35,7 @@ class APIKeys(BaseSettings):
     SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
     GRAPH_API_KEY: t.Optional[SecretStr] = None
+    TENDERLY_FORK_RPC: t.Optional[str] = None
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
     GOOGLE_SEARCH_ENGINE_ID: t.Optional[SecretStr] = None

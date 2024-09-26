@@ -11,7 +11,6 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     HexAddress,
-    int_to_hexbytes,
     private_key_type,
     xDai,
     xdai_type,

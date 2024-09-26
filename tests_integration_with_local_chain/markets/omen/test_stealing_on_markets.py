@@ -195,7 +195,7 @@ def test_stealing_on_markets(
         web3=local_web3,
     )
 
-    # Check who is the winner in the end/
+    # Check who is the winner in the end.
     ending_balance_A, ending_balance_B = (
         get_balances(api_keys_A.bet_from_address, local_web3).total,
         get_balances(api_keys_B.bet_from_address, local_web3).total,

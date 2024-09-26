@@ -48,6 +48,7 @@ sqlmodel = "^0.0.21"
 psycopg2-binary = "^2.9.9"
 base58 = ">=1.0.2,<2.0"
 loky = "^3.4.1"
+hishel = "^0.0.31"
 
 [tool.poetry.extras]
 openai = ["openai"]

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-from scipy.optimize import newton
+from scipy.optimize import bisect
 
 from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
@@ -223,47 +223,81 @@ class KellyMaxSlippageBettingStrategy(KellyBettingStrategy):
         self.max_slippage = max_slippage
         super().__init__(max_bet_amount=max_bet_amount)
 
+    def calc_bet_for_slippage(
+        self, buy_direction: bool, bet_amount: float, yes: float, no: float, fee: float
+    ) -> float:
+        if buy_direction:
+            r_a = yes
+            r_b = no
+        else:
+            r_a = no
+            r_b = yes
+
+        p_a = r_b / (r_a + r_b)
+        n_a = bet_amount * (r_a + r_b) / (2 * r_b)
+        n_swap = r_a - ((r_a * r_b) / (r_b + ((bet_amount * (r_b + r_a)) / (2 * r_a))))
+        n_r = n_a + n_swap
+
+        p_a_new = bet_amount / n_r
+        new_bet_amount = p_a * (self.max_slippage + 1) * n_r
+        print(
+            f" p_a {p_a} n_swap {n_swap} p_a_new {p_a_new} new_bet_amount {new_bet_amount}"
+        )
+        return new_bet_amount
+
     def calc_slippage(
         self, buy_direction: bool, bet_amount: float, yes: float, no: float, fee: float
     ):
         total_outcome_tokens = yes + no
-        initial_price = (
+        expected_price = (
             no / total_outcome_tokens if buy_direction else yes / total_outcome_tokens
         )
-        expected_tokens_bought = bet_amount / initial_price
-        tokens_bought = 0
+        # expected_tokens_bought = bet_amount / initial_price
+
         try:
             tokens_bought = get_buy_outcome_token_amount(
                 bet_amount, buy_direction, yes, no, fee
             )
+
         except Exception as e:
             print("Error,", e)
-            pass
-        s = (expected_tokens_bought - tokens_bought) / expected_tokens_bought
+            return 1
+
+        actual_price = bet_amount / tokens_bought
+        s = (actual_price - expected_price) / expected_price
         return s
 
     def calculate_slippage_for_bet_amount(
         self, market: AgentMarket, kelly_bet: SimpleBet, fee: float
     ):
-        def slippage_diff(b: xDai) -> float:
-            yes_outcome_pool_size = market.outcome_token_pool[
-                market.get_outcome_str_from_bool(True)
-            ]
-            no_outcome_pool_size = market.outcome_token_pool[
-                market.get_outcome_str_from_bool(False)
-            ]
+        yes_outcome_pool_size = market.outcome_token_pool[
+            market.get_outcome_str_from_bool(True)
+        ]
+        no_outcome_pool_size = market.outcome_token_pool[
+            market.get_outcome_str_from_bool(False)
+        ]
 
+        # slippage for (100)
+        slippage_50 = self.calc_slippage(
+            kelly_bet.direction, 50, yes_outcome_pool_size, no_outcome_pool_size, fee
+        )
+
+        def slippage_diff(b: xDai) -> float:
             actual_slippage = self.calc_slippage(
                 kelly_bet.direction, b, yes_outcome_pool_size, no_outcome_pool_size, fee
             )
-            return actual_slippage - self.max_slippage
+            # translate in y
+            return actual_slippage - self.max_slippage - slippage_50
 
         # ToDo - Try minimize_scalar, bisect
         #  https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize_scalar.html#minimize-scalar
         try:
-            optimized_bet_amount = newton(
-                slippage_diff, self.max_bet_amount, maxiter=1000
-            )
+            # optimized_bet_amount = newton(
+            #     slippage_diff, self.max_bet_amount, maxiter=1000
+            # )
+            # We use max(pool_tokens) to find a large value of slippage if required.
+            optimized_bet_amount = bisect(slippage_diff, 1e-12, 100, rtol=1e-6)
+
             # other_amount = root_scalar(
             #     slippage_diff, bracket=[1e-18, self.max_bet_amount]
             # )
@@ -307,9 +341,13 @@ class KellyMaxSlippageBettingStrategy(KellyBettingStrategy):
         )
 
         # Adjust amount
-        max_slippage_bet_amount = self.calculate_slippage_for_bet_amount(
-            market, kelly_bet, 0
+        # max_slippage_bet_amount = self.calculate_slippage_for_bet_amount(
+        #    market, kelly_bet, 0
+        # )
+        new_bet_amount = self.calc_bet_for_slippage(
+            kelly_bet.direction,
         )
+
         kelly_bet_size = min(kelly_bet.size, max_slippage_bet_amount)
         # check slippage
         slippage_num = self.calc_slippage(

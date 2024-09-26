@@ -1,6 +1,10 @@
 from datetime import datetime
 from typing import Any
 
+import hishel
+from dotenv import load_dotenv
+
+load_dotenv()
 import pandas as pd
 from langfuse import Langfuse
 from pydantic import BaseModel
@@ -126,6 +130,10 @@ if __name__ == "__main__":
         KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.2),
     ]
 
+    storage = hishel.FileStorage(ttl=3600)
+    controller = hishel.Controller(force_cache=True)
+    httpx_client = hishel.CacheClient(storage=storage, controller=controller)
+
     print("# Agent Bet vs Simulated Bet Comparison")
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
@@ -138,6 +146,7 @@ if __name__ == "__main__":
             secret_key=api_keys.langfuse_secret_key.get_secret_value(),
             public_key=api_keys.langfuse_public_key,
             host=api_keys.langfuse_host,
+            httpx_client=httpx_client,
         )
 
         traces = get_traces_for_agent(

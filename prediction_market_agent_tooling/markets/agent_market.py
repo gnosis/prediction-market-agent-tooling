@@ -50,9 +50,9 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: list[str]
-    outcome_token_pool: (
-        dict[str, float] | None
-    )  # Should be in currency of `currency` above.
+    outcome_token_pool: dict[
+        str, float
+    ] | None  # Should be in currency of `currency` above.
     resolution: Resolution | None
     created_time: datetime | None
     close_time: datetime | None

@@ -27,8 +27,8 @@ from prediction_market_agent_tooling.markets.data_models import Resolution, Reso
 from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
-    add_utc_timezone_validator,
     check_not_none,
+    convert_to_utc_datetime,
     should_not_happen,
 )
 
@@ -49,10 +49,10 @@ class DeployedAgent(BaseModel):
     raw_env_vars: dict[str, str] | None = None
 
     _add_timezone_validator_start_time = field_validator("start_time")(
-        add_utc_timezone_validator
+        convert_to_utc_datetime
     )
     _add_timezone_validator_end_time = field_validator("end_time")(
-        add_utc_timezone_validator
+        convert_to_utc_datetime
     )
 
     def model_dump_prefixed(self) -> dict[str, t.Any]:

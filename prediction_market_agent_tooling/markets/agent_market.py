@@ -18,8 +18,8 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.tools.utils import (
-    add_utc_timezone_validator,
     check_not_none,
+    convert_to_utc_datetime,
     should_not_happen,
     utcnow,
 )
@@ -50,9 +50,9 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: list[str]
-    outcome_token_pool: dict[
-        str, float
-    ] | None  # Should be in currency of `currency` above.
+    outcome_token_pool: (
+        dict[str, float] | None
+    )  # Should be in currency of `currency` above.
     resolution: Resolution | None
     created_time: datetime | None
     close_time: datetime | None
@@ -61,10 +61,10 @@ class AgentMarket(BaseModel):
     volume: float | None  # Should be in currency of `currency` above.
 
     _add_timezone_validator_created_time = field_validator("created_time")(
-        add_utc_timezone_validator
+        convert_to_utc_datetime
     )
     _add_timezone_validator_close_time = field_validator("close_time")(
-        add_utc_timezone_validator
+        convert_to_utc_datetime
     )
 
     @field_validator("outcome_token_pool")

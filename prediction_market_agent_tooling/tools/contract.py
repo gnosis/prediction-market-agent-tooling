@@ -25,8 +25,8 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
 )
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeWithTimezone,
-    add_utc_timezone_validator,
     should_not_happen,
+    utc_timestamp_to_utc_datetime,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
@@ -455,9 +455,7 @@ class DebuggingContract(ContractOnGnosisChain):
         self,
         web3: Web3 | None = None,
     ) -> DatetimeWithTimezone:
-        return add_utc_timezone_validator(
-            datetime.fromtimestamp(self.getNow(web3), tz=pytz.UTC)
-        )
+        return utc_timestamp_to_utc_datetime(self.getNow(web3))
 
     def inc(
         self,

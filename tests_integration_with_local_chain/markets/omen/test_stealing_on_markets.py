@@ -151,12 +151,12 @@ def test_stealing_on_markets(
         balance_after_failed_trading_B == balance_after_buying_B
     ), "Balance after failed trading should be the same as after buying of tokens in the beginning, because nothing should have happened."
 
-    # "Wait for market's closing time"
+    # Wait for market's closing time
     time.sleep(close_in * 1.1)
     # Do a dummy block again, so the time in the contract is updated and it knows it's opened already.
     DebuggingContract().inc(api_keys_A, local_web3)
 
-    # "Submit answer on reality.
+    # Submit answer on reality.
     omen_submit_answer_market_tx(
         api_keys_A,
         omen_market,

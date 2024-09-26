@@ -93,7 +93,7 @@ def test_stealing_on_markets(
         balance_after_market_creation_A < starting_balance_A
     ), "Starting balance of A should have been lowered"
 
-    # Buy YES tokens from accout B (attacked) -- removing profit from any real agent that'd like to complete the job.
+    # Buy YES tokens from accout B (attacker) -- removing profit from any real agent that'd like to complete the job.
     buy_yes_for_b = xdai_type(5)
     binary_omen_buy_outcome_tx(
         api_keys_B,

@@ -82,15 +82,5 @@ def test_created_market_corresponds_to_subgraph_market() -> None:
     with open("tests_files/from_subgraph_market.json", "w") as f:
         json.dump(from_subgraph_market.model_dump(), f, indent=2)
 
-    # For some reason, creation timestamp can be a bit off.
-    assert (
-        abs(
-            from_created_market.creationTimestamp
-            - from_subgraph_market.creationTimestamp
-        )
-        <= 60
-    ), "Creation timestamps are too far away."
-    from_created_market.creationTimestamp = from_subgraph_market.creationTimestamp
-
     # Compare!
     assert from_created_market == from_subgraph_market

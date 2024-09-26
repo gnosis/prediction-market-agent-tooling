@@ -454,7 +454,9 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
         distribution_hint: list[OmenOutcomeToken] | None = None,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
-    ) -> tuple[OmenFixedProductMarketMakerCreationEvent, FPMMFundingAddedEvent]:
+    ) -> tuple[
+        OmenFixedProductMarketMakerCreationEvent, FPMMFundingAddedEvent, TxReceipt
+    ]:
         web3 = web3 or self.get_web3()
         receipt_tx = self.send(
             api_keys=api_keys,
@@ -489,7 +491,7 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
         )
         funding_event = FPMMFundingAddedEvent(**funding_event_logs[0]["args"])
 
-        return market_event, funding_event
+        return market_event, funding_event, receipt_tx
 
 
 class Arbitrator(str, Enum):

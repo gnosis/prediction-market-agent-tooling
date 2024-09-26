@@ -413,7 +413,7 @@ class OmenMarket(BaseModel):
             outcomeTokenMarginalPrices=outcome_token_marginal_prices,
             answerFinalizedTimestamp=None,  # It's a fresh market.
             currentAnswer=None,  # It's a fresh market.
-            creationTimestamp=model.question_event.created,
+            creationTimestamp=model.market_creation_timestamp,
             condition=Condition(
                 id=model.market_event.conditionIds[0],
                 outcomeSlotCount=len(model.question_event.parsed_question.outcomes),
@@ -711,6 +711,7 @@ class FPMMFundingAddedEvent(BaseModel):
 
 
 class CreatedMarket(BaseModel):
+    market_creation_timestamp: int
     market_event: OmenFixedProductMarketMakerCreationEvent
     funding_event: FPMMFundingAddedEvent
     condition_id: HexBytes

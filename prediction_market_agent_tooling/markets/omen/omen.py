@@ -74,6 +74,7 @@ from prediction_market_agent_tooling.tools.utils import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
+    get_receipt_block_timestamp,
     remove_fraction,
     wei_to_xdai,
     xdai_to_wei,
@@ -926,7 +927,11 @@ def omen_create_market_tx(
 
     # Create the market.
     fee = xdai_to_wei(xdai_type(fee_perc))
-    market_event, funding_event = factory_contract.create2FixedProductMarketMaker(
+    (
+        market_event,
+        funding_event,
+        receipt_tx,
+    ) = factory_contract.create2FixedProductMarketMaker(
         api_keys=api_keys,
         condition_id=condition_id,
         fee=fee,
@@ -942,6 +947,7 @@ def omen_create_market_tx(
     # so skipping it here.
 
     return CreatedMarket(
+        market_creation_timestamp=get_receipt_block_timestamp(receipt_tx, web3),
         market_event=market_event,
         funding_event=funding_event,
         condition_id=condition_id,

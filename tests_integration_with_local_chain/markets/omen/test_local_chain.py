@@ -1,3 +1,6 @@
+import time
+from datetime import timedelta
+
 from ape_test import TestAccount
 from eth_account import Account
 from numpy import isclose
@@ -10,6 +13,8 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     is_minimum_required_balance,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.contract import DebuggingContract
+from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     send_xdai_to,
     wei_to_xdai,
@@ -93,3 +98,37 @@ def test_fresh_account_has_less_than_minimum_required_balance(
     fresh_account_adr = Account.create().address
     account_adr = Web3.to_checksum_address(fresh_account_adr)
     assert not is_minimum_required_balance(account_adr, xdai_type(0.5), local_web3)
+
+
+def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
+    # we need to mint a new block to update timestamp
+    DebuggingContract().inc(test_keys, local_web3)
+    allowed_difference = 10  # seconds
+    chain_timestamp = DebuggingContract().getNow(local_web3)
+    utc_timestamp = int(utcnow().timestamp())
+    assert (
+        abs(chain_timestamp - utc_timestamp) <= allowed_difference
+    ), f"chain_timestamp and utc_timestamp differ by more than {allowed_difference} seconds: {chain_timestamp=} {utc_timestamp=}"
+
+
+def test_now_failed(local_web3: Web3, test_keys: APIKeys) -> None:
+    # Sleep a little to let the local chain go out of sync without updating the block
+    time.sleep(5)
+    allowed_difference = 10  # seconds
+    chain_timestamp = DebuggingContract().getNow(local_web3)
+    utc_timestamp = int(utcnow().timestamp())
+    assert (
+        abs(chain_timestamp - utc_timestamp) >= allowed_difference
+    ), f"without minting a new block, timestamps should differ by more than {allowed_difference} seconds: {chain_timestamp=} {utc_timestamp=}"
+
+
+def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
+    # we need to mint a new block to update timestamp
+    DebuggingContract().inc(test_keys, local_web3)
+    allowed_difference = 10  # seconds
+    chain_datetime = DebuggingContract().get_now(local_web3)
+    utc_datetime = utcnow()
+    actual_difference = abs(chain_datetime - utc_datetime)
+    assert actual_difference <= timedelta(
+        seconds=allowed_difference
+    ), f"chain_datetime and utc_datetime differ by more than {allowed_difference} seconds: {chain_datetime=} {utc_datetime=} {actual_difference=}"

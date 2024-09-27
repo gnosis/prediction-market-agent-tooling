@@ -6,10 +6,11 @@ from langfuse import Langfuse
 from langfuse.client import TraceWithDetails
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
+    PlacedTrade,
     ProbabilisticAnswer,
     ResolvedBet,
-    Trade,
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -20,10 +21,10 @@ class ProcessMarketTrace(BaseModel):
     timestamp: datetime
     market: OmenAgentMarket
     answer: ProbabilisticAnswer
-    trades: list[Trade]
+    trades: list[PlacedTrade]
 
     @property
-    def buy_trade(self) -> Trade:
+    def buy_trade(self) -> PlacedTrade:
         buy_trades = [t for t in self.trades if t.trade_type == TradeType.BUY]
         if len(buy_trades) == 1:
             return buy_trades[0]
@@ -107,10 +108,10 @@ def trace_to_answer(trace: TraceWithDetails) -> ProbabilisticAnswer:
     return ProbabilisticAnswer.model_validate(trace.output["answer"])
 
 
-def trace_to_trades(trace: TraceWithDetails) -> list[Trade]:
+def trace_to_trades(trace: TraceWithDetails) -> list[PlacedTrade]:
     assert trace.output is not None, "Trace output is None"
     assert trace.output["trades"] is not None, "Trace output trades is None"
-    return [Trade.model_validate(t) for t in trace.output["trades"]]
+    return [PlacedTrade.model_validate(t) for t in trace.output["trades"]]
 
 
 def get_closest_datetime_from_list(
@@ -146,9 +147,21 @@ def get_trace_for_bet(
     else:
         # In-case there are multiple traces for the same market, get the closest
         # trace to the bet
+        bet_timestamp = add_utc_timezone_validator(bet.created_time)
         closest_trace_index = get_closest_datetime_from_list(
-            add_utc_timezone_validator(bet.created_time),
+            bet_timestamp,
             [t.timestamp for t in traces_for_bet],
         )
+
+        # Sanity check: Let's say the upper bound for time between
+        # `agent.process_market` being called and the bet being placed is 20
+        # minutes
+        candidate_trace = traces_for_bet[closest_trace_index]
+        if abs(candidate_trace.timestamp - bet_timestamp).total_seconds() > 1200:
+            logger.info(
+                f"Closest trace to bet has timestamp {candidate_trace.timestamp}, "
+                f"but bet was created at {bet_timestamp}. Not matching"
+            )
+            return None
 
         return traces_for_bet[closest_trace_index]

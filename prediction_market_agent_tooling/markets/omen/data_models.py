@@ -1,6 +1,7 @@
 import typing as t
 from datetime import datetime
 
+import pytz
 from pydantic import BaseModel
 from web3 import Web3
 
@@ -218,7 +219,7 @@ class OmenMarket(BaseModel):
 
     @property
     def opening_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.openingTimestamp)
+        return datetime.fromtimestamp(self.openingTimestamp, tz=pytz.UTC)
 
     @property
     def close_time(self) -> datetime:
@@ -382,7 +383,7 @@ class OmenBetCreator(BaseModel):
 
 
 class OmenBet(BaseModel):
-    id: HexAddress
+    id: HexAddress  # A concatenation of: FPMM contract ID, trader ID and nonce. See https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/FixedProductMarketMakerMapping.ts#L109
     title: str
     collateralToken: HexAddress
     outcomeTokenMarginalPrice: xDai
@@ -400,7 +401,7 @@ class OmenBet(BaseModel):
 
     @property
     def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp)
+        return datetime.fromtimestamp(self.creationTimestamp, tz=pytz.UTC)
 
     @property
     def boolean_outcome(self) -> bool:
@@ -431,6 +432,9 @@ class OmenBet(BaseModel):
 
     def to_bet(self) -> Bet:
         return Bet(
+            id=str(
+                self.transactionHash
+            ),  # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
@@ -445,6 +449,9 @@ class OmenBet(BaseModel):
             )
 
         return ResolvedBet(
+            id=str(
+                self.transactionHash
+            ),  # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,

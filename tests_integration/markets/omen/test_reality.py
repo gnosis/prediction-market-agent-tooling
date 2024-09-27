@@ -60,7 +60,9 @@ def test_claim_bonds() -> None:
     time.sleep(timeout.total_seconds() + 2)  # Wait for the question to be finalized.
 
     # Try to claim bonds
-    question = OmenSubgraphHandler().get_questions(question_id_in=[question_id])[0]
+    question = OmenSubgraphHandler().get_questions(
+        limit=1, question_id_in=[question_id]
+    )[0]
     logger.info(f"Claiming for {question.url}")
     claim_bonds_on_realitio_question(
         api_keys=api_keys,

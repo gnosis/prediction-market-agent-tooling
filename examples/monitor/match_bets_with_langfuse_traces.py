@@ -89,12 +89,12 @@ if __name__ == "__main__":
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
         "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        # "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
         # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",  # no bets!
         # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",  # no bets!
-        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
 
     agent_pkey_map = {
@@ -143,6 +143,8 @@ if __name__ == "__main__":
     controller = hishel.Controller(force_cache=True)
     httpx_client = hishel.CacheClient(storage=storage, controller=controller)
 
+    overall_md = ""
+
     print("# Agent Bet vs Simulated Bet Comparison")
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
@@ -179,19 +181,19 @@ if __name__ == "__main__":
         # All bets should have a trace, but not all traces should have a bet
         # (e.g. if all markets are deemed unpredictable), so iterate over bets
         bets_with_traces: list[ResolvedBetWithTrace] = []
-        missing_bets = []
         for bet in bets:
             trace = get_trace_for_bet(bet, process_market_traces)
             if trace:
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
-            else:
-                missing_bets.append(bet)
 
         print(f"Number of bets since {start_time}: {len(bets_with_traces)}\n")
-        if missing_bets:
-            print(f"Bets without traces : {missing_bets}")
+        if len(bets_with_traces) != len(bets):
+            print(
+                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."
+            )
 
         simulations: list[dict[str, Any]] = []
+        details = []
 
         for strategy_idx, strategy in enumerate(strategies):
             # "Born" agent with initial funding, simulate as if he was doing bets one by one.
@@ -209,6 +211,26 @@ if __name__ == "__main__":
                     continue
                 simulated_outcomes.append(simulated_outcome)
                 agent_balance += simulated_outcome.profit
+
+                details.append(
+                    {
+                        "url": trace.market.url,
+                        "market_p_yes": round(trace.market.current_p_yes, 4),
+                        "agent_p_yes": round(trace.answer.p_yes, 4),
+                        "agent_conf": round(trace.answer.confidence, 4),
+                        "org_bet": round(bet.amount.amount, 4),
+                        "sim_bet": round(simulated_outcome.size, 4),
+                        "org_dir": bet.outcome,
+                        "sim_dir": simulated_outcome.direction,
+                        "org_profit": round(bet.profit.amount, 4),
+                        "sim_profit": round(simulated_outcome.profit, 4),
+                    }
+                )
+
+            details.sort(key=lambda x: x["sim_profit"], reverse=True)
+            pd.DataFrame.from_records(details).to_csv(
+                f"{agent_name} - {strategy} - all bets.csv", index=False
+            )
 
             total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
             total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
@@ -242,6 +264,10 @@ if __name__ == "__main__":
                 }
             )
 
-        simulations_df = pd.DataFrame.from_records(simulations)
-        simulations_df.to_csv("simulations.csv")
-        print(simulations_df.to_markdown(index=False))
+        overall_md += (
+            f"\n\n## {agent_name}\n\n{len(simulations)} bets\n\n"
+            + pd.DataFrame.from_records(simulations).to_markdown(index=False)
+        )
+
+    with open("match_bets_with_langfuse_traces_overall.md", "w") as overall_f:
+        overall_f.write(overall_md)

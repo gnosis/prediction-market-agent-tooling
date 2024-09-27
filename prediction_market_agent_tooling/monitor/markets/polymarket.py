@@ -43,3 +43,7 @@ class DeployedPolymarketAgent(DeployedAgent):
         == MarketType.POLYMARKET.value,
     ) -> t.Sequence["DeployedPolymarketAgent"]:
         return super().from_all_gcp_functions(filter_=filter_)
+
+    @staticmethod
+    def get_user_id(api_keys: APIKeys) -> str:
+        return api_keys.bet_from_address

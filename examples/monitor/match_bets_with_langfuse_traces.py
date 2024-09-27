@@ -15,10 +15,10 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     ProbabilisticAnswer,
     TradeType,
     KellyMaxSlippageBettingStrategy,
-    MaxExpectedValueBettingStrategy,
-    MaxAccuracyWithKellyScaledBetsStrategy,
     KellyBettingStrategy,
     MaxAccuracyBettingStrategy,
+    MaxAccuracyWithKellyScaledBetsStrategy,
+    MaxExpectedValueBettingStrategy,
 )
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -122,12 +122,21 @@ if __name__ == "__main__":
         KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.2),
         KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.25),
         KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.3),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.4),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.5),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=2, max_slippage=0.7),
         KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.1),
         KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.15),
         KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.2),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.3),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.5),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.6),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=5, max_slippage=0.7),
         KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.1),
-        KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.15),
         KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.2),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.3),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.5),
+        KellyMaxSlippageBettingStrategy(max_bet_amount=25, max_slippage=0.7),
     ]
 
     storage = hishel.FileStorage(ttl=3600)

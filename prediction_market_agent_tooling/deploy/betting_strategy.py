@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-from scipy.optimize import bisect
+from scipy.optimize import minimize_scalar
 
 from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
@@ -224,7 +224,7 @@ class KellyMaxSlippageBettingStrategy(KellyBettingStrategy):
         super().__init__(max_bet_amount=max_bet_amount)
 
     def calc_bet_for_slippage(
-        self, buy_direction: bool, bet_amount: float, yes: float, no: float, fee: float
+        self, buy_direction: bool, yes: float, no: float, fee: float = 0
     ) -> float:
         if buy_direction:
             r_a = yes
@@ -233,16 +233,21 @@ class KellyMaxSlippageBettingStrategy(KellyBettingStrategy):
             r_a = no
             r_b = yes
 
-        p_a = r_b / (r_a + r_b)
-        n_a = bet_amount * (r_a + r_b) / (2 * r_b)
-        n_swap = r_a - ((r_a * r_b) / (r_b + ((bet_amount * (r_b + r_a)) / (2 * r_a))))
-        n_r = n_a + n_swap
+        # p_a = r_b / (r_a + r_b)
+        # n_a = bet_amount * (r_a + r_b) / (2 * r_b)
+        # n_swap = r_a - ((r_a * r_b) / (r_b + ((bet_amount * (r_b + r_a)) / (2 * r_a))))
+        # n_r = n_a + n_swap
+        #
+        # p_a_new = bet_amount / n_r
+        # new_bet_amount = p_a * (self.max_slippage + 1) * n_r
+        # print(
+        #     f" p_a {p_a} n_swap {n_swap} p_a_new {p_a_new} new_bet_amount {new_bet_amount}"
+        # )
 
-        p_a_new = bet_amount / n_r
-        new_bet_amount = p_a * (self.max_slippage + 1) * n_r
-        print(
-            f" p_a {p_a} n_swap {n_swap} p_a_new {p_a_new} new_bet_amount {new_bet_amount}"
-        )
+        total_supply = r_a + r_b
+        p_a = r_b / (r_a + r_b)
+        g = (1 / (self.max_slippage * (p_a + 1))) - (total_supply * 0.5 / r_b)
+        new_bet_amount = r_a * ((1.0 / g) - (2.0 * r_b / total_supply))
         return new_bet_amount
 
     def calc_slippage(
@@ -252,18 +257,24 @@ class KellyMaxSlippageBettingStrategy(KellyBettingStrategy):
         expected_price = (
             no / total_outcome_tokens if buy_direction else yes / total_outcome_tokens
         )
-        # expected_tokens_bought = bet_amount / initial_price
 
-        try:
-            tokens_bought = get_buy_outcome_token_amount(
-                bet_amount, buy_direction, yes, no, fee
-            )
-
-        except Exception as e:
-            print("Error,", e)
-            return 1
+        tokens_bought = get_buy_outcome_token_amount(
+            bet_amount, buy_direction, yes, no, fee
+        )
+        new_yes = yes + bet_amount
+        new_no = no + bet_amount
+        if buy_direction:
+            new_yes -= tokens_bought
+        else:
+            new_no -= tokens_bought
 
         actual_price = bet_amount / tokens_bought
+        actual_price_2 = (
+            new_no / (new_yes + new_no)
+            if buy_direction
+            else new_yes / (new_yes + new_no)
+        )
+        # print(f"actual_price {actual_price} actual_price2 {actual_price_2}")
         s = (actual_price - expected_price) / expected_price
         return s
 
@@ -277,26 +288,34 @@ class KellyMaxSlippageBettingStrategy(KellyBettingStrategy):
             market.get_outcome_str_from_bool(False)
         ]
 
-        # slippage for (100)
-        slippage_50 = self.calc_slippage(
-            kelly_bet.direction, 50, yes_outcome_pool_size, no_outcome_pool_size, fee
-        )
-
         def slippage_diff(b: xDai) -> float:
             actual_slippage = self.calc_slippage(
                 kelly_bet.direction, b, yes_outcome_pool_size, no_outcome_pool_size, fee
             )
             # translate in y
-            return actual_slippage - self.max_slippage - slippage_50
+            return abs(actual_slippage - self.max_slippage)
 
         # ToDo - Try minimize_scalar, bisect
         #  https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize_scalar.html#minimize-scalar
         try:
+            optimized_bet_amount = minimize_scalar(
+                slippage_diff,
+                bounds=(min(yes_outcome_pool_size, no_outcome_pool_size) / 10, 100),
+                method="bounded",
+                tol=1e-7,
+                options={"maxiter": 10000},
+            ).x
             # optimized_bet_amount = newton(
             #     slippage_diff, self.max_bet_amount, maxiter=1000
             # )
             # We use max(pool_tokens) to find a large value of slippage if required.
-            optimized_bet_amount = bisect(slippage_diff, 1e-12, 100, rtol=1e-6)
+            # optimized_bet_amount = bisect(slippage_diff, 1e-12, 100, rtol=1e-6)
+            # optimized_bet_amount = find_target_slippage(
+            #     kelly_bet.direction,
+            #     kelly_bet.size,
+            #     yes_outcome_pool_size,
+            #     no_outcome_pool_size,
+            # )
 
             # other_amount = root_scalar(
             #     slippage_diff, bracket=[1e-18, self.max_bet_amount]
@@ -339,30 +358,32 @@ class KellyMaxSlippageBettingStrategy(KellyBettingStrategy):
                 answer.confidence,
             )
         )
-
+        markets_for_debug = [
+            "0x04527b6afde0192b47f5450b2ff5183e5d7c12b5",
+            "0x11cf6ec9649097127238ffb789b0703da448d9fa",
+            "0x67d5e1a18c54686402d26cde2441c56d67096a9c",
+        ]
+        if market.id in markets_for_debug:
+            pass
         # Adjust amount
-        # max_slippage_bet_amount = self.calculate_slippage_for_bet_amount(
-        #    market, kelly_bet, 0
-        # )
-        new_bet_amount = self.calc_bet_for_slippage(
-            kelly_bet.direction,
+        max_slippage_bet_amount = self.calculate_slippage_for_bet_amount(
+            market, kelly_bet, 0
         )
 
         kelly_bet_size = min(kelly_bet.size, max_slippage_bet_amount)
         # check slippage
         slippage_num = self.calc_slippage(
             kelly_bet.direction,
-            max_slippage_bet_amount,
+            kelly_bet_size,
             market.outcome_token_pool["Yes"],
             market.outcome_token_pool["No"],
             0,
         )
-        print(f"slippage calc {slippage_num}")
-        if not np.isclose(
-            slippage_num, self.max_slippage, atol=self.max_slippage / 100
+        # print(f"slippage calc {slippage_num}")
+        if slippage_num > self.max_slippage and not np.isclose(
+            slippage_num, self.max_slippage, self.max_slippage / 100
         ):
-            print("Slippage wrong")
-            kelly_bet_size = kelly_bet.size
+            print(f"Slippage too high, market_id {market.id}")
 
         amounts = {
             market.get_outcome_str_from_bool(kelly_bet.direction): TokenAmount(

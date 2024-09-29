@@ -97,10 +97,6 @@ class OmenAgentMarket(AgentMarket):
     close_time: datetime
     fee: float  # proportion, from 0 to 1
 
-    INVALID_MARKET_ANSWER: HexStr = HexStr(
-        "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    )
-
     _binary_market_p_yes_history: list[Probability] | None = None
     description: str | None = (
         None  # Omen markets don't have a description, so just default to None.
@@ -193,7 +189,7 @@ class OmenAgentMarket(AgentMarket):
         omen_auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-    ) -> None:
+    ) -> str:
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot place bet."
@@ -201,7 +197,7 @@ class OmenAgentMarket(AgentMarket):
         if amount.currency != self.currency:
             raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
         amount_xdai = xDai(amount.amount)
-        binary_omen_buy_outcome_tx(
+        return binary_omen_buy_outcome_tx(
             api_keys=api_keys if api_keys is not None else APIKeys(),
             amount=amount_xdai,
             market=self,
@@ -216,7 +212,7 @@ class OmenAgentMarket(AgentMarket):
         amount: TokenAmount,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-    ) -> None:
+    ) -> str:
         return self.place_bet(
             outcome=outcome,
             amount=amount,
@@ -249,7 +245,7 @@ class OmenAgentMarket(AgentMarket):
         auto_withdraw: bool = False,
         api_keys: APIKeys | None = None,
         web3: Web3 | None = None,
-    ) -> None:
+    ) -> str:
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot sell tokens."
@@ -262,7 +258,7 @@ class OmenAgentMarket(AgentMarket):
             outcome=outcome,
             web3=web3,
         )
-        binary_omen_sell_outcome_tx(
+        return binary_omen_sell_outcome_tx(
             amount=collateral,
             api_keys=api_keys if api_keys is not None else APIKeys(),
             market=self,
@@ -637,6 +633,14 @@ class OmenAgentMarket(AgentMarket):
         )
         return Probability(new_p_yes)
 
+    @staticmethod
+    def get_user_balance(user_id: str) -> float:
+        return float(get_balances(Web3.to_checksum_address(user_id)).total)
+
+    @staticmethod
+    def get_user_id(api_keys: APIKeys) -> str:
+        return api_keys.bet_from_address
+
 
 def get_omen_user_url(address: ChecksumAddress) -> str:
     return f"https://gnosisscan.io/address/{address}"
@@ -663,7 +667,7 @@ def omen_buy_outcome_tx(
     outcome: str,
     auto_deposit: bool,
     web3: Web3 | None = None,
-) -> None:
+) -> str:
     """
     Bets the given amount of xDai for the given outcome in the given market.
     """
@@ -699,13 +703,15 @@ def omen_buy_outcome_tx(
         )
 
     # Buy shares using the deposited xDai in the collateral token.
-    market_contract.buy(
+    tx_receipt = market_contract.buy(
         api_keys=api_keys,
         amount_wei=amount_wei_to_buy,
         outcome_index=outcome_index,
         min_outcome_tokens_to_buy=expected_shares,
         web3=web3,
     )
+
+    return tx_receipt["transactionHash"].hex()
 
 
 def binary_omen_buy_outcome_tx(
@@ -715,8 +721,8 @@ def binary_omen_buy_outcome_tx(
     binary_outcome: bool,
     auto_deposit: bool,
     web3: Web3 | None = None,
-) -> None:
-    omen_buy_outcome_tx(
+) -> str:
+    return omen_buy_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
@@ -733,7 +739,7 @@ def omen_sell_outcome_tx(
     outcome: str,
     auto_withdraw: bool,
     web3: Web3 | None = None,
-) -> None:
+) -> str:
     """
     Sells the given xDai value of shares corresponding to the given outcome in
     the given market.
@@ -774,7 +780,7 @@ def omen_sell_outcome_tx(
         web3=web3,
     )
     # Sell the shares.
-    market_contract.sell(
+    tx_receipt = market_contract.sell(
         api_keys,
         amount_wei,
         outcome_index,
@@ -796,6 +802,8 @@ def omen_sell_outcome_tx(
             web3,
         )
 
+    return tx_receipt["transactionHash"].hex()
+
 
 def binary_omen_sell_outcome_tx(
     api_keys: APIKeys,
@@ -804,8 +812,8 @@ def binary_omen_sell_outcome_tx(
     binary_outcome: bool,
     auto_withdraw: bool,
     web3: Web3 | None = None,
-) -> None:
-    omen_sell_outcome_tx(
+) -> str:
+    return omen_sell_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
@@ -934,7 +942,7 @@ def omen_fund_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     market_contract = market.get_contract()
-    collateral_token_contract = market_contract.get_collateral_token_contract()
+    collateral_token_contract = market_contract.get_collateral_token_contract(web3=web3)
 
     amount_to_fund = collateral_token_contract.get_in_shares(funds, web3)
 
@@ -1052,8 +1060,12 @@ def omen_remove_fund_market_tx(
     """
     from_address = api_keys.bet_from_address
     market_contract = market.get_contract()
-    market_collateral_token_contract = market_contract.get_collateral_token_contract()
-    original_balance = market_collateral_token_contract.balanceOf(from_address)
+    market_collateral_token_contract = market_contract.get_collateral_token_contract(
+        web3=web3
+    )
+    original_balance = market_collateral_token_contract.balanceOf(
+        from_address, web3=web3
+    )
 
     total_shares = market_contract.balanceOf(from_address, web3=web3)
     if total_shares == 0:
@@ -1088,11 +1100,11 @@ def omen_remove_fund_market_tx(
         web3=web3,
     )
 
-    new_balance = market_collateral_token_contract.balanceOf(from_address)
+    new_balance = market_collateral_token_contract.balanceOf(from_address, web3=web3)
 
     logger.debug(f"Result from merge positions {result}")
     logger.info(
-        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached()} from liquidity at {market.url=}."
+        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached(web3=web3)} from liquidity at {market.url=}."
     )
 
 

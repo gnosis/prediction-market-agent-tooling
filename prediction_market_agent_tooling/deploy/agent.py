@@ -26,6 +26,7 @@ from prediction_market_agent_tooling.markets.agent_market import (AgentMarket,
                                                                   FilterBy,
                                                                   SortBy)
 from prediction_market_agent_tooling.markets.data_models import (
+    PlacedTrade,
     Position, ProbabilisticAnswer, Trade)
 from prediction_market_agent_tooling.markets.markets import (
     MarketType, have_bet_on_market_since)
@@ -93,7 +94,7 @@ class OutOfFundsError(ValueError):
 
 class ProcessedMarket(BaseModel):
     answer: ProbabilisticAnswer
-    trades: list[Trade]
+    trades: list[PlacedTrade]
 
 
 class AnsweredEnum(str, Enum):
@@ -265,8 +266,6 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
-    strategy: BettingStrategy = MaxAccuracyBettingStrategy()
-    allow_opposite_bets: bool = False
 
     def __init__(
         self,
@@ -275,6 +274,15 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
+
+    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
+        user_id = market.get_user_id(api_keys=APIKeys())
+
+        total_amount = market.get_user_balance(user_id=user_id) * 0.1
+        if existing_position := market.get_position(user_id=user_id):
+            total_amount += existing_position.total_amount.amount
+
+        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -394,7 +402,8 @@ class DeployableTraderAgent(DeployableAgent):
         answer: ProbabilisticAnswer,
         existing_position: Position | None,
     ) -> list[Trade]:
-        trades = self.strategy.calculate_trades(existing_position, answer, market)
+        strategy = self.get_betting_strategy(market=market)
+        trades = strategy.calculate_trades(existing_position, answer, market)
         BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 
@@ -427,24 +436,32 @@ class DeployableTraderAgent(DeployableAgent):
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.build_trades(
-            market=market, answer=answer, existing_position=existing_position
+            market=market,
+            answer=answer,
+            existing_position=existing_position,
         )
 
+        placed_trades = []
         if self.place_bet:
             for trade in trades:
                 logger.info(f"Executing trade {trade} on market {market.id}")
 
                 match trade.trade_type:
                     case TradeType.BUY:
-                        market.buy_tokens(outcome=trade.outcome, amount=trade.amount)
+                        id = market.buy_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
                     case TradeType.SELL:
-                        market.sell_tokens(outcome=trade.outcome, amount=trade.amount)
+                        id = market.sell_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
                     case _:
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")
+                placed_trades.append(PlacedTrade.from_trade(trade, id))
 
         self.after_process_market(market_type, market)
 
-        processed_market = ProcessedMarket(answer=answer, trades=trades)
+        processed_market = ProcessedMarket(answer=answer, trades=placed_trades)
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
 
         logger.info(f"Processed market {market.question=} from {market.url=}.")

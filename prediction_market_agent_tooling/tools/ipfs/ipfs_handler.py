@@ -1,7 +1,11 @@
+import json
+import tempfile
+
 from pinatapy import PinataPy
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import IPFSCIDVersion0
+from prediction_market_agent_tooling.markets.omen.data_models import IPFSAgentResult
 
 
 class IPFSHandler:
@@ -17,6 +21,13 @@ class IPFSHandler:
                 "IpfsHash"
             ]
         )
+
+    def store_agent_result(self, agent_result: IPFSAgentResult):
+        with tempfile.NamedTemporaryFile(mode='r+', encoding='utf-8') as json_file:
+            json.dump(agent_result.model_dump(), json_file, indent=4)
+            json_file.flush()
+            ipfs_hash = self.upload_file(json_file.name)
+            return ipfs_hash
 
     def unpin_file(self, hash_to_remove: str) -> None:
         self.pinata.remove_pin_from_ipfs(hash_to_remove=hash_to_remove)

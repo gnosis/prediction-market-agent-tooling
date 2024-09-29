@@ -505,17 +505,14 @@ class DeployableTraderAgent(DeployableAgent):
         processed_market: ProcessedMarket,
     ) -> None:
         if market_type != MarketType.OMEN:
+            logger.info(f"Skipping after_process_market since market_type {market_type} != OMEN")
             return
         keys = APIKeys()
         self.store_prediction(market_id=market.id, processed_market=processed_market, keys=keys)
     def store_prediction(self, market_id: str,processed_market: ProcessedMarket,
                          keys: APIKeys) -> None:
 
-        agent_result = IPFSAgentResult(reasoning=processed_market.answer.reasoning)
-        with tempfile.NamedTemporaryFile(suffix=".json",mode='r+', encoding='utf-8') as json_file:
-            json.dump(agent_result.model_dump(), json_file, indent=4)
-            json_file.flush()
-            ipfs_hash = self.ipfs_handler.upload_file(json_file.name)
+        ipfs_hash = self.ipfs_handler.store_agent_result(IPFSAgentResult(reasoning=processed_market.answer.reasoning))
 
         prediction = ContractPrediction(
             publisher=keys.public_key,

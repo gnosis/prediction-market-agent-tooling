@@ -1,8 +1,8 @@
 import typing as t
 from datetime import datetime
-from typing_extensions import Self
+
 import pytz
-from pydantic import BaseModel, Field, ConfigDict, model_validator, computed_field
+from pydantic import BaseModel, ConfigDict, Field
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (

@@ -22,8 +22,8 @@ class IPFSHandler:
             ]
         )
 
-    def store_agent_result(self, agent_result: IPFSAgentResult):
-        with tempfile.NamedTemporaryFile(mode='r+', encoding='utf-8') as json_file:
+    def store_agent_result(self, agent_result: IPFSAgentResult) -> IPFSCIDVersion0:
+        with tempfile.NamedTemporaryFile(mode="r+", encoding="utf-8") as json_file:
             json.dump(agent_result.model_dump(), json_file, indent=4)
             json_file.flush()
             ipfs_hash = self.upload_file(json_file.name)

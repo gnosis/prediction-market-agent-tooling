@@ -29,8 +29,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
-    get_bet_outcome,
     ContractPrediction,
+    get_bet_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -45,12 +45,12 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
+    OmenAgentResultMappingContract,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenRealitioContract,
     WrappedxDaiContract,
     sDaiContract,
-    OmenAgentResultMappingContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,

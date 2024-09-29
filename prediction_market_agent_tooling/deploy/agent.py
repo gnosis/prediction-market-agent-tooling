@@ -1,6 +1,5 @@
 import getpass
 import inspect
-import json
 import os
 import tempfile
 import time
@@ -32,7 +31,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import xDai, xdai_type, ChecksumAddress
+from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -64,6 +63,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
@@ -505,21 +505,30 @@ class DeployableTraderAgent(DeployableAgent):
         processed_market: ProcessedMarket,
     ) -> None:
         if market_type != MarketType.OMEN:
-            logger.info(f"Skipping after_process_market since market_type {market_type} != OMEN")
+            logger.info(
+                f"Skipping after_process_market since market_type {market_type} != OMEN"
+            )
             return
         keys = APIKeys()
-        self.store_prediction(market_id=market.id, processed_market=processed_market, keys=keys)
-    def store_prediction(self, market_id: str,processed_market: ProcessedMarket,
-                         keys: APIKeys) -> None:
+        self.store_prediction(
+            market_id=market.id, processed_market=processed_market, keys=keys
+        )
 
-        ipfs_hash = self.ipfs_handler.store_agent_result(IPFSAgentResult(reasoning=processed_market.answer.reasoning))
+    def store_prediction(
+        self, market_id: str, processed_market: ProcessedMarket, keys: APIKeys
+    ) -> None:
+        reasoning = processed_market.answer.reasoning if processed_market.answer.reasoning else ""
+        ipfs_hash = self.ipfs_handler.store_agent_result(
+            IPFSAgentResult(reasoning=reasoning)
+        )
 
+        # We store only the first trade, since it's only here for tracking purposes - also,
+        # we want only 1 entry per prediction, not 1 entry per trade.
+        tx_hash = HexBytes(processed_market.trades[0].id) if processed_market.trades else HexBytes("")
         prediction = ContractPrediction(
             publisher=keys.public_key,
             ipfs_hash=ipfscidv0_to_byte32(ipfs_hash),
-            tx_hash="".join(
-                [i.id for i in processed_market.trades]
-            ),  # joining txHashes if there are multiple trades.
+            tx_hash=tx_hash,
             estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
         )
         tx_receipt = OmenAgentResultMappingContract().add_prediction(

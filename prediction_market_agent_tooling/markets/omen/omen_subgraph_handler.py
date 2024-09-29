@@ -20,6 +20,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    ContractPrediction,
     OmenBet,
     OmenMarket,
     OmenPosition,
@@ -27,7 +28,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityAnswer,
     RealityQuestion,
     RealityResponse,
-    ContractPrediction,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,

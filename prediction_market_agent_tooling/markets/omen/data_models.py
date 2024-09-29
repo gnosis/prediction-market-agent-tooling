@@ -1,8 +1,8 @@
 import typing as t
 from datetime import datetime
-
+from typing_extensions import Self
 import pytz
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator, computed_field
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -547,3 +547,11 @@ class ContractPrediction(BaseModel):
     def from_tuple(values: tuple[t.Any]) -> "ContractPrediction":
         data = {k: v for k, v in zip(ContractPrediction.model_fields.keys(), values)}
         return ContractPrediction.model_validate(data)
+
+
+class IPFSAgentResult(BaseModel):
+    reasoning: str
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )

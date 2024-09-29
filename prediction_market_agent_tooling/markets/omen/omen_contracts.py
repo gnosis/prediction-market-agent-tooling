@@ -681,7 +681,7 @@ class OmenAgentResultMappingContract(ContractOnGnosisChain):
             "../../abis/omen_agentresultmapping.abi.json",
         )
     )
-    # ToDo - update address after PR was merged
+
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xbe1F6944496923683ca849fc0cC93fD10523cB83"
     )

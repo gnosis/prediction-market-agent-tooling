@@ -68,6 +68,7 @@ from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
 from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
+from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
 
 MAX_AVAILABLE_MARKETS = 20
 TRADER_TAG = "trader"
@@ -511,17 +512,18 @@ class DeployableTraderAgent(DeployableAgent):
                          keys: APIKeys) -> None:
 
         agent_result = IPFSAgentResult(reasoning=processed_market.answer.reasoning)
-        with tempfile.NamedTemporaryFile(suffix=".json") as json_file:
-            json.dump(agent_result.model_dump(), json_file)
+        with tempfile.NamedTemporaryFile(suffix=".json",mode='r+', encoding='utf-8') as json_file:
+            json.dump(agent_result.model_dump(), json_file, indent=4)
+            json_file.flush()
             ipfs_hash = self.ipfs_handler.upload_file(json_file.name)
 
         prediction = ContractPrediction(
             publisher=keys.public_key,
-            ipfs_hash=ipfs_hash,
+            ipfs_hash=ipfscidv0_to_byte32(ipfs_hash),
             tx_hash="".join(
-                [i.id for i in processed_market.placed_trades]
+                [i.id for i in processed_market.trades]
             ),  # joining txHashes if there are multiple trades.
-            estimated_probability_bps=processed_market.answer.p_yes * 10000,
+            estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
         )
         tx_receipt = OmenAgentResultMappingContract().add_prediction(
             api_keys=keys,
@@ -579,7 +581,7 @@ class DeployableTraderAgent(DeployableAgent):
 
         logger.info("All markets processed.")
 
-    def after_process_markets(self, market_type: MarketType, rpc_url) -> None:
+    def after_process_markets(self, market_type: MarketType) -> None:
         pass
 
     def run(self, market_type: MarketType) -> None:

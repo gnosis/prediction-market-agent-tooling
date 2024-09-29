@@ -11,7 +11,7 @@ class IPFSHandler:
             api_keys.pinata_api_secret.get_secret_value(),
         )
 
-    def upload_file(self, file_path: str) -> str:
+    def upload_file(self, file_path: str) -> IPFSCIDVersion0:
         return IPFSCIDVersion0(
             self.pinata.pin_file_to_ipfs(file_path, save_absolute_paths=False)[
                 "IpfsHash"

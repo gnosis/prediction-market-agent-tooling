@@ -411,7 +411,6 @@ def get_position_balance_by_position_id(
 
 
 def test_add_predictions(local_web3: Web3, test_keys: APIKeys) -> None:
-    local_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
     agent_result_mapping = OmenAgentResultMappingContract()
     market_address = test_keys.public_key
     dummy_transaction_hash = (

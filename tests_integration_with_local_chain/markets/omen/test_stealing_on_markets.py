@@ -29,8 +29,8 @@ from prediction_market_agent_tooling.markets.omen.omen_resolving import (
     omen_submit_answer_market_tx,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
-from prediction_market_agent_tooling.tools.contract import DebuggingContract
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from tests.utils import mint_new_block
 
 
 def test_stealing_on_markets(
@@ -47,7 +47,7 @@ def test_stealing_on_markets(
     print(f"{api_keys_A.bet_from_address=}, {api_keys_B.bet_from_address=}")
 
     # Update chain's state with a dummy block.
-    DebuggingContract().inc(api_keys_A, local_web3)
+    mint_new_block(api_keys_A, local_web3)
 
     # Get their starting balances, so we can compare them with their ending balances.
     starting_balance_A, starting_balance_B = (
@@ -154,7 +154,7 @@ def test_stealing_on_markets(
     # Wait for market's closing time
     time.sleep(close_in * 1.1)
     # Do a dummy block again, so the time in the contract is updated and it knows it's opened already.
-    DebuggingContract().inc(api_keys_A, local_web3)
+    mint_new_block(api_keys_A, local_web3)
 
     # Submit answer on reality.
     omen_submit_answer_market_tx(
@@ -168,7 +168,7 @@ def test_stealing_on_markets(
     # Wait for the finalization.
     time.sleep(finalization_wait_time_seconds * 1.1)
     # Update the time in the chain again.
-    DebuggingContract().inc(api_keys_A, local_web3)
+    mint_new_block(api_keys_A, local_web3)
 
     # Resolve the market.
     omen_resolve_market_tx(api_keys_A, omen_market, local_web3)

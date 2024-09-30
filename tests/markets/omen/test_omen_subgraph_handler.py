@@ -346,18 +346,15 @@ def test_will_return_non_wxdai_markets_if_asked_for(
     assert len(markets) == 1, "Should have return that one market with the given ID."
 
 
-# ToDo - Use test_subgraph_handler everywhere
 def test_get_predictions_from_market(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
-    dummy_market_id = Web3.to_checksum_address(
+    predictions = omen_subgraph_handler.get_agent_results_for_market()
+    # We have at least 1 prediction
+    # We hardcode the first publisher we addded a prediction for.
+    first_publisher = Web3.to_checksum_address(
         "0x134f193625bbc38f31aeeecf41f5f96c1ad6ea9a"
-    )  # dummy market inserted right after contract was deployed
-    dummy_ipfs_hash = "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"  # IPFS hash is a dummy value created for testing purposes upon contract creation.
-
-    predictions = omen_subgraph_handler.get_agent_results_for_market(
-        market_id=dummy_market_id
     )
-    assert len(predictions) == 1
+    assert len(predictions) >= 1
     # We can get the 0th element since we sort by block number asc.
-    assert predictions[0].ipfs_hash.hex() == dummy_ipfs_hash
+    assert predictions[0].publisher_checksummed == first_publisher

@@ -13,12 +13,12 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     HexAddress,
+    PrivateKey,
     private_key_type,
     xDai,
     xdai_type,
-    PrivateKey,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, send_xdai_to
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -81,7 +81,7 @@ def fund_account_on_tenderly(
 def create_and_fund_random_account(
     web3: Web3, private_key: PrivateKey, deposit_amount: xDai = xDai(10)
 ) -> LocalAccount:
-    fresh_account = Account.create()
+    fresh_account: LocalAccount = Account.create()
     send_xdai_to(
         web3=web3,
         from_private_key=private_key,

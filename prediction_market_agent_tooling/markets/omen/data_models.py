@@ -2,7 +2,7 @@ import typing as t
 from datetime import datetime
 
 import pytz
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -538,10 +538,15 @@ class RealityAnswersResponse(BaseModel):
 
 class ContractPrediction(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    publisher: ChecksumAddress = Field(..., alias="publisherAddress")
+    publisher: str = Field(..., alias="publisherAddress")
     ipfs_hash: HexBytes = Field(..., alias="ipfsHash")
     tx_hashes: list[HexBytes] = Field(..., alias="txHashes")
     estimated_probability_bps: int = Field(..., alias="estimatedProbabilityBps")
+
+    @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
+    @property
+    def publisher_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.publisher)
 
     @staticmethod
     def from_tuple(values: tuple[t.Any]) -> "ContractPrediction":

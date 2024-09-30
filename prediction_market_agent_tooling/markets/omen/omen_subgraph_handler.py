@@ -809,11 +809,15 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         )
 
     def get_agent_results_for_market(
-        self, market_id: HexAddress
+        self, market_id: HexAddress | None = None
     ) -> list[ContractPrediction]:
+        where_stms = {}
+        if market_id:
+            where_stms["marketAddress"] = market_id.lower()
+
         prediction_added = (
             self.omen_agent_result_mapping_subgraph.Query.predictionAddeds(
-                where={"marketAddress": market_id.lower()},
+                where=where_stms,
                 orderBy="blockNumber",
                 orderDirection="asc",
             )
@@ -821,7 +825,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         fields = [
             prediction_added.publisherAddress,
             prediction_added.ipfsHash,
-            prediction_added.txHash,
+            prediction_added.txHashes,
             prediction_added.estimatedProbabilityBps,
         ]
         result = self.sg.query_json(fields)

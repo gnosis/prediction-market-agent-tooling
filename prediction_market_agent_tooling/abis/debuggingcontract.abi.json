@@ -1,0 +1,29 @@
+[
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "inc",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "counter",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "getNow",
+    "outputs": [{ "name": "", "type": "uint32" }],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import DebuggingContract
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
+    mint_new_block,
     send_xdai_to,
     wei_to_xdai,
     xdai_to_wei,
@@ -102,7 +103,7 @@ def test_fresh_account_has_less_than_minimum_required_balance(
 
 def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
     # we need to mint a new block to update timestamp
-    DebuggingContract().inc(test_keys, local_web3)
+    mint_new_block(test_keys, local_web3)
     allowed_difference = 10  # seconds
     chain_timestamp = DebuggingContract().getNow(local_web3)
     utc_timestamp = int(utcnow().timestamp())
@@ -124,7 +125,7 @@ def test_now_failed(local_web3: Web3, test_keys: APIKeys) -> None:
 
 def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
     # we need to mint a new block to update timestamp
-    DebuggingContract().inc(test_keys, local_web3)
+    mint_new_block(test_keys, local_web3)
     allowed_difference = 10  # seconds
     chain_datetime = DebuggingContract().get_now(local_web3)
     utc_datetime = utcnow()

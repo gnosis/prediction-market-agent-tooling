@@ -16,11 +16,11 @@ from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import DebuggingContract
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
-    mint_new_block,
     send_xdai_to,
     wei_to_xdai,
     xdai_to_wei,
 )
+from tests.utils import mint_new_block
 
 
 def test_connect_local_chain(local_web3: Web3) -> None:

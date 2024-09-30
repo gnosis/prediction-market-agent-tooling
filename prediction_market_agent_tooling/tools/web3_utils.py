@@ -12,7 +12,6 @@ from web3 import Web3
 from web3.constants import HASH_ZERO
 from web3.types import AccessList, AccessListEntry, Nonce, TxParams, TxReceipt, Wei
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
@@ -25,7 +24,6 @@ from prediction_market_agent_tooling.gtypes import (
     xdai_type,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.tools.contract import DebuggingContract
 
 ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
@@ -337,11 +335,3 @@ def byte32_to_ipfscidv0(hex: HexBytes) -> IPFSCIDVersion0:
     """
     completed_binary_str = b"\x12 " + hex
     return IPFSCIDVersion0(base58.b58encode(completed_binary_str).decode("utf-8"))
-
-
-def mint_new_block(keys: APIKeys, web3: Web3) -> None:
-    """
-    Mints a new block on the web3's blockchain.
-    Useful for tests that debends on chain's timestamp, this will update it.
-    """
-    DebuggingContract().inc(keys, web3)

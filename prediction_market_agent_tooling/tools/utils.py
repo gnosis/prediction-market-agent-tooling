@@ -9,6 +9,7 @@ import pytz
 import requests
 from google.cloud import secretmanager
 from pydantic import BaseModel, ValidationError
+from pydantic.functional_validators import BeforeValidator
 from scipy.optimize import newton
 from scipy.stats import entropy
 
@@ -85,16 +86,16 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def add_utc_timezone_validator(value: datetime) -> DatetimeWithTimezone:
+def convert_to_utc_datetime(value: datetime) -> DatetimeWithTimezone:
     ...
 
 
 @t.overload
-def add_utc_timezone_validator(value: None) -> None:
+def convert_to_utc_datetime(value: None) -> None:
     ...
 
 
-def add_utc_timezone_validator(value: datetime | None) -> DatetimeWithTimezone | None:
+def convert_to_utc_datetime(value: datetime | None) -> DatetimeWithTimezone | None:
     """
     If datetime doesn't come with a timezone, we assume it to be UTC.
     Note: Not great, but at least the error will be constant.
@@ -108,8 +109,31 @@ def add_utc_timezone_validator(value: datetime | None) -> DatetimeWithTimezone |
     return cast(DatetimeWithTimezone, value)
 
 
+@t.overload
+def utc_timestamp_to_utc_datetime(ts: int) -> DatetimeWithTimezone:
+    ...
+
+
+@t.overload
+def utc_timestamp_to_utc_datetime(ts: None) -> None:
+    ...
+
+
+def utc_timestamp_to_utc_datetime(ts: int | None) -> DatetimeWithTimezone | None:
+    return (
+        convert_to_utc_datetime(datetime.fromtimestamp(ts, tz=pytz.UTC))
+        if ts is not None
+        else None
+    )
+
+
+UTCDatetimeFromUTCTimestamp = t.Annotated[
+    datetime, BeforeValidator(utc_timestamp_to_utc_datetime)
+]
+
+
 def utcnow() -> DatetimeWithTimezone:
-    return add_utc_timezone_validator(datetime.utcnow())
+    return convert_to_utc_datetime(datetime.now(pytz.UTC))
 
 
 def get_current_git_commit_sha() -> str:

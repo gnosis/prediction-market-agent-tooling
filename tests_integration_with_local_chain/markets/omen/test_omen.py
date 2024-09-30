@@ -365,9 +365,11 @@ def test_place_bet_with_autodeposit(
         )[0]
     )
     initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
-    collateral_token_contract = market.get_contract().get_collateral_token_contract()
+    collateral_token_contract = market.get_contract().get_collateral_token_contract(
+        web3=local_web3
+    )
     assert (
-        collateral_token_contract.symbol() == expected_symbol
+        collateral_token_contract.symbol(web3=local_web3) == expected_symbol
     ), f"Should have retrieve {expected_symbol} market."
     assert isinstance(
         collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
@@ -394,8 +396,8 @@ def test_place_bet_with_autodeposit(
         outcome=True,
         amount=bet_amount,
         omen_auto_deposit=True,
-        web3=local_web3,
         api_keys=test_keys,
+        web3=local_web3,
     )
 
 

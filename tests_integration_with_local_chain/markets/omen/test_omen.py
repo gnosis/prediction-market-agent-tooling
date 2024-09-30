@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -341,6 +342,29 @@ def test_omen_buy_and_sell_outcome(
     for tx in [buy_tx, sell_tx]:
         assert tx is not None
         assert tx["from"] == api_keys.bet_from_address
+
+
+def test_deposit_and_withdraw_wxdai(
+    local_web3: Web3,
+    test_keys: APIKeys,
+    accounts: list[TestAccount],
+) -> None:
+    # add balance
+    account = accounts[-1]
+    deposit_amount = xDai(10)
+    wxdai = WrappedxDaiContract()
+    wxdai.deposit(api_keys=test_keys, amount_wei=xdai_to_wei(10), web3=local_web3)
+    balance = get_balances(address=account.address, web3=local_web3)
+    assert balance.wxdai == deposit_amount
+
+    wxdai.withdraw(
+        api_keys=test_keys,
+        amount_wei=xdai_to_wei(balance.wxdai),
+        web3=local_web3,
+    )
+
+    balance = get_balances(address=account.address, web3=local_web3)
+    assert balance.wxdai == 0
 
 
 @pytest.mark.parametrize(

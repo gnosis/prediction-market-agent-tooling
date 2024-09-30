@@ -23,7 +23,7 @@ def load_env() -> None:
     load_dotenv()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def local_web3(
     load_env: None, chain: ChainManager, accounts: list[TestAccount]
 ) -> t.Generator[Web3, None, None]:

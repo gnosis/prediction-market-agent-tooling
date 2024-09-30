@@ -683,7 +683,7 @@ class OmenAgentResultMappingContract(ContractOnGnosisChain):
     )
 
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0xbe1F6944496923683ca849fc0cC93fD10523cB83"
+        "0x260E1077dEA98e738324A6cEfB0EE9A272eD471a"
     )
 
     def get_predictions(

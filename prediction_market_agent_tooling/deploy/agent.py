@@ -517,18 +517,20 @@ class DeployableTraderAgent(DeployableAgent):
     def store_prediction(
         self, market_id: str, processed_market: ProcessedMarket, keys: APIKeys
     ) -> None:
-        reasoning = processed_market.answer.reasoning if processed_market.answer.reasoning else ""
+        reasoning = (
+            processed_market.answer.reasoning
+            if processed_market.answer.reasoning
+            else ""
+        )
         ipfs_hash = self.ipfs_handler.store_agent_result(
             IPFSAgentResult(reasoning=reasoning)
         )
 
-        # We store only the first trade, since it's only here for tracking purposes - also,
-        # we want only 1 entry per prediction, not 1 entry per trade.
-        tx_hash = HexBytes(processed_market.trades[0].id) if processed_market.trades else HexBytes("")
+        tx_hashes = [HexBytes(i.id) for i in processed_market.trades]
         prediction = ContractPrediction(
             publisher=keys.public_key,
             ipfs_hash=ipfscidv0_to_byte32(ipfs_hash),
-            tx_hash=tx_hash,
+            tx_hashes=tx_hashes,
             estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
         )
         tx_receipt = OmenAgentResultMappingContract().add_prediction(

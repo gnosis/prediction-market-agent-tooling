@@ -417,7 +417,7 @@ def test_add_predictions(local_web3: Web3, test_keys: APIKeys) -> None:
         "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"
     )
     p = ContractPrediction(
-        tx_hash=HexBytes(dummy_transaction_hash),
+        tx_hashes=[HexBytes(dummy_transaction_hash)],
         estimated_probability_bps=5454,
         ipfs_hash=HexBytes(dummy_transaction_hash),
         publisher=test_keys.public_key,

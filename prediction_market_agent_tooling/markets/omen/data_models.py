@@ -540,7 +540,7 @@ class ContractPrediction(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     publisher: ChecksumAddress = Field(..., alias="publisherAddress")
     ipfs_hash: HexBytes = Field(..., alias="ipfsHash")
-    tx_hash: HexBytes = Field(..., alias="txHash")
+    tx_hashes: list[HexBytes] = Field(..., alias="txHashes")
     estimated_probability_bps: int = Field(..., alias="estimatedProbabilityBps")
 
     @staticmethod

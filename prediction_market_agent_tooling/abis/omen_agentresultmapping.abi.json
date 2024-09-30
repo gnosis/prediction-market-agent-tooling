@@ -1,171 +1,171 @@
-[
-  {
-    "type": "constructor",
-    "inputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "addPrediction",
-    "inputs": [
-      {
-        "name": "marketAddress",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "prediction",
-        "type": "tuple",
-        "internalType": "struct Prediction",
-        "components": [
-          {
-            "name": "publisherAddress",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "ipfsHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "txHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "estimatedProbabilityBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "getPredictionByIndex",
-    "inputs": [
-      {
-        "name": "marketAddress",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "index",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple",
-        "internalType": "struct Prediction",
-        "components": [
-          {
-            "name": "publisherAddress",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "ipfsHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "txHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "estimatedProbabilityBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getPredictions",
-    "inputs": [
-      {
-        "name": "marketAddress",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple[]",
-        "internalType": "struct Prediction[]",
-        "components": [
-          {
-            "name": "publisherAddress",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "ipfsHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "txHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "estimatedProbabilityBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "event",
-    "name": "PredictionAdded",
-    "inputs": [
-      {
-        "name": "marketAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "estimatedProbabilityBps",
-        "type": "uint16",
-        "indexed": false,
-        "internalType": "uint16"
-      },
-      {
-        "name": "publisherAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "txHash",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "ipfsHash",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      }
-    ],
-    "anonymous": false
-  }
-]
+ [
+        {
+            "type": "constructor",
+            "inputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "function",
+            "name": "addPrediction",
+            "inputs": [
+                {
+                    "name": "marketAddress",
+                    "type": "address",
+                    "internalType": "address"
+                },
+                {
+                    "name": "prediction",
+                    "type": "tuple",
+                    "internalType": "struct Prediction",
+                    "components": [
+                        {
+                            "name": "publisherAddress",
+                            "type": "address",
+                            "internalType": "address"
+                        },
+                        {
+                            "name": "ipfsHash",
+                            "type": "bytes32",
+                            "internalType": "bytes32"
+                        },
+                        {
+                            "name": "txHashes",
+                            "type": "bytes32[]",
+                            "internalType": "bytes32[]"
+                        },
+                        {
+                            "name": "estimatedProbabilityBps",
+                            "type": "uint16",
+                            "internalType": "uint16"
+                        }
+                    ]
+                }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "function",
+            "name": "getPredictionByIndex",
+            "inputs": [
+                {
+                    "name": "marketAddress",
+                    "type": "address",
+                    "internalType": "address"
+                },
+                {
+                    "name": "index",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "tuple",
+                    "internalType": "struct Prediction",
+                    "components": [
+                        {
+                            "name": "publisherAddress",
+                            "type": "address",
+                            "internalType": "address"
+                        },
+                        {
+                            "name": "ipfsHash",
+                            "type": "bytes32",
+                            "internalType": "bytes32"
+                        },
+                        {
+                            "name": "txHashes",
+                            "type": "bytes32[]",
+                            "internalType": "bytes32[]"
+                        },
+                        {
+                            "name": "estimatedProbabilityBps",
+                            "type": "uint16",
+                            "internalType": "uint16"
+                        }
+                    ]
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
+            "name": "getPredictions",
+            "inputs": [
+                {
+                    "name": "marketAddress",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "tuple[]",
+                    "internalType": "struct Prediction[]",
+                    "components": [
+                        {
+                            "name": "publisherAddress",
+                            "type": "address",
+                            "internalType": "address"
+                        },
+                        {
+                            "name": "ipfsHash",
+                            "type": "bytes32",
+                            "internalType": "bytes32"
+                        },
+                        {
+                            "name": "txHashes",
+                            "type": "bytes32[]",
+                            "internalType": "bytes32[]"
+                        },
+                        {
+                            "name": "estimatedProbabilityBps",
+                            "type": "uint16",
+                            "internalType": "uint16"
+                        }
+                    ]
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "event",
+            "name": "PredictionAdded",
+            "inputs": [
+                {
+                    "name": "marketAddress",
+                    "type": "address",
+                    "indexed": true,
+                    "internalType": "address"
+                },
+                {
+                    "name": "estimatedProbabilityBps",
+                    "type": "uint16",
+                    "indexed": false,
+                    "internalType": "uint16"
+                },
+                {
+                    "name": "publisherAddress",
+                    "type": "address",
+                    "indexed": true,
+                    "internalType": "address"
+                },
+                {
+                    "name": "txHashes",
+                    "type": "bytes32[]",
+                    "indexed": false,
+                    "internalType": "bytes32[]"
+                },
+                {
+                    "name": "ipfsHash",
+                    "type": "bytes32",
+                    "indexed": false,
+                    "internalType": "bytes32"
+                }
+            ],
+            "anonymous": false
+        }
+    ]

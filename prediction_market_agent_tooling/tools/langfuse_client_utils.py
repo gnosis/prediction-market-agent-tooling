@@ -6,6 +6,7 @@ from langfuse import Langfuse
 from langfuse.client import TraceWithDetails
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     PlacedTrade,
     ProbabilisticAnswer,
@@ -146,9 +147,22 @@ def get_trace_for_bet(
     else:
         # In-case there are multiple traces for the same market, get the closest
         # trace to the bet
+        bet_timestamp = add_utc_timezone_validator(bet.created_time)
         closest_trace_index = get_closest_datetime_from_list(
             convert_to_utc_datetime(bet.created_time),
+            bet_timestamp,
             [t.timestamp for t in traces_for_bet],
         )
+
+        # Sanity check: Let's say the upper bound for time between
+        # `agent.process_market` being called and the bet being placed is 20
+        # minutes
+        candidate_trace = traces_for_bet[closest_trace_index]
+        if abs(candidate_trace.timestamp - bet_timestamp).total_seconds() > 1200:
+            logger.info(
+                f"Closest trace to bet has timestamp {candidate_trace.timestamp}, "
+                f"but bet was created at {bet_timestamp}. Not matching"
+            )
+            return None
 
         return traces_for_bet[closest_trace_index]

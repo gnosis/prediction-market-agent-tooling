@@ -147,9 +147,8 @@ def get_trace_for_bet(
     else:
         # In-case there are multiple traces for the same market, get the closest
         # trace to the bet
-        bet_timestamp = add_utc_timezone_validator(bet.created_time)
+        bet_timestamp = convert_to_utc_datetime(bet.created_time)
         closest_trace_index = get_closest_datetime_from_list(
-            convert_to_utc_datetime(bet.created_time),
             bet_timestamp,
             [t.timestamp for t in traces_for_bet],
         )

@@ -6,6 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from ape_test import TestAccount
+from eth_account import Account
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -17,6 +18,7 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     xDai,
     xdai_type,
+    private_key_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -59,7 +61,11 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import (
+    wei_to_xdai,
+    xdai_to_wei,
+    send_xdai_to,
+)
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
 
@@ -345,26 +351,37 @@ def test_omen_buy_and_sell_outcome(
 
 
 def test_deposit_and_withdraw_wxdai(
-    local_web3: Web3,
-    test_keys: APIKeys,
-    accounts: list[TestAccount],
+    local_web3: Web3, accounts: list[TestAccount], test_keys: APIKeys
 ) -> None:
     # add balance
-    account = accounts[-1]
     deposit_amount = xDai(10)
+    fresh_account = Account.create()
+    send_xdai_to(
+        web3=local_web3,
+        from_private_key=test_keys.bet_from_private_key,
+        to_address=fresh_account.address,
+        value=xdai_to_wei(xDai(deposit_amount * 2)),
+    )
+
+    api_keys = APIKeys(
+        BET_FROM_PRIVATE_KEY=private_key_type(fresh_account.key.hex()),
+        SAFE_ADDRESS=None,
+    )
     wxdai = WrappedxDaiContract()
-    wxdai.deposit(api_keys=test_keys, amount_wei=xdai_to_wei(10), web3=local_web3)
-    balance = get_balances(address=account.address, web3=local_web3)
+    wxdai.deposit(
+        api_keys=api_keys, amount_wei=xdai_to_wei(deposit_amount), web3=local_web3
+    )
+    balance = get_balances(address=fresh_account.address, web3=local_web3)
     assert balance.wxdai == deposit_amount
 
     wxdai.withdraw(
-        api_keys=test_keys,
+        api_keys=api_keys,
         amount_wei=xdai_to_wei(balance.wxdai),
         web3=local_web3,
     )
 
-    balance = get_balances(address=account.address, web3=local_web3)
-    assert balance.wxdai == 0
+    balance = get_balances(address=fresh_account.address, web3=local_web3)
+    assert balance.wxdai == xDai(0)
 
 
 @pytest.mark.parametrize(

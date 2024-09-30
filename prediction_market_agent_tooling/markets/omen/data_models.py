@@ -1,6 +1,7 @@
 import typing as t
 from datetime import datetime
 
+import pytz
 from pydantic import BaseModel
 from web3 import Web3
 
@@ -218,7 +219,7 @@ class OmenMarket(BaseModel):
 
     @property
     def opening_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.openingTimestamp)
+        return datetime.fromtimestamp(self.openingTimestamp, tz=pytz.UTC)
 
     @property
     def close_time(self) -> datetime:
@@ -469,7 +470,7 @@ class OmenBet(BaseModel):
 
     @property
     def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp)
+        return datetime.fromtimestamp(self.creationTimestamp, tz=pytz.UTC)
 
     @property
     def boolean_outcome(self) -> bool:

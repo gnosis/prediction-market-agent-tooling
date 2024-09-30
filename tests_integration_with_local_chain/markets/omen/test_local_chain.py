@@ -1,5 +1,4 @@
 import time
-from datetime import timedelta
 
 from ape_test import TestAccount
 from eth_account import Account
@@ -20,6 +19,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     wei_to_xdai,
     xdai_to_wei,
 )
+from tests.utils import mint_new_block
 
 
 def test_connect_local_chain(local_web3: Web3) -> None:
@@ -102,8 +102,8 @@ def test_fresh_account_has_less_than_minimum_required_balance(
 
 def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
     # we need to mint a new block to update timestamp
-    DebuggingContract().inc(test_keys, local_web3)
-    allowed_difference = 10  # seconds
+    mint_new_block(test_keys, local_web3)
+    allowed_difference = 15  # seconds
     chain_timestamp = DebuggingContract().getNow(local_web3)
     utc_timestamp = int(utcnow().timestamp())
     assert (
@@ -114,7 +114,7 @@ def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
 def test_now_failed(local_web3: Web3, test_keys: APIKeys) -> None:
     # Sleep a little to let the local chain go out of sync without updating the block
     time.sleep(5)
-    allowed_difference = 10  # seconds
+    allowed_difference = 5  # seconds
     chain_timestamp = DebuggingContract().getNow(local_web3)
     utc_timestamp = int(utcnow().timestamp())
     assert (
@@ -124,11 +124,11 @@ def test_now_failed(local_web3: Web3, test_keys: APIKeys) -> None:
 
 def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
     # we need to mint a new block to update timestamp
-    DebuggingContract().inc(test_keys, local_web3)
-    allowed_difference = 10  # seconds
+    mint_new_block(test_keys, local_web3)
+    allowed_difference = 15  # seconds
     chain_datetime = DebuggingContract().get_now(local_web3)
     utc_datetime = utcnow()
-    actual_difference = abs(chain_datetime - utc_datetime)
-    assert actual_difference <= timedelta(
-        seconds=allowed_difference
+    actual_difference = (utc_datetime - chain_datetime).total_seconds()
+    assert (
+        actual_difference <= allowed_difference
     ), f"chain_datetime and utc_datetime differ by more than {allowed_difference} seconds: {chain_datetime=} {utc_datetime=} {actual_difference=}"

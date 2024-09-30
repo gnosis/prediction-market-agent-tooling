@@ -4,9 +4,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.omen.data_models import (
-    ContractPrediction,
-)
+from prediction_market_agent_tooling.markets.omen.data_models import ContractPrediction
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenAgentResultMappingContract,
 )

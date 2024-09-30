@@ -85,10 +85,9 @@ def test_stealing_on_markets(
     # Initialize OmenMarket and OmenAgentMarket out of it, so we can use it with our standard helper functions.
     omen_market = OmenMarket.from_created_market(created_market)
     agent_market = OmenAgentMarket.from_data_model(omen_market)
-    balance_after_market_creation_A, balance_after_market_creation_B = (
-        get_balances(api_keys_A.bet_from_address, local_web3).total,
-        get_balances(api_keys_B.bet_from_address, local_web3).total,
-    )
+    balance_after_market_creation_A = get_balances(
+        api_keys_A.bet_from_address, local_web3
+    ).total
     assert (
         balance_after_market_creation_A < starting_balance_A
     ), "Starting balance of A should have been lowered"
@@ -143,10 +142,9 @@ def test_stealing_on_markets(
             auto_withdraw=True,
             web3=local_web3,
         )
-    balance_after_failed_trading_A, balance_after_failed_trading_B = (
-        get_balances(api_keys_A.bet_from_address, local_web3).total,
-        get_balances(api_keys_B.bet_from_address, local_web3).total,
-    )
+    balance_after_failed_trading_B = get_balances(
+        api_keys_B.bet_from_address, local_web3
+    ).total
     assert (
         balance_after_failed_trading_B == balance_after_buying_B
     ), "Balance after failed trading should be the same as after buying of tokens in the beginning, because nothing should have happened."

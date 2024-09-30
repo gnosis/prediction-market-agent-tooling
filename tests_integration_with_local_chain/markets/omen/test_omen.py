@@ -385,7 +385,7 @@ def test_place_bet_with_autodeposit(
 
     # Check that we have xdai funds, but no wxdai funds
     initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
-    assert initial_balances.wxdai == xdai_type(0)
+    assert np.isclose(initial_balances.wxdai, xdai_type(0))
     assert initial_balances.xdai > xdai_type(0)
 
     # Try to place a bet with 90% of the xDai funds

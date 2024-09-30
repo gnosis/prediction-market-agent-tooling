@@ -26,10 +26,11 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_BINARY_MARKET_OUTCOMES,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
-    get_bet_outcome,
     ContractPrediction,
+    get_bet_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -44,12 +45,12 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
+    OmenAgentResultMappingContract,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenRealitioContract,
     WrappedxDaiContract,
     sDaiContract,
-    OmenAgentResultMappingContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -87,7 +88,7 @@ def test_create_bet_withdraw_resolve_market(
         closing_time=closing_time,
         category="cryptocurrency",
         language="en",
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        outcomes=OMEN_BINARY_MARKET_OUTCOMES,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -130,7 +131,9 @@ def test_create_bet_withdraw_resolve_market(
     # ToDo - Instead of subgraph, fetch data directly from contract.
     answers = omen_subgraph_handler.get_answers(market.question.id)
     assert len(answers) == 1, answers
-    responses = omen_subgraph_handler.get_responses(question_id=market.question.id)
+    responses = omen_subgraph_handler.get_responses(
+        limit=None, question_id=market.question.id
+    )
     assert len(responses) == 1, responses
     # ToDo: Once this test is fixed, check how to assert this, currently `answer` is HexBytes and OMEN_FALSE_OUTCOME is string, so it will never be equal.
     # assert answers[0].answer == OMEN_FALSE_OUTCOME, answers[0]
@@ -150,7 +153,7 @@ def test_omen_create_market_wxdai(
         closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
         language="en",
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        outcomes=OMEN_BINARY_MARKET_OUTCOMES,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -173,7 +176,7 @@ def test_omen_create_market_sdai(
         closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
         language="en",
-        outcomes=[OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME],
+        outcomes=OMEN_BINARY_MARKET_OUTCOMES,
         auto_deposit=True,
         collateral_token_address=sDaiContract().address,
         web3=local_web3,
@@ -315,13 +318,13 @@ def test_omen_buy_and_sell_outcome(
     balances = get_balances(address=api_keys.bet_from_address, web3=local_web3)
     assert balances.xdai + balances.wxdai > bet_amount.amount
 
-    market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
+    buy_id = market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
 
     # Check that we now have a position in the market.
     outcome_tokens = get_market_outcome_tokens()
     assert outcome_tokens.amount > 0
 
-    market.sell_tokens(
+    sell_id = market.sell_tokens(
         outcome=outcome,
         amount=outcome_tokens,
         web3=local_web3,
@@ -331,6 +334,13 @@ def test_omen_buy_and_sell_outcome(
     # Check that we have sold our entire stake in the market.
     remaining_tokens = get_market_outcome_tokens()
     assert np.isclose(remaining_tokens.amount, 0, atol=1e-5)
+
+    # Check that the IDs of buy and sell calls are valid transaction hashes
+    buy_tx = local_web3.eth.get_transaction(HexStr(buy_id))
+    sell_tx = local_web3.eth.get_transaction(HexStr(sell_id))
+    for tx in [buy_tx, sell_tx]:
+        assert tx is not None
+        assert tx["from"] == api_keys.bet_from_address
 
 
 @pytest.mark.parametrize(
@@ -401,7 +411,6 @@ def get_position_balance_by_position_id(
 
 
 def test_add_predictions(local_web3: Web3, test_keys: APIKeys) -> None:
-    local_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
     agent_result_mapping = OmenAgentResultMappingContract()
     market_address = test_keys.public_key
     dummy_transaction_hash = (

@@ -10,36 +10,65 @@ from functools import cached_property
 
 from pydantic import BaseModel, BeforeValidator, computed_field
 from typing_extensions import Annotated
+from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
-    BettingStrategy, MaxAccuracyBettingStrategy, TradeType)
-from prediction_market_agent_tooling.deploy.constants import (MARKET_TYPE_KEY,
-                                                              REPOSITORY_KEY)
+    BettingStrategy,
+    MaxAccuracyBettingStrategy,
+    TradeType,
+)
+from prediction_market_agent_tooling.deploy.constants import (
+    MARKET_TYPE_KEY,
+    REPOSITORY_KEY,
+)
 from prediction_market_agent_tooling.deploy.gcp.deploy import (
-    deploy_to_gcp, run_deployed_gcp_function, schedule_deployed_gcp_function)
+    deploy_to_gcp,
+    run_deployed_gcp_function,
+    schedule_deployed_gcp_function,
+)
 from prediction_market_agent_tooling.deploy.gcp.utils import (
-    gcp_function_is_active, gcp_resolve_api_keys_secrets)
+    gcp_function_is_active,
+    gcp_resolve_api_keys_secrets,
+)
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import (AgentMarket,
-                                                                  FilterBy,
-                                                                  SortBy)
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.data_models import (
-    Position, ProbabilisticAnswer, Trade)
+    PlacedTrade,
+    Position,
+    ProbabilisticAnswer,
+    Trade,
+)
 from prediction_market_agent_tooling.markets.markets import (
-    MarketType, have_bet_on_market_since)
+    MarketType,
+    have_bet_on_market_since,
+)
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    ContractPrediction,
+    IPFSAgentResult,
+)
 from prediction_market_agent_tooling.markets.omen.omen import (
-    is_minimum_required_balance, redeem_from_all_user_positions,
-    withdraw_wxdai_to_xdai_to_keep_balance)
-from prediction_market_agent_tooling.monitor.monitor_app import \
-    MARKET_TYPE_TO_DEPLOYED_AGENT
-from prediction_market_agent_tooling.tools.is_predictable import \
-    is_predictable_binary
-from prediction_market_agent_tooling.tools.langfuse_ import (langfuse_context,
-                                                             observe)
-from prediction_market_agent_tooling.tools.utils import (DatetimeWithTimezone,
-                                                         utcnow)
+    is_minimum_required_balance,
+    redeem_from_all_user_positions,
+    withdraw_wxdai_to_xdai_to_keep_balance,
+)
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenAgentResultMappingContract,
+)
+from prediction_market_agent_tooling.monitor.monitor_app import (
+    MARKET_TYPE_TO_DEPLOYED_AGENT,
+)
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
+from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
+from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
+from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
+from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
 
 MAX_AVAILABLE_MARKETS = 20
 TRADER_TAG = "trader"
@@ -93,7 +122,7 @@ class OutOfFundsError(ValueError):
 
 class ProcessedMarket(BaseModel):
     answer: ProbabilisticAnswer
-    trades: list[Trade]
+    trades: list[PlacedTrade]
 
 
 class AnsweredEnum(str, Enum):
@@ -265,8 +294,6 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
-    strategy: BettingStrategy = MaxAccuracyBettingStrategy()
-    allow_opposite_bets: bool = False
 
     def __init__(
         self,
@@ -275,6 +302,16 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
+        self.ipfs_handler = IPFSHandler(APIKeys())
+
+    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
+        user_id = market.get_user_id(api_keys=APIKeys())
+
+        total_amount = market.get_user_balance(user_id=user_id) * 0.1
+        if existing_position := market.get_position(user_id=user_id):
+            total_amount += existing_position.total_amount.amount
+
+        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -394,7 +431,8 @@ class DeployableTraderAgent(DeployableAgent):
         answer: ProbabilisticAnswer,
         existing_position: Position | None,
     ) -> list[Trade]:
-        trades = self.strategy.calculate_trades(existing_position, answer, market)
+        strategy = self.get_betting_strategy(market=market)
+        trades = strategy.calculate_trades(existing_position, answer, market)
         BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 
@@ -427,33 +465,80 @@ class DeployableTraderAgent(DeployableAgent):
 
         existing_position = market.get_position(user_id=APIKeys().bet_from_address)
         trades = self.build_trades(
-            market=market, answer=answer, existing_position=existing_position
+            market=market,
+            answer=answer,
+            existing_position=existing_position,
         )
 
+        placed_trades = []
         if self.place_bet:
             for trade in trades:
                 logger.info(f"Executing trade {trade} on market {market.id}")
 
                 match trade.trade_type:
                     case TradeType.BUY:
-                        market.buy_tokens(outcome=trade.outcome, amount=trade.amount)
+                        id = market.buy_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
                     case TradeType.SELL:
-                        market.sell_tokens(outcome=trade.outcome, amount=trade.amount)
+                        id = market.sell_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
                     case _:
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")
+                placed_trades.append(PlacedTrade.from_trade(trade, id))
 
-        self.after_process_market(market_type, market)
-
-        processed_market = ProcessedMarket(answer=answer, trades=trades)
+        processed_market = ProcessedMarket(answer=answer, trades=placed_trades)
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
+
+        self.after_process_market(
+            market_type, market, processed_market=processed_market
+        )
 
         logger.info(f"Processed market {market.question=} from {market.url=}.")
         return processed_market
 
     def after_process_market(
-        self, market_type: MarketType, market: AgentMarket
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        processed_market: ProcessedMarket,
     ) -> None:
-        pass
+        if market_type != MarketType.OMEN:
+            logger.info(
+                f"Skipping after_process_market since market_type {market_type} != OMEN"
+            )
+            return
+        keys = APIKeys()
+        self.store_prediction(
+            market_id=market.id, processed_market=processed_market, keys=keys
+        )
+
+    def store_prediction(
+        self, market_id: str, processed_market: ProcessedMarket, keys: APIKeys
+    ) -> None:
+        reasoning = processed_market.answer.reasoning if processed_market.answer.reasoning else ""
+        ipfs_hash = self.ipfs_handler.store_agent_result(
+            IPFSAgentResult(reasoning=reasoning)
+        )
+
+        # We store only the first trade, since it's only here for tracking purposes - also,
+        # we want only 1 entry per prediction, not 1 entry per trade.
+        tx_hash = HexBytes(processed_market.trades[0].id) if processed_market.trades else HexBytes("")
+        prediction = ContractPrediction(
+            publisher=keys.public_key,
+            ipfs_hash=ipfscidv0_to_byte32(ipfs_hash),
+            tx_hash=tx_hash,
+            estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
+        )
+        tx_receipt = OmenAgentResultMappingContract().add_prediction(
+            api_keys=keys,
+            market_address=Web3.to_checksum_address(market_id),
+            prediction=prediction,
+        )
+        logger.info(
+            f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].hex()}."
+        )
 
     def before_process_markets(self, market_type: MarketType) -> None:
         """

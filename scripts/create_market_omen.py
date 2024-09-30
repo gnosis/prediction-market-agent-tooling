@@ -7,8 +7,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_FALSE_OUTCOME,
-    OMEN_TRUE_OUTCOME,
+    OMEN_BINARY_MARKET_OUTCOMES,
 )
 from prediction_market_agent_tooling.markets.omen.omen import omen_create_market_tx
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -28,7 +27,7 @@ def main(
     cl_token: CollateralTokenChoice = CollateralTokenChoice.wxdai,
     fee: float = typer.Option(OMEN_DEFAULT_MARKET_FEE),
     language: str = typer.Option("en"),
-    outcomes: list[str] = typer.Option([OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]),
+    outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
     auto_deposit: bool = typer.Option(False),
 ) -> None:
     """

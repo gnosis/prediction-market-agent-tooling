@@ -1,16 +1,57 @@
+import typing as t
 from datetime import datetime
 
+import numpy as np
 from langfuse import Langfuse
 from langfuse.client import TraceWithDetails
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
+    PlacedTrade,
     ProbabilisticAnswer,
     ResolvedBet,
-    Trade,
+    TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.utils import add_utc_timezone_validator
+
+
+class ProcessMarketTrace(BaseModel):
+    timestamp: datetime
+    market: OmenAgentMarket
+    answer: ProbabilisticAnswer
+    trades: list[PlacedTrade]
+
+    @property
+    def buy_trade(self) -> PlacedTrade:
+        buy_trades = [t for t in self.trades if t.trade_type == TradeType.BUY]
+        if len(buy_trades) == 1:
+            return buy_trades[0]
+        raise ValueError("No buy trade found")
+
+    @staticmethod
+    def from_langfuse_trace(
+        trace: TraceWithDetails,
+    ) -> t.Optional["ProcessMarketTrace"]:
+        market = trace_to_omen_agent_market(trace)
+        answer = trace_to_answer(trace)
+        trades = trace_to_trades(trace)
+
+        if not market or not answer or not trades:
+            return None
+
+        return ProcessMarketTrace(
+            market=market,
+            answer=answer,
+            trades=trades,
+            timestamp=trace.timestamp,
+        )
+
+
+class ResolvedBetWithTrace(BaseModel):
+    bet: ResolvedBet
+    trace: ProcessMarketTrace
 
 
 def get_traces_for_agent(
@@ -47,11 +88,18 @@ def get_traces_for_agent(
     return all_agent_traces
 
 
-def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket:
-    assert trace.input is not None, "Trace input is None"
-    assert trace.input["args"] is not None, "Trace input args is None"
+def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket | None:
+    if not trace.input:
+        return None
+    if not trace.input["args"]:
+        return None
     assert len(trace.input["args"]) == 2 and trace.input["args"][0] == "omen"
-    return OmenAgentMarket.model_validate(trace.input["args"][1])
+    try:
+        # If the market model is invalid (e.g. outdated), it will raise an exception
+        market = OmenAgentMarket.model_validate(trace.input["args"][1])
+        return market
+    except Exception:
+        return None
 
 
 def trace_to_answer(trace: TraceWithDetails) -> ProbabilisticAnswer:
@@ -60,10 +108,10 @@ def trace_to_answer(trace: TraceWithDetails) -> ProbabilisticAnswer:
     return ProbabilisticAnswer.model_validate(trace.output["answer"])
 
 
-def trace_to_trades(trace: TraceWithDetails) -> list[Trade]:
+def trace_to_trades(trace: TraceWithDetails) -> list[PlacedTrade]:
     assert trace.output is not None, "Trace output is None"
     assert trace.output["trades"] is not None, "Trace output trades is None"
-    return [Trade.model_validate(t) for t in trace.output["trades"]]
+    return [PlacedTrade.model_validate(t) for t in trace.output["trades"]]
 
 
 def get_closest_datetime_from_list(
@@ -78,25 +126,42 @@ def get_closest_datetime_from_list(
 
 
 def get_trace_for_bet(
-    bet: ResolvedBet, traces: list[TraceWithDetails]
-) -> TraceWithDetails | None:
-    # Get traces with the same market id
-    traces_for_bet = [
-        t for t in traces if trace_to_omen_agent_market(t).id == bet.market_id
-    ]
+    bet: ResolvedBet, traces: list[ProcessMarketTrace]
+) -> ProcessMarketTrace | None:
+    # Filter for traces with the same market id
+    traces = [t for t in traces if t.market.id == bet.market_id]
 
-    # In-case there are multiple traces for the same market, get the closest trace to the bet
-    closest_trace_index = get_closest_datetime_from_list(
-        add_utc_timezone_validator(bet.created_time),
-        [t.timestamp for t in traces_for_bet],
-    )
-    # Sanity check - the trace should be after the bet
-    if traces_for_bet[closest_trace_index].timestamp < add_utc_timezone_validator(
-        bet.created_time
-    ):
-        logger.warning(
-            f"No trace for bet on market {bet.market_id} at time {bet.created_time} found"
-        )
+    # Filter for traces with the same bet outcome and amount
+    traces_for_bet: list[ProcessMarketTrace] = []
+    for t in traces:
+        # Cannot use exact comparison due to gas fees
+        if t.buy_trade.outcome == bet.outcome and np.isclose(
+            t.buy_trade.amount.amount, bet.amount.amount
+        ):
+            traces_for_bet.append(t)
+
+    if not traces_for_bet:
         return None
+    elif len(traces_for_bet) == 1:
+        return traces_for_bet[0]
+    else:
+        # In-case there are multiple traces for the same market, get the closest
+        # trace to the bet
+        bet_timestamp = add_utc_timezone_validator(bet.created_time)
+        closest_trace_index = get_closest_datetime_from_list(
+            bet_timestamp,
+            [t.timestamp for t in traces_for_bet],
+        )
 
-    return traces_for_bet[closest_trace_index]
+        # Sanity check: Let's say the upper bound for time between
+        # `agent.process_market` being called and the bet being placed is 20
+        # minutes
+        candidate_trace = traces_for_bet[closest_trace_index]
+        if abs(candidate_trace.timestamp - bet_timestamp).total_seconds() > 1200:
+            logger.info(
+                f"Closest trace to bet has timestamp {candidate_trace.timestamp}, "
+                f"but bet was created at {bet_timestamp}. Not matching"
+            )
+            return None
+
+        return traces_for_bet[closest_trace_index]

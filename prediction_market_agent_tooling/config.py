@@ -35,6 +35,7 @@ class APIKeys(BaseSettings):
     SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
     GRAPH_API_KEY: t.Optional[SecretStr] = None
+    TENDERLY_FORK_RPC: t.Optional[str] = None
 
     GOOGLE_SEARCH_API_KEY: t.Optional[SecretStr] = None
     GOOGLE_SEARCH_ENGINE_ID: t.Optional[SecretStr] = None
@@ -43,6 +44,9 @@ class APIKeys(BaseSettings):
     LANGFUSE_PUBLIC_KEY: t.Optional[str] = None
     LANGFUSE_HOST: t.Optional[str] = None
     LANGFUSE_DEPLOYMENT_VERSION: t.Optional[str] = None
+
+    PINATA_API_KEY: t.Optional[SecretStr] = None
+    PINATA_API_SECRET: t.Optional[SecretStr] = None
 
     TAVILY_API_KEY: t.Optional[SecretStr] = None
 
@@ -145,6 +149,18 @@ class APIKeys(BaseSettings):
             self.LANGFUSE_SECRET_KEY is not None
             and self.LANGFUSE_PUBLIC_KEY is not None
             and self.LANGFUSE_HOST is not None
+        )
+
+    @property
+    def pinata_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.PINATA_API_KEY, "PINATA_API_KEY missing in the environment."
+        )
+
+    @property
+    def pinata_api_secret(self) -> SecretStr:
+        return check_not_none(
+            self.PINATA_API_SECRET, "PINATA_API_SECRET missing in the environment."
         )
 
     @property

@@ -89,11 +89,11 @@ if __name__ == "__main__":
     agent_gcp_secret_map = {
         "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
         "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
         "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
         # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",  # no bets!
         # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",  # no bets!
-        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
 
     agent_pkey_map = {
@@ -114,20 +114,20 @@ if __name__ == "__main__":
         MaxExpectedValueBettingStrategy(bet_amount=1),
         MaxExpectedValueBettingStrategy(bet_amount=2),
         # MaxExpectedValueBettingStrategy(bet_amount=25),
-        # KellyBettingStrategy(max_bet_amount=2, max_slippage=0.01),
-        # KellyBettingStrategy(max_bet_amount=2, max_slippage=0.05),
-        # KellyBettingStrategy(max_bet_amount=2, max_slippage=0.1),
-        # KellyBettingStrategy(max_bet_amount=2, max_slippage=0.15),
-        # KellyBettingStrategy(max_bet_amount=2, max_slippage=0.2),
-        # KellyBettingStrategy(max_bet_amount=2, max_slippage=0.25),
+        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.01),
+        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.05),
+        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.1),
+        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.15),
+        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.2),
+        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.25),
         KellyBettingStrategy(max_bet_amount=2, max_slippage=0.3),
         KellyBettingStrategy(max_bet_amount=2, max_slippage=0.4),
         KellyBettingStrategy(max_bet_amount=2, max_slippage=0.5),
         KellyBettingStrategy(max_bet_amount=2, max_slippage=0.6),
         KellyBettingStrategy(max_bet_amount=2, max_slippage=0.7),
-        # KellyBettingStrategy(max_bet_amount=5, max_slippage=0.1),
-        # KellyBettingStrategy(max_bet_amount=5, max_slippage=0.15),
-        # KellyBettingStrategy(max_bet_amount=5, max_slippage=0.2),
+        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.1),
+        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.15),
+        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.2),
         KellyBettingStrategy(max_bet_amount=5, max_slippage=0.3),
         KellyBettingStrategy(max_bet_amount=5, max_slippage=0.4),
         KellyBettingStrategy(max_bet_amount=5, max_slippage=0.5),

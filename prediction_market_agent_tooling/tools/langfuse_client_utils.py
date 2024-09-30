@@ -24,11 +24,11 @@ class ProcessMarketTrace(BaseModel):
     trades: list[PlacedTrade]
 
     @property
-    def buy_trade(self) -> PlacedTrade:
-        buy_trades = [t for t in self.trades if t.trade_type == TradeType.BUY]
-        if len(buy_trades) == 1:
-            return buy_trades[0]
-        raise ValueError("No buy trade found")
+    def buy_trade(self) -> PlacedTrade | None:
+        buy_trade = next(
+            iter([t for t in self.trades if t.trade_type == TradeType.BUY]), None
+        )
+        return buy_trade
 
     @staticmethod
     def from_langfuse_trace(
@@ -135,8 +135,10 @@ def get_trace_for_bet(
     traces_for_bet: list[ProcessMarketTrace] = []
     for t in traces:
         # Cannot use exact comparison due to gas fees
-        if t.buy_trade.outcome == bet.outcome and np.isclose(
-            t.buy_trade.amount.amount, bet.amount.amount
+        if (
+            t.buy_trade
+            and t.buy_trade.outcome == bet.outcome
+            and np.isclose(t.buy_trade.amount.amount, bet.amount.amount)
         ):
             traces_for_bet.append(t)
 

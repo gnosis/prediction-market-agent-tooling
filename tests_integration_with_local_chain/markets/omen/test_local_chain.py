@@ -104,7 +104,7 @@ def test_fresh_account_has_less_than_minimum_required_balance(
 def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
     # we need to mint a new block to update timestamp
     mint_new_block(test_keys, local_web3)
-    allowed_difference = 10  # seconds
+    allowed_difference = 5  # seconds
     chain_timestamp = DebuggingContract().getNow(local_web3)
     utc_timestamp = int(utcnow().timestamp())
     assert (
@@ -115,7 +115,7 @@ def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
 def test_now_failed(local_web3: Web3, test_keys: APIKeys) -> None:
     # Sleep a little to let the local chain go out of sync without updating the block
     time.sleep(5)
-    allowed_difference = 10  # seconds
+    allowed_difference = 5  # seconds
     chain_timestamp = DebuggingContract().getNow(local_web3)
     utc_timestamp = int(utcnow().timestamp())
     assert (
@@ -126,7 +126,7 @@ def test_now_failed(local_web3: Web3, test_keys: APIKeys) -> None:
 def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
     # we need to mint a new block to update timestamp
     mint_new_block(test_keys, local_web3)
-    allowed_difference = 10  # seconds
+    allowed_difference = 5  # seconds
     chain_datetime = DebuggingContract().get_now(local_web3)
     utc_datetime = utcnow()
     actual_difference = abs(chain_datetime - utc_datetime)

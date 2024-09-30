@@ -6,7 +6,6 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from ape_test import TestAccount
-from eth_account import Account
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -64,8 +63,8 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     wei_to_xdai,
     xdai_to_wei,
-    send_xdai_to,
 )
+from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
 
@@ -355,12 +354,10 @@ def test_deposit_and_withdraw_wxdai(
 ) -> None:
     # add balance
     deposit_amount = xDai(10)
-    fresh_account = Account.create()
-    send_xdai_to(
+    fresh_account = create_and_fund_random_account(
+        private_key=test_keys.bet_from_private_key,
         web3=local_web3,
-        from_private_key=test_keys.bet_from_private_key,
-        to_address=fresh_account.address,
-        value=xdai_to_wei(xDai(deposit_amount * 2)),
+        deposit_amount=xDai(deposit_amount * 2),  # 2* for safety
     )
 
     api_keys = APIKeys(
@@ -405,7 +402,20 @@ def test_place_bet_with_autodeposit(
             collateral_token_address_in=(collateral_token_address,),
         )[0]
     )
-    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+
+    deposit_amount = xDai(10)
+    fresh_account = create_and_fund_random_account(
+        private_key=test_keys.bet_from_private_key,
+        web3=local_web3,
+        deposit_amount=xDai(deposit_amount * 2),  # 2* for safety
+    )
+
+    keys = APIKeys(
+        BET_FROM_PRIVATE_KEY=private_key_type(fresh_account.key.hex()),
+        SAFE_ADDRESS=None,
+    )
+
+    initial_balances = get_balances(address=keys.bet_from_address, web3=local_web3)
     collateral_token_contract = market.get_contract().get_collateral_token_contract(
         web3=local_web3
     )
@@ -421,13 +431,13 @@ def test_place_bet_with_autodeposit(
     # Start by moving all funds from wxdai to xdai
     if initial_balances.wxdai > 0:
         WrappedxDaiContract().withdraw(
-            api_keys=test_keys,
+            api_keys=keys,
             amount_wei=xdai_to_wei(initial_balances.wxdai),
             web3=local_web3,
         )
 
     # Check that we have xdai funds, but no wxdai funds
-    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    initial_balances = get_balances(address=keys.bet_from_address, web3=local_web3)
     assert np.isclose(initial_balances.wxdai, xdai_type(0))
     assert initial_balances.xdai > xdai_type(0)
 
@@ -437,7 +447,7 @@ def test_place_bet_with_autodeposit(
         outcome=True,
         amount=bet_amount,
         omen_auto_deposit=True,
-        api_keys=test_keys,
+        api_keys=keys,
         web3=local_web3,
     )
 

@@ -15,6 +15,8 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     MaxAccuracyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MaxExpectedValueBettingStrategy,
+    ProbabilisticAnswer,
+    TradeType,
 )
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -32,6 +34,11 @@ class SimulatedOutcome(BaseModel):
     direction: bool
     correct: bool
     profit: float
+
+
+class MSEProfit(BaseModel):
+    p_yes_mse: list[float]
+    total_profit: list[float]
 
 
 def get_outcome_for_trace(
@@ -147,6 +154,10 @@ if __name__ == "__main__":
 
     overall_md = ""
 
+    strat_mse_profits: dict[str, MSEProfit] = {}
+    for strategy in strategies:
+        strat_mse_profits[repr(strategy)] = MSEProfit(p_yes_mse=[], total_profit=[])
+
     print("# Agent Bet vs Simulated Bet Comparison")
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
@@ -230,7 +241,18 @@ if __name__ == "__main__":
                 )
 
             details.sort(key=lambda x: x["sim_profit"], reverse=True)
+            pd.DataFrame.from_records(details).to_csv(
+                f"{agent_name} - {strategy} - all bets.csv", index=False
+            )
 
+            sum_squared_errors = 0.0
+            for bet_with_trace in bets_with_traces:
+                bet = bet_with_trace.bet
+                trace = bet_with_trace.trace
+                estimated_p_yes = trace.answer.p_yes
+                actual_answer = float(bet.market_outcome)
+                sum_squared_errors += (estimated_p_yes - actual_answer) ** 2
+            p_yes_mse = sum_squared_errors / len(bets_with_traces)
             total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
             total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
             total_simulated_amount = sum([so.size for so in simulated_outcomes])
@@ -246,10 +268,16 @@ if __name__ == "__main__":
                         "bet_amount": total_bet_amount,
                         "bet_profit": total_bet_profit,
                         "roi": roi,
+                        "p_yes mse": p_yes_mse,
                         # We don't know these for the original run.
                         "start_balance": None,
                         "end_balance": None,
                     }
+                )
+            else:
+                strat_mse_profits[repr(strategy)].p_yes_mse.append(p_yes_mse)
+                strat_mse_profits[repr(strategy)].total_profit.append(
+                    total_simulated_profit
                 )
 
             simulations.append(
@@ -258,6 +286,7 @@ if __name__ == "__main__":
                     "bet_amount": total_simulated_amount,
                     "bet_profit": total_simulated_profit,
                     "roi": simulated_roi,
+                    "p_yes mse": p_yes_mse,
                     "start_balance": starting_balance,
                     "end_balance": agent_balance,
                 }
@@ -271,6 +300,13 @@ if __name__ == "__main__":
         )
         # export details per agent
         pd.DataFrame.from_records(details).to_csv(f"{agent_name}_details.csv")
+
+    print(f"Correlation between p_yes mse and total profit:")
+    for strategy, mse_profit in strat_mse_profits.items():
+        mse = mse_profit.p_yes_mse
+        profit = mse_profit.total_profit
+        correlation = pd.Series(mse).corr(pd.Series(profit))
+        print(f"{strategy}: {correlation=}")
 
     with open("match_bets_with_langfuse_traces_overall.md", "w") as overall_f:
         overall_f.write(overall_md)

@@ -20,6 +20,7 @@ def test_ask_question(local_web3: Web3, test_keys: APIKeys) -> None:
         language="en",
         arbitrator=Arbitrator.KLEROS,
         opening=utcnow() + timedelta(minutes=2),
+        timeout=timedelta(seconds=5),
         web3=local_web3,
     )
     assert question_id is not None

@@ -85,8 +85,6 @@ def omen_market() -> OmenMarket:
         ),
         liquidityParameter=Wei(10),
         creationTimestamp=int(utcnow().timestamp()),
-        lastActiveDay=42,
-        lastActiveHour=42,
     )
 
 

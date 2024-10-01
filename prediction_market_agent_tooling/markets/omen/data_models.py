@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     OmenOutcomeToken,
     Probability,
     Wei,
+    wei_type,
     xDai,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -38,6 +39,7 @@ INVALID_ANSWER_HEX_BYTES = HexBytes(INVALID_ANSWER)
 INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.hex())
 OMEN_BASE_URL = "https://aiomen.eth.limo"
 PRESAGIO_BASE_URL = "https://presagio.pages.dev"
+TEST_CATEGORY = "test"  # This category is hidden on Presagio for testing purposes.
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
@@ -208,8 +210,6 @@ class OmenMarket(BaseModel):
     creationTimestamp: int
     condition: Condition
     question: Question
-    lastActiveDay: int
-    lastActiveHour: int
 
     @property
     def openingTimestamp(self) -> int:
@@ -377,6 +377,96 @@ class OmenMarket(BaseModel):
     def url(self) -> str:
         return f"{PRESAGIO_BASE_URL}/markets?id={self.id}"
 
+    @staticmethod
+    def from_created_market(model: "CreatedMarket") -> "OmenMarket":
+        """
+        OmenMarket is meant to be retrieved from subgraph, however in tests against local chain it's very handy to create it out of `CreatedMarket`,
+        which is collection of events that are emitted during the market creation in omen_create_market_tx function.
+        """
+        if len(model.market_event.conditionIds) != 1:
+            raise ValueError(
+                f"Unexpected number of conditions: {len(model.market_event.conditionIds)}"
+            )
+        outcome_token_amounts = model.funding_event.outcome_token_amounts
+        return OmenMarket(
+            id=HexAddress(
+                HexStr(model.market_event.fixedProductMarketMaker.lower())
+            ),  # Lowering to be identical with subgraph's output.
+            title=model.question_event.parsed_question.question,
+            creator=HexAddress(
+                HexStr(model.market_event.creator.lower())
+            ),  # Lowering to be identical with subgraph's output.
+            category=model.question_event.parsed_question.category,
+            collateralVolume=Wei(0),  # No volume possible yet.
+            liquidityParameter=calculate_liquidity_parameter(outcome_token_amounts),
+            usdVolume=USD(0),  # No volume possible yet.
+            fee=model.fee,
+            collateralToken=HexAddress(
+                HexStr(model.market_event.collateralToken.lower())
+            ),  # Lowering to be identical with subgraph's output.
+            outcomes=model.question_event.parsed_question.outcomes,
+            outcomeTokenAmounts=outcome_token_amounts,
+            outcomeTokenMarginalPrices=calculate_marginal_prices(outcome_token_amounts),
+            answerFinalizedTimestamp=None,  # It's a fresh market.
+            currentAnswer=None,  # It's a fresh market.
+            creationTimestamp=model.market_creation_timestamp,
+            condition=Condition(
+                id=model.market_event.conditionIds[0],
+                outcomeSlotCount=len(model.question_event.parsed_question.outcomes),
+            ),
+            question=Question(
+                id=model.question_event.question_id,
+                title=model.question_event.parsed_question.question,
+                data=model.question_event.question,  # Question in the event holds the "raw" data.
+                templateId=model.question_event.template_id,
+                outcomes=model.question_event.parsed_question.outcomes,
+                isPendingArbitration=False,  # Can not be, it's a fresh market.
+                openingTimestamp=model.question_event.opening_ts,
+                answerFinalizedTimestamp=None,  # It's a new one, can not be.
+                currentAnswer=None,  # It's a new one, no answer yet.
+            ),
+        )
+
+
+def calculate_liquidity_parameter(
+    outcome_token_amounts: list[OmenOutcomeToken],
+) -> Wei:
+    """
+    Converted to Python from https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/utils/fpmm.ts#L171.
+    """
+    amounts_product = 1.0
+    for amount in outcome_token_amounts:
+        amounts_product *= amount
+    n = len(outcome_token_amounts)
+    liquidity_parameter = amounts_product ** (1.0 / n)
+    return wei_type(liquidity_parameter)
+
+
+def calculate_marginal_prices(
+    outcome_token_amounts: list[OmenOutcomeToken],
+) -> list[xDai] | None:
+    """
+    Converted to Python from https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/utils/fpmm.ts#L197.
+    """
+    all_non_zero = all(x != 0 for x in outcome_token_amounts)
+    if not all_non_zero:
+        return None
+
+    n_outcomes = len(outcome_token_amounts)
+    weights = []
+
+    for i in range(n_outcomes):
+        weight = 1.0
+        for j in range(n_outcomes):
+            if i != j:
+                weight *= outcome_token_amounts[j]
+        weights.append(weight)
+
+    sum_weights = sum(weights)
+
+    marginal_prices = [weights[i] / sum_weights for i in range(n_outcomes)]
+    return [xDai(mp) for mp in marginal_prices]
+
 
 class OmenBetCreator(BaseModel):
     id: HexAddress
@@ -534,3 +624,121 @@ class RealityAnswers(BaseModel):
 
 class RealityAnswersResponse(BaseModel):
     data: RealityAnswers
+
+
+def format_realitio_question(
+    question: str,
+    outcomes: list[str],
+    category: str,
+    language: str,
+    template_id: int,
+) -> str:
+    """If you add a new template id here, also add to the parsing function below."""
+    if template_id == 2:
+        return "␟".join(
+            [
+                question,
+                ",".join(f'"{o}"' for o in outcomes),
+                category,
+                language,
+            ]
+        )
+
+    raise ValueError(f"Unsupported template id {template_id}.")
+
+
+def parse_realitio_question(question_raw: str, template_id: int) -> "ParsedQuestion":
+    """If you add a new template id here, also add to the encoding function above."""
+    if template_id == 2:
+        question, outcomes_raw, category, language = question_raw.split("␟")
+        outcomes = [o.strip('"') for o in outcomes_raw.split(",")]
+        return ParsedQuestion(
+            question=question, outcomes=outcomes, category=category, language=language
+        )
+
+    raise ValueError(f"Unsupported template id {template_id}.")
+
+
+class ParsedQuestion(BaseModel):
+    question: str
+    outcomes: list[str]
+    language: str
+    category: str
+
+
+class RealitioLogNewQuestionEvent(BaseModel):
+    question_id: HexBytes
+    user: HexAddress
+    template_id: int
+    question: str  # Be aware, this is question in format of format_realitio_question function, it's raw data.
+    content_hash: HexBytes
+    arbitrator: HexAddress
+    timeout: int
+    opening_ts: int
+    nonce: int
+    created: int
+
+    @property
+    def user_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.user)
+
+    @property
+    def parsed_question(self) -> ParsedQuestion:
+        return parse_realitio_question(
+            question_raw=self.question, template_id=self.template_id
+        )
+
+
+class OmenFixedProductMarketMakerCreationEvent(BaseModel):
+    creator: HexAddress
+    fixedProductMarketMaker: HexAddress
+    conditionalTokens: HexAddress
+    collateralToken: HexAddress
+    conditionIds: list[HexBytes]
+    fee: int
+
+    @property
+    def creator_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.creator)
+
+    @property
+    def fixed_product_market_maker_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.fixedProductMarketMaker)
+
+    @property
+    def conditional_tokens_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.conditionalTokens)
+
+    @property
+    def collateral_token_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.collateralToken)
+
+
+class ConditionPreparationEvent(BaseModel):
+    conditionId: HexBytes
+    oracle: HexAddress
+    questionId: HexBytes
+    outcomeSlotCount: int
+
+
+class FPMMFundingAddedEvent(BaseModel):
+    funder: HexAddress
+    amountsAdded: list[OmenOutcomeToken]
+    sharesMinted: Wei
+
+    @property
+    def outcome_token_amounts(self) -> list[OmenOutcomeToken]:
+        # Just renaming so we remember what it is.
+        return self.amountsAdded
+
+
+class CreatedMarket(BaseModel):
+    market_creation_timestamp: int
+    market_event: OmenFixedProductMarketMakerCreationEvent
+    funding_event: FPMMFundingAddedEvent
+    condition_id: HexBytes
+    question_event: RealitioLogNewQuestionEvent
+    condition_event: ConditionPreparationEvent | None
+    initial_funds: Wei
+    fee: Wei
+    distribution_hint: list[OmenOutcomeToken] | None

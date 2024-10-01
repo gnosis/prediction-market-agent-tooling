@@ -25,7 +25,8 @@ def test_ipfs_upload_and_removal(test_ipfs_handler: IPFSHandler) -> None:
 
     # assert uploaded
     # can take a while to be available for download
-    r = requests.get(f"https://ipfs.io/ipfs/{ipfs_hash}", timeout=60)
+    # r = requests.get(f"https://ipfs.io/ipfs/{ipfs_hash}", timeout=120)
+    r = requests.get(f"https://gateway.pinata.cloud/ipfs/{ipfs_hash}", timeout=60)
     r.raise_for_status()
     assert r.text == temp_string
     # remove from IPFS

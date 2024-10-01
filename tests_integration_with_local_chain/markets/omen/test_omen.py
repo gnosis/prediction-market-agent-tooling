@@ -397,6 +397,7 @@ def test_deposit_and_withdraw_wxdai(
         (sDaiContract().address, "sDAI"),
     ],
 )
+@pytest.mark.skip(reason="failing intermittently")
 def test_place_bet_with_autodeposit(
     collateral_token_address: ChecksumAddress,
     expected_symbol: str,

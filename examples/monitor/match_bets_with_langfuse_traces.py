@@ -88,9 +88,9 @@ if __name__ == "__main__":
         "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
         "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
         "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
-        # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",  # no bets!
-        # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",  # no bets!
-        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
 
     agent_pkey_map = {
@@ -226,9 +226,6 @@ if __name__ == "__main__":
                 )
 
             details.sort(key=lambda x: x["sim_profit"], reverse=True)
-            pd.DataFrame.from_records(details).to_csv(
-                f"{agent_name} - {strategy} - all bets.csv", index=False
-            )
 
             total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
             total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
@@ -263,7 +260,7 @@ if __name__ == "__main__":
             )
 
         overall_md += (
-            f"\n\n## {agent_name}\n\n{len(simulations)} bets\n\n"
+            f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"
             + pd.DataFrame.from_records(simulations).to_markdown(index=False)
         )
 

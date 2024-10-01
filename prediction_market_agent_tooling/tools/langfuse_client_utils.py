@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.tools.utils import add_utc_timezone_validator
+from prediction_market_agent_tooling.tools.utils import convert_to_utc_datetime
 
 
 class ProcessMarketTrace(BaseModel):
@@ -25,10 +25,10 @@ class ProcessMarketTrace(BaseModel):
 
     @property
     def buy_trade(self) -> PlacedTrade | None:
-        buy_trade = next(
-            iter([t for t in self.trades if t.trade_type == TradeType.BUY]), None
-        )
-        return buy_trade
+        buy_trades = [t for t in self.trades if t.trade_type == TradeType.BUY]
+        if len(buy_trades) > 1:
+            raise ValueError("Unhandled logic, check it outm please!")
+        return buy_trades[0] if buy_trades else None
 
     @staticmethod
     def from_langfuse_trace(
@@ -149,7 +149,7 @@ def get_trace_for_bet(
     else:
         # In-case there are multiple traces for the same market, get the closest
         # trace to the bet
-        bet_timestamp = add_utc_timezone_validator(bet.created_time)
+        bet_timestamp = convert_to_utc_datetime(bet.created_time)
         closest_trace_index = get_closest_datetime_from_list(
             bet_timestamp,
             [t.timestamp for t in traces_for_bet],

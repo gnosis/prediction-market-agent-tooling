@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from pydantic import BaseModel, field_validator
 from web3 import Web3
+from web3.contract.contract import Contract as Web3Contract
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -21,7 +22,11 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
     GNOSIS_NETWORK_ID,
     GNOSIS_RPC_URL,
 )
-from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeWithTimezone,
+    should_not_happen,
+    utc_timestamp_to_utc_datetime,
+)
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
@@ -72,6 +77,10 @@ class ContractBaseClass(BaseModel):
     ] = (
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
+
+    def get_web3_contract(self, web3: Web3 | None = None) -> Web3Contract:
+        web3 = web3 or self.get_web3()
+        return web3.eth.contract(address=self.address, abi=self.abi)
 
     def call(
         self,
@@ -421,6 +430,46 @@ class ContractERC4626OnGnosisChain(
         self, web3: Web3 | None = None
     ) -> ContractERC20OnGnosisChain | ContractDepositableWrapperERC20OnGnosisChain:
         return to_gnosis_chain_contract(super().get_asset_token_contract(web3=web3))
+
+
+class DebuggingContract(ContractOnGnosisChain):
+    # Contract ABI taken from https://gnosisscan.io/address/0x5Aa82E068aE6a6a1C26c42E5a59520a74Cdb8998#code.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/debuggingcontract.abi.json",
+        )
+    )
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x5Aa82E068aE6a6a1C26c42E5a59520a74Cdb8998"
+    )
+
+    def getNow(
+        self,
+        web3: Web3 | None = None,
+    ) -> int:
+        now: int = self.call(
+            function_name="getNow",
+            web3=web3,
+        )
+        return now
+
+    def get_now(
+        self,
+        web3: Web3 | None = None,
+    ) -> DatetimeWithTimezone:
+        return utc_timestamp_to_utc_datetime(self.getNow(web3))
+
+    def inc(
+        self,
+        api_keys: APIKeys,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="inc",
+            web3=web3,
+        )
 
 
 def contract_implements_function(

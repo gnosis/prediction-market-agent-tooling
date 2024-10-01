@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen import omen_create_market_tx
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     COLLATERAL_TOKEN_CHOICE_TO_ADDRESS,
-    OMEN_DEFAULT_MARKET_FEE,
+    OMEN_DEFAULT_MARKET_FEE_PERC,
     CollateralTokenChoice,
 )
 
@@ -25,7 +25,7 @@ def main(
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(None),
     cl_token: CollateralTokenChoice = CollateralTokenChoice.wxdai,
-    fee: float = typer.Option(OMEN_DEFAULT_MARKET_FEE),
+    fee_perc: float = typer.Option(OMEN_DEFAULT_MARKET_FEE_PERC),
     language: str = typer.Option("en"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
     auto_deposit: bool = typer.Option(False),
@@ -55,7 +55,7 @@ def main(
         api_keys=api_keys,
         collateral_token_address=COLLATERAL_TOKEN_CHOICE_TO_ADDRESS[cl_token],
         initial_funds=xdai_type(initial_funds),
-        fee=fee,
+        fee_perc=fee_perc,
         question=question,
         closing_time=closing_time,
         category=category,

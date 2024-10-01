@@ -29,7 +29,7 @@ def test_claim_bonds() -> None:
     outcomes = ["Yes", "No"]
 
     # Ask a question
-    question_id = realitio_contract.askQuestion(
+    question_event = realitio_contract.askQuestion(
         api_keys=api_keys,
         question="Will GNO be above $1000 in 1 second from now?",
         category="cryptocurrency",
@@ -39,7 +39,7 @@ def test_claim_bonds() -> None:
         opening=utcnow() + timedelta(seconds=1),
         timeout=timeout,
     )
-    logger.info(f"Question ID: {question_id.hex()}")
+    logger.info(f"Question ID: {question_event.question_id.hex()}")
     time.sleep(2)  # Wait for the question to be opened.
 
     # Add multiple answers
@@ -48,7 +48,7 @@ def test_claim_bonds() -> None:
     for answer in answers:
         realitio_contract.submit_answer(
             api_keys=api_keys,
-            question_id=question_id,
+            question_id=question_event.question_id,
             answer=answer,
             outcomes=outcomes,
             bond=bond,
@@ -61,7 +61,7 @@ def test_claim_bonds() -> None:
 
     # Try to claim bonds
     question = OmenSubgraphHandler().get_questions(
-        limit=1, question_id_in=[question_id]
+        limit=1, question_id_in=[question_event.question_id]
     )[0]
     logger.info(f"Claiming for {question.url}")
     claim_bonds_on_realitio_question(

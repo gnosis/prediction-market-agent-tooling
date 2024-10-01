@@ -1,14 +1,11 @@
 from datetime import datetime
 from typing import Any
 
-from dotenv import load_dotenv
-
-load_dotenv()
-import hishel
 import pandas as pd
 from langfuse import Langfuse
 from pydantic import BaseModel
 
+from examples.monitor.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
@@ -149,9 +146,7 @@ if __name__ == "__main__":
         KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.7),
     ]
 
-    storage = hishel.FileStorage(ttl=3600)
-    controller = hishel.Controller(force_cache=True)
-    httpx_client = hishel.CacheClient(storage=storage, controller=controller)
+    httpx_client = HttpxCachedClient().get_client()
 
     overall_md = ""
 

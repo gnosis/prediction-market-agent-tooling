@@ -226,7 +226,7 @@ class KellyBettingStrategy(BettingStrategy):
             no / total_outcome_tokens if buy_direction else yes / total_outcome_tokens
         )
 
-        tokens_bought = get_buy_outcome_token_amount(
+        tokens_to_buy = get_buy_outcome_token_amount(
             bet_amount, buy_direction, yes, no, fee
         )
 

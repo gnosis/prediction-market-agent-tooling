@@ -263,7 +263,7 @@ class KellyBettingStrategy(BettingStrategy):
         return optimized_bet_amount.x
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount})(max_price_impact={self.max_price_impact})"
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount}, max_price_impact={self.max_price_impact})"
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):

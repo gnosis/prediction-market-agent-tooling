@@ -44,7 +44,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     pick_binary_market,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OMEN_DEFAULT_MARKET_FEE,
+    OMEN_DEFAULT_MARKET_FEE_PERC,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
     OmenAgentResultMappingContract,
@@ -83,10 +83,10 @@ def test_create_bet_withdraw_resolve_market(
     question = f"Will GNO be above $10000 in {wait_time} seconds from now?"
     closing_time = utcnow() + timedelta(seconds=wait_time)
 
-    market_address = omen_create_market_tx(
+    created_market = omen_create_market_tx(
         api_keys=test_keys,
         initial_funds=xdai_type(0.001),
-        fee=OMEN_DEFAULT_MARKET_FEE,
+        fee_perc=OMEN_DEFAULT_MARKET_FEE_PERC,
         question=question,
         closing_time=closing_time,
         category="cryptocurrency",
@@ -95,9 +95,11 @@ def test_create_bet_withdraw_resolve_market(
         auto_deposit=True,
         web3=local_web3,
     )
-    logger.debug(f"Market created at address: {market_address}")
+    logger.debug(f"Market created at address: {created_market.market_event}")
     # ToDo - Fix call here (subgraph will not update on localchain). Retrieve data directly from contract.
-    market = omen_subgraph_handler.get_omen_market_by_market_id(market_address)
+    market = omen_subgraph_handler.get_omen_market_by_market_id(
+        created_market.market_event.fixed_product_market_maker_checksummed
+    )
 
     # Double check the market was created correctly.
     assert market.question_title == question
@@ -149,7 +151,7 @@ def test_omen_create_market_wxdai(
     local_web3: Web3,
     test_keys: APIKeys,
 ) -> None:
-    market_address = omen_create_market_tx(
+    created_market = omen_create_market_tx(
         api_keys=test_keys,
         initial_funds=xdai_type(0.001),
         question="Will GNO hit $1000 in 2 minutes from creation of this market?",
@@ -160,8 +162,12 @@ def test_omen_create_market_wxdai(
         auto_deposit=True,
         web3=local_web3,
     )
-    assert is_contract(local_web3, market_address)
-    market_contract = OmenFixedProductMarketMakerContract(address=market_address)
+    assert is_contract(
+        local_web3, created_market.market_event.fixed_product_market_maker_checksummed
+    )
+    market_contract = OmenFixedProductMarketMakerContract(
+        address=created_market.market_event.fixed_product_market_maker_checksummed
+    )
     assert (
         market_contract.collateralToken(web3=local_web3)
         == WrappedxDaiContract().address
@@ -172,7 +178,7 @@ def test_omen_create_market_sdai(
     local_web3: Web3,
     test_keys: APIKeys,
 ) -> None:
-    market_address = omen_create_market_tx(
+    created_market = omen_create_market_tx(
         api_keys=test_keys,
         initial_funds=xdai_type(100),
         question="Will GNO hit $1000 in 2 minutes from creation of this market?",
@@ -184,8 +190,12 @@ def test_omen_create_market_sdai(
         collateral_token_address=sDaiContract().address,
         web3=local_web3,
     )
-    assert is_contract(local_web3, market_address)
-    market_contract = OmenFixedProductMarketMakerContract(address=market_address)
+    assert is_contract(
+        local_web3, created_market.market_event.fixed_product_market_maker_checksummed
+    )
+    market_contract = OmenFixedProductMarketMakerContract(
+        address=created_market.market_event.fixed_product_market_maker_checksummed
+    )
     assert market_contract.collateralToken(web3=local_web3) == sDaiContract().address
 
 
@@ -265,7 +275,9 @@ def test_omen_fund_and_remove_fund_market(
             collateral_token_address_in=(collateral_token_address,),
         )[0]
     )
-    collateral_token_contract = market.get_contract().get_collateral_token_contract()
+    collateral_token_contract = market.get_contract().get_collateral_token_contract(
+        local_web3
+    )
     assert (
         collateral_token_contract.symbol() == expected_symbol
     ), f"Should have retrieved {expected_symbol} market."
@@ -399,23 +411,26 @@ def test_place_bet_with_autodeposit(
             collateral_token_address_in=(collateral_token_address,),
         )[0]
     )
-
-    deposit_amount = xDai(10)
-    fresh_account = create_and_fund_random_account(
-        private_key=test_keys.bet_from_private_key,
-        web3=local_web3,
-        deposit_amount=xDai(deposit_amount * 2),  # 2* for safety
-    )
-
-    keys = APIKeys(
-        BET_FROM_PRIVATE_KEY=private_key_type(fresh_account.key.hex()),
-        SAFE_ADDRESS=None,
-    )
-
-    initial_balances = get_balances(address=keys.bet_from_address, web3=local_web3)
+    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     collateral_token_contract = market.get_contract().get_collateral_token_contract(
-        web3=local_web3
+        local_web3
     )
+    # deposit_amount = xDai(10)
+    # fresh_account = create_and_fund_random_account(
+    #     private_key=test_keys.bet_from_private_key,
+    #     web3=local_web3,
+    #     deposit_amount=xDai(deposit_amount * 2),  # 2* for safety
+    # )
+    #
+    # keys = APIKeys(
+    #     BET_FROM_PRIVATE_KEY=private_key_type(fresh_account.key.hex()),
+    #     SAFE_ADDRESS=None,
+    # )
+    #
+    # initial_balances = get_balances(address=keys.bet_from_address, web3=local_web3)
+    # collateral_token_contract = market.get_contract().get_collateral_token_contract(
+    #     web3=local_web3
+    # )
     assert (
         collateral_token_contract.symbol(web3=local_web3) == expected_symbol
     ), f"Should have retrieve {expected_symbol} market."

@@ -335,3 +335,10 @@ def byte32_to_ipfscidv0(hex: HexBytes) -> IPFSCIDVersion0:
     """
     completed_binary_str = b"\x12 " + hex
     return IPFSCIDVersion0(base58.b58encode(completed_binary_str).decode("utf-8"))
+
+
+def get_receipt_block_timestamp(receipt_tx: TxReceipt, web3: Web3) -> int:
+    block_number = receipt_tx["blockNumber"]
+    block = web3.eth.get_block(block_number)
+    block_timestamp: int = block["timestamp"]
+    return block_timestamp

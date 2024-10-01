@@ -6,10 +6,19 @@ from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import DatetimeWithTimezone, OutcomeStr, Wei
+from prediction_market_agent_tooling.gtypes import (
+    DatetimeWithTimezone,
+    OutcomeStr,
+    Wei,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Position, TokenAmount
-from prediction_market_agent_tooling.markets.omen.data_models import OmenBet
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OmenBet,
+    OmenOutcomeToken,
+    calculate_marginal_prices,
+)
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     get_binary_market_p_yes_history,
@@ -270,3 +279,18 @@ def test_get_buy_token_amount(direction: bool) -> None:
             direction=buy_direction,
         ).amount
         assert np.isclose(buy_amount0, buy_amount1)
+
+
+@pytest.mark.parametrize(
+    "outcome_token_amounts, expected_marginal_prices",
+    [
+        ([0, 100], None),
+        ([1000, 1000], [0.5, 0.5]),
+        ([500, 1500], [0.75, 0.25]),
+    ],
+)
+def test_calculate_marginal_prices(
+    outcome_token_amounts: list[OmenOutcomeToken],
+    expected_marginal_prices: list[xDai] | None,
+) -> None:
+    assert calculate_marginal_prices(outcome_token_amounts) == expected_marginal_prices

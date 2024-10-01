@@ -106,12 +106,14 @@ if __name__ == "__main__":
         # MaxAccuracyBettingStrategy(bet_amount=25),
         KellyBettingStrategy(max_bet_amount=1),
         KellyBettingStrategy(max_bet_amount=2),
+        KellyBettingStrategy(max_bet_amount=5),
         KellyBettingStrategy(max_bet_amount=25),
         # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
         # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
         MaxExpectedValueBettingStrategy(bet_amount=1),
         MaxExpectedValueBettingStrategy(bet_amount=2),
+        MaxExpectedValueBettingStrategy(bet_amount=5),
         # MaxExpectedValueBettingStrategy(bet_amount=25),
         KellyBettingStrategy(max_bet_amount=2, max_slippage=0.01),
         KellyBettingStrategy(max_bet_amount=2, max_slippage=0.05),
@@ -261,10 +263,14 @@ if __name__ == "__main__":
                 }
             )
 
+        simulations_df = pd.DataFrame.from_records(simulations)
+        simulations_df.sort_values(by="bet_profit", ascending=False, inplace=True)
         overall_md += (
             f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"
-            + pd.DataFrame.from_records(simulations).to_markdown(index=False)
+            + simulations_df.to_markdown(index=False)
         )
+        # export details per agent
+        pd.DataFrame.from_records(details).to_csv(f"{agent_name}_details.csv")
 
     with open("match_bets_with_langfuse_traces_overall.md", "w") as overall_f:
         overall_f.write(overall_md)

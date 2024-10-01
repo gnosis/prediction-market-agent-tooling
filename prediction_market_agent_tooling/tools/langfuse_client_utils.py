@@ -25,10 +25,10 @@ class ProcessMarketTrace(BaseModel):
 
     @property
     def buy_trade(self) -> PlacedTrade | None:
-        buy_trade = next(
-            iter([t for t in self.trades if t.trade_type == TradeType.BUY]), None
-        )
-        return buy_trade
+        buy_trades = [t for t in self.trades if t.trade_type == TradeType.BUY]
+        if len(buy_trades) > 1:
+            raise ValueError("Unhandled logic, check it outm please!")
+        return buy_trades[0] if buy_trades else None
 
     @staticmethod
     def from_langfuse_trace(

@@ -38,7 +38,7 @@ def test_stealing_on_markets(
     local_web3: Web3,
 ) -> None:
     # Get two accounts, one will create a job market (A) and one will try to sabotage it (B)
-    account_A, account_B = accounts[0], accounts[1]
+    account_A, account_B = accounts[2], accounts[3]
     api_keys_A, api_keys_B = APIKeys(
         BET_FROM_PRIVATE_KEY=private_key_type(account_A.private_key), SAFE_ADDRESS=None
     ), APIKeys(
@@ -102,20 +102,16 @@ def test_stealing_on_markets(
         auto_deposit=True,
         web3=local_web3,
     )
-    balance_after_buying_A, balance_after_buying_B = (
-        get_balances(api_keys_A.bet_from_address, local_web3).total,
-        get_balances(api_keys_B.bet_from_address, local_web3).total,
-    )
+    balance_after_buying_B = get_balances(api_keys_B.bet_from_address, local_web3).total
     assert (
         balance_after_buying_B < starting_balance_B
     ), "Balance of B should have be lowered from betting"
 
     # Account A detects this and removes remaining liquidity, so the attacker is locked-in and will loose money unless he completes the job.
     omen_remove_fund_market_tx(api_keys_A, agent_market, shares=None, web3=local_web3)
-    balance_after_removing_funding_A, balance_after_removing_funding_B = (
-        get_balances(api_keys_A.bet_from_address, local_web3).total,
-        get_balances(api_keys_B.bet_from_address, local_web3).total,
-    )
+    balance_after_removing_funding_A = get_balances(
+        api_keys_A.bet_from_address, local_web3
+    ).total
     assert (
         balance_after_market_creation_A
         < balance_after_removing_funding_A
@@ -123,7 +119,7 @@ def test_stealing_on_markets(
     ), "Balance after removing the liquidity should be higher than after market creation (because some liquidity can be withdrawn right away), but lower than before market creation (because some liquidity is now locked for the attacker's bet)"
 
     # Buying or selling tokens after the liquidity is removed will fail.
-    with pytest.raises(Exception) as e_buying:
+    with pytest.raises(Exception):
         binary_omen_buy_outcome_tx(
             api_keys_B,
             buy_yes_for_b,
@@ -133,7 +129,7 @@ def test_stealing_on_markets(
             web3=local_web3,
         )
     sell_yes_for_b = xdai_type(1)
-    with pytest.raises(Exception) as e_selling:
+    with pytest.raises(Exception):
         binary_omen_sell_outcome_tx(
             api_keys_B,
             sell_yes_for_b,

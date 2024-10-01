@@ -143,14 +143,14 @@ class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: float, max_slippage: float | None = None):
+    def __init__(self, max_bet_amount: float, max_price_impact: float | None = None):
         self.max_bet_amount = max_bet_amount
-        self.max_price_impact = max_slippage
+        self.max_price_impact = max_price_impact
 
     def _check_price_impact_ok_else_log(
         self, buy_direction: bool, bet_size: float, market: AgentMarket
     ) -> None:
-        slippage = self.calculate_slippage_for_bet_amount(
+        price_impact = self.calculate_price_impact_for_bet_amount(
             buy_direction,
             bet_size,
             market.outcome_token_pool["Yes"],
@@ -158,11 +158,11 @@ class KellyBettingStrategy(BettingStrategy):
             0,
         )
 
-        if slippage > self.max_price_impact and not np.isclose(
-            slippage, self.max_price_impact, self.max_price_impact / 100
+        if price_impact > self.max_price_impact and not np.isclose(
+            price_impact, self.max_price_impact, atol=self.max_price_impact * 0.01
         ):
             logger.info(
-                f"Slippage {slippage} deviates too much from self.max_slippage {self.max_price_impact}, market_id {market.id}"
+                f"Price impact {price_impact} deviates too much from self.max_price_impact {self.max_price_impact}, market_id {market.id}"
             )
 
     def calculate_trades(
@@ -218,7 +218,7 @@ class KellyBettingStrategy(BettingStrategy):
         )
         return trades
 
-    def calculate_slippage_for_bet_amount(
+    def calculate_price_impact_for_bet_amount(
         self, buy_direction: bool, bet_amount: float, yes: float, no: float, fee: float
     ) -> float:
         total_outcome_tokens = yes + no
@@ -230,21 +230,20 @@ class KellyBettingStrategy(BettingStrategy):
             bet_amount, buy_direction, yes, no, fee
         )
 
-        actual_price = bet_amount / tokens_bought
-        # Slippage should be > 0 if we paid more than expected_price, and
-        # < 0 if we paid less than expected_price.
-        slippage = (actual_price - expected_price) / expected_price
-        return slippage
+        actual_price = bet_amount / tokens_to_buy
+        # price_impact should always be > 0
+        price_impact = (actual_price - expected_price) / expected_price
+        return price_impact
 
     def calculate_bet_amount_for_price_impact(
         self, market: AgentMarket, kelly_bet: SimpleBet, fee: float
     ) -> float:
         def calculate_price_impact_deviation_from_target_price_impact(b: xDai) -> float:
-            actual_slippage = self.calculate_slippage_for_bet_amount(
+            price_impact = self.calculate_price_impact_for_bet_amount(
                 kelly_bet.direction, b, yes_outcome_pool_size, no_outcome_pool_size, fee
             )
-            # translate in y
-            return abs(actual_slippage - self.max_price_impact)
+            # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
+            return abs(price_impact - self.max_price_impact)
 
         yes_outcome_pool_size = market.outcome_token_pool[
             market.get_outcome_str_from_bool(True)
@@ -255,9 +254,9 @@ class KellyBettingStrategy(BettingStrategy):
 
         optimized_bet_amount = minimize_scalar(
             calculate_price_impact_deviation_from_target_price_impact,
-            bounds=(min(yes_outcome_pool_size, no_outcome_pool_size) / 10, 1000),
+            bounds=(min(yes_outcome_pool_size, no_outcome_pool_size) / 1000, 1000),
             method="bounded",
-            tol=1e-7,
+            tol=1e-11,
             options={"maxiter": 10000},
         )
         return optimized_bet_amount.x
@@ -267,9 +266,8 @@ class KellyBettingStrategy(BettingStrategy):
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: float = 10, max_slippage: float | None = None):
+    def __init__(self, max_bet_amount: float = 10):
         self.max_bet_amount = max_bet_amount
-        self.max_slippage = max_slippage
 
     def adjust_bet_amount(
         self, existing_position: Position | None, market: AgentMarket

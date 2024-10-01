@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import Any
 
+from dotenv import load_dotenv
+
+load_dotenv()
 import hishel
 import pandas as pd
 from langfuse import Langfuse
@@ -9,14 +12,12 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    KellyBettingStrategy,
     ProbabilisticAnswer,
     TradeType,
-    KellyBettingStrategy,
     MaxAccuracyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MaxExpectedValueBettingStrategy,
-    ProbabilisticAnswer,
-    TradeType,
 )
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -108,44 +109,44 @@ if __name__ == "__main__":
 
     # Define strategies we want to test out
     strategies = [
-        # MaxAccuracyBettingStrategy(bet_amount=1),
+        MaxAccuracyBettingStrategy(bet_amount=1),
         MaxAccuracyBettingStrategy(bet_amount=2),
-        # MaxAccuracyBettingStrategy(bet_amount=25),
+        MaxAccuracyBettingStrategy(bet_amount=25),
         KellyBettingStrategy(max_bet_amount=1),
         KellyBettingStrategy(max_bet_amount=2),
         KellyBettingStrategy(max_bet_amount=5),
         KellyBettingStrategy(max_bet_amount=25),
-        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
+        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
         MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
-        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
+        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
         MaxExpectedValueBettingStrategy(bet_amount=1),
         MaxExpectedValueBettingStrategy(bet_amount=2),
         MaxExpectedValueBettingStrategy(bet_amount=5),
-        # MaxExpectedValueBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.01),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.05),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.1),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.15),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.2),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.25),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.3),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.4),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.5),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.6),
-        KellyBettingStrategy(max_bet_amount=2, max_slippage=0.7),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.1),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.15),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.2),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.3),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.4),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.5),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.6),
-        KellyBettingStrategy(max_bet_amount=5, max_slippage=0.7),
-        KellyBettingStrategy(max_bet_amount=25, max_slippage=0.1),
-        KellyBettingStrategy(max_bet_amount=25, max_slippage=0.2),
-        KellyBettingStrategy(max_bet_amount=25, max_slippage=0.3),
-        KellyBettingStrategy(max_bet_amount=25, max_slippage=0.5),
-        KellyBettingStrategy(max_bet_amount=25, max_slippage=0.7),
+        MaxExpectedValueBettingStrategy(bet_amount=25),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.01),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.05),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.1),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.15),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.2),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.25),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.3),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.4),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.5),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.6),
+        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.7),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.1),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.15),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.2),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.3),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.4),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.5),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.6),
+        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.7),
+        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.1),
+        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.2),
+        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.3),
+        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.5),
+        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.7),
     ]
 
     storage = hishel.FileStorage(ttl=3600)

@@ -35,7 +35,7 @@ def test_claim_bonds() -> None:
         category="cryptocurrency",
         outcomes=outcomes,
         language="en",
-        arbitrator=Arbitrator.KLEROS,
+        arbitrator=Arbitrator.KLEROS_31_JURORS_WITH_APPEAL,
         opening=utcnow() + timedelta(seconds=1),
         timeout=timeout,
     )

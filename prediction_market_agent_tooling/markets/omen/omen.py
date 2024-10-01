@@ -844,6 +844,7 @@ def omen_create_market_tx(
     fee_perc: float = OMEN_DEFAULT_MARKET_FEE_PERC,
     distribution_hint: list[OmenOutcomeToken] | None = None,
     collateral_token_address: ChecksumAddress = WrappedxDaiContract().address,
+    arbitrator: Arbitrator = Arbitrator.KLEROS_31_JURORS_WITH_APPEAL,
     web3: Web3 | None = None,
 ) -> CreatedMarket:
     """
@@ -889,7 +890,7 @@ def omen_create_market_tx(
         category=category,
         outcomes=outcomes,
         language=language,
-        arbitrator=Arbitrator.KLEROS,
+        arbitrator=arbitrator,
         opening=closing_time,  # The question is opened at the closing time of the market.
         timeout=finalization_timeout,
         web3=web3,

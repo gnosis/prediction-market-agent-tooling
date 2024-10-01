@@ -495,8 +495,13 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
 
 
 class Arbitrator(str, Enum):
-    KLEROS = "kleros"
+    KLEROS_511_JURORS_WITHOUT_APPEAL = "kleros_511_jurors_without_appeal"
+    KLEROS_31_JURORS_WITH_APPEAL = "kleros_31_jurors_with_appeal"
     DXDAO = "dxdao"
+
+    @property
+    def is_kleros(self) -> bool:
+        return self.value.startswith("kleros")
 
 
 class OmenDxDaoContract(ContractOnGnosisChain):
@@ -520,9 +525,22 @@ class OmenKlerosContract(ContractOnGnosisChain):
             "../../abis/omen_kleros.abi.json",
         )
     )
-    address: ChecksumAddress = Web3.to_checksum_address(
-        "0x29f39de98d750eb77b5fafb31b2837f079fce222"
-    )
+
+    @staticmethod
+    def from_arbitrator(arbitrator: "Arbitrator") -> "OmenKlerosContract":
+        """
+        See https://docs.kleros.io/developer/deployment-addresses for all available addresses.
+        """
+        if arbitrator == Arbitrator.KLEROS_511_JURORS_WITHOUT_APPEAL:
+            address = "0xe40DD83a262da3f56976038F1554Fe541Fa75ecd"
+
+        elif arbitrator == Arbitrator.KLEROS_31_JURORS_WITH_APPEAL:
+            address = "0x29f39de98d750eb77b5fafb31b2837f079fce222"
+
+        else:
+            raise ValueError(f"Unsupported arbitrator: {arbitrator=}")
+
+        return OmenKlerosContract(address=Web3.to_checksum_address(address))
 
 
 class OmenRealitioContract(ContractOnGnosisChain):
@@ -541,8 +559,8 @@ class OmenRealitioContract(ContractOnGnosisChain):
     def get_arbitrator_contract(
         arbitrator: Arbitrator,
     ) -> ContractOnGnosisChain:
-        if arbitrator == Arbitrator.KLEROS:
-            return OmenKlerosContract()
+        if arbitrator.is_kleros:
+            return OmenKlerosContract.from_arbitrator(arbitrator)
         if arbitrator == Arbitrator.DXDAO:
             return OmenDxDaoContract()
         raise ValueError(f"Unknown arbitrator: {arbitrator}")

@@ -25,11 +25,11 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.markets.omen.data_models import (
     INVALID_ANSWER_HEX_BYTES,
     ConditionPreparationEvent,
+    ContractPrediction,
     FPMMFundingAddedEvent,
     OmenFixedProductMarketMakerCreationEvent,
     RealitioLogNewQuestionEvent,
     format_realitio_question,
-    ContractPrediction,
 )
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20OnGnosisChain,

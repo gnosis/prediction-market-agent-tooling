@@ -388,11 +388,6 @@ class OmenMarket(BaseModel):
                 f"Unexpected number of conditions: {len(model.market_event.conditionIds)}"
             )
         outcome_token_amounts = model.funding_event.outcome_token_amounts
-        total_amount = sum(outcome_token_amounts)
-        outcome_token_marginal_prices = [
-            xDai((total_amount - amount) / total_amount)
-            for amount in outcome_token_amounts
-        ]
         return OmenMarket(
             id=HexAddress(
                 HexStr(model.market_event.fixedProductMarketMaker.lower())
@@ -411,7 +406,7 @@ class OmenMarket(BaseModel):
             ),  # Lowering to be identical with subgraph's output.
             outcomes=model.question_event.parsed_question.outcomes,
             outcomeTokenAmounts=outcome_token_amounts,
-            outcomeTokenMarginalPrices=outcome_token_marginal_prices,
+            outcomeTokenMarginalPrices=calculate_marginal_prices(outcome_token_amounts),
             answerFinalizedTimestamp=None,  # It's a fresh market.
             currentAnswer=None,  # It's a fresh market.
             creationTimestamp=model.market_creation_timestamp,
@@ -445,6 +440,32 @@ def calculate_liquidity_parameter(
     n = len(outcome_token_amounts)
     liquidity_parameter = amounts_product ** (1.0 / n)
     return wei_type(liquidity_parameter)
+
+
+def calculate_marginal_prices(
+    outcome_token_amounts: list[OmenOutcomeToken],
+) -> list[xDai] | None:
+    """
+    Converted to Python from https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/utils/fpmm.ts#L197.
+    """
+    all_non_zero = all(x != 0 for x in outcome_token_amounts)
+    if not all_non_zero:
+        return None
+
+    n_outcomes = len(outcome_token_amounts)
+    weights = []
+
+    for i in range(n_outcomes):
+        weight = 1.0
+        for j in range(n_outcomes):
+            if i != j:
+                weight *= outcome_token_amounts[j]
+        weights.append(weight)
+
+    sum_weights = sum(weights)
+
+    marginal_prices = [weights[i] / sum_weights for i in range(n_outcomes)]
+    return [xDai(mp) for mp in marginal_prices]
 
 
 class OmenBetCreator(BaseModel):

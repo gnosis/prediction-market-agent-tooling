@@ -2,9 +2,6 @@ from datetime import datetime
 from typing import Any
 
 import hishel
-from dotenv import load_dotenv
-
-load_dotenv()
 import pandas as pd
 from langfuse import Langfuse
 from pydantic import BaseModel

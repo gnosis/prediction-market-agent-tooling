@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-from loguru import logger
+from prediction_market_agent_tooling.loggers import logger
 from scipy.optimize import minimize_scalar
 
 from prediction_market_agent_tooling.gtypes import xDai

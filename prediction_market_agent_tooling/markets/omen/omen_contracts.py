@@ -521,7 +521,7 @@ class OmenKlerosContract(ContractOnGnosisChain):
         )
     )
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0xe40DD83a262da3f56976038F1554Fe541Fa75ecd"
+        "0x29f39de98d750eb77b5fafb31b2837f079fce222"
     )
 
 

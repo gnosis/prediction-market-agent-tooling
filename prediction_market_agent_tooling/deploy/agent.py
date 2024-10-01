@@ -31,7 +31,7 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import HexStr, xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -526,7 +526,9 @@ class DeployableTraderAgent(DeployableAgent):
             IPFSAgentResult(reasoning=reasoning)
         )
 
-        tx_hashes = [HexBytes(i.id) for i in processed_market.trades]
+        tx_hashes = [
+            HexBytes(HexStr(i.id)) for i in processed_market.trades if i.id is not None
+        ]
         prediction = ContractPrediction(
             publisher=keys.public_key,
             ipfs_hash=ipfscidv0_to_byte32(ipfs_hash),

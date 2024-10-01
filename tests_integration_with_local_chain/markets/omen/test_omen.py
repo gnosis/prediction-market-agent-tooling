@@ -415,24 +415,8 @@ def test_place_bet_with_autodeposit(
     collateral_token_contract = market.get_contract().get_collateral_token_contract(
         local_web3
     )
-    # deposit_amount = xDai(10)
-    # fresh_account = create_and_fund_random_account(
-    #     private_key=test_keys.bet_from_private_key,
-    #     web3=local_web3,
-    #     deposit_amount=xDai(deposit_amount * 2),  # 2* for safety
-    # )
-    #
-    # keys = APIKeys(
-    #     BET_FROM_PRIVATE_KEY=private_key_type(fresh_account.key.hex()),
-    #     SAFE_ADDRESS=None,
-    # )
-    #
-    # initial_balances = get_balances(address=keys.bet_from_address, web3=local_web3)
-    # collateral_token_contract = market.get_contract().get_collateral_token_contract(
-    #     web3=local_web3
-    # )
     assert (
-        collateral_token_contract.symbol(web3=local_web3) == expected_symbol
+        collateral_token_contract.symbol() == expected_symbol
     ), f"Should have retrieve {expected_symbol} market."
     assert isinstance(
         collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
@@ -443,13 +427,13 @@ def test_place_bet_with_autodeposit(
     # Start by moving all funds from wxdai to xdai
     if initial_balances.wxdai > 0:
         WrappedxDaiContract().withdraw(
-            api_keys=keys,
+            api_keys=test_keys,
             amount_wei=xdai_to_wei(initial_balances.wxdai),
             web3=local_web3,
         )
 
     # Check that we have xdai funds, but no wxdai funds
-    initial_balances = get_balances(address=keys.bet_from_address, web3=local_web3)
+    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     assert np.isclose(initial_balances.wxdai, xdai_type(0))
     assert initial_balances.xdai > xdai_type(0)
 
@@ -459,8 +443,8 @@ def test_place_bet_with_autodeposit(
         outcome=True,
         amount=bet_amount,
         omen_auto_deposit=True,
-        api_keys=keys,
         web3=local_web3,
+        api_keys=test_keys,
     )
 
 

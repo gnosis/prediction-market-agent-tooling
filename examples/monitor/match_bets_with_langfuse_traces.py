@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Any
 
 import pandas as pd
 from langfuse import Langfuse
@@ -8,10 +7,6 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    KellyBettingStrategy,
-    MaxAccuracyBettingStrategy,
-    MaxAccuracyWithKellyScaledBetsStrategy,
-    MaxExpectedValueBettingStrategy,
     ProbabilisticAnswer,
     TradeType,
 )
@@ -94,21 +89,6 @@ if __name__ == "__main__":
     agent_pkey_map = {
         k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
     }
-    # Define strategies we want to test out
-    strategies = [
-        MaxAccuracyBettingStrategy(bet_amount=1),
-        MaxAccuracyBettingStrategy(bet_amount=2),
-        MaxAccuracyBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=1),
-        KellyBettingStrategy(max_bet_amount=2),
-        KellyBettingStrategy(max_bet_amount=25),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
-        MaxExpectedValueBettingStrategy(bet_amount=1),
-        MaxExpectedValueBettingStrategy(bet_amount=2),
-        MaxExpectedValueBettingStrategy(bet_amount=25),
-    ]
 
     overall_md = ""
 
@@ -158,74 +138,27 @@ if __name__ == "__main__":
                 f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."
             )
 
-        simulations: list[dict[str, Any]] = []
-        details = []
+        sum_squared_errors = 0.0
+        for bet_with_trace in bets_with_traces:
+            bet = bet_with_trace.bet
+            trace = bet_with_trace.trace
+            estimated_p_yes = trace.answer.p_yes
+            actual_answer = float(bet.market_outcome)
+            sum_squared_errors += (estimated_p_yes - actual_answer) ** 2
+        p_yes_mse = sum_squared_errors / len(bets_with_traces)
+        total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
+        total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
+        roi = 100 * total_bet_profit / total_bet_amount
 
-        for strategy_idx, strategy in enumerate(strategies):
-            # "Born" agent with initial funding, simulate as if he was doing bets one by one.
-            starting_balance = 50.0
-            agent_balance = starting_balance
-            simulated_outcomes: list[SimulatedOutcome] = []
-
-            for bet_with_trace in bets_with_traces:
-                bet = bet_with_trace.bet
-                trace = bet_with_trace.trace
-                simulated_outcome = get_outcome_for_trace(
-                    strategy=strategy, trace=trace, market_outcome=bet.market_outcome
-                )
-                if simulated_outcome is None:
-                    continue
-                simulated_outcomes.append(simulated_outcome)
-                agent_balance += simulated_outcome.profit
-
-                details.append(
-                    {
-                        "url": trace.market.url,
-                        "market_p_yes": round(trace.market.current_p_yes, 4),
-                        "agent_p_yes": round(trace.answer.p_yes, 4),
-                        "agent_conf": round(trace.answer.confidence, 4),
-                        "org_bet": round(bet.amount.amount, 4),
-                        "sim_bet": round(simulated_outcome.size, 4),
-                        "org_dir": bet.outcome,
-                        "sim_dir": simulated_outcome.direction,
-                        "org_profit": round(bet.profit.amount, 4),
-                        "sim_profit": round(simulated_outcome.profit, 4),
-                    }
-                )
-
-            details.sort(key=lambda x: x["sim_profit"], reverse=True)
-
-            total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
-            total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
-            total_simulated_amount = sum([so.size for so in simulated_outcomes])
-            total_simulated_profit = sum([so.profit for so in simulated_outcomes])
-            roi = 100 * total_bet_profit / total_bet_amount
-            simulated_roi = 100 * total_simulated_profit / total_simulated_amount
-
-            # At the beginning, add also the agent's current strategy.
-            if strategy_idx == 0:
-                simulations.append(
-                    {
-                        "strategy": "original",
-                        "bet_amount": total_bet_amount,
-                        "bet_profit": total_bet_profit,
-                        "roi": roi,
-                        # We don't know these for the original run.
-                        "start_balance": None,
-                        "end_balance": None,
-                    }
-                )
-
-            simulations.append(
-                {
-                    "strategy": repr(strategy),
-                    "bet_amount": total_simulated_amount,
-                    "bet_profit": total_simulated_profit,
-                    "roi": simulated_roi,
-                    "start_balance": starting_balance,
-                    "end_balance": agent_balance,
-                }
-            )
+        simulations = [
+            {
+                "strategy": "original",
+                "bet_amount": total_bet_amount,
+                "bet_profit": total_bet_profit,
+                "roi": roi,
+                "p_yes mse": p_yes_mse,
+            }
+        ]
 
         overall_md += (
             f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"

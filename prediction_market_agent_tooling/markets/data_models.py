@@ -130,7 +130,7 @@ class Trade(BaseModel):
 
 
 class PlacedTrade(Trade):
-    id: str
+    id: str | None = None
 
     @staticmethod
     def from_trade(trade: Trade, id: str) -> "PlacedTrade":

@@ -1,16 +1,16 @@
 import sys
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import tenacity
 from web3 import Web3
-from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexStr,
+    OmenOutcomeToken,
     OutcomeStr,
     Probability,
     Wei,
@@ -37,6 +37,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
     PRESAGIO_BASE_URL,
     Condition,
+    ConditionPreparationEvent,
+    CreatedMarket,
     OmenBet,
     OmenMarket,
     OmenUserPosition,
@@ -44,7 +46,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     get_boolean_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OMEN_DEFAULT_MARKET_FEE,
+    OMEN_DEFAULT_MARKET_FEE_PERC,
     Arbitrator,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
@@ -52,6 +54,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
     WrappedxDaiContract,
+    build_parent_collection_id,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -71,6 +74,7 @@ from prediction_market_agent_tooling.tools.utils import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
+    get_receipt_block_timestamp,
     remove_fraction,
     wei_to_xdai,
     xdai_to_wei,
@@ -324,6 +328,10 @@ class OmenAgentMarket(AgentMarket):
             return None
 
         omen_redeem_full_position_tx(api_keys=api_keys, market=self)
+
+    @staticmethod
+    def from_created_market(model: "CreatedMarket") -> "OmenAgentMarket":
+        return OmenAgentMarket.from_data_model(OmenMarket.from_created_market(model))
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
@@ -674,7 +682,7 @@ def omen_buy_outcome_tx(
     amount_wei = xdai_to_wei(amount)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
-    collateral_token_contract = market_contract.get_collateral_token_contract()
+    collateral_token_contract = market_contract.get_collateral_token_contract(web3)
 
     # In case of ERC4626, obtained (for example) sDai out of xDai could be lower than the `amount_wei`, so we need to handle it.
     amount_wei_to_buy = collateral_token_contract.get_in_shares(amount_wei, web3)
@@ -751,7 +759,7 @@ def omen_sell_outcome_tx(
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
-    collateral_token_contract = market_contract.get_collateral_token_contract()
+    collateral_token_contract = market_contract.get_collateral_token_contract(web3)
 
     # Verify, that markets uses conditional tokens that we expect.
     if (
@@ -832,10 +840,12 @@ def omen_create_market_tx(
     language: str,
     outcomes: list[str],
     auto_deposit: bool,
-    fee: float = OMEN_DEFAULT_MARKET_FEE,
+    finalization_timeout: timedelta = timedelta(days=1),
+    fee_perc: float = OMEN_DEFAULT_MARKET_FEE_PERC,
+    distribution_hint: list[OmenOutcomeToken] | None = None,
     collateral_token_address: ChecksumAddress = WrappedxDaiContract().address,
     web3: Web3 | None = None,
-) -> ChecksumAddress:
+) -> CreatedMarket:
     """
     Based on omen-exchange TypeScript code: https://github.com/protofire/omen-exchange/blob/b0b9a3e71b415d6becf21fe428e1c4fc0dad2e80/app/src/services/cpk/cpk.ts#L308
     """
@@ -873,7 +883,7 @@ def omen_create_market_tx(
         )
 
     # Create the question on Realitio.
-    question_id = realitio_contract.askQuestion(
+    question_event = realitio_contract.askQuestion(
         api_keys=api_keys,
         question=question,
         category=category,
@@ -881,20 +891,22 @@ def omen_create_market_tx(
         language=language,
         arbitrator=Arbitrator.KLEROS,
         opening=closing_time,  # The question is opened at the closing time of the market.
+        timeout=finalization_timeout,
         web3=web3,
     )
 
     # Construct the condition id.
+    cond_event: ConditionPreparationEvent | None = None
     condition_id = conditional_token_contract.getConditionId(
-        question_id=question_id,
+        question_id=question_event.question_id,
         oracle_address=oracle_contract.address,
         outcomes_slot_count=len(outcomes),
         web3=web3,
     )
     if not conditional_token_contract.does_condition_exists(condition_id, web3=web3):
-        conditional_token_contract.prepareCondition(
+        cond_event = conditional_token_contract.prepareCondition(
             api_keys=api_keys,
-            question_id=question_id,
+            question_id=question_event.question_id,
             oracle_address=oracle_contract.address,
             outcomes_slot_count=len(outcomes),
             web3=web3,
@@ -914,10 +926,16 @@ def omen_create_market_tx(
     )
 
     # Create the market.
-    create_market_receipt_tx = factory_contract.create2FixedProductMarketMaker(
+    fee = xdai_to_wei(xdai_type(fee_perc))
+    (
+        market_event,
+        funding_event,
+        receipt_tx,
+    ) = factory_contract.create2FixedProductMarketMaker(
         api_keys=api_keys,
         condition_id=condition_id,
         fee=fee,
+        distribution_hint=distribution_hint,
         initial_funds_wei=initial_funds_in_shares,
         collateral_token_address=collateral_token_contract.address,
         web3=web3,
@@ -928,10 +946,17 @@ def omen_create_market_tx(
     # but address of stakingRewardsFactoryAddress on xDai/Gnosis is 0x0000000000000000000000000000000000000000,
     # so skipping it here.
 
-    market_address = create_market_receipt_tx["logs"][-1][
-        "address"
-    ]  # The market address is available in the last emitted log, in the address field.
-    return market_address
+    return CreatedMarket(
+        market_creation_timestamp=get_receipt_block_timestamp(receipt_tx, web3),
+        market_event=market_event,
+        funding_event=funding_event,
+        condition_id=condition_id,
+        question_event=question_event,
+        condition_event=cond_event,
+        initial_funds=initial_funds_wei,
+        fee=fee,
+        distribution_hint=distribution_hint,
+    )
 
 
 def omen_fund_market_tx(
@@ -960,10 +985,6 @@ def omen_fund_market_tx(
     market_contract.addFunding(api_keys, amount_to_fund, web3=web3)
 
 
-def build_parent_collection_id() -> HexStr:
-    return HASH_ZERO  # Taken from Olas
-
-
 def omen_redeem_full_position_tx(
     api_keys: APIKeys,
     market: OmenAgentMarket,
@@ -985,8 +1006,6 @@ def omen_redeem_full_position_tx(
             f"Market {market.id} uses conditional token that we didn't expect, {market_contract.conditionalTokens()} != {conditional_token_contract.address=}"
         )
 
-    parent_collection_id = build_parent_collection_id()
-
     if not market.is_resolved():
         logger.debug("Cannot redeem winnings if market is not yet resolved. Exiting.")
         return
@@ -1007,7 +1026,6 @@ def omen_redeem_full_position_tx(
         api_keys=api_keys,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
         condition_id=market.condition.id,
-        parent_collection_id=parent_collection_id,
         index_sets=market.condition.index_sets,
         web3=web3,
     )
@@ -1142,7 +1160,6 @@ def redeem_from_all_user_positions(
             api_keys=api_keys,
             collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
             condition_id=condition_id,
-            parent_collection_id=build_parent_collection_id(),
             index_sets=user_position.position.indexSets,
             web3=web3,
         )

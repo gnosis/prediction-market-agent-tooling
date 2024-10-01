@@ -24,7 +24,8 @@ def test_ipfs_upload_and_removal(test_ipfs_handler: IPFSHandler) -> None:
         ipfs_hash = test_ipfs_handler.upload_file(temp_file.name)
 
     # assert uploaded
-    r = requests.get(f"https://ipfs.io/ipfs/{ipfs_hash}")
+    # can take a while to be available for download
+    r = requests.get(f"https://ipfs.io/ipfs/{ipfs_hash}", timeout=60)
     r.raise_for_status()
     assert r.text == temp_string
     # remove from IPFS

@@ -2,5 +2,6 @@ import os
 
 from prediction_market_agent_tooling.gtypes import ChainID
 
+# my test
 GNOSIS_NETWORK_ID = ChainID(100)  # xDai network.
 GNOSIS_RPC_URL = os.getenv("GNOSIS_RPC_URL", "https://rpc.gnosischain.com")

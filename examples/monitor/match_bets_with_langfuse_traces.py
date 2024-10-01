@@ -83,13 +83,13 @@ def get_outcome_for_trace(
 if __name__ == "__main__":
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
-        # "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        # "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
-        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",  # no bets!
-        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",  # no bets!
-        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
+        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
     agent_pkey_map = {
         k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()

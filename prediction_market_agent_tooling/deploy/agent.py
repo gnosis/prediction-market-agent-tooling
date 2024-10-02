@@ -57,7 +57,7 @@ from prediction_market_agent_tooling.monitor.monitor_app import (
 )
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
-from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 MAX_AVAILABLE_MARKETS = 20
 TRADER_TAG = "trader"
@@ -204,7 +204,7 @@ class DeployableAgent:
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
         gcp_fname: str | None = None,
-        start_time: DatetimeWithTimezone | None = None,
+        start_time: DatetimeUTC | None = None,
         timeout: int = 180,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))

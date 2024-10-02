@@ -27,7 +27,7 @@ from prediction_market_agent_tooling.monitor.monitor import (
 )
 from prediction_market_agent_tooling.monitor.monitor_settings import MonitorSettings
 from prediction_market_agent_tooling.tools.utils import (
-    DatetimeWithTimezone,
+    DatetimeUTC,
     check_not_none,
     convert_to_utc_datetime,
     utcnow,
@@ -46,7 +46,7 @@ MARKET_TYPE_TO_DEPLOYED_AGENT: dict[MarketType, type[DeployedAgent]] = {
 def get_deployed_agents(
     market_type: MarketType,
     settings: MonitorSettings,
-    start_time: DatetimeWithTimezone | None,
+    start_time: DatetimeUTC | None,
 ) -> list[DeployedAgent]:
     cls = MARKET_TYPE_TO_DEPLOYED_AGENT.get(market_type)
     if cls is None:
@@ -76,7 +76,7 @@ def get_deployed_agents(
 
 
 def get_open_and_resolved_markets(
-    start_time: datetime,
+    start_time: DatetimeUTC,
     market_type: MarketType,
 ) -> tuple[t.Sequence[AgentMarket], t.Sequence[AgentMarket]]:
     cls = market_type.market_class
@@ -103,7 +103,7 @@ def monitor_app(
     market_type: MarketType = check_not_none(
         st.selectbox(label="Market type", options=enabled_market_types, index=0)
     )
-    start_time: DatetimeWithTimezone | None = (
+    start_time: DatetimeUTC | None = (
         convert_to_utc_datetime(
             datetime.combine(
                 t.cast(

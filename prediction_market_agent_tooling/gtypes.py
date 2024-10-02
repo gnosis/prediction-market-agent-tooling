@@ -32,7 +32,7 @@ OutcomeStr = NewType("OutcomeStr", str)
 Probability = NewType("Probability", float)
 Mana = NewType("Mana", float)  # Manifold's "currency"
 USDC = NewType("USDC", float)
-DatetimeWithTimezone = NewType("DatetimeWithTimezone", datetime)
+DatetimeUTC = NewType("DatetimeUTC", datetime)
 ChainID = NewType("ChainID", int)
 IPFSCIDVersion0 = NewType("IPFSCIDVersion0", str)
 
@@ -66,13 +66,11 @@ def private_key_type(k: str) -> PrivateKey:
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1:
-    ...
+def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1: ...
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: None) -> None:
-    ...
+def secretstr_to_v1_secretstr(s: None) -> None: ...
 
 
 def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:

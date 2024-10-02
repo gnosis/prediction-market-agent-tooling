@@ -15,8 +15,8 @@ from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
 class PolymarketRewards(BaseModel):
     min_size: int
     max_spread: float | None
-    event_start_date: datetime | None = None
-    event_end_date: datetime | None = None
+    event_start_date: DatetimeUTC | None = None
+    event_end_date: DatetimeUTC | None = None
     in_game_multiplier: int | None = None
     reward_epoch: int | None = None
 
@@ -39,8 +39,8 @@ class PolymarketMarket(BaseModel):
     question: str
     description: str
     market_slug: str
-    end_date_iso: datetime | None
-    game_start_time: datetime | None
+    end_date_iso: DatetimeUTC | None
+    game_start_time: DatetimeUTC | None
     seconds_delay: int
     fpmm: str
     maker_base_fee: int

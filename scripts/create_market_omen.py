@@ -19,7 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 
 def main(
     question: str = typer.Option(),
-    closing_time: datetime = typer.Option(),
+    closing_time: DatetimeUTC = typer.Option(),
     category: str = typer.Option(),
     initial_funds: str = typer.Option(),
     from_private_key: str = typer.Option(),

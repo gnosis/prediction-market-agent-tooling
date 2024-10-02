@@ -23,9 +23,9 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
     GNOSIS_RPC_URL,
 )
 from prediction_market_agent_tooling.tools.utils import (
-    DatetimeWithTimezone,
+    DatetimeUTC,
     should_not_happen,
-    utc_timestamp_to_utc_datetime,
+    to_utc_datetime,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
@@ -72,9 +72,7 @@ class ContractBaseClass(BaseModel):
     address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
-    _cache: dict[
-        str, t.Any
-    ] = (
+    _cache: dict[str, t.Any] = (
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
@@ -457,8 +455,8 @@ class DebuggingContract(ContractOnGnosisChain):
     def get_now(
         self,
         web3: Web3 | None = None,
-    ) -> DatetimeWithTimezone:
-        return utc_timestamp_to_utc_datetime(self.getNow(web3))
+    ) -> DatetimeUTC:
+        return to_utc_datetime(self.getNow(web3))
 
     def inc(
         self,

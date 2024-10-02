@@ -38,7 +38,7 @@ class Event(BaseModel):
 
 
 class Event1(BaseModel):
-    startDate: datetime | None = None
+    startDate: DatetimeUTC | None = None
     slug: str
 
 
@@ -60,7 +60,7 @@ class Market1(BaseModel):
 class ResolutionData(BaseModel):
     id: str
     author: str
-    lastUpdateTimestamp: datetime
+    lastUpdateTimestamp: int
     status: str
     wasDisputed: bool
     price: str
@@ -79,13 +79,13 @@ class Market(BaseModel):
     slug: str
     twitterCardImage: t.Any | None = None
     resolutionSource: str | None = None
-    endDate: datetime
+    endDate: DatetimeUTC
     category: t.Any | None = None
     ammType: t.Any | None = None
     description: str
     liquidity: str | None = None
-    startDate: datetime | None = None
-    createdAt: datetime
+    startDate: DatetimeUTC | None = None
+    createdAt: DatetimeUTC
     xAxisValue: t.Any | None = None
     yAxisValue: t.Any | None = None
     denominationToken: t.Any | None = None
@@ -106,7 +106,7 @@ class Market(BaseModel):
     upperBoundDate: t.Any | None = None
     closed: bool
     marketMakerAddress: HexAddress
-    closedTime: datetime | None = None
+    closedTime: DatetimeUTC | None = None
     wideFormat: bool | None = None
     new: bool | None = None
     sentDiscord: t.Any | None = None
@@ -129,9 +129,9 @@ class Market(BaseModel):
     curationOrder: t.Any | None = None
     volumeNum: USDC | None = None
     liquidityNum: float | None = None
-    endDateIso: datetime | None = None
-    startDateIso: datetime | None = None
-    umaEndDateIso: datetime | None = None
+    endDateIso: DatetimeUTC | None = None
+    startDateIso: DatetimeUTC | None = None
+    umaEndDateIso: DatetimeUTC | None = None
     commentsEnabled: bool | None = None
     disqusThread: t.Any | None = None
     gameStartTime: t.Any | None = None
@@ -236,8 +236,8 @@ class PolymarketFullMarket(BaseModel):
     description: str
     commentCount: int | None = None
     resolutionSource: str | None = None
-    startDate: datetime | None = None
-    endDate: datetime
+    startDate: DatetimeUTC | None = None
+    endDate: DatetimeUTC
     image: str | None = None
     icon: str | None = None
     featuredImage: str | None = None
@@ -253,10 +253,10 @@ class PolymarketFullMarket(BaseModel):
     competitive: float | None = None
     openInterest: int | None = None
     sortBy: str | None = None
-    createdAt: datetime
+    createdAt: DatetimeUTC
     commentsEnabled: bool | None = None
     disqusThread: t.Any | None = None
-    updatedAt: datetime
+    updatedAt: DatetimeUTC
     enableOrderBook: bool | None = None
     liquidityAmm: float | None = None
     liquidityClob: float | None = None

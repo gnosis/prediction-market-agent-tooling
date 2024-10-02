@@ -40,7 +40,7 @@ class Bet(BaseModel):
     id: str
     amount: BetAmount
     outcome: bool
-    created_time: datetime
+    created_time: DatetimeUTC
     market_question: str
     market_id: str
 
@@ -50,7 +50,7 @@ class Bet(BaseModel):
 
 class ResolvedBet(Bet):
     market_outcome: bool
-    resolved_time: datetime
+    resolved_time: DatetimeUTC
     profit: ProfitAmount
 
     @computed_field  # type: ignore[prop-decorator]

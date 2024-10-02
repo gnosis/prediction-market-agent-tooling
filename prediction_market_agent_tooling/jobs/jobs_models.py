@@ -16,7 +16,7 @@ class SimpleJob(BaseModel):
     job: str
     reward: float
     currency: str
-    deadline: datetime
+    deadline: DatetimeUTC
 
 
 class JobAgentMarket(AgentMarket, ABC):

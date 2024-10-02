@@ -167,7 +167,7 @@ def get_manifold_market(market_id: str) -> FullManifoldMarket:
 )
 def get_manifold_bets(
     user_id: str,
-    start_time: datetime,
+    start_time: DatetimeUTC,
     end_time: t.Optional[datetime],
 ) -> list[ManifoldBet]:
     url = f"{MANIFOLD_API_BASE_URL}/v0/bets"
@@ -182,7 +182,7 @@ def get_manifold_bets(
 
 def get_resolved_manifold_bets(
     user_id: str,
-    start_time: datetime,
+    start_time: DatetimeUTC,
     end_time: t.Optional[datetime],
 ) -> tuple[list[ManifoldBet], list[ManifoldMarket]]:
     bets = get_manifold_bets(user_id, start_time, end_time)

@@ -573,7 +573,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         outcomes: list[str],
         language: str,
         arbitrator: Arbitrator,
-        opening: datetime,
+        opening: DatetimeUTC,
         timeout: timedelta,
         nonce: int | None = None,
         tx_params: t.Optional[TxParams] = None,

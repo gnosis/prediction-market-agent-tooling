@@ -7,7 +7,7 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
-    DatetimeWithTimezone,
+    DatetimeUTC,
     OutcomeStr,
     Wei,
     xDai,
@@ -81,7 +81,7 @@ def test_omen_market_close_time() -> None:
         assert (
             market.close_time >= time_now
         ), "Market close time should be in the future."
-        time_now = DatetimeWithTimezone(
+        time_now = DatetimeUTC(
             market.close_time
         )  # Ensure close time is in ascending order
 

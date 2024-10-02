@@ -96,9 +96,9 @@ class OmenAgentMarket(AgentMarket):
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
     condition: Condition
-    finalized_time: datetime | None
-    created_time: datetime
-    close_time: datetime
+    finalized_time: DatetimeUTC | None
+    created_time: DatetimeUTC
+    close_time: DatetimeUTC
     fee: float  # proportion, from 0 to 1
 
     _binary_market_p_yes_history: list[Probability] | None = None
@@ -386,7 +386,7 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime
+        better_address: ChecksumAddress, start_time: DatetimeUTC
     ) -> list[Bet]:
         bets = OmenSubgraphHandler().get_bets(
             better_address=better_address, start_time=start_time
@@ -396,7 +396,9 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_resolved_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime, end_time: datetime | None
+        better_address: ChecksumAddress,
+        start_time: DatetimeUTC,
+        end_time: DatetimeUTC | None,
     ) -> list[ResolvedBet]:
         subgraph_handler = OmenSubgraphHandler()
         bets = subgraph_handler.get_resolved_bets_with_valid_answer(
@@ -835,7 +837,7 @@ def omen_create_market_tx(
     api_keys: APIKeys,
     initial_funds: xDai,
     question: str,
-    closing_time: datetime,
+    closing_time: DatetimeUTC,
     category: str,
     language: str,
     outcomes: list[str],

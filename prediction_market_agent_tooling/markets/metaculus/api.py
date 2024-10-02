@@ -65,7 +65,7 @@ def get_questions(
     order_by: str | None = None,
     offset: int = 0,
     tournament_id: int | None = None,
-    created_after: datetime | None = None,
+    created_after: DatetimeUTC | None = None,
     status: str | None = None,
 ) -> list[MetaculusQuestion]:
     """

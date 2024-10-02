@@ -325,7 +325,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         filter_by: FilterBy,
         sort_by: SortBy,
         # Additional filters, these can not be modified by the enums above.
-        created_after: datetime | None = None,
+        created_after: DatetimeUTC | None = None,
         excluded_questions: set[str] | None = None,  # question titles
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
@@ -338,7 +338,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         # These values need to be set according to the filter_by value, so they can not be passed as arguments.
         finalized: bool | None = None
         resolved: bool | None = None
-        opened_after: datetime | None = None
+        opened_after: DatetimeUTC | None = None
         liquidity_bigger_than: Wei | None = None
 
         if filter_by == FilterBy.RESOLVED:
@@ -535,12 +535,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_trades(
         self,
         better_address: ChecksumAddress | None = None,
-        start_time: datetime | None = None,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         type_: t.Literal["Buy", "Sell"] | None = None,
-        market_opening_after: datetime | None = None,
+        market_opening_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         if not end_time:
@@ -578,11 +578,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_bets(
         self,
         better_address: ChecksumAddress | None = None,
-        start_time: datetime | None = None,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
-        market_opening_after: datetime | None = None,
+        market_opening_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         return self.get_trades(
@@ -599,7 +599,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_resolved_bets(
         self,
         better_address: ChecksumAddress,
-        start_time: datetime,
+        start_time: DatetimeUTC,
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
@@ -615,7 +615,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_resolved_bets_with_valid_answer(
         self,
         better_address: ChecksumAddress,
-        start_time: datetime,
+        start_time: DatetimeUTC,
         end_time: t.Optional[datetime] = None,
         market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
@@ -631,9 +631,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_reality_question_filters(
         user: HexAddress | None = None,
         claimed: bool | None = None,
-        current_answer_before: datetime | None = None,
-        finalized_before: datetime | None = None,
-        finalized_after: datetime | None = None,
+        current_answer_before: DatetimeUTC | None = None,
+        finalized_before: DatetimeUTC | None = None,
+        finalized_after: DatetimeUTC | None = None,
         id_in: list[str] | None = None,
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
@@ -680,9 +680,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         limit: int | None,
         user: HexAddress | None = None,
         claimed: bool | None = None,
-        current_answer_before: datetime | None = None,
-        finalized_before: datetime | None = None,
-        finalized_after: datetime | None = None,
+        current_answer_before: DatetimeUTC | None = None,
+        finalized_before: DatetimeUTC | None = None,
+        finalized_after: DatetimeUTC | None = None,
         id_in: list[str] | None = None,
         question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityQuestion]:
@@ -725,9 +725,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         user: HexAddress | None = None,
         question_id: HexBytes | None = None,
         question_claimed: bool | None = None,
-        question_finalized_before: datetime | None = None,
-        question_finalized_after: datetime | None = None,
-        question_current_answer_before: datetime | None = None,
+        question_finalized_before: DatetimeUTC | None = None,
+        question_finalized_after: DatetimeUTC | None = None,
+        question_current_answer_before: DatetimeUTC | None = None,
         question_id_in: list[HexBytes] | None = None,
     ) -> list[RealityResponse]:
         where_stms: dict[str, t.Any] = {}

@@ -18,7 +18,7 @@ from prediction_market_agent_tooling.tools.utils import convert_to_utc_datetime
 
 
 class ProcessMarketTrace(BaseModel):
-    timestamp: datetime
+    timestamp: int
     market: OmenAgentMarket
     answer: ProbabilisticAnswer
     trades: list[PlacedTrade]
@@ -57,7 +57,7 @@ class ResolvedBetWithTrace(BaseModel):
 def get_traces_for_agent(
     agent_name: str,
     trace_name: str,
-    from_timestamp: datetime,
+    from_timestamp: DatetimeUTC,
     has_output: bool,
     client: Langfuse,
 ) -> list[TraceWithDetails]:
@@ -115,7 +115,7 @@ def trace_to_trades(trace: TraceWithDetails) -> list[PlacedTrade]:
 
 
 def get_closest_datetime_from_list(
-    ref_datetime: datetime, datetimes: list[datetime]
+    ref_datetime: DatetimeUTC, datetimes: list[datetime]
 ) -> int:
     """Get the index of the closest datetime to the reference datetime"""
     if len(datetimes) == 1:

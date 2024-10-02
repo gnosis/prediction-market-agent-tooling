@@ -26,7 +26,7 @@ from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import (
-    DatetimeWithTimezone,
+    DatetimeUTC,
     check_not_none,
     convert_to_utc_datetime,
     should_not_happen,
@@ -40,10 +40,10 @@ class DeployedAgent(BaseModel):
 
     name: str
 
-    start_time: DatetimeWithTimezone
-    end_time: t.Optional[
-        DatetimeWithTimezone
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    start_time: DatetimeUTC
+    end_time: t.Optional[DatetimeUTC] = (
+        None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    )
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
@@ -93,7 +93,7 @@ class DeployedAgent(BaseModel):
     @staticmethod
     def from_api_keys(
         name: str,
-        start_time: DatetimeWithTimezone,
+        start_time: DatetimeUTC,
         api_keys: APIKeys,
     ) -> "DeployedAgent":
         raise NotImplementedError("Subclasses must implement this method.")

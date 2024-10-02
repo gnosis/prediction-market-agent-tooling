@@ -6,6 +6,7 @@ from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 from prediction_market_agent_tooling.gtypes import Probability
 
 
@@ -41,7 +42,7 @@ class AbstractBenchmarkedAgent:
     def is_predictable_restricted(
         self,
         market_question: str,
-        time_restriction_up_to: datetime,
+        time_restriction_up_to: DatetimeUTC,
     ) -> bool:
         """
         Override if the agent can decide to not predict the question, before doing the hard work.
@@ -53,7 +54,7 @@ class AbstractBenchmarkedAgent:
     def predict_restricted(
         self,
         market_question: str,
-        time_restriction_up_to: datetime,
+        time_restriction_up_to: DatetimeUTC,
     ) -> Prediction:
         """
         Predict the outcome of the market question.
@@ -65,7 +66,7 @@ class AbstractBenchmarkedAgent:
     def check_and_predict_restricted(
         self,
         market_question: str,
-        time_restriction_up_to: datetime,
+        time_restriction_up_to: DatetimeUTC,
     ) -> Prediction:
         """
         Data used must be restricted to the time_restriction_up_to.
@@ -94,7 +95,7 @@ class RandomAgent(AbstractBenchmarkedAgent):
         )
 
     def predict_restricted(
-        self, market_question: str, time_restriction_up_to: datetime
+        self, market_question: str, time_restriction_up_to: DatetimeUTC
     ) -> Prediction:
         return self.predict(market_question)
 
@@ -117,6 +118,6 @@ class FixedAgent(AbstractBenchmarkedAgent):
         )
 
     def predict_restricted(
-        self, market_question: str, time_restriction_up_to: datetime
+        self, market_question: str, time_restriction_up_to: DatetimeUTC
     ) -> Prediction:
         return self.predict(market_question)

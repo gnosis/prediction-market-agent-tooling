@@ -15,7 +15,7 @@ from prediction_market_agent_tooling.monitor.monitor import (
     DeployedAgent,
     KubernetesCronJob,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class DeployedManifoldAgent(DeployedAgent):
@@ -57,7 +57,7 @@ class DeployedManifoldAgent(DeployedAgent):
     @staticmethod
     def from_api_keys(
         name: str,
-        start_time: DatetimeWithTimezone,
+        start_time: DatetimeUTC,
         api_keys: APIKeys,
     ) -> "DeployedManifoldAgent":
         return DeployedManifoldAgent(

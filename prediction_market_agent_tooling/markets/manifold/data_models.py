@@ -10,7 +10,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProfitAmount,
     Resolution,
 )
-from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.utils import (
+    should_not_happen,
+    DatetimeUTC,
+)
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
 
@@ -33,7 +36,7 @@ class ManifoldAnswersMode(str, Enum):
 
 
 class ManifoldAnswer(BaseModel):
-    createdTime: datetime
+    createdTime: DatetimeUTC
     avatarUrl: str
     id: str
     username: str
@@ -55,8 +58,8 @@ class ManifoldMarket(BaseModel):
     id: str
     question: str
     creatorId: str
-    closeTime: datetime
-    createdTime: datetime
+    closeTime: DatetimeUTC
+    createdTime: DatetimeUTC
     creatorAvatarUrl: t.Optional[str] = None
     creatorName: str
     creatorUsername: str
@@ -65,7 +68,7 @@ class ManifoldMarket(BaseModel):
     resolutionTime: t.Optional[datetime] = None
     lastBetTime: t.Optional[datetime] = None
     lastCommentTime: t.Optional[datetime] = None
-    lastUpdatedTime: datetime
+    lastUpdatedTime: DatetimeUTC
     mechanism: str
     outcomeType: str
     p: t.Optional[float] = None
@@ -101,13 +104,15 @@ class ManifoldMarket(BaseModel):
         return f"Manifold's market: {self.question}"
 
     @field_validator("closeTime", mode="before")
-    def clip_timestamp(cls, value: int) -> datetime:
+    def clip_timestamp(cls, value: int) -> int:
         """
         Clip the timestamp to the maximum valid timestamp.
         """
         max_timestamp = (datetime.max - timedelta(days=1)).timestamp()
-        value = int(min(value / 1000, max_timestamp))
-        return datetime.fromtimestamp(value)
+        value = int(
+            min(value / 1000, max_timestamp)
+        )  # Manifold's timestamp is in miliseconds, so / 1000.
+        return value
 
 
 class FullManifoldMarket(ManifoldMarket):
@@ -137,7 +142,7 @@ class ManifoldUser(BaseModel):
     """
 
     id: str
-    createdTime: datetime
+    createdTime: DatetimeUTC
     name: str
     username: str
     url: str
@@ -193,7 +198,7 @@ class ManifoldBet(BaseModel):
     loanAmount: Mana | None
     orderAmount: t.Optional[Mana] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
-    createdTime: datetime
+    createdTime: DatetimeUTC
     outcome: Resolution
 
     def get_resolved_boolean_outcome(self) -> bool:
@@ -237,4 +242,4 @@ class ManifoldContractMetric(BaseModel):
     userUsername: str
     userName: str
     userAvatarUrl: str
-    lastBetTime: datetime
+    lastBetTime: DatetimeUTC

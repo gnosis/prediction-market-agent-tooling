@@ -28,6 +28,8 @@ from prediction_market_agent_tooling.markets.data_models import (
 from prediction_market_agent_tooling.tools.utils import (
     check_not_none,
     should_not_happen,
+    DatetimeUTC,
+    to_utc_datetime,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
@@ -84,8 +86,8 @@ class Question(BaseModel):
         return len(self.outcomes)
 
     @property
-    def opening_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.openingTimestamp)
+    def opening_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.openingTimestamp)
 
     @property
     def has_answer(self) -> bool:
@@ -218,8 +220,8 @@ class OmenMarket(BaseModel):
         return self.question.openingTimestamp
 
     @property
-    def opening_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.openingTimestamp, tz=pytz.UTC)
+    def opening_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.openingTimestamp)
 
     @property
     def close_time(self) -> datetime:
@@ -257,16 +259,12 @@ class OmenMarket(BaseModel):
         return self.title
 
     @property
-    def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp)
+    def creation_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.creationTimestamp)
 
     @property
-    def finalized_datetime(self) -> datetime | None:
-        return (
-            datetime.fromtimestamp(self.answerFinalizedTimestamp)
-            if self.answerFinalizedTimestamp is not None
-            else None
-        )
+    def finalized_datetime(self) -> DatetimeUTC | None:
+        return to_utc_datetime(self.answerFinalizedTimestamp)
 
     @property
     def has_bonded_outcome(self) -> bool:
@@ -490,8 +488,8 @@ class OmenBet(BaseModel):
     fpmm: OmenMarket
 
     @property
-    def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp, tz=pytz.UTC)
+    def creation_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.creationTimestamp)
 
     @property
     def boolean_outcome(self) -> bool:
@@ -548,9 +546,7 @@ class OmenBet(BaseModel):
             market_question=self.title,
             market_id=self.fpmm.id,
             market_outcome=self.fpmm.boolean_outcome,
-            resolved_time=datetime.fromtimestamp(
-                check_not_none(self.fpmm.answerFinalizedTimestamp)
-            ),
+            resolved_time=check_not_none(self.fpmm.finalized_datetime),
             profit=self.get_profit(),
         )
 
@@ -571,11 +567,11 @@ class RealityQuestion(BaseModel):
     id: str
     user: HexAddress
     historyHash: HexBytes | None
-    updatedTimestamp: datetime
+    updatedTimestamp: DatetimeUTC
     contentHash: HexBytes
     questionId: HexBytes
-    answerFinalizedTimestamp: datetime
-    currentScheduledFinalizationTimestamp: datetime
+    answerFinalizedTimestamp: DatetimeUTC
+    currentScheduledFinalizationTimestamp: DatetimeUTC
 
     @property
     def url(self) -> str:
@@ -584,7 +580,7 @@ class RealityQuestion(BaseModel):
 
 class RealityAnswer(BaseModel):
     id: str
-    timestamp: datetime
+    timestamp: DatetimeUTC
     answer: HexBytes
     lastBond: Wei
     bondAggregate: Wei
@@ -598,7 +594,7 @@ class RealityResponse(BaseModel):
     """
 
     id: str
-    timestamp: datetime
+    timestamp: int
     answer: HexBytes
     isUnrevealed: bool
     isCommitment: bool

@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
 import pytz
@@ -14,7 +14,7 @@ from scipy.optimize import newton
 from scipy.stats import entropy
 
 from prediction_market_agent_tooling.gtypes import (
-    DatetimeWithTimezone,
+    DatetimeUTC,
     PrivateKey,
     Probability,
     SecretStr,
@@ -86,16 +86,14 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def convert_to_utc_datetime(value: datetime) -> DatetimeWithTimezone:
-    ...
+def convert_to_utc_datetime(value: datetime) -> DatetimeUTC: ...
 
 
 @t.overload
-def convert_to_utc_datetime(value: None) -> None:
-    ...
+def convert_to_utc_datetime(value: None) -> None: ...
 
 
-def convert_to_utc_datetime(value: datetime | None) -> DatetimeWithTimezone | None:
+def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
     """
     If datetime doesn't come with a timezone, we assume it to be UTC.
     Note: Not great, but at least the error will be constant.
@@ -103,36 +101,31 @@ def convert_to_utc_datetime(value: datetime | None) -> DatetimeWithTimezone | No
     if value is None:
         return None
     if value.tzinfo is None:
+        logger.warning(f"Assuming the timezone is UTC for {value=}")
         value = value.replace(tzinfo=pytz.UTC)
     if value.tzinfo != pytz.UTC:
         value = value.astimezone(pytz.UTC)
-    return cast(DatetimeWithTimezone, value)
+    return cast(DatetimeUTC, value)
 
 
 @t.overload
-def utc_timestamp_to_utc_datetime(ts: int) -> DatetimeWithTimezone:
-    ...
+def to_utc_datetime(value: int) -> DatetimeUTC: ...
 
 
 @t.overload
-def utc_timestamp_to_utc_datetime(ts: None) -> None:
-    ...
+def to_utc_datetime(value: None) -> None: ...
 
 
-def utc_timestamp_to_utc_datetime(ts: int | None) -> DatetimeWithTimezone | None:
-    return (
-        convert_to_utc_datetime(datetime.fromtimestamp(ts, tz=pytz.UTC))
-        if ts is not None
-        else None
-    )
+def to_utc_datetime(value: datetime | int | None) -> DatetimeUTC | None:
+    if isinstance(value, int):
+        value = datetime.fromtimestamp(value, tz=pytz.UTC)
+    return convert_to_utc_datetime(value)
 
 
-UTCDatetimeFromUTCTimestamp = t.Annotated[
-    datetime, BeforeValidator(utc_timestamp_to_utc_datetime)
-]
+DatetimeUTCValidator = t.Annotated[datetime, BeforeValidator(to_utc_datetime)]
 
 
-def utcnow() -> DatetimeWithTimezone:
+def utcnow() -> DatetimeUTC:
     return convert_to_utc_datetime(datetime.now(pytz.UTC))
 
 

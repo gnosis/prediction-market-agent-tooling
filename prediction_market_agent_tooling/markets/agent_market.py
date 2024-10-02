@@ -50,12 +50,12 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: list[str]
-    outcome_token_pool: dict[
-        str, float
-    ] | None  # Should be in currency of `currency` above.
+    outcome_token_pool: (
+        dict[str, float] | None
+    )  # Should be in currency of `currency` above.
     resolution: Resolution | None
-    created_time: datetime | None
-    close_time: datetime | None
+    created_time: DatetimeUTC | None
+    close_time: DatetimeUTC | None
     current_p_yes: Probability
     url: str
     volume: float | None  # Should be in currency of `currency` above.
@@ -191,13 +191,15 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime
+        better_address: ChecksumAddress, start_time: DatetimeUTC
     ) -> list[Bet]:
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
     def get_resolved_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime, end_time: datetime | None
+        better_address: ChecksumAddress,
+        start_time: DatetimeUTC,
+        end_time: DatetimeUTC | None,
     ) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method")
 

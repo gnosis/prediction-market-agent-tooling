@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
+from loguru import logger
 from scipy.optimize import minimize_scalar
 
 from prediction_market_agent_tooling.gtypes import xDai
@@ -150,6 +151,14 @@ class KellyBettingStrategy(BettingStrategy):
         self, buy_direction: bool, bet_size: float, market: AgentMarket
     ) -> None:
         """Bet size cannot be larger than max_price_impact"""
+
+        if not market.outcome_token_pool or not self.max_price_impact:
+            logger.warning(
+                f"Could not assert price impact, check variables: market.outcome_token_pool "
+                f"{market.outcome_token_pool} and self.max_price_impact {self.max_price_impact}"
+            )
+            return
+
         price_impact = self.calculate_price_impact_for_bet_amount(
             buy_direction,
             bet_size,
@@ -235,20 +244,12 @@ class KellyBettingStrategy(BettingStrategy):
         price_impact = (actual_price - expected_price) / expected_price
         return price_impact
 
-    def calculate_price_impact_deviation_from_target_price_impact(b: xDai) -> float:
-        price_impact = self.calculate_price_impact_for_bet_amount(
-            kelly_bet_direction,
-            bet_amount,
-            yes_outcome_pool_size,
-            no_outcome_pool_size,
-            fee,
-        )
-        # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
-        return abs(price_impact - self.max_price_impact)
-
     def calculate_bet_amount_for_price_impact(
         self, market: AgentMarket, kelly_bet: SimpleBet, fee: float
     ) -> float:
+        if not self.max_price_impact:
+            raise EnvironmentError("This method requires max_price_impact to be set")
+
         def calculate_price_impact_deviation_from_target_price_impact(
             bet_amount: xDai,
         ) -> float:
@@ -260,7 +261,14 @@ class KellyBettingStrategy(BettingStrategy):
                 fee,
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
-            return abs(price_impact - self.max_price_impact)
+
+            return abs(price_impact - self.max_price_impact)  # type: ignore[operator]
+
+        if not market.outcome_token_pool:
+            logger.warning(
+                "Market outcome_token_pool is None, cannot calculate bet amount"
+            )
+            return kelly_bet.size
 
         yes_outcome_pool_size = market.outcome_token_pool[
             market.get_outcome_str_from_bool(True)
@@ -276,7 +284,7 @@ class KellyBettingStrategy(BettingStrategy):
             tol=1e-11,
             options={"maxiter": 10000},
         )
-        return optimized_bet_amount.x
+        return float(optimized_bet_amount.x)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount}, max_price_impact={self.max_price_impact})"

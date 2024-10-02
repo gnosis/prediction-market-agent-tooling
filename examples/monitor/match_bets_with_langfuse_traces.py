@@ -9,11 +9,11 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     KellyBettingStrategy,
-    ProbabilisticAnswer,
-    TradeType,
     MaxAccuracyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MaxExpectedValueBettingStrategy,
+    ProbabilisticAnswer,
+    TradeType,
 )
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -298,11 +298,11 @@ if __name__ == "__main__":
         pd.DataFrame.from_records(details).to_csv(f"{agent_name}_details.csv")
 
     print(f"Correlation between p_yes mse and total profit:")
-    for strategy, mse_profit in strat_mse_profits.items():
+    for strategy_name, mse_profit in strat_mse_profits.items():
         mse = mse_profit.p_yes_mse
         profit = mse_profit.total_profit
         correlation = pd.Series(mse).corr(pd.Series(profit))
-        print(f"{strategy}: {correlation=}")
+        print(f"{strategy_name}: {correlation=}")
 
     with open("match_bets_with_langfuse_traces_overall.md", "w") as overall_f:
         overall_f.write(overall_md)

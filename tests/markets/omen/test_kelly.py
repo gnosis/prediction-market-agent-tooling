@@ -29,7 +29,7 @@ def assert_price_impact(
     yes: float,
     no: float,
     kelly: KellyBettingStrategy,
-):
+) -> None:
     price_impact = kelly.calculate_price_impact_for_bet_amount(
         buy_direction, bet_amount=bet_amount, yes=yes, no=no, fee=0
     )

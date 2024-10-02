@@ -104,11 +104,21 @@ def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        logger.error(f"Assuming the timezone is UTC for {value=}")
+        logger.warning(f"Assuming the timezone is UTC for {value=}")
         value = value.replace(tzinfo=pytz.UTC)
     if value.tzinfo != pytz.UTC:
         value = value.astimezone(pytz.UTC)
     return cast(DatetimeUTC, value)
+
+
+@t.overload
+def to_utc_datetime(value: datetime) -> DatetimeUTC:
+    ...
+
+
+@t.overload
+def to_utc_datetime(value: str) -> DatetimeUTC:
+    ...
 
 
 @t.overload

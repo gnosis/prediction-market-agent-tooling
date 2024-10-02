@@ -235,16 +235,27 @@ class KellyBettingStrategy(BettingStrategy):
         price_impact = (actual_price - expected_price) / expected_price
         return price_impact
 
+    def calculate_price_impact_deviation_from_target_price_impact(
+        self,
+        bet_amount: xDai,
+        kelly_bet_direction: bool,
+        yes_outcome_pool_size: float,
+        no_outcome_pool_size: float,
+        fee: float,
+    ) -> float:
+        price_impact = self.calculate_price_impact_for_bet_amount(
+            kelly_bet_direction,
+            bet_amount,
+            yes_outcome_pool_size,
+            no_outcome_pool_size,
+            fee,
+        )
+        # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
+        return abs(price_impact - self.max_price_impact)
+
     def calculate_bet_amount_for_price_impact(
         self, market: AgentMarket, kelly_bet: SimpleBet, fee: float
     ) -> float:
-        def calculate_price_impact_deviation_from_target_price_impact(b: xDai) -> float:
-            price_impact = self.calculate_price_impact_for_bet_amount(
-                kelly_bet.direction, b, yes_outcome_pool_size, no_outcome_pool_size, fee
-            )
-            # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
-            return abs(price_impact - self.max_price_impact)
-
         yes_outcome_pool_size = market.outcome_token_pool[
             market.get_outcome_str_from_bool(True)
         ]
@@ -253,7 +264,13 @@ class KellyBettingStrategy(BettingStrategy):
         ]
 
         optimized_bet_amount = minimize_scalar(
-            calculate_price_impact_deviation_from_target_price_impact,
+            lambda bet_amount: self.calculate_price_impact_deviation_from_target_price_impact(
+                bet_amount,
+                kelly_bet.direction,
+                yes_outcome_pool_size,
+                no_outcome_pool_size,
+                fee,
+            ),
             bounds=(min(yes_outcome_pool_size, no_outcome_pool_size) / 1000, 1000),
             method="bounded",
             tol=1e-11,

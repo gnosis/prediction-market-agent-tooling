@@ -5,7 +5,6 @@ import pandas as pd
 from langfuse import Langfuse
 from pydantic import BaseModel
 
-from examples.monitor.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
@@ -18,6 +17,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
 )
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     ProcessMarketTrace,
     ResolvedBetWithTrace,

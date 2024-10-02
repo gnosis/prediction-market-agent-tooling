@@ -18,7 +18,6 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
-    DatetimeUTCValidator,
     check_not_none,
     should_not_happen,
     utcnow,
@@ -54,8 +53,8 @@ class AgentMarket(BaseModel):
         dict[str, float] | None
     )  # Should be in currency of `currency` above.
     resolution: Resolution | None
-    created_time: DatetimeUTCValidator | None
-    close_time: DatetimeUTCValidator | None
+    created_time: DatetimeUTC | None
+    close_time: DatetimeUTC | None
     current_p_yes: Probability
     url: str
     volume: float | None  # Should be in currency of `currency` above.

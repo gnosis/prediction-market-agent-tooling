@@ -1,16 +1,13 @@
 import json
 import os
 import subprocess
-import typing as t
 from datetime import datetime
 from typing import Any, NoReturn, Optional, Type, TypeVar
 
 import pytz
 import requests
-from dateutil import parser
 from google.cloud import secretmanager
 from pydantic import BaseModel, ValidationError
-from pydantic.functional_validators import BeforeValidator
 from scipy.optimize import newton
 from scipy.stats import entropy
 
@@ -84,41 +81,6 @@ def export_requirements_from_toml(output_dir: str) -> None:
         check=True,
     )
     logger.debug(f"Saved requirements to {output_dir}/requirements.txt")
-
-
-@t.overload
-def to_utc_datetime(value: datetime) -> DatetimeUTC:
-    ...
-
-
-@t.overload
-def to_utc_datetime(value: str) -> DatetimeUTC:
-    ...
-
-
-@t.overload
-def to_utc_datetime(value: int) -> DatetimeUTC:
-    ...
-
-
-@t.overload
-def to_utc_datetime(value: None) -> None:
-    ...
-
-
-def to_utc_datetime(value: datetime | int | str | None) -> DatetimeUTC | None:
-    if value is None:
-        return None
-    elif isinstance(value, int):
-        # Divide by 1000 if the timestamp is assumed to be in miliseconds (if not, 1e11 would be year 5138).
-        value = int(value / 1000) if value > 1e11 else value
-        value = datetime.fromtimestamp(value, tz=pytz.UTC)
-    elif isinstance(value, str):
-        value = parser.parse(value)
-    return DatetimeUTC.from_datetime(value)
-
-
-DatetimeUTCValidator = t.Annotated[DatetimeUTC, BeforeValidator(to_utc_datetime)]
 
 
 def utcnow() -> DatetimeUTC:

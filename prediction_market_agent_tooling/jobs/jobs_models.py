@@ -8,10 +8,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     FilterBy,
     SortBy,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    DatetimeUTC,
-    DatetimeUTCValidator,
-)
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class SimpleJob(BaseModel):
@@ -19,7 +16,7 @@ class SimpleJob(BaseModel):
     job: str
     reward: float
     currency: str
-    deadline: DatetimeUTCValidator
+    deadline: DatetimeUTC
 
 
 class JobAgentMarket(AgentMarket, ABC):

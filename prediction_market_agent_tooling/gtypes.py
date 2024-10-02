@@ -1,8 +1,6 @@
 import typing as t
-from datetime import datetime
 from typing import NewType, Union
 
-import pytz
 from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     Address,
     ChecksumAddress,
@@ -18,7 +16,9 @@ from web3.types import (  # noqa: F401  # Import for the sake of easy importing 
     Wei,
 )
 
-from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.tools.datetime_utc import (  # noqa: F401  # Import for the sake of easy importing with others from here.
+    DatetimeUTC,
+)
 from prediction_market_agent_tooling.tools.hexbytes_custom import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     HexBytes,
 )
@@ -36,33 +36,6 @@ Mana = NewType("Mana", float)  # Manifold's "currency"
 USDC = NewType("USDC", float)
 ChainID = NewType("ChainID", int)
 IPFSCIDVersion0 = NewType("IPFSCIDVersion0", str)
-
-
-class DatetimeUTC(datetime):
-    """
-    As a subclass of `datetime` instead of `NewType` because otherwise it doesn't work with issubclass command which is required for SQLModel/Pydantic.
-    """
-
-    @staticmethod
-    def from_datetime(dt: datetime) -> "DatetimeUTC":
-        """
-        Converts a datetime object to DatetimeUTC, ensuring it is timezone-aware in UTC.
-        """
-        if dt.tzinfo is None:
-            logger.warning(
-                f"Assuming the timezone of {dt=} is local to the executor of the code."
-            )
-        dt = dt.astimezone(pytz.UTC)
-        return DatetimeUTC(
-            dt.year,
-            dt.month,
-            dt.day,
-            dt.hour,
-            dt.minute,
-            dt.second,
-            dt.microsecond,
-            tzinfo=pytz.UTC,
-        )
 
 
 def usd_type(amount: Union[str, int, float]) -> USD:

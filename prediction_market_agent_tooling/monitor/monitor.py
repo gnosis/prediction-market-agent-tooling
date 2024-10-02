@@ -27,7 +27,6 @@ from prediction_market_agent_tooling.markets.data_models import Resolution, Reso
 from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
-    DatetimeUTCValidator,
     check_not_none,
     should_not_happen,
 )
@@ -40,8 +39,8 @@ class DeployedAgent(BaseModel):
 
     name: str
 
-    start_time: DatetimeUTCValidator
-    end_time: DatetimeUTCValidator | None = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    start_time: DatetimeUTC
+    end_time: DatetimeUTC | None = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None

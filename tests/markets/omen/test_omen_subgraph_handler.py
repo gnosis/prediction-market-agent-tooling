@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import to_utc_datetime, utc_datetime
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utc_datetime
 
 MARKET_ID_WITH_SDAI_AS_COLLATERAL = "0x4ecb20cea4d1b0c90d935a45213d27e1695bee92"
 
@@ -45,8 +45,8 @@ def test_markets_with_creation_timestamp_between(
     bets = omen_subgraph_handler.get_bets(
         better_address=Web3.to_checksum_address(creator),
         filter_by_answer_finalized_not_null=False,
-        start_time=to_utc_datetime(1625073159),
-        end_time=to_utc_datetime(1625073162),
+        start_time=DatetimeUTC.to_datetime_utc(1625073159),
+        end_time=DatetimeUTC.to_datetime_utc(1625073162),
     )
     assert len(bets) == 1
     bet = bets[0]

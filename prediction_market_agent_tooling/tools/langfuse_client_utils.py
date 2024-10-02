@@ -13,7 +13,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC, to_utc_datetime
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class ProcessMarketTrace(BaseModel):
@@ -24,7 +24,7 @@ class ProcessMarketTrace(BaseModel):
 
     @property
     def timestamp_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.timestamp)
+        return DatetimeUTC.to_datetime_utc(self.timestamp)
 
     @property
     def buy_trade(self) -> PlacedTrade | None:

@@ -10,11 +10,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProfitAmount,
     Resolution,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    DatetimeUTC,
-    DatetimeUTCValidator,
-    should_not_happen,
-)
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
 
@@ -37,7 +33,7 @@ class ManifoldAnswersMode(str, Enum):
 
 
 class ManifoldAnswer(BaseModel):
-    createdTime: DatetimeUTCValidator
+    createdTime: DatetimeUTC
     avatarUrl: str
     id: str
     username: str
@@ -59,8 +55,8 @@ class ManifoldMarket(BaseModel):
     id: str
     question: str
     creatorId: str
-    closeTime: DatetimeUTCValidator
-    createdTime: DatetimeUTCValidator
+    closeTime: DatetimeUTC
+    createdTime: DatetimeUTC
     creatorAvatarUrl: t.Optional[str] = None
     creatorName: str
     creatorUsername: str
@@ -69,7 +65,7 @@ class ManifoldMarket(BaseModel):
     resolutionTime: t.Optional[DatetimeUTC] = None
     lastBetTime: t.Optional[DatetimeUTC] = None
     lastCommentTime: t.Optional[DatetimeUTC] = None
-    lastUpdatedTime: DatetimeUTCValidator
+    lastUpdatedTime: DatetimeUTC
     mechanism: str
     outcomeType: str
     p: t.Optional[float] = None
@@ -143,7 +139,7 @@ class ManifoldUser(BaseModel):
     """
 
     id: str
-    createdTime: DatetimeUTCValidator
+    createdTime: DatetimeUTC
     name: str
     username: str
     url: str
@@ -199,7 +195,7 @@ class ManifoldBet(BaseModel):
     loanAmount: Mana | None
     orderAmount: t.Optional[Mana] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
-    createdTime: DatetimeUTCValidator
+    createdTime: DatetimeUTC
     outcome: Resolution
 
     def get_resolved_boolean_outcome(self) -> bool:
@@ -243,4 +239,4 @@ class ManifoldContractMetric(BaseModel):
     userUsername: str
     userName: str
     userAvatarUrl: str
-    lastBetTime: DatetimeUTCValidator
+    lastBetTime: DatetimeUTC

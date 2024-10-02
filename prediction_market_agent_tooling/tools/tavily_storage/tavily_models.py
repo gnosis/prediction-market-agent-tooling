@@ -18,7 +18,7 @@ from sqlmodel import (
 )
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.tools.utils import DatetimeUTCValidator, utcnow
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 
 class TavilyResult(BaseModel):
@@ -59,7 +59,7 @@ class TavilyResponseModel(SQLModel, table=True):
     include_images: bool
     use_cache: bool
     # Datetime at the time of search response and response from the search
-    datetime_: DatetimeUTCValidator = Field(index=True, nullable=False)
+    datetime_: DatetimeUTC = Field(index=True, nullable=False)
     response: dict[str, t.Any] = Field(sa_column=Column(JSONB, nullable=False))
 
     @staticmethod

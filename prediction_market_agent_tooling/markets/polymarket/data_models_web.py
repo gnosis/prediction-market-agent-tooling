@@ -14,7 +14,7 @@ from pydantic import BaseModel, field_validator
 from prediction_market_agent_tooling.gtypes import USDC, HexAddress
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.tools.utils import DatetimeUTCValidator
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 POLYMARKET_BASE_URL = "https://polymarket.com"
 POLYMARKET_TRUE_OUTCOME = "Yes"
@@ -38,7 +38,7 @@ class Event(BaseModel):
 
 
 class Event1(BaseModel):
-    startDate: DatetimeUTCValidator | None = None
+    startDate: DatetimeUTC | None = None
     slug: str
 
 
@@ -79,13 +79,13 @@ class Market(BaseModel):
     slug: str
     twitterCardImage: t.Any | None = None
     resolutionSource: str | None = None
-    endDate: DatetimeUTCValidator
+    endDate: DatetimeUTC
     category: t.Any | None = None
     ammType: t.Any | None = None
     description: str
     liquidity: str | None = None
-    startDate: DatetimeUTCValidator | None = None
-    createdAt: DatetimeUTCValidator
+    startDate: DatetimeUTC | None = None
+    createdAt: DatetimeUTC
     xAxisValue: t.Any | None = None
     yAxisValue: t.Any | None = None
     denominationToken: t.Any | None = None
@@ -106,7 +106,7 @@ class Market(BaseModel):
     upperBoundDate: t.Any | None = None
     closed: bool
     marketMakerAddress: HexAddress
-    closedTime: DatetimeUTCValidator | None = None
+    closedTime: DatetimeUTC | None = None
     wideFormat: bool | None = None
     new: bool | None = None
     sentDiscord: t.Any | None = None
@@ -129,9 +129,9 @@ class Market(BaseModel):
     curationOrder: t.Any | None = None
     volumeNum: USDC | None = None
     liquidityNum: float | None = None
-    endDateIso: DatetimeUTCValidator | None = None
-    startDateIso: DatetimeUTCValidator | None = None
-    umaEndDateIso: DatetimeUTCValidator | None = None
+    endDateIso: DatetimeUTC | None = None
+    startDateIso: DatetimeUTC | None = None
+    umaEndDateIso: DatetimeUTC | None = None
     commentsEnabled: bool | None = None
     disqusThread: t.Any | None = None
     gameStartTime: t.Any | None = None
@@ -236,8 +236,8 @@ class PolymarketFullMarket(BaseModel):
     description: str
     commentCount: int | None = None
     resolutionSource: str | None = None
-    startDate: DatetimeUTCValidator | None = None
-    endDate: DatetimeUTCValidator
+    startDate: DatetimeUTC | None = None
+    endDate: DatetimeUTC
     image: str | None = None
     icon: str | None = None
     featuredImage: str | None = None
@@ -253,10 +253,10 @@ class PolymarketFullMarket(BaseModel):
     competitive: float | None = None
     openInterest: int | None = None
     sortBy: str | None = None
-    createdAt: DatetimeUTCValidator
+    createdAt: DatetimeUTC
     commentsEnabled: bool | None = None
     disqusThread: t.Any | None = None
-    updatedAt: DatetimeUTCValidator
+    updatedAt: DatetimeUTC
     enableOrderBook: bool | None = None
     liquidityAmm: float | None = None
     liquidityClob: float | None = None

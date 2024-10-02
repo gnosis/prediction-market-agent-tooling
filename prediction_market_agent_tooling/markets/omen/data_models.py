@@ -27,7 +27,6 @@ from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
     should_not_happen,
-    to_utc_datetime,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
@@ -85,7 +84,7 @@ class Question(BaseModel):
 
     @property
     def opening_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.openingTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.openingTimestamp)
 
     @property
     def has_answer(self) -> bool:
@@ -219,7 +218,7 @@ class OmenMarket(BaseModel):
 
     @property
     def opening_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.openingTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.openingTimestamp)
 
     @property
     def close_time(self) -> DatetimeUTC:
@@ -258,11 +257,15 @@ class OmenMarket(BaseModel):
 
     @property
     def creation_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.creationTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.creationTimestamp)
 
     @property
     def finalized_datetime(self) -> DatetimeUTC | None:
-        return to_utc_datetime(self.answerFinalizedTimestamp)
+        return (
+            DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
+            if self.answerFinalizedTimestamp is not None
+            else None
+        )
 
     @property
     def has_bonded_outcome(self) -> bool:
@@ -487,7 +490,7 @@ class OmenBet(BaseModel):
 
     @property
     def creation_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.creationTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.creationTimestamp)
 
     @property
     def boolean_outcome(self) -> bool:
@@ -573,15 +576,15 @@ class RealityQuestion(BaseModel):
 
     @property
     def updated_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.updatedTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.updatedTimestamp)
 
     @property
     def answer_finalized_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.answerFinalizedTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
 
     @property
     def current_scheduled_finalization_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.currentScheduledFinalizationTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.currentScheduledFinalizationTimestamp)
 
     @property
     def url(self) -> str:
@@ -599,7 +602,7 @@ class RealityAnswer(BaseModel):
 
     @property
     def timestamp_datetime(self) -> DatetimeUTC:
-        return to_utc_datetime(self.timestamp)
+        return DatetimeUTC.to_datetime_utc(self.timestamp)
 
 
 class RealityResponse(BaseModel):

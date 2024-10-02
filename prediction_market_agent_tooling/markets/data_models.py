@@ -4,7 +4,7 @@ from typing import Annotated, TypeAlias
 from pydantic import BaseModel, BeforeValidator, computed_field
 
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
-from prediction_market_agent_tooling.tools.utils import DatetimeUTCValidator
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class Currency(str, Enum):
@@ -40,7 +40,7 @@ class Bet(BaseModel):
     id: str
     amount: BetAmount
     outcome: bool
-    created_time: DatetimeUTCValidator
+    created_time: DatetimeUTC
     market_question: str
     market_id: str
 
@@ -50,7 +50,7 @@ class Bet(BaseModel):
 
 class ResolvedBet(Bet):
     market_outcome: bool
-    resolved_time: DatetimeUTCValidator
+    resolved_time: DatetimeUTC
     profit: ProfitAmount
 
     @computed_field  # type: ignore[prop-decorator]

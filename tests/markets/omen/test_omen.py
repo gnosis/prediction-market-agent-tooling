@@ -4,7 +4,7 @@ from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import DatetimeUTC, OutcomeStr, Wei, xDai
+from prediction_market_agent_tooling.gtypes import OutcomeStr, Wei, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Position, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -78,9 +78,7 @@ def test_omen_market_close_time() -> None:
         assert (
             market.close_time >= time_now
         ), "Market close time should be in the future."
-        time_now = DatetimeUTC(
-            market.close_time
-        )  # Ensure close time is in ascending order
+        time_now = market.close_time  # Ensure close time is in ascending order
 
 
 def test_market_liquidity() -> None:

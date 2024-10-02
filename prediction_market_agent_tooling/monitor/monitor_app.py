@@ -28,7 +28,6 @@ from prediction_market_agent_tooling.monitor.monitor_settings import MonitorSett
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
-    convert_to_utc_datetime,
     utc_datetime,
     utcnow,
 )
@@ -104,7 +103,7 @@ def monitor_app(
         st.selectbox(label="Market type", options=enabled_market_types, index=0)
     )
     start_time: DatetimeUTC | None = (
-        convert_to_utc_datetime(
+        DatetimeUTC.from_datetime(
             datetime.combine(
                 t.cast(
                     # This will be always a date for us, so casting.

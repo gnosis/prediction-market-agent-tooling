@@ -3,7 +3,7 @@ import os
 import subprocess
 import typing as t
 from datetime import datetime
-from typing import Any, NoReturn, Optional, Type, TypeVar, cast
+from typing import Any, NoReturn, Optional, Type, TypeVar
 
 import pytz
 import requests
@@ -87,31 +87,6 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def convert_to_utc_datetime(value: datetime) -> DatetimeUTC:
-    ...
-
-
-@t.overload
-def convert_to_utc_datetime(value: None) -> None:
-    ...
-
-
-def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
-    """
-    If datetime doesn't come with a timezone, we assume it to be UTC.
-    Note: Not great, but at least the error will be constant.
-    """
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        logger.warning(f"Assuming the timezone is UTC for {value=}")
-        value = value.replace(tzinfo=pytz.UTC)
-    if value.tzinfo != pytz.UTC:
-        value = value.astimezone(pytz.UTC)
-    return cast(DatetimeUTC, value)
-
-
-@t.overload
 def to_utc_datetime(value: datetime) -> DatetimeUTC:
     ...
 
@@ -132,20 +107,22 @@ def to_utc_datetime(value: None) -> None:
 
 
 def to_utc_datetime(value: datetime | int | str | None) -> DatetimeUTC | None:
-    if isinstance(value, int):
+    if value is None:
+        return None
+    elif isinstance(value, int):
         # Divide by 1000 if the timestamp is assumed to be in miliseconds (if not, 1e11 would be year 5138).
         value = int(value / 1000) if value > 1e11 else value
         value = datetime.fromtimestamp(value, tz=pytz.UTC)
     elif isinstance(value, str):
         value = parser.parse(value)
-    return convert_to_utc_datetime(value)
+    return DatetimeUTC.from_datetime(value)
 
 
 DatetimeUTCValidator = t.Annotated[DatetimeUTC, BeforeValidator(to_utc_datetime)]
 
 
 def utcnow() -> DatetimeUTC:
-    return convert_to_utc_datetime(datetime.now(pytz.UTC))
+    return DatetimeUTC.from_datetime(datetime.now(pytz.UTC))
 
 
 def utc_datetime(
@@ -170,7 +147,7 @@ def utc_datetime(
         tzinfo=pytz.UTC,
         fold=fold,
     )
-    return convert_to_utc_datetime(dt)
+    return DatetimeUTC.from_datetime(dt)
 
 
 def get_current_git_commit_sha() -> str:

@@ -74,3 +74,12 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
         for outcome in market.outcomes:
             # Sanity check
             assert market.get_pool_tokens(outcome) > 0
+
+
+@pytest.mark.parametrize("market_type", list(MarketType))
+def test_get_markets(market_type: MarketType) -> None:
+    limit = 10
+    markets = market_type.market_class.get_binary_markets(
+        limit=limit, sort_by=SortBy.NONE, filter_by=FilterBy.OPEN
+    )
+    assert len(markets) <= limit

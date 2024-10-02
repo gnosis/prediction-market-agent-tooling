@@ -5,17 +5,20 @@ import requests
 from ape.managers import ChainManager
 from ape_test import TestAccount
 from dotenv import load_dotenv
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
 from gnosis.eth import EthereumClient
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     HexAddress,
+    PrivateKey,
     private_key_type,
     xDai,
     xdai_type,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -73,3 +76,16 @@ def fund_account_on_tenderly(
     }
     response = requests.post(fork_rpc, json=payload)
     response.raise_for_status()
+
+
+def create_and_fund_random_account(
+    web3: Web3, private_key: PrivateKey, deposit_amount: xDai = xDai(10)
+) -> LocalAccount:
+    fresh_account: LocalAccount = Account.create()
+    send_xdai_to(
+        web3=web3,
+        from_private_key=private_key,
+        to_address=fresh_account.address,
+        value=xdai_to_wei(deposit_amount),
+    )
+    return fresh_account

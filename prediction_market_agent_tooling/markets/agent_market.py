@@ -20,7 +20,6 @@ from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     DatetimeUTCValidator,
     check_not_none,
-    convert_to_utc_datetime,
     should_not_happen,
     utcnow,
 )
@@ -60,13 +59,6 @@ class AgentMarket(BaseModel):
     current_p_yes: Probability
     url: str
     volume: float | None  # Should be in currency of `currency` above.
-
-    _add_timezone_validator_created_time = field_validator("created_time")(
-        convert_to_utc_datetime
-    )
-    _add_timezone_validator_close_time = field_validator("close_time")(
-        convert_to_utc_datetime
-    )
 
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(

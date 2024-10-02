@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from google.cloud.functions_v2.types.functions import Function
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.kubernetes_models import (
@@ -29,7 +29,6 @@ from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     DatetimeUTCValidator,
     check_not_none,
-    convert_to_utc_datetime,
     should_not_happen,
 )
 
@@ -42,19 +41,10 @@ class DeployedAgent(BaseModel):
     name: str
 
     start_time: DatetimeUTCValidator
-    end_time: t.Optional[
-        DatetimeUTCValidator
-    ] = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
+    end_time: DatetimeUTCValidator | None = None  # TODO: If we want end time, we need to store agents somewhere, not just query them from functions.
 
     raw_labels: dict[str, str] | None = None
     raw_env_vars: dict[str, str] | None = None
-
-    _add_timezone_validator_start_time = field_validator("start_time")(
-        convert_to_utc_datetime
-    )
-    _add_timezone_validator_end_time = field_validator("end_time")(
-        convert_to_utc_datetime
-    )
 
     def model_dump_prefixed(self) -> dict[str, t.Any]:
         return {

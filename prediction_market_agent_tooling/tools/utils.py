@@ -86,13 +86,11 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def convert_to_utc_datetime(value: datetime) -> DatetimeUTC:
-    ...
+def convert_to_utc_datetime(value: datetime) -> DatetimeUTC: ...
 
 
 @t.overload
-def convert_to_utc_datetime(value: None) -> None:
-    ...
+def convert_to_utc_datetime(value: None) -> None: ...
 
 
 def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
@@ -103,7 +101,7 @@ def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        logger.warning(f"Assuming the timezone is UTC for {value=}")
+        logger.error(f"Assuming the timezone is UTC for {value=}")
         value = value.replace(tzinfo=pytz.UTC)
     if value.tzinfo != pytz.UTC:
         value = value.astimezone(pytz.UTC)
@@ -111,13 +109,11 @@ def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
 
 
 @t.overload
-def to_utc_datetime(value: int) -> DatetimeUTC:
-    ...
+def to_utc_datetime(value: int) -> DatetimeUTC: ...
 
 
 @t.overload
-def to_utc_datetime(value: None) -> None:
-    ...
+def to_utc_datetime(value: None) -> None: ...
 
 
 def to_utc_datetime(value: datetime | int | None) -> DatetimeUTC | None:

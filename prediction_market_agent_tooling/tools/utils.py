@@ -122,6 +122,8 @@ def to_utc_datetime(value: None) -> None:
 
 def to_utc_datetime(value: datetime | int | None) -> DatetimeUTC | None:
     if isinstance(value, int):
+        # Divide by 1000 if the timestamp is assumed to be in miliseconds (if not, 1e11 would be year 5138).
+        value = int(value / 1000) if value > 1e11 else value
         value = datetime.fromtimestamp(value, tz=pytz.UTC)
     return convert_to_utc_datetime(value)
 

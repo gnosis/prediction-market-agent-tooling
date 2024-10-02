@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -358,10 +357,7 @@ def test_omen_buy_and_sell_outcome(
         assert tx["from"] == api_keys.bet_from_address
 
 
-def test_deposit_and_withdraw_wxdai(
-    local_web3: Web3, accounts: list[TestAccount], test_keys: APIKeys
-) -> None:
-    # add balance
+def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> None:
     deposit_amount = xDai(10)
     fresh_account = create_and_fund_random_account(
         private_key=test_keys.bet_from_private_key,

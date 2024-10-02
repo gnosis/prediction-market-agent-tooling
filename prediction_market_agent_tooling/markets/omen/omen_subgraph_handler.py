@@ -99,7 +99,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             )
         )
 
-        # ToDo - Update URL once curations are live
         self.omen_agent_result_mapping_subgraph = self.sg.load_subgraph(
             self.OMEN_AGENT_RESULT_MAPPING_GRAPH_URL.format(
                 graph_api_key=keys.graph_api_key.get_secret_value()

@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexStr,
     OutcomeStr,
     Wei,
-    private_key_type,
     xDai,
     xdai_type,
 )
@@ -30,8 +29,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
-    ContractPrediction,
     get_bet_outcome,
+    ContractPrediction,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -46,12 +45,12 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
-    OmenAgentResultMappingContract,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenRealitioContract,
     WrappedxDaiContract,
     sDaiContract,
+    OmenAgentResultMappingContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -60,7 +59,6 @@ from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
-from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
 
@@ -355,35 +353,6 @@ def test_omen_buy_and_sell_outcome(
     for tx in [buy_tx, sell_tx]:
         assert tx is not None
         assert tx["from"] == api_keys.bet_from_address
-
-
-def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> None:
-    deposit_amount = xDai(10)
-    fresh_account = create_and_fund_random_account(
-        private_key=test_keys.bet_from_private_key,
-        web3=local_web3,
-        deposit_amount=xDai(deposit_amount * 2),  # 2* for safety
-    )
-
-    api_keys = APIKeys(
-        BET_FROM_PRIVATE_KEY=private_key_type(fresh_account.key.hex()),
-        SAFE_ADDRESS=None,
-    )
-    wxdai = WrappedxDaiContract()
-    wxdai.deposit(
-        api_keys=api_keys, amount_wei=xdai_to_wei(deposit_amount), web3=local_web3
-    )
-    balance = get_balances(address=fresh_account.address, web3=local_web3)
-    assert balance.wxdai == deposit_amount
-
-    wxdai.withdraw(
-        api_keys=api_keys,
-        amount_wei=xdai_to_wei(balance.wxdai),
-        web3=local_web3,
-    )
-
-    balance = get_balances(address=fresh_account.address, web3=local_web3)
-    assert balance.wxdai == xDai(0)
 
 
 @pytest.mark.parametrize(

@@ -7,7 +7,7 @@ from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
 import pytz
 import requests
-from dateutil.parser import parse as dateutil_parse
+from dateutil import parser
 from google.cloud import secretmanager
 from pydantic import BaseModel, ValidationError
 from pydantic.functional_validators import BeforeValidator
@@ -127,7 +127,7 @@ def to_utc_datetime(value: datetime | int | str | None) -> DatetimeUTC | None:
         value = int(value / 1000) if value > 1e11 else value
         value = datetime.fromtimestamp(value, tz=pytz.UTC)
     elif isinstance(value, str):
-        value = dateutil_parse(value)
+        value = parser.parse(value)
     return convert_to_utc_datetime(value)
 
 

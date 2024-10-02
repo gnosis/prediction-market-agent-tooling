@@ -114,7 +114,7 @@ def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
 def test_now_failed(local_web3: Web3, test_keys: APIKeys) -> None:
     # Sleep a little to let the local chain go out of sync without updating the block
     time.sleep(5)
-    allowed_difference = 5  # seconds
+    allowed_difference = 3  # seconds
     chain_timestamp = DebuggingContract().getNow(local_web3)
     utc_timestamp = int(utcnow().timestamp())
     assert (

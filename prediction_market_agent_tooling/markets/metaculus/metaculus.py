@@ -100,7 +100,7 @@ class MetaculusAgentMarket(AgentMarket):
 
             if len(all_questions) >= limit:
                 break
-        return [MetaculusAgentMarket.from_data_model(q) for q in all_questions]
+        return [MetaculusAgentMarket.from_data_model(q) for q in all_questions[:limit]]
 
     def submit_prediction(self, p_yes: Probability, reasoning: str) -> None:
         make_prediction(self.id, p_yes)

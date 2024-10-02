@@ -1,7 +1,6 @@
 import concurrent.futures
 import os
 import typing as t
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -436,92 +435,6 @@ class Benchmarker:
             ],
         }
 
-    def calculate_expected_returns(
-        self, prediction: Prediction, market: AgentMarket
-    ) -> float | None:
-        """
-        The expected value if betting on a binary market in its initialized state of 50:50 'yes' and 'no' shares, with the assumption that the correct `p_yes` is that of the market.
-        """
-        if not prediction.is_answered:
-            return None
-
-        # TODO: Add support for different bet sizes -- if we bet a low amount (such as <10 units), the real shares will be very close to that we calculate below (bet_units / share_price),
-        # but if one bets a lot, it will change the share price along the way, and so he/she receives less than `bet_units / share_price`, but it's more complicated to calculate.
-        bet_units = 10  # Assuming the agent always bet 10 units per market.
-
-        assert prediction.outcome_prediction is not None
-        # Assume that market starts at 50/50 and so the price is 0.5 at the time we are buying it,
-        # we can't use {yes,no}_outcome_price atm, because it would just cancel out to EV = 0.0,
-        # as it's the same as the probability.
-        yes_shares = (
-            bet_units / 0.5  # market.yes_outcome_price
-            if prediction.outcome_prediction.probable_resolution == Resolution.YES
-            and market.yes_outcome_price > 0
-            else 0
-        )
-        no_shares = (
-            bet_units / 0.5  # market.no_outcome_price
-            if prediction.outcome_prediction.probable_resolution == Resolution.NO
-            and market.no_outcome_price > 0
-            else 0
-        )
-
-        # If we don't bet, we don't have any expected returns.
-        if yes_shares == 0 and no_shares == 0:
-            return None
-
-        expected_value = (
-            yes_shares * market.current_p_yes
-            + no_shares * (1 - market.current_p_yes)
-            - bet_units
-        )
-        expected_returns_perc = 100 * expected_value / bet_units
-
-        return expected_returns_perc
-
-    def compute_expected_returns_summary(
-        self,
-    ) -> t.Tuple[dict[str, list[str | float]], dict[str, list[str | float | None]]]:
-        overall_summary: dict[str, list[str | float]] = defaultdict(list)
-
-        for agent in self.registered_agents:
-            expected_returns = []
-
-            for market in self.markets:
-                if (
-                    prediction := self.get_prediction(agent.agent_name, market.question)
-                ).is_answered and (
-                    expected_return := self.calculate_expected_returns(
-                        prediction, market
-                    )
-                ) is not None:
-                    expected_returns.append(expected_return)
-
-            overall_summary["Agent"].append(agent.agent_name)
-            overall_summary["Mean expected returns"].append(
-                float(np.mean(expected_returns))
-            )
-            overall_summary["Median expected returns"].append(
-                float(np.median(expected_returns))
-            )
-            overall_summary["Total expected returns"].append(
-                float(np.sum(expected_returns))
-            )
-
-        per_market: dict[str, list[str | float | None]] = defaultdict(list)
-
-        for market in self.markets:
-            per_market["Market Question"].append(market.question)
-
-            for agent in self.registered_agents:
-                per_market[agent.agent_name].append(
-                    self.calculate_expected_returns(
-                        self.get_prediction(agent.agent_name, market.question), market
-                    )
-                )
-
-        return dict(overall_summary), dict(per_market)
-
     def generate_markdown_report(self) -> str:
         md = "# Comparison Report\n\n"
         md += "## Market Results\n\n"
@@ -533,10 +446,4 @@ class Benchmarker:
         md += "\n\n"
         md += "### Markets\n\n"
         md += pd.DataFrame(self.get_markets_summary()).to_markdown(index=False)
-        md += "\n\n"
-        md += "### Expected value\n\n"
-        overall_summary, per_market = self.compute_expected_returns_summary()
-        md += pd.DataFrame(overall_summary).to_markdown(index=False)
-        md += "\n\n"
-        md += pd.DataFrame(per_market).to_markdown(index=False)
         return md

@@ -152,22 +152,17 @@ class KellyBettingStrategy(BettingStrategy):
         buy_direction: bool,
         bet_size: float,
         market: AgentMarket,
-        max_price_impact: float,
     ) -> None:
         """Bet size cannot be larger than max_price_impact"""
 
-        if not market.outcome_token_pool:
-            logger.warning(
-                f"Could not assert price impact, check variables: market.outcome_token_pool "
-                f"{market.outcome_token_pool} and self.max_price_impact {self.max_price_impact}"
-            )
-            return
+        outcome_token_pool = check_not_none(market.outcome_token_pool)
+        max_price_impact = check_not_none(self.max_price_impact)
 
         price_impact = self.calculate_price_impact_for_bet_amount(
             buy_direction,
             bet_size,
-            market.outcome_token_pool["Yes"],
-            market.outcome_token_pool["No"],
+            outcome_token_pool["Yes"],
+            outcome_token_pool["No"],
             0,
         )
 
@@ -175,7 +170,7 @@ class KellyBettingStrategy(BettingStrategy):
             price_impact, max_price_impact, atol=max_price_impact * 0.01
         ):
             raise ValueError(
-                f"Price impact {price_impact} deviates too much from self.max_price_impact {max_price_impact}, market_id {market.id}"
+                f"Price impact {price_impact} deviates too much from max_price_impact {max_price_impact}, market_id {market.id}"
             )
 
     def calculate_trades(
@@ -210,14 +205,14 @@ class KellyBettingStrategy(BettingStrategy):
         if self.max_price_impact:
             # Adjust amount
             max_slippage_bet_amount = self.calculate_bet_amount_for_price_impact(
-                market, kelly_bet, 0, self.max_price_impact
+                market, kelly_bet, 0
             )
 
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
             kelly_bet_size = min(kelly_bet.size, max_slippage_bet_amount)
 
             self.assert_price_impact_lt_max_price_impact_else_raise(
-                kelly_bet.direction, kelly_bet_size, market, self.max_price_impact
+                kelly_bet.direction, kelly_bet_size, market
             )
 
         amounts = {
@@ -253,7 +248,6 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
         kelly_bet: SimpleBet,
         fee: float,
-        max_price_impact: float,
     ) -> float:
         def calculate_price_impact_deviation_from_target_price_impact(
             bet_amount: xDai,
@@ -267,6 +261,7 @@ class KellyBettingStrategy(BettingStrategy):
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
 
+            max_price_impact = check_not_none(self.max_price_impact)
             return abs(price_impact - max_price_impact)
 
         if not market.outcome_token_pool:

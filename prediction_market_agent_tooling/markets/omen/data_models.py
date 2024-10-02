@@ -25,7 +25,6 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
-    DatetimeUTCValidator,
     check_not_none,
     should_not_happen,
     to_utc_datetime,
@@ -566,11 +565,23 @@ class RealityQuestion(BaseModel):
     id: str
     user: HexAddress
     historyHash: HexBytes | None
-    updatedTimestamp: DatetimeUTCValidator
+    updatedTimestamp: int
     contentHash: HexBytes
     questionId: HexBytes
-    answerFinalizedTimestamp: DatetimeUTCValidator
-    currentScheduledFinalizationTimestamp: DatetimeUTCValidator
+    answerFinalizedTimestamp: int
+    currentScheduledFinalizationTimestamp: int
+
+    @property
+    def updated_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.updatedTimestamp)
+
+    @property
+    def answer_finalized_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.answerFinalizedTimestamp)
+
+    @property
+    def current_scheduled_finalization_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.currentScheduledFinalizationTimestamp)
 
     @property
     def url(self) -> str:
@@ -579,12 +590,16 @@ class RealityQuestion(BaseModel):
 
 class RealityAnswer(BaseModel):
     id: str
-    timestamp: DatetimeUTCValidator
+    timestamp: int
     answer: HexBytes
     lastBond: Wei
     bondAggregate: Wei
     question: RealityQuestion
     createdBlock: int
+
+    @property
+    def timestamp_datetime(self) -> DatetimeUTC:
+        return to_utc_datetime(self.timestamp)
 
 
 class RealityResponse(BaseModel):

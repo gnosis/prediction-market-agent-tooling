@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
-import pytz
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import mana_type
@@ -16,6 +15,7 @@ from prediction_market_agent_tooling.markets.manifold.api import (
     place_bet,
 )
 from prediction_market_agent_tooling.markets.manifold.data_models import ManifoldPool
+from prediction_market_agent_tooling.tools.utils import utc_datetime
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -47,7 +47,7 @@ def test_manifold_full_market() -> None:
 
 
 def test_manifold_bets(a_user_id: str) -> None:
-    start_time = datetime(2020, 2, 1, tzinfo=pytz.UTC)
+    start_time = utc_datetime(2020, 2, 1)
     bets = get_manifold_bets(
         user_id=a_user_id,
         start_time=start_time,
@@ -57,7 +57,7 @@ def test_manifold_bets(a_user_id: str) -> None:
 
 
 def test_resolved_manifold_bets(a_user_id: str) -> None:
-    start_time = datetime(2024, 2, 20, tzinfo=pytz.UTC)
+    start_time = utc_datetime(2024, 2, 20)
     resolved_bets, markets = get_resolved_manifold_bets(
         user_id=a_user_id,
         start_time=start_time,

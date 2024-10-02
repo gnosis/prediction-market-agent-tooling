@@ -1,6 +1,6 @@
 import sys
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import tenacity
 from web3 import Web3
@@ -69,6 +69,8 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    DatetimeUTCValidator,
     calculate_sell_amount_in_collateral,
     check_not_none,
 )
@@ -96,9 +98,9 @@ class OmenAgentMarket(AgentMarket):
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
     condition: Condition
-    finalized_time: DatetimeUTC | None
-    created_time: DatetimeUTC
-    close_time: DatetimeUTC
+    finalized_time: DatetimeUTCValidator | None
+    created_time: DatetimeUTCValidator
+    close_time: DatetimeUTCValidator
     fee: float  # proportion, from 0 to 1
 
     _binary_market_p_yes_history: list[Probability] | None = None
@@ -362,7 +364,7 @@ class OmenAgentMarket(AgentMarket):
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
-        created_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
     ) -> t.Sequence["OmenAgentMarket"]:
         return [

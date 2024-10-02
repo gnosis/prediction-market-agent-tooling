@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import typer
 from web3 import Web3
 
@@ -15,6 +13,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
     CollateralTokenChoice,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 def main(

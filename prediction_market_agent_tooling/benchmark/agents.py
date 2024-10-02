@@ -1,13 +1,12 @@
 import random
 import typing as t
-from datetime import datetime
 
 from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class AbstractBenchmarkedAgent:

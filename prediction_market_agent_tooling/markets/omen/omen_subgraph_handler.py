@@ -1,6 +1,5 @@
 import sys
 import typing as t
-from datetime import datetime
 
 import requests
 import tenacity
@@ -34,7 +33,11 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     sDaiContract,
 )
 from prediction_market_agent_tooling.tools.singleton import SingletonMeta
-from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    to_int_timestamp,
+    utcnow,
+)
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     byte32_to_ipfscidv0,
@@ -204,11 +207,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         creator: t.Optional[HexAddress] = None,
         creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
-        created_after: t.Optional[datetime] = None,
-        opened_before: t.Optional[datetime] = None,
-        opened_after: t.Optional[datetime] = None,
-        finalized_before: t.Optional[datetime] = None,
-        finalized_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
+        opened_before: t.Optional[DatetimeUTC] = None,
+        opened_after: t.Optional[DatetimeUTC] = None,
+        finalized_before: t.Optional[DatetimeUTC] = None,
+        finalized_after: t.Optional[DatetimeUTC] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
         liquidity_bigger_than: Wei | None = None,
@@ -374,11 +377,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_omen_binary_markets(
         self,
         limit: t.Optional[int],
-        created_after: t.Optional[datetime] = None,
-        opened_before: t.Optional[datetime] = None,
-        opened_after: t.Optional[datetime] = None,
-        finalized_before: t.Optional[datetime] = None,
-        finalized_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
+        opened_before: t.Optional[DatetimeUTC] = None,
+        opened_after: t.Optional[DatetimeUTC] = None,
+        finalized_before: t.Optional[DatetimeUTC] = None,
+        finalized_after: t.Optional[DatetimeUTC] = None,
         finalized: bool | None = None,
         resolved: bool | None = None,
         creator: t.Optional[HexAddress] = None,
@@ -536,7 +539,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self,
         better_address: ChecksumAddress | None = None,
         start_time: DatetimeUTC | None = None,
-        end_time: t.Optional[datetime] = None,
+        end_time: t.Optional[DatetimeUTC] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         type_: t.Literal["Buy", "Sell"] | None = None,
@@ -579,7 +582,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self,
         better_address: ChecksumAddress | None = None,
         start_time: DatetimeUTC | None = None,
-        end_time: t.Optional[datetime] = None,
+        end_time: t.Optional[DatetimeUTC] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         market_opening_after: DatetimeUTC | None = None,
@@ -600,7 +603,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self,
         better_address: ChecksumAddress,
         start_time: DatetimeUTC,
-        end_time: t.Optional[datetime] = None,
+        end_time: t.Optional[DatetimeUTC] = None,
         market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         omen_bets = self.get_bets(
@@ -616,7 +619,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self,
         better_address: ChecksumAddress,
         start_time: DatetimeUTC,
-        end_time: t.Optional[datetime] = None,
+        end_time: t.Optional[DatetimeUTC] = None,
         market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         bets = self.get_resolved_bets(

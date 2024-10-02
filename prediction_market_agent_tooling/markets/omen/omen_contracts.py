@@ -1,7 +1,7 @@
 import os
 import random
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 from enum import Enum
 
 from web3 import Web3
@@ -39,6 +39,7 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     byte32_to_ipfscidv0,

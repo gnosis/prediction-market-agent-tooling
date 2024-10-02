@@ -1,17 +1,10 @@
-from datetime import datetime
-
 import numpy as np
 import pytest
 from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import (
-    DatetimeUTC,
-    OutcomeStr,
-    Wei,
-    xDai,
-)
+from prediction_market_agent_tooling.gtypes import DatetimeUTC, OutcomeStr, Wei, xDai
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Position, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -30,7 +23,11 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
     get_market_moving_bet,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    utc_datetime,
+    utcnow,
+)
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 
@@ -193,8 +190,8 @@ def test_positions_value() -> None:
         "0x2DD9f5678484C1F59F97eD334725858b938B4102"
     )
     resolved_bets = OmenSubgraphHandler().get_resolved_bets_with_valid_answer(
-        start_time=datetime(2024, 3, 27, 4, 20),
-        end_time=datetime(2024, 3, 27, 4, 30),
+        start_time=utc_datetime(2024, 3, 27, 4, 20),
+        end_time=utc_datetime(2024, 3, 27, 4, 30),
         better_address=user_address,
     )
     assert len(resolved_bets) == 1

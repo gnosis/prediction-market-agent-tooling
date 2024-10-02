@@ -1,5 +1,4 @@
 import sys
-from datetime import datetime
 
 import pytest
 from eth_typing import HexAddress, HexStr
@@ -15,7 +14,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import to_utc_datetime
+from prediction_market_agent_tooling.tools.utils import to_utc_datetime, utc_datetime
 
 MARKET_ID_WITH_SDAI_AS_COLLATERAL = "0x4ecb20cea4d1b0c90d935a45213d27e1695bee92"
 
@@ -77,8 +76,8 @@ def test_resolved_omen_bets(
 ) -> None:
     better_address = Web3.to_checksum_address(a_bet_from_address)
     resolved_bets = omen_subgraph_handler.get_resolved_bets_with_valid_answer(
-        start_time=datetime(2024, 2, 20),
-        end_time=datetime(2024, 2, 28),
+        start_time=utc_datetime(2024, 2, 20),
+        end_time=utc_datetime(2024, 2, 28),
         better_address=better_address,
     )
 
@@ -96,8 +95,8 @@ def test_get_bets(
 ) -> None:
     better_address = Web3.to_checksum_address(a_bet_from_address)
     bets = omen_subgraph_handler.get_bets(
-        start_time=datetime(2024, 2, 20),
-        end_time=datetime(2024, 2, 21),
+        start_time=utc_datetime(2024, 2, 20),
+        end_time=utc_datetime(2024, 2, 21),
         better_address=better_address,
     )
     assert len(bets) == 1

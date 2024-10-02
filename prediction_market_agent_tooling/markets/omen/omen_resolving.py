@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -33,6 +31,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.markets.polymarket.utils import (
     find_resolution_on_polymarket,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
 
 
@@ -131,7 +130,7 @@ def finalize_markets(
         logger.info(
             f"[{idx+1} / {len(markets_with_resolutions)}] Looking into {market.url=} {market.question_title=}"
         )
-        closed_before_days = (datetime.now() - market.close_time).days
+        closed_before_days = (utcnow() - market.close_time).days
 
         if resolution is None:
             if closed_before_days > wait_n_days_before_invalid:

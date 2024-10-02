@@ -1,12 +1,12 @@
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+
+from prediction_market_agent_tooling.tools.utils import DatetimeUTCValidator
 
 
 class Metadata(BaseModel):
-    creationTimestamp: DatetimeUTC
+    creationTimestamp: DatetimeUTCValidator
     generation: int
     name: str
     namespace: str
@@ -16,12 +16,12 @@ class Metadata(BaseModel):
 
 
 class Metadata1(BaseModel):
-    creationTimestamp: DatetimeUTC | None
+    creationTimestamp: DatetimeUTCValidator | None
     name: str
 
 
 class Metadata2(BaseModel):
-    creationTimestamp: DatetimeUTC | None
+    creationTimestamp: DatetimeUTCValidator | None
     name: str
 
 

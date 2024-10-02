@@ -11,8 +11,9 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
 )
 from prediction_market_agent_tooling.tools.utils import (
-    should_not_happen,
     DatetimeUTC,
+    DatetimeUTCValidator,
+    should_not_happen,
 )
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
@@ -36,7 +37,7 @@ class ManifoldAnswersMode(str, Enum):
 
 
 class ManifoldAnswer(BaseModel):
-    createdTime: DatetimeUTC
+    createdTime: DatetimeUTCValidator
     avatarUrl: str
     id: str
     username: str
@@ -58,17 +59,17 @@ class ManifoldMarket(BaseModel):
     id: str
     question: str
     creatorId: str
-    closeTime: DatetimeUTC
-    createdTime: DatetimeUTC
+    closeTime: DatetimeUTCValidator
+    createdTime: DatetimeUTCValidator
     creatorAvatarUrl: t.Optional[str] = None
     creatorName: str
     creatorUsername: str
     isResolved: bool
     resolution: t.Optional[Resolution] = None
-    resolutionTime: t.Optional[datetime] = None
-    lastBetTime: t.Optional[datetime] = None
-    lastCommentTime: t.Optional[datetime] = None
-    lastUpdatedTime: DatetimeUTC
+    resolutionTime: t.Optional[DatetimeUTC] = None
+    lastBetTime: t.Optional[DatetimeUTC] = None
+    lastCommentTime: t.Optional[DatetimeUTC] = None
+    lastUpdatedTime: DatetimeUTCValidator
     mechanism: str
     outcomeType: str
     p: t.Optional[float] = None
@@ -142,7 +143,7 @@ class ManifoldUser(BaseModel):
     """
 
     id: str
-    createdTime: DatetimeUTC
+    createdTime: DatetimeUTCValidator
     name: str
     username: str
     url: str
@@ -159,7 +160,7 @@ class ManifoldUser(BaseModel):
     userDeleted: t.Optional[bool] = None
     balance: Mana
     totalDeposits: Mana
-    lastBetTime: t.Optional[datetime] = None
+    lastBetTime: t.Optional[DatetimeUTC] = None
     currentBettingStreak: t.Optional[int] = None
     profitCached: ProfitCached
 
@@ -198,7 +199,7 @@ class ManifoldBet(BaseModel):
     loanAmount: Mana | None
     orderAmount: t.Optional[Mana] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
-    createdTime: DatetimeUTC
+    createdTime: DatetimeUTCValidator
     outcome: Resolution
 
     def get_resolved_boolean_outcome(self) -> bool:
@@ -242,4 +243,4 @@ class ManifoldContractMetric(BaseModel):
     userUsername: str
     userName: str
     userAvatarUrl: str
-    lastBetTime: DatetimeUTC
+    lastBetTime: DatetimeUTCValidator

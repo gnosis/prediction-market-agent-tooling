@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 from enum import Enum
 
 from eth_typing import ChecksumAddress
@@ -18,6 +17,8 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    DatetimeUTCValidator,
     check_not_none,
     convert_to_utc_datetime,
     should_not_happen,
@@ -54,8 +55,8 @@ class AgentMarket(BaseModel):
         dict[str, float] | None
     )  # Should be in currency of `currency` above.
     resolution: Resolution | None
-    created_time: DatetimeUTC | None
-    close_time: DatetimeUTC | None
+    created_time: DatetimeUTCValidator | None
+    close_time: DatetimeUTCValidator | None
     current_p_yes: Probability
     url: str
     volume: float | None  # Should be in currency of `currency` above.
@@ -180,7 +181,7 @@ class AgentMarket(BaseModel):
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
-        created_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")

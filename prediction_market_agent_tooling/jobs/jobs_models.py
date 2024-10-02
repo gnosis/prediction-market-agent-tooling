@@ -1,6 +1,5 @@
 import typing as t
 from abc import ABC, abstractmethod
-from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -9,6 +8,10 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     FilterBy,
     SortBy,
 )
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    DatetimeUTCValidator,
+)
 
 
 class SimpleJob(BaseModel):
@@ -16,7 +19,7 @@ class SimpleJob(BaseModel):
     job: str
     reward: float
     currency: str
-    deadline: DatetimeUTC
+    deadline: DatetimeUTCValidator
 
 
 class JobAgentMarket(AgentMarket, ABC):
@@ -29,7 +32,7 @@ class JobAgentMarket(AgentMarket, ABC):
 
     @property
     @abstractmethod
-    def deadline(self) -> datetime:
+    def deadline(self) -> DatetimeUTC:
         """Deadline for the job completion."""
 
     @abstractmethod

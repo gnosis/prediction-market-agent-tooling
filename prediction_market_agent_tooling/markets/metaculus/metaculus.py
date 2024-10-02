@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Probability
@@ -17,6 +16,7 @@ from prediction_market_agent_tooling.markets.metaculus.api import (
 from prediction_market_agent_tooling.markets.metaculus.data_models import (
     MetaculusQuestion,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class MetaculusAgentMarket(AgentMarket):
@@ -52,7 +52,7 @@ class MetaculusAgentMarket(AgentMarket):
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
-        created_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         tournament_id: int | None = None,
     ) -> t.Sequence["MetaculusAgentMarket"]:

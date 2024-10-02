@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, NoReturn, Optional, Type, TypeVar, cast
 
 import pytz
@@ -86,11 +86,13 @@ def export_requirements_from_toml(output_dir: str) -> None:
 
 
 @t.overload
-def convert_to_utc_datetime(value: datetime) -> DatetimeUTC: ...
+def convert_to_utc_datetime(value: datetime) -> DatetimeUTC:
+    ...
 
 
 @t.overload
-def convert_to_utc_datetime(value: None) -> None: ...
+def convert_to_utc_datetime(value: None) -> None:
+    ...
 
 
 def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
@@ -109,11 +111,13 @@ def convert_to_utc_datetime(value: datetime | None) -> DatetimeUTC | None:
 
 
 @t.overload
-def to_utc_datetime(value: int) -> DatetimeUTC: ...
+def to_utc_datetime(value: int) -> DatetimeUTC:
+    ...
 
 
 @t.overload
-def to_utc_datetime(value: None) -> None: ...
+def to_utc_datetime(value: None) -> None:
+    ...
 
 
 def to_utc_datetime(value: datetime | int | None) -> DatetimeUTC | None:
@@ -122,11 +126,36 @@ def to_utc_datetime(value: datetime | int | None) -> DatetimeUTC | None:
     return convert_to_utc_datetime(value)
 
 
-DatetimeUTCValidator = t.Annotated[datetime, BeforeValidator(to_utc_datetime)]
+DatetimeUTCValidator = t.Annotated[DatetimeUTC, BeforeValidator(to_utc_datetime)]
 
 
 def utcnow() -> DatetimeUTC:
     return convert_to_utc_datetime(datetime.now(pytz.UTC))
+
+
+def utc_datetime(
+    year: int,
+    month: int,
+    day: int,
+    hour: int = 0,
+    minute: int = 0,
+    second: int = 0,
+    microsecond: int = 0,
+    *,
+    fold: int = 0,
+) -> DatetimeUTC:
+    dt = datetime(
+        year=year,
+        month=month,
+        day=day,
+        hour=hour,
+        minute=minute,
+        second=second,
+        microsecond=microsecond,
+        tzinfo=pytz.UTC,
+        fold=fold,
+    )
+    return convert_to_utc_datetime(dt)
 
 
 def get_current_git_commit_sha() -> str:

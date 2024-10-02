@@ -1,7 +1,6 @@
 import typing as t
 from datetime import date, datetime, timedelta
 
-import pytz
 import streamlit as st
 
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -30,6 +29,7 @@ from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
     convert_to_utc_datetime,
+    utc_datetime,
     utcnow,
 )
 
@@ -131,7 +131,7 @@ def monitor_app(
     oldest_start_time = (
         min(agent.start_time for agent in agents)
         if agents
-        else datetime(2020, 1, 1, tzinfo=pytz.UTC)
+        else utc_datetime(2020, 1, 1)
     )
 
     st.header("Market Info")

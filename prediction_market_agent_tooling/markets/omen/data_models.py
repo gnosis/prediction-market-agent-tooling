@@ -1,7 +1,5 @@
 import typing as t
-from datetime import datetime
 
-import pytz
 from pydantic import BaseModel
 from web3 import Web3
 
@@ -26,9 +24,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
 )
 from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    DatetimeUTCValidator,
     check_not_none,
     should_not_happen,
-    DatetimeUTC,
     to_utc_datetime,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
@@ -73,7 +72,7 @@ class Question(BaseModel):
     outcomes: list[str]
     isPendingArbitration: bool
     openingTimestamp: int
-    answerFinalizedTimestamp: t.Optional[datetime] = None
+    answerFinalizedTimestamp: t.Optional[DatetimeUTC] = None
     currentAnswer: t.Optional[str] = None
 
     @property
@@ -224,7 +223,7 @@ class OmenMarket(BaseModel):
         return to_utc_datetime(self.openingTimestamp)
 
     @property
-    def close_time(self) -> datetime:
+    def close_time(self) -> DatetimeUTC:
         # Opening of the Reality's question is close time for the market,
         # however, market is usually "closed" even sooner by removing all the liquidity.
         return self.opening_datetime
@@ -567,11 +566,11 @@ class RealityQuestion(BaseModel):
     id: str
     user: HexAddress
     historyHash: HexBytes | None
-    updatedTimestamp: DatetimeUTC
+    updatedTimestamp: DatetimeUTCValidator
     contentHash: HexBytes
     questionId: HexBytes
-    answerFinalizedTimestamp: DatetimeUTC
-    currentScheduledFinalizationTimestamp: DatetimeUTC
+    answerFinalizedTimestamp: DatetimeUTCValidator
+    currentScheduledFinalizationTimestamp: DatetimeUTCValidator
 
     @property
     def url(self) -> str:
@@ -580,7 +579,7 @@ class RealityQuestion(BaseModel):
 
 class RealityAnswer(BaseModel):
     id: str
-    timestamp: DatetimeUTC
+    timestamp: DatetimeUTCValidator
     answer: HexBytes
     lastBond: Wei
     bondAggregate: Wei

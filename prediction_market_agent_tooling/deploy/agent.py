@@ -4,7 +4,7 @@ import os
 import tempfile
 import time
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 from enum import Enum
 from functools import cached_property
 
@@ -276,7 +276,7 @@ def {entrypoint_function_name}(request) -> str:
         raise NotImplementedError("This method must be implemented by the subclass.")
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
-        return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"
+        return f"{self.__class__.__name__.lower()}-{market_type}-{utcnow().strftime('%Y-%m-%d--%H-%M-%S')}"
 
 
 class DeployableTraderAgent(DeployableAgent):

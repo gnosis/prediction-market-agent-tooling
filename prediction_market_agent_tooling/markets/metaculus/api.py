@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Union
 
 import requests
@@ -9,7 +8,7 @@ from prediction_market_agent_tooling.markets.metaculus.data_models import (
     MetaculusQuestion,
     MetaculusQuestions,
 )
-from prediction_market_agent_tooling.tools.utils import response_to_model
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, response_to_model
 
 METACULUS_API_BASE_URL = "https://www.metaculus.com/api2"
 

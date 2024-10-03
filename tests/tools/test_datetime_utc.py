@@ -1,8 +1,11 @@
+import pickle
 from datetime import datetime
 
 import pytest
+import pytz
 
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 @pytest.mark.parametrize(
@@ -26,3 +29,15 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 )
 def test_datetime_utc(value: str | int | datetime, expected: DatetimeUTC) -> None:
     assert DatetimeUTC.to_datetime_utc(value) == expected
+
+
+def test_datetime_utc_pickle() -> None:
+    now = utcnow()
+    dumped = pickle.dumps(now)
+    loaded = pickle.loads(dumped)
+    assert now == loaded
+
+
+def test_datetime_utc_is_utc() -> None:
+    now = utcnow()
+    assert now.tzinfo == pytz.UTC

@@ -14,33 +14,9 @@ class DatetimeUTC(datetime):
     As a subclass of `datetime` instead of `NewType` because otherwise it doesn't work with issubclass command which is required for SQLModel/Pydantic.
     """
 
-    def __new__(
-        cls,
-        year: int,
-        month: int,
-        day: int,
-        hour: int = 0,
-        minute: int = 0,
-        second: int = 0,
-        microsecond: int = 0,
-        tzinfo: pytz.BaseTzInfo = pytz.UTC,
-        *,
-        fold: int = 0,
-    ) -> "DatetimeUTC":
-        if tzinfo is not pytz.UTC:
-            raise ValueError(f"DatetimeUTC should always be created with UTC timezone.")
-        return super().__new__(
-            cls,
-            year=year,
-            month=month,
-            day=day,
-            hour=hour,
-            minute=minute,
-            second=second,
-            microsecond=microsecond,
-            tzinfo=tzinfo,
-            fold=fold,
-        )
+    def __new__(cls, *args, **kwargs) -> "DatetimeUTC":  # type: ignore[no-untyped-def] # Pickling doesn't work if I copy-paste arguments from datetime's __new__.
+        kwargs["tzinfo"] = pytz.UTC
+        return super().__new__(cls, *args, **kwargs)
 
     @classmethod
     def _validate(cls, value: t.Any) -> "DatetimeUTC":

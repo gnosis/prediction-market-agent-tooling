@@ -48,7 +48,7 @@ class ProcessMarketTrace(BaseModel):
             market=market,
             answer=answer,
             trades=trades,
-            timestamp=trace.timestamp,
+            timestamp=int(trace.timestamp.timestamp()),
         )
 
 

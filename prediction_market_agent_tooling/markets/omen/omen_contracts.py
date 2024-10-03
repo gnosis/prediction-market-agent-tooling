@@ -25,6 +25,7 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.markets.omen.data_models import (
     INVALID_ANSWER_HEX_BYTES,
     ConditionPreparationEvent,
+    ContractPrediction,
     FPMMFundingAddedEvent,
     OmenFixedProductMarketMakerCreationEvent,
     RealitioLogNewQuestionEvent,
@@ -776,6 +777,45 @@ class OmenRealitioContract(ContractOnGnosisChain):
             web3=web3,
         )
         return is_pending_arbitration
+
+
+class OmenAgentResultMappingContract(ContractOnGnosisChain):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../../abis/omen_agentresultmapping.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x260E1077dEA98e738324A6cEfB0EE9A272eD471a"
+    )
+
+    def get_predictions(
+        self,
+        market_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> list[ContractPrediction]:
+        prediction_tuples = self.call(
+            "getPredictions", function_params=[market_address], web3=web3
+        )
+        return [ContractPrediction.from_tuple(p) for p in prediction_tuples]
+
+    def add_prediction(
+        self,
+        api_keys: APIKeys,
+        market_address: ChecksumAddress,
+        prediction: ContractPrediction,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="addPrediction",
+            function_params=[market_address, prediction.model_dump(by_alias=True)],
+            web3=web3,
+        )
 
 
 class OmenThumbnailMapping(ContractOnGnosisChain):

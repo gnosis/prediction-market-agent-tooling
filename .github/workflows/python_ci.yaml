@@ -16,6 +16,8 @@ env:
   GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
   GRAPH_API_KEY: ${{ secrets.GRAPH_API_KEY }}
   METACULUS_API_KEY: ${{ secrets.METACULUS_API_KEY }}
+  PINATA_API_KEY: ${{ secrets.PINATA_API_KEY }}
+  PINATA_API_SECRET: ${{ secrets.PINATA_API_SECRET }}
 
 jobs:
   mypy:

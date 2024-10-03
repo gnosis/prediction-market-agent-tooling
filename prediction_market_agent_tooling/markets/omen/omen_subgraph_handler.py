@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    ContractPrediction,
     OmenBet,
     OmenMarket,
     OmenPosition,
@@ -63,6 +64,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     OMEN_IMAGE_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/EWN14ciGK53PpUiKSm7kMWQ6G4iz3tDrRLyZ1iXMQEdu"
 
+    OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/GoE3UFyc8Gg9xzv92oinonyhRCphpGu62qB2Eh2XvJ8F"
+
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
     def __init__(self) -> None:
@@ -95,6 +98,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         )
         self.omen_image_mapping_subgraph = self.sg.load_subgraph(
             self.OMEN_IMAGE_MAPPING_GRAPH_URL.format(
+                graph_api_key=keys.graph_api_key.get_secret_value()
+            )
+        )
+
+        self.omen_agent_result_mapping_subgraph = self.sg.load_subgraph(
+            self.OMEN_AGENT_RESULT_MAPPING_GRAPH_URL.format(
                 graph_api_key=keys.graph_api_key.get_secret_value()
             )
         )
@@ -800,3 +809,29 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             if image_url is not None
             else None
         )
+
+    def get_agent_results_for_market(
+        self, market_id: HexAddress | None = None
+    ) -> list[ContractPrediction]:
+        where_stms = {}
+        if market_id:
+            where_stms["marketAddress"] = market_id.lower()
+
+        prediction_added = (
+            self.omen_agent_result_mapping_subgraph.Query.predictionAddeds(
+                where=where_stms,
+                orderBy="blockNumber",
+                orderDirection="asc",
+            )
+        )
+        fields = [
+            prediction_added.publisherAddress,
+            prediction_added.ipfsHash,
+            prediction_added.txHashes,
+            prediction_added.estimatedProbabilityBps,
+        ]
+        result = self.sg.query_json(fields)
+        items = self._parse_items_from_json(result)
+        if not items:
+            return []
+        return [ContractPrediction.model_validate(i) for i in items]

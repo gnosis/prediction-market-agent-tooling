@@ -14,6 +14,34 @@ class DatetimeUTC(datetime):
     As a subclass of `datetime` instead of `NewType` because otherwise it doesn't work with issubclass command which is required for SQLModel/Pydantic.
     """
 
+    def __new__(
+        cls,
+        year: int,
+        month: int,
+        day: int,
+        hour: int = 0,
+        minute: int = 0,
+        second: int = 0,
+        microsecond: int = 0,
+        tzinfo: pytz.BaseTzInfo = pytz.UTC,
+        *,
+        fold: int = 0,
+    ) -> "DatetimeUTC":
+        if tzinfo is not pytz.UTC:
+            raise ValueError(f"DatetimeUTC should always be created with UTC timezone.")
+        return super().__new__(
+            cls,
+            year=year,
+            month=month,
+            day=day,
+            hour=hour,
+            minute=minute,
+            second=second,
+            microsecond=microsecond,
+            tzinfo=tzinfo,
+            fold=fold,
+        )
+
     @classmethod
     def _validate(cls, value: t.Any) -> "DatetimeUTC":
         if not isinstance(value, (datetime, int, str)):
@@ -36,9 +64,11 @@ class DatetimeUTC(datetime):
         """
         if dt.tzinfo is None:
             logger.warning(
-                f"Assuming the timezone of {dt=} is local to the executor of the code."
+                f"tzinfo not provided, assuming the timezone of {dt=} is UTC."
             )
-        dt = dt.astimezone(pytz.UTC)
+            dt = dt.replace(tzinfo=pytz.UTC)
+        else:
+            dt = dt.astimezone(pytz.UTC)
         return DatetimeUTC(
             dt.year,
             dt.month,

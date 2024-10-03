@@ -40,4 +40,5 @@ def test_datetime_utc_pickle() -> None:
 
 def test_datetime_utc_is_utc() -> None:
     now = utcnow()
+    assert isinstance(now, DatetimeUTC)
     assert now.tzinfo == pytz.UTC

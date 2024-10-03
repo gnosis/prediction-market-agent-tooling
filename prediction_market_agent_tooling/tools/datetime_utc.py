@@ -15,7 +15,11 @@ class DatetimeUTC(datetime):
     """
 
     def __new__(cls, *args, **kwargs) -> "DatetimeUTC":  # type: ignore[no-untyped-def] # Pickling doesn't work if I copy-paste arguments from datetime's __new__.
-        kwargs["tzinfo"] = pytz.UTC
+        if len(args) >= 8:
+            # Start of Selection
+            args = args[:7] + (pytz.UTC,) + args[8:]
+        else:
+            kwargs["tzinfo"] = pytz.UTC
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod

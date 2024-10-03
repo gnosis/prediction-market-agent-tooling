@@ -204,12 +204,12 @@ class KellyBettingStrategy(BettingStrategy):
         kelly_bet_size = kelly_bet.size
         if self.max_price_impact:
             # Adjust amount
-            max_slippage_bet_amount = self.calculate_bet_amount_for_price_impact(
+            max_price_impact_bet_amount = self.calculate_bet_amount_for_price_impact(
                 market, kelly_bet, 0
             )
 
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
-            kelly_bet_size = min(kelly_bet.size, max_slippage_bet_amount)
+            kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
 
             self.assert_price_impact_lt_max_price_impact_else_raise(
                 kelly_bet.direction, kelly_bet_size, market

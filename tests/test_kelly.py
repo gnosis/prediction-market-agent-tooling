@@ -3,7 +3,7 @@ import numpy as np
 from prediction_market_agent_tooling.deploy.betting_strategy import KellyBettingStrategy
 
 
-def test_kelly_slippage_calculation1() -> None:
+def test_kelly_price_impact_calculation1() -> None:
     # First case from https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-cpmm
     kelly = KellyBettingStrategy(max_bet_amount=1, max_price_impact=0.5)
     yes = 10
@@ -13,7 +13,7 @@ def test_kelly_slippage_calculation1() -> None:
     assert_price_impact(bet_amount, buy_direction, yes, no, kelly)
 
 
-def test_kelly_slippage_calculation2() -> None:
+def test_kelly_price_impact_calculation2() -> None:
     # Follow-up from first case from https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-cpmm
     kelly = KellyBettingStrategy(max_bet_amount=1, max_price_impact=0.5)
     # after first bet 10 xDAI on Yes, new yes/no

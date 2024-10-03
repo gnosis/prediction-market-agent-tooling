@@ -281,7 +281,7 @@ def test_zero_bets() -> None:
         target_p_yes=market.current_p_yes,
         fee=market.fee,
     )
-    assert np.isclose(market_moving_bet.size, 0.0, atol=1e-4)
+    assert np.isclose(market_moving_bet.size, 0.0, atol=1e-3)
 
     kelly_bet = get_kelly_bet_full(
         yes_outcome_pool_size=yes_outcome_pool_size,

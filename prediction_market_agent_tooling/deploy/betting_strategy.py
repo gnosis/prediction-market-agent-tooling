@@ -277,9 +277,10 @@ class KellyBettingStrategy(BettingStrategy):
             market.get_outcome_str_from_bool(False)
         ]
 
+        # The bounds below have been found to work heuristically.
         optimized_bet_amount = minimize_scalar(
             calculate_price_impact_deviation_from_target_price_impact,
-            bounds=(min(yes_outcome_pool_size, no_outcome_pool_size) / 1000, 1000),
+            bounds=(0, 1000 * (yes_outcome_pool_size + no_outcome_pool_size)),
             method="bounded",
             tol=1e-11,
             options={"maxiter": 10000},

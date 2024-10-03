@@ -307,7 +307,7 @@ class DeployableTraderAgent(DeployableAgent):
     def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
         user_id = market.get_user_id(api_keys=APIKeys())
 
-        total_amount = market.get_user_balance(user_id=user_id) * 0.1
+        total_amount = market.get_tiny_bet_amount().amount
         if existing_position := market.get_position(user_id=user_id):
             total_amount += existing_position.total_amount.amount
 

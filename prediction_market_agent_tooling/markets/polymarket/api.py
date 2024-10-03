@@ -2,8 +2,8 @@ import typing as t
 
 import requests
 import tenacity
-from loguru import logger
 
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,

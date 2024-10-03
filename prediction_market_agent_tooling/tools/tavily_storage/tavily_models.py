@@ -2,7 +2,6 @@ import typing as t
 from datetime import timedelta
 
 import tenacity
-from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -18,6 +17,7 @@ from sqlmodel import (
 )
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 

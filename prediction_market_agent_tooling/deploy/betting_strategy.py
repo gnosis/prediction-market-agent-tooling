@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 
+from scipy.optimize import minimize_scalar
+
+from prediction_market_agent_tooling.gtypes import xDai
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
@@ -10,10 +14,14 @@ from prediction_market_agent_tooling.markets.data_models import (
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
+from prediction_market_agent_tooling.markets.omen.omen import (
+    get_buy_outcome_token_amount,
+)
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet_full,
     get_kelly_bet_simplified,
 )
+from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
@@ -134,8 +142,9 @@ class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: float):
+    def __init__(self, max_bet_amount: float, max_price_impact: float | None = None):
         self.max_bet_amount = max_bet_amount
+        self.max_price_impact = max_price_impact
 
     def calculate_trades(
         self,
@@ -165,9 +174,19 @@ class KellyBettingStrategy(BettingStrategy):
             )
         )
 
+        kelly_bet_size = kelly_bet.size
+        if self.max_price_impact:
+            # Adjust amount
+            max_price_impact_bet_amount = self.calculate_bet_amount_for_price_impact(
+                market, kelly_bet, 0
+            )
+
+            # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
+            kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
+
         amounts = {
             market.get_outcome_str_from_bool(kelly_bet.direction): TokenAmount(
-                amount=kelly_bet.size, currency=market.currency
+                amount=kelly_bet_size, currency=market.currency
             ),
         }
         target_position = Position(market_id=market.id, amounts=amounts)
@@ -176,8 +195,69 @@ class KellyBettingStrategy(BettingStrategy):
         )
         return trades
 
+    def calculate_price_impact_for_bet_amount(
+        self, buy_direction: bool, bet_amount: float, yes: float, no: float, fee: float
+    ) -> float:
+        total_outcome_tokens = yes + no
+        expected_price = (
+            no / total_outcome_tokens if buy_direction else yes / total_outcome_tokens
+        )
+
+        tokens_to_buy = get_buy_outcome_token_amount(
+            bet_amount, buy_direction, yes, no, fee
+        )
+
+        actual_price = bet_amount / tokens_to_buy
+        # price_impact should always be > 0
+        price_impact = (actual_price - expected_price) / expected_price
+        return price_impact
+
+    def calculate_bet_amount_for_price_impact(
+        self,
+        market: AgentMarket,
+        kelly_bet: SimpleBet,
+        fee: float,
+    ) -> float:
+        def calculate_price_impact_deviation_from_target_price_impact(
+            bet_amount: xDai,
+        ) -> float:
+            price_impact = self.calculate_price_impact_for_bet_amount(
+                kelly_bet.direction,
+                bet_amount,
+                yes_outcome_pool_size,
+                no_outcome_pool_size,
+                fee,
+            )
+            # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
+
+            max_price_impact = check_not_none(self.max_price_impact)
+            return abs(price_impact - max_price_impact)
+
+        if not market.outcome_token_pool:
+            logger.warning(
+                "Market outcome_token_pool is None, cannot calculate bet amount"
+            )
+            return kelly_bet.size
+
+        yes_outcome_pool_size = market.outcome_token_pool[
+            market.get_outcome_str_from_bool(True)
+        ]
+        no_outcome_pool_size = market.outcome_token_pool[
+            market.get_outcome_str_from_bool(False)
+        ]
+
+        # The bounds below have been found to work heuristically.
+        optimized_bet_amount = minimize_scalar(
+            calculate_price_impact_deviation_from_target_price_impact,
+            bounds=(0, 1000 * (yes_outcome_pool_size + no_outcome_pool_size)),
+            method="bounded",
+            tol=1e-11,
+            options={"maxiter": 10000},
+        )
+        return float(optimized_bet_amount.x)
+
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount})"
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount}, max_price_impact={self.max_price_impact})"
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):

@@ -322,6 +322,16 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 sort_by_field = (
                     self.trades_subgraph.FixedProductMarketMaker.openingTimestamp
                 )
+            case SortBy.HIGHEST_LIQUIDITY:
+                sort_direction = "desc"
+                sort_by_field = (
+                    self.trades_subgraph.FixedProductMarketMaker.liquidityMeasure
+                )
+            case SortBy.LOWEST_LIQUIDITY:
+                sort_direction = "asc"
+                sort_by_field = (
+                    self.trades_subgraph.FixedProductMarketMaker.liquidityMeasure
+                )
             case SortBy.NONE:
                 sort_direction = None
                 sort_by_field = None

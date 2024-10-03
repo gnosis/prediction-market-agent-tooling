@@ -27,6 +27,8 @@ from prediction_market_agent_tooling.tools.utils import (
 class SortBy(str, Enum):
     CLOSING_SOONEST = "closing-soonest"
     NEWEST = "newest"
+    HIGHEST_LIQUIDITY = "highest_liquidity"
+    LOWEST_LIQUIDITY = "lowest_liquidity"
     NONE = "none"
 
 

@@ -161,8 +161,8 @@ class KellyBettingStrategy(BettingStrategy):
         price_impact = self.calculate_price_impact_for_bet_amount(
             buy_direction,
             bet_size,
-            outcome_token_pool["Yes"],
-            outcome_token_pool["No"],
+            outcome_token_pool[market.get_outcome_str_from_bool(True)],
+            outcome_token_pool[market.get_outcome_str_from_bool(False)],
             0,
         )
 

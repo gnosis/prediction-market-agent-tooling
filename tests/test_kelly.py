@@ -14,6 +14,7 @@ def test_kelly_slippage_calculation1() -> None:
 
 
 def test_kelly_slippage_calculation2() -> None:
+    # Follow-up from first case from https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-cpmm
     kelly = KellyBettingStrategy(max_bet_amount=1, max_price_impact=0.5)
     # after first bet 10 xDAI on Yes, new yes/no
     yes = 5

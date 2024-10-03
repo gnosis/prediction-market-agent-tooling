@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-import numpy as np
 from scipy.optimize import minimize_scalar
 
 from prediction_market_agent_tooling.gtypes import xDai
@@ -147,32 +146,6 @@ class KellyBettingStrategy(BettingStrategy):
         self.max_bet_amount = max_bet_amount
         self.max_price_impact = max_price_impact
 
-    def assert_price_impact_lt_max_price_impact_else_raise(
-        self,
-        buy_direction: bool,
-        bet_size: float,
-        market: AgentMarket,
-    ) -> None:
-        """Bet size cannot be larger than max_price_impact"""
-
-        outcome_token_pool = check_not_none(market.outcome_token_pool)
-        max_price_impact = check_not_none(self.max_price_impact)
-
-        price_impact = self.calculate_price_impact_for_bet_amount(
-            buy_direction,
-            bet_size,
-            outcome_token_pool[market.get_outcome_str_from_bool(True)],
-            outcome_token_pool[market.get_outcome_str_from_bool(False)],
-            0,
-        )
-
-        if price_impact > max_price_impact and not np.isclose(
-            price_impact, max_price_impact, atol=max_price_impact * 0.01
-        ):
-            raise ValueError(
-                f"Price impact {price_impact} deviates too much from max_price_impact {max_price_impact}, market_id {market.id}"
-            )
-
     def calculate_trades(
         self,
         existing_position: Position | None,
@@ -210,10 +183,6 @@ class KellyBettingStrategy(BettingStrategy):
 
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
             kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
-
-            self.assert_price_impact_lt_max_price_impact_else_raise(
-                kelly_bet.direction, kelly_bet_size, market
-            )
 
         amounts = {
             market.get_outcome_str_from_bool(kelly_bet.direction): TokenAmount(

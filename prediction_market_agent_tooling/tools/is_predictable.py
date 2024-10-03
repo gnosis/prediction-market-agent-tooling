@@ -1,7 +1,7 @@
 import tenacity
-from loguru import logger
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
 from prediction_market_agent_tooling.tools.langfuse_ import (
     get_langfuse_langchain_config,

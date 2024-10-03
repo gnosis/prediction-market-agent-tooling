@@ -1,6 +1,5 @@
 import typing as t
 
-import pytz
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 from web3 import Web3
 

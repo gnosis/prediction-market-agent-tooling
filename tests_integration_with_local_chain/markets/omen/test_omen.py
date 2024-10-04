@@ -6,6 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -17,7 +18,6 @@ from prediction_market_agent_tooling.gtypes import (
     private_key_type,
     xDai,
     xdai_type,
-    IPFSCIDVersion0,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -63,7 +63,6 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     wei_to_xdai,
     xdai_to_wei,
-    ipfscidv0_to_byte32,
 )
 from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
@@ -492,7 +491,7 @@ def test_add_prediction_with_empty_ipfs_hash(
     p = ContractPrediction(
         tx_hashes=[HexBytes(dummy_transaction_hash)],
         estimated_probability_bps=5454,
-        ipfs_hash=ipfscidv0_to_byte32(IPFSCIDVersion0("")),
+        ipfs_hash=HexBytes(HASH_ZERO),
         publisher=test_keys.public_key,
     )
 

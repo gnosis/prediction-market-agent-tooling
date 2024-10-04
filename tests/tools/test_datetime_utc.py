@@ -1,5 +1,5 @@
 import pickle
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import pytz
@@ -42,3 +42,11 @@ def test_datetime_utc_is_utc() -> None:
     now = utcnow()
     assert isinstance(now, DatetimeUTC)
     assert now.tzinfo == pytz.UTC
+
+
+def test_datetime_utc_with_timedelta() -> None:
+    now = utcnow()
+    then = now + timedelta(hours=12)
+    assert then > now
+    assert type(now) == type(then)
+    assert isinstance(then, DatetimeUTC)

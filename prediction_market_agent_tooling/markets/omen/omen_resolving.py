@@ -239,7 +239,7 @@ def omen_resolve_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     """
-    Market can be resolved 24h after last answer was submitted via `omen_submit_answer_market_tx`.
+    Market can be resolved after the answer if finalized on Reality.
     """
     oracle_contract = OmenOracleContract()
     oracle_contract.resolve(

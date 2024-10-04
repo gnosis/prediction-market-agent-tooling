@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 import numpy as np
 from langfuse import Langfuse
@@ -14,14 +13,18 @@ from prediction_market_agent_tooling.markets.data_models import (
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.tools.utils import convert_to_utc_datetime
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class ProcessMarketTrace(BaseModel):
-    timestamp: datetime
+    timestamp: int
     market: OmenAgentMarket
     answer: ProbabilisticAnswer
     trades: list[PlacedTrade]
+
+    @property
+    def timestamp_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.timestamp)
 
     @property
     def buy_trade(self) -> PlacedTrade | None:
@@ -45,7 +48,7 @@ class ProcessMarketTrace(BaseModel):
             market=market,
             answer=answer,
             trades=trades,
-            timestamp=trace.timestamp,
+            timestamp=int(trace.timestamp.timestamp()),
         )
 
 
@@ -57,7 +60,7 @@ class ResolvedBetWithTrace(BaseModel):
 def get_traces_for_agent(
     agent_name: str,
     trace_name: str,
-    from_timestamp: datetime,
+    from_timestamp: DatetimeUTC,
     has_output: bool,
     client: Langfuse,
 ) -> list[TraceWithDetails]:
@@ -115,7 +118,7 @@ def trace_to_trades(trace: TraceWithDetails) -> list[PlacedTrade]:
 
 
 def get_closest_datetime_from_list(
-    ref_datetime: datetime, datetimes: list[datetime]
+    ref_datetime: DatetimeUTC, datetimes: list[DatetimeUTC]
 ) -> int:
     """Get the index of the closest datetime to the reference datetime"""
     if len(datetimes) == 1:
@@ -149,20 +152,22 @@ def get_trace_for_bet(
     else:
         # In-case there are multiple traces for the same market, get the closest
         # trace to the bet
-        bet_timestamp = convert_to_utc_datetime(bet.created_time)
         closest_trace_index = get_closest_datetime_from_list(
-            bet_timestamp,
-            [t.timestamp for t in traces_for_bet],
+            bet.created_time,
+            [t.timestamp_datetime for t in traces_for_bet],
         )
 
         # Sanity check: Let's say the upper bound for time between
         # `agent.process_market` being called and the bet being placed is 20
         # minutes
         candidate_trace = traces_for_bet[closest_trace_index]
-        if abs(candidate_trace.timestamp - bet_timestamp).total_seconds() > 1200:
+        if (
+            abs(candidate_trace.timestamp_datetime - bet.created_time).total_seconds()
+            > 1200
+        ):
             logger.info(
                 f"Closest trace to bet has timestamp {candidate_trace.timestamp}, "
-                f"but bet was created at {bet_timestamp}. Not matching"
+                f"but bet was created at {bet.created_time}. Not matching"
             )
             return None
 

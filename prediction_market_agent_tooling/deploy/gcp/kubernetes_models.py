@@ -1,11 +1,10 @@
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
 
 
 class Metadata(BaseModel):
-    creationTimestamp: datetime
+    creationTimestamp: int
     generation: int
     name: str
     namespace: str
@@ -15,12 +14,12 @@ class Metadata(BaseModel):
 
 
 class Metadata1(BaseModel):
-    creationTimestamp: datetime | None
+    creationTimestamp: int | None
     name: str
 
 
 class Metadata2(BaseModel):
-    creationTimestamp: datetime | None
+    creationTimestamp: int | None
     name: str
 
 

@@ -4,7 +4,7 @@ import os
 import tempfile
 import time
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 from enum import Enum
 from functools import cached_property
 
@@ -67,7 +67,7 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
-from prediction_market_agent_tooling.tools.utils import DatetimeWithTimezone, utcnow
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
 
 MAX_AVAILABLE_MARKETS = 20
@@ -215,7 +215,7 @@ class DeployableAgent:
         secrets: dict[str, str] | None = None,
         cron_schedule: str | None = None,
         gcp_fname: str | None = None,
-        start_time: DatetimeWithTimezone | None = None,
+        start_time: DatetimeUTC | None = None,
         timeout: int = 180,
     ) -> None:
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
@@ -287,7 +287,7 @@ def {entrypoint_function_name}(request) -> str:
         raise NotImplementedError("This method must be implemented by the subclass.")
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
-        return f"{self.__class__.__name__.lower()}-{market_type}-{datetime.now().strftime('%Y-%m-%d--%H-%M-%S')}"
+        return f"{self.__class__.__name__.lower()}-{market_type}-{utcnow().strftime('%Y-%m-%d--%H-%M-%S')}"
 
 
 class DeployableTraderAgent(DeployableAgent):

@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 from math import ceil
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -23,6 +22,7 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
 from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
     minimum_bet_to_win,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class ManifoldAgentMarket(AgentMarket):
@@ -83,7 +83,7 @@ class ManifoldAgentMarket(AgentMarket):
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
-        created_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
     ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None

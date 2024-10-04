@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 import requests
 import tenacity
@@ -20,6 +19,7 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
 )
 from prediction_market_agent_tooling.tools.parallelism import par_map
 from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
     response_list_to_model,
     response_to_model,
 )
@@ -47,7 +47,7 @@ def get_manifold_binary_markets(
         ]
         | None
     ) = "open",
-    created_after: t.Optional[datetime] = None,
+    created_after: t.Optional[DatetimeUTC] = None,
     excluded_questions: set[str] | None = None,
 ) -> list[ManifoldMarket]:
     all_markets: list[ManifoldMarket] = []
@@ -167,8 +167,8 @@ def get_manifold_market(market_id: str) -> FullManifoldMarket:
 )
 def get_manifold_bets(
     user_id: str,
-    start_time: datetime,
-    end_time: t.Optional[datetime],
+    start_time: DatetimeUTC,
+    end_time: t.Optional[DatetimeUTC],
 ) -> list[ManifoldBet]:
     url = f"{MANIFOLD_API_BASE_URL}/v0/bets"
 
@@ -182,8 +182,8 @@ def get_manifold_bets(
 
 def get_resolved_manifold_bets(
     user_id: str,
-    start_time: datetime,
-    end_time: t.Optional[datetime],
+    start_time: DatetimeUTC,
+    end_time: t.Optional[DatetimeUTC],
 ) -> tuple[list[ManifoldBet], list[ManifoldMarket]]:
     bets = get_manifold_bets(user_id, start_time, end_time)
     markets: list[ManifoldMarket] = par_map(

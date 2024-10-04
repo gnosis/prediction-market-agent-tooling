@@ -36,11 +36,11 @@ jobs:
         python-version: [ '3.10.x', '3.11.x', '3.12.x' ]
         test:
           - name: Unit Tests
-            command: 'poetry run python -m pytest tests/ -p no:ape_test'
+            command: 'poetry run python -m pytest tests/ -p no:ape_test -vvv'
           - name: Integration Tests
-            command: 'poetry run python -m pytest tests_integration/ -p no:ape_test'
+            command: 'poetry run python -m pytest tests_integration/ -p no:ape_test -vvv'
           - name: Integration with Local Chain
-            command: 'poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation'
+            command: 'poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv'
     name: pytest - Python ${{ matrix.python-version }} - ${{ matrix.test.name }}
     steps:
       - uses: actions/checkout@v2

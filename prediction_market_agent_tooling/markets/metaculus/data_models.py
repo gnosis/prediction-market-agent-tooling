@@ -1,8 +1,9 @@
-from datetime import datetime
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel
+
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class QuestionType(str, Enum):
@@ -33,7 +34,7 @@ class CommunityPrediction(BaseModel):
 
 
 class Prediction(BaseModel):
-    t: datetime
+    t: DatetimeUTC
     x: float
 
 
@@ -68,20 +69,20 @@ class MetaculusQuestion(BaseModel):
     group_label: str | None = None
     resolution: int | None
     resolved_option: int | None
-    created_time: datetime
-    publish_time: datetime | None = None
-    close_time: datetime | None = None
-    effected_close_time: datetime | None
-    resolve_time: datetime | None = None
+    created_time: DatetimeUTC
+    publish_time: DatetimeUTC | None = None
+    close_time: DatetimeUTC | None = None
+    effected_close_time: DatetimeUTC | None
+    resolve_time: DatetimeUTC | None = None
     possibilities: dict[Any, Any] | None = None
     scoring: dict[Any, Any] = {}
     type: QuestionType | None = None
     user_perms: Any
     weekly_movement: float | None
     weekly_movement_direction: int | None = None
-    cp_reveal_time: datetime | None = None
-    edited_time: datetime
-    last_activity_time: datetime
+    cp_reveal_time: DatetimeUTC | None = None
+    edited_time: DatetimeUTC
+    last_activity_time: DatetimeUTC
     activity: float
     comment_count: int
     votes: int

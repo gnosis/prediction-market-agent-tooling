@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 from enum import Enum
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -26,7 +26,11 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from prediction_market_agent_tooling.tools.utils import should_not_happen, utcnow
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    should_not_happen,
+    utcnow,
+)
 
 
 class MarketType(str, Enum):
@@ -57,7 +61,7 @@ def get_binary_markets(
     filter_by: FilterBy = FilterBy.OPEN,
     sort_by: SortBy = SortBy.NONE,
     excluded_questions: set[str] | None = None,
-    created_after: datetime | None = None,
+    created_after: DatetimeUTC | None = None,
 ) -> t.Sequence[AgentMarket]:
     agent_market_class = MARKET_TYPE_TO_AGENT_MARKET[market_type]
     markets = agent_market_class.get_binary_markets(

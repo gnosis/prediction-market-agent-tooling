@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 from enum import Enum
 
 from eth_typing import ChecksumAddress
@@ -18,8 +17,8 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
     check_not_none,
-    convert_to_utc_datetime,
     should_not_happen,
     utcnow,
 )
@@ -52,22 +51,15 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: list[str]
-    outcome_token_pool: dict[
-        str, float
-    ] | None  # Should be in currency of `currency` above.
+    outcome_token_pool: (
+        dict[str, float] | None
+    )  # Should be in currency of `currency` above.
     resolution: Resolution | None
-    created_time: datetime | None
-    close_time: datetime | None
+    created_time: DatetimeUTC | None
+    close_time: DatetimeUTC | None
     current_p_yes: Probability
     url: str
     volume: float | None  # Should be in currency of `currency` above.
-
-    _add_timezone_validator_created_time = field_validator("created_time")(
-        convert_to_utc_datetime
-    )
-    _add_timezone_validator_close_time = field_validator("close_time")(
-        convert_to_utc_datetime
-    )
 
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(
@@ -182,7 +174,7 @@ class AgentMarket(BaseModel):
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
-        created_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
@@ -193,13 +185,15 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime
+        better_address: ChecksumAddress, start_time: DatetimeUTC
     ) -> list[Bet]:
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
     def get_resolved_bets_made_since(
-        better_address: ChecksumAddress, start_time: datetime, end_time: datetime | None
+        better_address: ChecksumAddress,
+        start_time: DatetimeUTC,
+        end_time: DatetimeUTC | None,
     ) -> list[ResolvedBet]:
         raise NotImplementedError("Subclasses must implement this method")
 

@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import tenacity
 from pydantic import BaseModel
@@ -18,7 +18,7 @@ from sqlmodel import (
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 
 class TavilyResult(BaseModel):
@@ -59,7 +59,7 @@ class TavilyResponseModel(SQLModel, table=True):
     include_images: bool
     use_cache: bool
     # Datetime at the time of search response and response from the search
-    datetime_: datetime = Field(index=True, nullable=False)
+    datetime_: DatetimeUTC = Field(index=True, nullable=False)
     response: dict[str, t.Any] = Field(sa_column=Column(JSONB, nullable=False))
 
     @staticmethod
@@ -89,7 +89,7 @@ class TavilyResponseModel(SQLModel, table=True):
             include_raw_content=include_raw_content,
             include_images=include_images,
             use_cache=use_cache,
-            datetime_=datetime.now(),
+            datetime_=utcnow(),
             response=response.model_dump(),
         )
 

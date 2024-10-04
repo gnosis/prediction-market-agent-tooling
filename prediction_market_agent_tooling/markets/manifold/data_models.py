@@ -1,8 +1,7 @@
 import typing as t
-from datetime import datetime, timedelta
 from enum import Enum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import Mana, Probability
 from prediction_market_agent_tooling.markets.data_models import (
@@ -10,7 +9,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProfitAmount,
     Resolution,
 )
-from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
 
@@ -33,7 +32,7 @@ class ManifoldAnswersMode(str, Enum):
 
 
 class ManifoldAnswer(BaseModel):
-    createdTime: datetime
+    createdTime: DatetimeUTC
     avatarUrl: str
     id: str
     username: str
@@ -55,17 +54,17 @@ class ManifoldMarket(BaseModel):
     id: str
     question: str
     creatorId: str
-    closeTime: datetime
-    createdTime: datetime
+    closeTime: DatetimeUTC
+    createdTime: DatetimeUTC
     creatorAvatarUrl: t.Optional[str] = None
     creatorName: str
     creatorUsername: str
     isResolved: bool
     resolution: t.Optional[Resolution] = None
-    resolutionTime: t.Optional[datetime] = None
-    lastBetTime: t.Optional[datetime] = None
-    lastCommentTime: t.Optional[datetime] = None
-    lastUpdatedTime: datetime
+    resolutionTime: t.Optional[DatetimeUTC] = None
+    lastBetTime: t.Optional[DatetimeUTC] = None
+    lastCommentTime: t.Optional[DatetimeUTC] = None
+    lastUpdatedTime: DatetimeUTC
     mechanism: str
     outcomeType: str
     p: t.Optional[float] = None
@@ -100,15 +99,6 @@ class ManifoldMarket(BaseModel):
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
 
-    @field_validator("closeTime", mode="before")
-    def clip_timestamp(cls, value: int) -> datetime:
-        """
-        Clip the timestamp to the maximum valid timestamp.
-        """
-        max_timestamp = (datetime.max - timedelta(days=1)).timestamp()
-        value = int(min(value / 1000, max_timestamp))
-        return datetime.fromtimestamp(value)
-
 
 class FullManifoldMarket(ManifoldMarket):
     # Some of these fields are available only in specific cases, see https://docs.manifold.markets/api#get-v0marketmarketid.
@@ -137,7 +127,7 @@ class ManifoldUser(BaseModel):
     """
 
     id: str
-    createdTime: datetime
+    createdTime: DatetimeUTC
     name: str
     username: str
     url: str
@@ -154,7 +144,7 @@ class ManifoldUser(BaseModel):
     userDeleted: t.Optional[bool] = None
     balance: Mana
     totalDeposits: Mana
-    lastBetTime: t.Optional[datetime] = None
+    lastBetTime: t.Optional[DatetimeUTC] = None
     currentBettingStreak: t.Optional[int] = None
     profitCached: ProfitCached
 
@@ -193,7 +183,7 @@ class ManifoldBet(BaseModel):
     loanAmount: Mana | None
     orderAmount: t.Optional[Mana] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
-    createdTime: datetime
+    createdTime: DatetimeUTC
     outcome: Resolution
 
     def get_resolved_boolean_outcome(self) -> bool:
@@ -237,4 +227,4 @@ class ManifoldContractMetric(BaseModel):
     userUsername: str
     userName: str
     userAvatarUrl: str
-    lastBetTime: datetime
+    lastBetTime: DatetimeUTC

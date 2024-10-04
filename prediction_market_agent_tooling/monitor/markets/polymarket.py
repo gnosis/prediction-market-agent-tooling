@@ -4,7 +4,7 @@ from google.cloud.functions_v2.types.functions import Function
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import MARKET_TYPE_KEY
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, DatetimeWithTimezone
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, DatetimeUTC
 from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.monitor.monitor import DeployedAgent
@@ -25,7 +25,7 @@ class DeployedPolymarketAgent(DeployedAgent):
     @staticmethod
     def from_api_keys(
         name: str,
-        start_time: DatetimeWithTimezone,
+        start_time: DatetimeUTC,
         api_keys: APIKeys,
     ) -> "DeployedPolymarketAgent":
         return DeployedPolymarketAgent(

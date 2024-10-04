@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -16,6 +15,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_BASE_URL,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -54,7 +54,7 @@ class PolymarketAgentMarket(AgentMarket):
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
-        created_after: t.Optional[datetime] = None,
+        created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         if sort_by != SortBy.NONE:

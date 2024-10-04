@@ -22,11 +22,7 @@ from prediction_market_agent_tooling.tools.gnosis_rpc import (
     GNOSIS_NETWORK_ID,
     GNOSIS_RPC_URL,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    DatetimeWithTimezone,
-    should_not_happen,
-    utc_timestamp_to_utc_datetime,
-)
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
@@ -457,8 +453,8 @@ class DebuggingContract(ContractOnGnosisChain):
     def get_now(
         self,
         web3: Web3 | None = None,
-    ) -> DatetimeWithTimezone:
-        return utc_timestamp_to_utc_datetime(self.getNow(web3))
+    ) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.getNow(web3))
 
     def inc(
         self,

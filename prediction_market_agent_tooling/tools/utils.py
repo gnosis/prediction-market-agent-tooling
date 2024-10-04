@@ -1,20 +1,18 @@
 import json
 import os
 import subprocess
-import typing as t
 from datetime import datetime
-from typing import Any, NoReturn, Optional, Type, TypeVar, cast
+from typing import Any, NoReturn, Optional, Type, TypeVar
 
 import pytz
 import requests
 from google.cloud import secretmanager
 from pydantic import BaseModel, ValidationError
-from pydantic.functional_validators import BeforeValidator
 from scipy.optimize import newton
 from scipy.stats import entropy
 
 from prediction_market_agent_tooling.gtypes import (
-    DatetimeWithTimezone,
+    DatetimeUTC,
     PrivateKey,
     Probability,
     SecretStr,
@@ -85,55 +83,33 @@ def export_requirements_from_toml(output_dir: str) -> None:
     logger.debug(f"Saved requirements to {output_dir}/requirements.txt")
 
 
-@t.overload
-def convert_to_utc_datetime(value: datetime) -> DatetimeWithTimezone:
-    ...
+def utcnow() -> DatetimeUTC:
+    return DatetimeUTC.from_datetime(datetime.now(pytz.UTC))
 
 
-@t.overload
-def convert_to_utc_datetime(value: None) -> None:
-    ...
-
-
-def convert_to_utc_datetime(value: datetime | None) -> DatetimeWithTimezone | None:
-    """
-    If datetime doesn't come with a timezone, we assume it to be UTC.
-    Note: Not great, but at least the error will be constant.
-    """
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=pytz.UTC)
-    if value.tzinfo != pytz.UTC:
-        value = value.astimezone(pytz.UTC)
-    return cast(DatetimeWithTimezone, value)
-
-
-@t.overload
-def utc_timestamp_to_utc_datetime(ts: int) -> DatetimeWithTimezone:
-    ...
-
-
-@t.overload
-def utc_timestamp_to_utc_datetime(ts: None) -> None:
-    ...
-
-
-def utc_timestamp_to_utc_datetime(ts: int | None) -> DatetimeWithTimezone | None:
-    return (
-        convert_to_utc_datetime(datetime.fromtimestamp(ts, tz=pytz.UTC))
-        if ts is not None
-        else None
+def utc_datetime(
+    year: int,
+    month: int,
+    day: int,
+    hour: int = 0,
+    minute: int = 0,
+    second: int = 0,
+    microsecond: int = 0,
+    *,
+    fold: int = 0,
+) -> DatetimeUTC:
+    dt = datetime(
+        year=year,
+        month=month,
+        day=day,
+        hour=hour,
+        minute=minute,
+        second=second,
+        microsecond=microsecond,
+        tzinfo=pytz.UTC,
+        fold=fold,
     )
-
-
-UTCDatetimeFromUTCTimestamp = t.Annotated[
-    datetime, BeforeValidator(utc_timestamp_to_utc_datetime)
-]
-
-
-def utcnow() -> DatetimeWithTimezone:
-    return convert_to_utc_datetime(datetime.now(pytz.UTC))
+    return DatetimeUTC.from_datetime(dt)
 
 
 def get_current_git_commit_sha() -> str:

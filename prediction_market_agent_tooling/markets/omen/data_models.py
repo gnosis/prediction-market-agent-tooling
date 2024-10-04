@@ -1,7 +1,5 @@
 import typing as t
-from datetime import datetime
 
-import pytz
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 from web3 import Web3
 
@@ -26,6 +24,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
 )
 from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
     check_not_none,
     should_not_happen,
 )
@@ -71,7 +70,7 @@ class Question(BaseModel):
     outcomes: list[str]
     isPendingArbitration: bool
     openingTimestamp: int
-    answerFinalizedTimestamp: t.Optional[datetime] = None
+    answerFinalizedTimestamp: t.Optional[DatetimeUTC] = None
     currentAnswer: t.Optional[str] = None
 
     @property
@@ -84,8 +83,8 @@ class Question(BaseModel):
         return len(self.outcomes)
 
     @property
-    def opening_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.openingTimestamp)
+    def opening_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.openingTimestamp)
 
     @property
     def has_answer(self) -> bool:
@@ -218,11 +217,11 @@ class OmenMarket(BaseModel):
         return self.question.openingTimestamp
 
     @property
-    def opening_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.openingTimestamp, tz=pytz.UTC)
+    def opening_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.openingTimestamp)
 
     @property
-    def close_time(self) -> datetime:
+    def close_time(self) -> DatetimeUTC:
         # Opening of the Reality's question is close time for the market,
         # however, market is usually "closed" even sooner by removing all the liquidity.
         return self.opening_datetime
@@ -257,13 +256,13 @@ class OmenMarket(BaseModel):
         return self.title
 
     @property
-    def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp)
+    def creation_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.creationTimestamp)
 
     @property
-    def finalized_datetime(self) -> datetime | None:
+    def finalized_datetime(self) -> DatetimeUTC | None:
         return (
-            datetime.fromtimestamp(self.answerFinalizedTimestamp)
+            DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
             if self.answerFinalizedTimestamp is not None
             else None
         )
@@ -490,8 +489,8 @@ class OmenBet(BaseModel):
     fpmm: OmenMarket
 
     @property
-    def creation_datetime(self) -> datetime:
-        return datetime.fromtimestamp(self.creationTimestamp, tz=pytz.UTC)
+    def creation_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.creationTimestamp)
 
     @property
     def boolean_outcome(self) -> bool:
@@ -548,9 +547,7 @@ class OmenBet(BaseModel):
             market_question=self.title,
             market_id=self.fpmm.id,
             market_outcome=self.fpmm.boolean_outcome,
-            resolved_time=datetime.fromtimestamp(
-                check_not_none(self.fpmm.answerFinalizedTimestamp)
-            ),
+            resolved_time=check_not_none(self.fpmm.finalized_datetime),
             profit=self.get_profit(),
         )
 
@@ -571,11 +568,23 @@ class RealityQuestion(BaseModel):
     id: str
     user: HexAddress
     historyHash: HexBytes | None
-    updatedTimestamp: datetime
+    updatedTimestamp: int
     contentHash: HexBytes
     questionId: HexBytes
-    answerFinalizedTimestamp: datetime
-    currentScheduledFinalizationTimestamp: datetime
+    answerFinalizedTimestamp: int
+    currentScheduledFinalizationTimestamp: int
+
+    @property
+    def updated_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.updatedTimestamp)
+
+    @property
+    def answer_finalized_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
+
+    @property
+    def current_scheduled_finalization_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.currentScheduledFinalizationTimestamp)
 
     @property
     def url(self) -> str:
@@ -584,12 +593,16 @@ class RealityQuestion(BaseModel):
 
 class RealityAnswer(BaseModel):
     id: str
-    timestamp: datetime
+    timestamp: int
     answer: HexBytes
     lastBond: Wei
     bondAggregate: Wei
     question: RealityQuestion
     createdBlock: int
+
+    @property
+    def timestamp_datetime(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.timestamp)
 
 
 class RealityResponse(BaseModel):
@@ -598,7 +611,7 @@ class RealityResponse(BaseModel):
     """
 
     id: str
-    timestamp: datetime
+    timestamp: int
     answer: HexBytes
     isUnrevealed: bool
     isCommitment: bool

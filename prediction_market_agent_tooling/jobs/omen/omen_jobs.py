@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 from web3 import Web3
 
@@ -21,6 +20,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
     SortBy,
 )
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
@@ -32,7 +32,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         return self.question
 
     @property
-    def deadline(self) -> datetime:
+    def deadline(self) -> DatetimeUTC:
         return self.close_time
 
     def get_reward(self, max_bond: float) -> float:

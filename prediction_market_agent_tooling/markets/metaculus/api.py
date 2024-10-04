@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Union
 
 import requests
@@ -9,7 +8,7 @@ from prediction_market_agent_tooling.markets.metaculus.data_models import (
     MetaculusQuestion,
     MetaculusQuestions,
 )
-from prediction_market_agent_tooling.tools.utils import response_to_model
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, response_to_model
 
 METACULUS_API_BASE_URL = "https://www.metaculus.com/api2"
 
@@ -65,7 +64,7 @@ def get_questions(
     order_by: str | None = None,
     offset: int = 0,
     tournament_id: int | None = None,
-    created_after: datetime | None = None,
+    created_after: DatetimeUTC | None = None,
     status: str | None = None,
 ) -> list[MetaculusQuestion]:
     """

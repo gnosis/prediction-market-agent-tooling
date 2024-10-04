@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -24,7 +23,10 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_trace_for_bet,
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.utils import get_private_key_from_gcp_secret
+from prediction_market_agent_tooling.tools.utils import (
+    get_private_key_from_gcp_secret,
+    utc_datetime,
+)
 
 
 class SimulatedOutcome(BaseModel):
@@ -160,7 +162,7 @@ if __name__ == "__main__":
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
 
         # Pick a time after pool token number is stored in OmenAgentMarket
-        start_time = datetime(2024, 9, 13)
+        start_time = utc_datetime(2024, 9, 13)
 
         langfuse = Langfuse(
             secret_key=api_keys.langfuse_secret_key.get_secret_value(),

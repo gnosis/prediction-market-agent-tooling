@@ -1,8 +1,7 @@
 import typing as t
-from datetime import datetime, timedelta
 from enum import Enum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import Mana, Probability
 from prediction_market_agent_tooling.markets.data_models import (
@@ -99,17 +98,6 @@ class ManifoldMarket(BaseModel):
 
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
-
-    @field_validator("closeTime", mode="before")
-    def clip_timestamp(cls, value: int) -> int:
-        """
-        Clip the timestamp to the maximum valid timestamp.
-        """
-        max_timestamp = (datetime.max - timedelta(days=1)).timestamp()
-        value = int(
-            min(value / 1000, max_timestamp)
-        )  # Manifold's timestamp is in miliseconds, so / 1000.
-        return value
 
 
 class FullManifoldMarket(ManifoldMarket):

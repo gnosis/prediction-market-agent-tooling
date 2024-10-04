@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from dateutil import parser
@@ -65,6 +65,9 @@ class DatetimeUTC(datetime):
         if isinstance(value, int):
             # Divide by 1000 if the timestamp is assumed to be in miliseconds (if not, 1e11 would be year 5138).
             value = int(value / 1000) if value > 1e11 else value
+            # In the past, we had bugged data where timestamp was huge and Python errored out.
+            max_timestamp = int((datetime.max - timedelta(days=1)).timestamp())
+            value = min(value, max_timestamp)
             value = datetime.fromtimestamp(value, tz=pytz.UTC)
         elif isinstance(value, str):
             value = parser.parse(value)

@@ -481,7 +481,7 @@ def test_add_predictions(local_web3: Web3, test_keys: APIKeys, ipfs_hash: str) -
         market_address, web3=local_web3
     )
     assert len(updated_stored_predictions) == len(stored_predictions) + 1
-    assert stored_predictions[-1] == p
+    assert updated_stored_predictions[-1] == p
 
 
 def test_place_bet_with_prev_existing_positions(

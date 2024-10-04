@@ -45,7 +45,7 @@ class APIKeys(BaseSettings):
     LANGFUSE_HOST: t.Optional[str] = None
     LANGFUSE_DEPLOYMENT_VERSION: t.Optional[str] = None
 
-    ENABLE_IPFS_UPLOAD: t.Optional[bool] = False
+    ENABLE_IPFS_UPLOAD: bool = False
     PINATA_API_KEY: t.Optional[SecretStr] = None
     PINATA_API_SECRET: t.Optional[SecretStr] = None
 

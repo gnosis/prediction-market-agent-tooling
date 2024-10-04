@@ -60,10 +60,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import (
-    wei_to_xdai,
-    xdai_to_wei,
-)
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"

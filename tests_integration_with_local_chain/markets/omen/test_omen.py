@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     private_key_type,
     xDai,
     xdai_type,
+    IPFSCIDVersion0,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -59,7 +60,11 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import (
+    wei_to_xdai,
+    xdai_to_wei,
+    ipfscidv0_to_byte32,
+)
 from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
@@ -465,6 +470,29 @@ def test_add_predictions(local_web3: Web3, test_keys: APIKeys) -> None:
         tx_hashes=[HexBytes(dummy_transaction_hash)],
         estimated_probability_bps=5454,
         ipfs_hash=HexBytes(dummy_transaction_hash),
+        publisher=test_keys.public_key,
+    )
+
+    agent_result_mapping.add_prediction(test_keys, market_address, p, web3=local_web3)
+    stored_predictions = agent_result_mapping.get_predictions(
+        market_address, web3=local_web3
+    )
+    assert len(stored_predictions) == 1
+    assert stored_predictions[0] == p
+
+
+def test_add_prediction_with_empty_ipfs_hash(
+    local_web3: Web3, test_keys: APIKeys
+) -> None:
+    agent_result_mapping = OmenAgentResultMappingContract()
+    market_address = test_keys.public_key
+    dummy_transaction_hash = (
+        "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"
+    )
+    p = ContractPrediction(
+        tx_hashes=[HexBytes(dummy_transaction_hash)],
+        estimated_probability_bps=5454,
+        ipfs_hash=ipfscidv0_to_byte32(IPFSCIDVersion0("")),
         publisher=test_keys.public_key,
     )
 

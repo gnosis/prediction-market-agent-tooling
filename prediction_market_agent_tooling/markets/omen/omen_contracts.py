@@ -431,7 +431,7 @@ class sDaiContract(ContractERC4626OnGnosisChain):
 
 
 OMEN_DEFAULT_MARKET_FEE_PERC = 0.02  # 2% fee from the buying shares amount.
-REALITY_DEFAULT_FINALIZATION_TIMEOUT = timedelta(days=3, hours=12)
+REALITY_DEFAULT_FINALIZATION_TIMEOUT = timedelta(days=3)
 
 
 class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):

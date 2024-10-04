@@ -47,6 +47,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
+    REALITY_DEFAULT_FINALIZATION_TIMEOUT,
     Arbitrator,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
@@ -840,7 +841,7 @@ def omen_create_market_tx(
     language: str,
     outcomes: list[str],
     auto_deposit: bool,
-    finalization_timeout: timedelta = timedelta(days=1),
+    finalization_timeout: timedelta = REALITY_DEFAULT_FINALIZATION_TIMEOUT,
     fee_perc: float = OMEN_DEFAULT_MARKET_FEE_PERC,
     distribution_hint: list[OmenOutcomeToken] | None = None,
     collateral_token_address: ChecksumAddress = WrappedxDaiContract().address,

@@ -45,6 +45,7 @@ class APIKeys(BaseSettings):
     LANGFUSE_HOST: t.Optional[str] = None
     LANGFUSE_DEPLOYMENT_VERSION: t.Optional[str] = None
 
+    ENABLE_IPFS_UPLOAD: bool = False
     PINATA_API_KEY: t.Optional[SecretStr] = None
     PINATA_API_SECRET: t.Optional[SecretStr] = None
 
@@ -149,6 +150,12 @@ class APIKeys(BaseSettings):
             self.LANGFUSE_SECRET_KEY is not None
             and self.LANGFUSE_PUBLIC_KEY is not None
             and self.LANGFUSE_HOST is not None
+        )
+
+    @property
+    def enable_ipfs_upload(self) -> bool:
+        return check_not_none(
+            self.ENABLE_IPFS_UPLOAD, "ENABLE_IPFS_UPLOAD missing in the environment."
         )
 
     @property

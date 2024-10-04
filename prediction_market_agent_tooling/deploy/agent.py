@@ -11,6 +11,7 @@ from functools import cached_property
 from pydantic import BaseModel, BeforeValidator, computed_field
 from typing_extensions import Annotated
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
@@ -302,7 +303,6 @@ class DeployableTraderAgent(DeployableAgent):
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
         self.place_bet = place_bet
-        self.ipfs_handler = IPFSHandler(APIKeys())
 
     def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
         user_id = market.get_user_id(api_keys=APIKeys())
@@ -522,16 +522,21 @@ class DeployableTraderAgent(DeployableAgent):
             if processed_market.answer.reasoning
             else ""
         )
-        ipfs_hash = self.ipfs_handler.store_agent_result(
-            IPFSAgentResult(reasoning=reasoning)
-        )
+
+        ipfs_hash_decoded = HexBytes(HASH_ZERO)
+        if keys.enable_ipfs_upload:
+            logger.info("Storing prediction on IPFS.")
+            ipfs_hash = IPFSHandler(keys).store_agent_result(
+                IPFSAgentResult(reasoning=reasoning)
+            )
+            ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
         tx_hashes = [
             HexBytes(HexStr(i.id)) for i in processed_market.trades if i.id is not None
         ]
         prediction = ContractPrediction(
             publisher=keys.public_key,
-            ipfs_hash=ipfscidv0_to_byte32(ipfs_hash),
+            ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
             estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
         )

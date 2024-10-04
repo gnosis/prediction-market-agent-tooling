@@ -6,6 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -455,25 +456,32 @@ def get_position_balance_by_position_id(
     )
 
 
-def test_add_predictions(local_web3: Web3, test_keys: APIKeys) -> None:
+@pytest.mark.parametrize(
+    "ipfs_hash",
+    ["0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b", HASH_ZERO],
+)
+def test_add_predictions(local_web3: Web3, test_keys: APIKeys, ipfs_hash: str) -> None:
     agent_result_mapping = OmenAgentResultMappingContract()
     market_address = test_keys.public_key
     dummy_transaction_hash = (
         "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"
     )
+    stored_predictions = agent_result_mapping.get_predictions(
+        market_address, web3=local_web3
+    )
     p = ContractPrediction(
         tx_hashes=[HexBytes(dummy_transaction_hash)],
         estimated_probability_bps=5454,
-        ipfs_hash=HexBytes(dummy_transaction_hash),
+        ipfs_hash=HexBytes(ipfs_hash),
         publisher=test_keys.public_key,
     )
 
     agent_result_mapping.add_prediction(test_keys, market_address, p, web3=local_web3)
-    stored_predictions = agent_result_mapping.get_predictions(
+    updated_stored_predictions = agent_result_mapping.get_predictions(
         market_address, web3=local_web3
     )
-    assert len(stored_predictions) == 1
-    assert stored_predictions[0] == p
+    assert len(updated_stored_predictions) == len(stored_predictions) + 1
+    assert updated_stored_predictions[-1] == p
 
 
 def test_place_bet_with_prev_existing_positions(

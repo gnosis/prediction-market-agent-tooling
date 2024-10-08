@@ -71,12 +71,17 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def __init__(self) -> None:
         self.sg = Subgrounds()
 
-        # Patch the query_json method to retry on failure.
+        # Patch methods to retry on failure.
         self.sg.query_json = tenacity.retry(
             stop=tenacity.stop_after_attempt(3),
             wait=tenacity.wait_fixed(1),
             after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
         )(self.sg.query_json)
+        self.sg.load_subgraph = tenacity.retry(
+            stop=tenacity.stop_after_attempt(3),
+            wait=tenacity.wait_fixed(1),
+            after=lambda x: logger.debug(f"load_subgraph failed, {x.attempt_number=}."),
+        )(self.sg.load_subgraph)
 
         keys = APIKeys()
 

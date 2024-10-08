@@ -352,25 +352,38 @@ class OmenMarket(BaseModel):
     def is_binary(self) -> bool:
         return len(self.outcomes) == 2
 
-    @property
-    def boolean_outcome(self) -> bool:
+    def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
         if not self.is_binary:
             raise ValueError(
                 f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
             )
+        outcome: str = self.outcomes[answer.as_int()]
+        return get_boolean_outcome(outcome)
+
+    @property
+    def boolean_outcome(self) -> bool:
         if not self.is_resolved_with_valid_answer:
             raise ValueError(f"Bet with title {self.title} is not resolved.")
+        return self.boolean_outcome_from_answer(
+            check_not_none(
+                self.currentAnswer, "Can not be None if `is_resolved_with_valid_answer`"
+            )
+        )
 
-        outcome: str = self.outcomes[check_not_none(self.answer_index)]
-        return get_boolean_outcome(outcome)
+    def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
+        if self.boolean_outcome_from_answer(answer):
+            return Resolution.YES
+        else:
+            return Resolution.NO
 
     def get_resolution_enum(self) -> t.Optional[Resolution]:
         if not self.is_resolved_with_valid_answer:
             return None
-        if self.boolean_outcome:
-            return Resolution.YES
-        else:
-            return Resolution.NO
+        return self.get_resolution_enum_from_answer(
+            check_not_none(
+                self.currentAnswer, "Can not be None if `is_resolved_with_valid_answer`"
+            )
+        )
 
     @property
     def url(self) -> str:

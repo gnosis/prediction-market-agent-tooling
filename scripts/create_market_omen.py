@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import typer
 from web3 import Web3
 
@@ -18,7 +20,7 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 def main(
     question: str = typer.Option(),
-    closing_time: DatetimeUTC = typer.Option(),
+    closing_time: datetime = typer.Option(),
     category: str = typer.Option(),
     initial_funds: str = typer.Option(),
     from_private_key: str = typer.Option(),
@@ -56,7 +58,7 @@ def main(
         initial_funds=xdai_type(initial_funds),
         fee_perc=fee_perc,
         question=question,
-        closing_time=closing_time,
+        closing_time=DatetimeUTC.from_datetime(closing_time),
         category=category,
         language=language,
         outcomes=outcomes,

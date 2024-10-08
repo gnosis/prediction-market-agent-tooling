@@ -18,9 +18,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     RealityQuestion,
 )
-from prediction_market_agent_tooling.markets.omen.omen import (
-    OMEN_DEFAULT_REALITIO_BOND_VALUE,
-)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
@@ -121,6 +118,7 @@ def claim_bonds_on_realitio_question(
 def finalize_markets(
     api_keys: APIKeys,
     markets_with_resolutions: list[tuple[OmenMarket, Resolution | None]],
+    realitio_bond: xDai,
     wait_n_days_before_invalid: int = 30,
     web3: Web3 | None = None,
 ) -> list[HexAddress]:
@@ -140,7 +138,7 @@ def finalize_markets(
                 omen_submit_invalid_answer_market_tx(
                     api_keys,
                     market,
-                    OMEN_DEFAULT_REALITIO_BOND_VALUE,
+                    realitio_bond,
                     web3=web3,
                 )
 
@@ -155,7 +153,7 @@ def finalize_markets(
                 api_keys,
                 market,
                 resolution,
-                OMEN_DEFAULT_REALITIO_BOND_VALUE,
+                realitio_bond,
                 web3=web3,
             )
             finalized_markets.append(market.id)
@@ -168,7 +166,7 @@ def finalize_markets(
             omen_submit_invalid_answer_market_tx(
                 api_keys,
                 market,
-                OMEN_DEFAULT_REALITIO_BOND_VALUE,
+                realitio_bond,
                 web3=web3,
             )
 

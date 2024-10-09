@@ -226,7 +226,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         opened_after: t.Optional[DatetimeUTC] = None,
         finalized_before: t.Optional[DatetimeUTC] = None,
         finalized_after: t.Optional[DatetimeUTC] = None,
-        finalized: bool | None = None,
         resolved: bool | None = None,
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
@@ -277,12 +276,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 where_stms["currentAnswer_not"] = self.INVALID_ANSWER
             else:
                 where_stms["resolutionTimestamp"] = None
-
-        if finalized is not None:
-            if finalized:
-                where_stms["answerFinalizedTimestamp_not"] = None
-            else:
-                where_stms["answerFinalizedTimestamp"] = None
 
         if opened_after:
             where_stms["question_"]["openingTimestamp_gt"] = to_int_timestamp(
@@ -363,13 +356,11 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
         """
         # These values need to be set according to the filter_by value, so they can not be passed as arguments.
-        finalized: bool | None = None
         resolved: bool | None = None
         opened_after: DatetimeUTC | None = None
         liquidity_bigger_than: Wei | None = None
 
         if filter_by == FilterBy.RESOLVED:
-            finalized = True
             resolved = True
         elif filter_by == FilterBy.OPEN:
             # We can not use `resolved=False` + `finalized=False` here,
@@ -386,7 +377,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         return self.get_omen_binary_markets(
             limit=limit,
-            finalized=finalized,
             resolved=resolved,
             opened_after=opened_after,
             liquidity_bigger_than=liquidity_bigger_than,
@@ -406,7 +396,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         opened_after: t.Optional[DatetimeUTC] = None,
         finalized_before: t.Optional[DatetimeUTC] = None,
         finalized_after: t.Optional[DatetimeUTC] = None,
-        finalized: bool | None = None,
         resolved: bool | None = None,
         creator: t.Optional[HexAddress] = None,
         creator_in: t.Optional[t.Sequence[HexAddress]] = None,
@@ -434,7 +423,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             opened_after=opened_after,
             finalized_before=finalized_before,
             finalized_after=finalized_after,
-            finalized=finalized,
             resolved=resolved,
             condition_id_in=condition_id_in,
             id_in=id_in,

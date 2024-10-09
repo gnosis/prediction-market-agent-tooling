@@ -20,9 +20,9 @@ from prediction_market_agent_tooling.tools.utils import (
 # with some small prompting mods and I removed the point about "The outcome of the market must be known by its Resolution Date.", because that can not be verified before-hand.
 # and also point about "in which none of the answers are valid will resolve as invalid" and "in which multiple answers are valid will resolve as invalid.", because before hand we can not know if one of the outcomes happened or not.
 QUESTION_IS_INVALID_PROMPT = """Main signs about an invalid question (sometimes referred to as a "market"):
-- The market's question is about immoral violence, dead or assatination.
-- The violant event can be caused by a single conscious being.
-- The violant event is done ilegally.
+- The market's question is about immoral violence, death or assassination.
+- The violent event can be caused by a single conscious being.
+- The violent event is done illegally.
 - The market should not directly incentivize immoral violent (such as murder, rape or unjust imprisonment) actions which could likely be performed by any participant.
 - Invalid: Will Donald Trump be alive on the 01/12/2021? (Anyone could bet on “No” and kill him for a guaranteed profit. Anyone could bet on “Yes” to effectively put a bounty on his head).
 - Invalid: Will Hera be a victim of swatting in 2020? (Anyone could falsely call the emergency services on him in order to win the bet)

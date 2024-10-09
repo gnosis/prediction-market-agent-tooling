@@ -66,6 +66,7 @@ from prediction_market_agent_tooling.monitor.monitor_app import (
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
+from prediction_market_agent_tooling.tools.is_invalid import is_invalid
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
@@ -295,6 +296,7 @@ class DeployableTraderAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+    allow_invalid_questions: bool = False
 
     def __init__(
         self,
@@ -401,6 +403,9 @@ class DeployableTraderAgent(DeployableAgent):
 
         # Do as a last check, as it uses paid OpenAI API.
         if not is_predictable_binary(market.question):
+            return False
+
+        if not self.allow_invalid_questions and is_invalid(market.question):
             return False
 
         return True

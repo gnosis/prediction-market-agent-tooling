@@ -37,13 +37,12 @@ class MetaculusAgentMarket(AgentMarket):
             question=model.title,
             outcomes=[],
             resolution=None,
-            current_p_yes=Probability(model.community_prediction.full.p_yes),
-            created_time=model.created_time,
-            close_time=model.close_time,
-            url=model.url,
+            current_p_yes=model.p_yes,
+            created_time=model.created_at,
+            close_time=model.scheduled_close_time,
+            url=model.page_url,
             volume=None,
-            have_predicted=model.my_predictions is not None
-            and len(model.my_predictions.predictions) > 0,
+            have_predicted=model.question.my_forecasts.latest is not None,
             outcome_token_pool=None,
         )
 

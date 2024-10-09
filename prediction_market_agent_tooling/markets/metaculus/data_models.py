@@ -45,9 +45,15 @@ class MyForecast(BaseModel):
     interval_upper_bounds: list[float] | None
 
 
+class MyAggregation(BaseModel):
+    history: list[MyForecast]
+    latest: MyForecast | None
+    score_data: dict[str, Any]
+
+
 class Question(BaseModel):
     aggregations: Aggregations
-    my_forecasts: MyForecast
+    my_forecasts: MyAggregation
     type: QuestionType
     possibilities: dict[str, str] | None
 

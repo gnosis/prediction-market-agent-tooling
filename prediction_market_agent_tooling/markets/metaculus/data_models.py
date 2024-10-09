@@ -36,9 +36,18 @@ class Aggregations(BaseModel):
     metaculus_prediction: Aggregation
 
 
+class MyForecast(BaseModel):
+    start_time: DatetimeUTC
+    end_time: DatetimeUTC | None
+    forecast_values: list[float] | None
+    interval_lower_bounds: list[float] | None
+    centers: list[float] | None
+    interval_upper_bounds: list[float] | None
+
+
 class Question(BaseModel):
     aggregations: Aggregations
-    my_forecasts: Aggregation
+    my_forecasts: MyForecast
     type: QuestionType
     possibilities: dict[str, str] | None
 

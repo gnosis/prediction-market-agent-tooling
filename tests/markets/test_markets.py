@@ -78,7 +78,7 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
 
 @pytest.mark.parametrize("market_type", list(MarketType))
 def test_get_markets(market_type: MarketType) -> None:
-    limit = 10
+    limit = 100
     markets = market_type.market_class.get_binary_markets(
         limit=limit, sort_by=SortBy.NONE, filter_by=FilterBy.OPEN
     )

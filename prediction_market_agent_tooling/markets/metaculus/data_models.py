@@ -3,92 +3,99 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class QuestionType(str, Enum):
-    forecast = "forecast"
-    notebook = "notebook"
-    discussion = "discussion"
-    claim = "claim"
-    group = "group"
-    conditional_group = "conditional_group"
-    multiple_choice = "multiple_choice"
+    binary = "binary"
 
 
-class CommunityPrediction(BaseModel):
-    y: list[float]
-    q1: float | None = None
-    q2: float | None = None
-    q3: float | None = None
-
-    @property
-    def p_yes(self) -> float:
-        """
-        q2 corresponds to the median, or 'second quartile' of the distribution.
-
-        If no value is provided (i.e. the question is new and has not been
-        answered yet), we default to 0.5.
-        """
-        return self.q2 if self.q2 is not None else 0.5
+class AggregationItem(BaseModel):
+    start_time: DatetimeUTC
+    end_time: DatetimeUTC | None
+    forecast_values: list[float] | None
+    forecaster_count: int
+    interval_lower_bounds: list[float] | None
+    centers: list[float] | None
+    interval_upper_bounds: list[float] | None
+    means: list[float] | None
+    histogram: list[float] | None
 
 
-class Prediction(BaseModel):
-    t: DatetimeUTC
-    x: float
+class Aggregation(BaseModel):
+    history: list[AggregationItem]
+    latest: AggregationItem | None
+    score_data: dict[str, Any]
 
 
-class UserPredictions(BaseModel):
-    id: int
-    predictions: list[Prediction]
-    points_won: float | None = None
-    user: int
-    username: str
-    question: int
+class Aggregations(BaseModel):
+    recency_weighted: Aggregation
+    unweighted: Aggregation
+    single_aggregation: Aggregation
+    metaculus_prediction: Aggregation
 
 
-class CommunityPredictionStats(BaseModel):
-    full: CommunityPrediction
-    unweighted: CommunityPrediction
+class MyForecast(BaseModel):
+    start_time: DatetimeUTC
+    end_time: DatetimeUTC | None
+    forecast_values: list[float] | None
+    interval_lower_bounds: list[float] | None
+    centers: list[float] | None
+    interval_upper_bounds: list[float] | None
+
+
+class MyAggregation(BaseModel):
+    history: list[MyForecast]
+    latest: MyForecast | None
+    score_data: dict[str, Any]
+
+
+class Question(BaseModel):
+    aggregations: Aggregations
+    my_forecasts: MyAggregation
+    type: QuestionType
+    possibilities: dict[str, str] | None
 
 
 class MetaculusQuestion(BaseModel):
-    """
-    https://www.metaculus.com/api2/schema/redoc/#tag/questions/operation/questions_retrieve
-    """
-
-    active_state: Any
-    url: str
-    page_url: str
     id: int
-    author: int
-    author_name: str
     author_id: int
+    author_username: str
     title: str
-    title_short: str
-    group_label: str | None = None
-    resolution: int | None
-    resolved_option: int | None
-    created_time: DatetimeUTC
-    publish_time: DatetimeUTC | None = None
-    close_time: DatetimeUTC | None = None
-    effected_close_time: DatetimeUTC | None
-    resolve_time: DatetimeUTC | None = None
-    possibilities: dict[Any, Any] | None = None
-    scoring: dict[Any, Any] = {}
-    type: QuestionType | None = None
-    user_perms: Any
-    weekly_movement: float | None
-    weekly_movement_direction: int | None = None
-    cp_reveal_time: DatetimeUTC | None = None
-    edited_time: DatetimeUTC
-    last_activity_time: DatetimeUTC
-    activity: float
+    created_at: DatetimeUTC
+    published_at: DatetimeUTC
+    scheduled_close_time: DatetimeUTC
+    scheduled_resolve_time: DatetimeUTC
+    user_permission: str
     comment_count: int
-    votes: int
-    community_prediction: CommunityPredictionStats
-    my_predictions: UserPredictions | None = None
+    question: Question
     # TODO add the rest of the fields https://github.com/gnosis/prediction-market-agent-tooling/issues/301
+
+    @property
+    def page_url(self) -> str:
+        return f"https://www.metaculus.com/questions/{self.id}/"
+
+    @property
+    def p_yes(self) -> Probability:
+        if self.question.type != QuestionType.binary:
+            raise ValueError(f"Only binary markets can have p_yes.")
+        if (
+            self.question.aggregations.recency_weighted is None
+            or self.question.aggregations.recency_weighted.latest is None
+            or self.question.aggregations.recency_weighted.latest.forecast_values
+            is None
+        ):
+            # If no value is provided (i.e. the question is new and has not been answered yet), we default to 0.5.
+            return Probability(0.5)
+        if len(self.question.aggregations.recency_weighted.latest.forecast_values) != 2:
+            raise ValueError(
+                f"Invalid logic, assumed that binary markets will have two forecasts, got: {self.question.aggregations.recency_weighted.latest.forecast_values}"
+            )
+        # Experimentally figured out that they store "Yes" at index 1.
+        return Probability(
+            self.question.aggregations.recency_weighted.latest.forecast_values[1]
+        )
 
 
 class MetaculusQuestions(BaseModel):

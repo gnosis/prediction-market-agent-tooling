@@ -251,7 +251,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             opened_after=question_opened_after,
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
-            with_anwers=question_with_answers,
+            with_answers=question_with_answers,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,
@@ -646,7 +646,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         current_answer_before: DatetimeUTC | None,
         finalized_before: DatetimeUTC | None,
         finalized_after: DatetimeUTC | None,
-        with_anwers: bool | None,
+        with_answers: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         opened_before: t.Optional[DatetimeUTC],
@@ -691,8 +691,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 finalized_after
             )
 
-        if with_anwers is not None:
-            if with_anwers:
+        if with_answers is not None:
+            if with_answers:
                 where_stms["answerFinalizedTimestamp_not"] = None
             else:
                 where_stms["answerFinalizedTimestamp"] = None
@@ -712,7 +712,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         current_answer_before: DatetimeUTC | None,
         finalized_before: DatetimeUTC | None,
         finalized_after: DatetimeUTC | None,
-        with_anwers: bool | None,
+        with_answers: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         opened_before: t.Optional[DatetimeUTC],
@@ -748,8 +748,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 finalized_after
             )
 
-        if with_anwers is not None:
-            if with_anwers:
+        if with_answers is not None:
+            if with_answers:
                 where_stms["answerFinalizedTimestamp_not"] = None
             else:
                 where_stms["answerFinalizedTimestamp"] = None
@@ -772,7 +772,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         current_answer_before: DatetimeUTC | None = None,
         finalized_before: DatetimeUTC | None = None,
         finalized_after: DatetimeUTC | None = None,
-        with_anwers: bool | None = None,
+        with_answers: bool | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_id: HexBytes | None = None,
         opened_before: DatetimeUTC | None = None,
@@ -784,7 +784,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             claimed=claimed,
             finalized_before=finalized_before,
             finalized_after=finalized_after,
-            with_anwers=with_anwers,
+            with_answers=with_answers,
             current_answer_before=current_answer_before,
             question_id_in=question_id_in,
             question_id=question_id,
@@ -845,7 +845,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             opened_after=question_opened_after,
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
-            with_anwers=question_with_answers,
+            with_answers=question_with_answers,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,

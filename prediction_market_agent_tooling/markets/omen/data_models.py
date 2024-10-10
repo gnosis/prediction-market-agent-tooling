@@ -74,7 +74,7 @@ class Question(BaseModel):
     currentAnswer: t.Optional[str] = None
 
     @property
-    def questionId(self) -> HexBytes:
+    def question_id(self) -> HexBytes:
         return self.id
 
     @property

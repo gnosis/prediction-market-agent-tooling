@@ -660,6 +660,10 @@ def format_realitio_question(
     template_id: int,
 ) -> str:
     """If you add a new template id here, also add to the parsing function below."""
+
+    # Escape characters for JSON troubles on Reality.eth.
+    question = question.replace('"', '\\"')
+
     if template_id == 2:
         return "␟".join(
             [

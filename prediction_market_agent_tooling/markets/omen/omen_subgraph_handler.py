@@ -228,7 +228,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_opened_after: DatetimeUTC | None,
         question_finalized_before: DatetimeUTC | None,
         question_finalized_after: DatetimeUTC | None,
-        question_with_anwers: bool | None,
+        question_with_answers: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         question_current_answer_before: DatetimeUTC | None,
@@ -255,7 +255,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             opened_after=question_opened_after,
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
-            with_anwers=question_with_anwers,
+            with_anwers=question_with_answers,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,
@@ -393,7 +393,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_opened_after: DatetimeUTC | None = None,
         question_finalized_before: DatetimeUTC | None = None,
         question_finalized_after: DatetimeUTC | None = None,
-        question_with_anwers: bool | None = None,
+        question_with_answers: bool | None = None,
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_current_answer_before: DatetimeUTC | None = None,
@@ -424,7 +424,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             question_opened_after=question_opened_after,
             question_finalized_before=question_finalized_before,
             question_finalized_after=question_finalized_after,
-            question_with_anwers=question_with_anwers,
+            question_with_answers=question_with_answers,
             question_id=question_id,
             question_id_in=question_id_in,
             question_current_answer_before=question_current_answer_before,
@@ -705,12 +705,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if question_id_in is not None:
             where_stms["questionId_in"] = [x.hex() for x in question_id_in]
 
-        # `excluded_question_titles` can not be an empty list, otherwise the API bugs out and returns nothing.
-        excluded_question_titles = [""]
         if excluded_titles:
-            excluded_question_titles = [i for i in excluded_titles]
-
-        where_stms["title_not_in"] = excluded_question_titles
+            where_stms["title_not_in"] = [i for i in excluded_titles]
 
         return where_stms
 
@@ -776,7 +772,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_opened_after: t.Optional[DatetimeUTC] = None,
         question_finalized_before: t.Optional[DatetimeUTC] = None,
         question_finalized_after: t.Optional[DatetimeUTC] = None,
-        question_with_anwers: bool | None = None,
+        question_with_answers: bool | None = None,
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_current_answer_before: DatetimeUTC | None = None,
@@ -795,7 +791,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             opened_after=question_opened_after,
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
-            with_anwers=question_with_anwers,
+            with_anwers=question_with_answers,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,

@@ -112,9 +112,11 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
     ) -> list[Trade]:
         direction = self.calculate_direction(market.current_p_yes, answer.p_yes)
 
+        # Don't bet `bet_amount` if it's less than liquidity, because that means just losing money instantly.
+        bet_amount = min(self.bet_amount, market.get_liquidity().amount)
         amounts = {
             market.get_outcome_str_from_bool(direction): TokenAmount(
-                amount=self.bet_amount,
+                amount=bet_amount,
                 currency=market.currency,
             ),
         }

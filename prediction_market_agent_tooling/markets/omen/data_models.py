@@ -74,6 +74,10 @@ class Question(BaseModel):
     currentAnswer: t.Optional[str] = None
 
     @property
+    def questionId(self) -> HexBytes:
+        return self.id
+
+    @property
     def question_raw(self) -> str:
         # Based on https://github.com/protofire/omen-exchange/blob/2cfdf6bfe37afa8b169731d51fea69d42321d66c/app/src/hooks/graph/useGraphMarketMakerData.tsx#L217.
         return self.data
@@ -583,7 +587,7 @@ class RealityQuestion(BaseModel):
     historyHash: HexBytes | None
     updatedTimestamp: int
     contentHash: HexBytes
-    questionId: HexBytes
+    questionId: HexBytes  # This is the `id` on question from omen subgraph.
     answerFinalizedTimestamp: int
     currentScheduledFinalizationTimestamp: int
 

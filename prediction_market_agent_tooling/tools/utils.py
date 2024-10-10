@@ -22,8 +22,10 @@ from prediction_market_agent_tooling.loggers import logger
 T = TypeVar("T")
 
 # t=0 is mathematically impossible and it's not clear how OpenAI (and others) handle it, as a result, even with t=0, gpt-4-turbo produces very different outputs,
-# it seems that using a very low temperature is the best way to have as consistent outputs as possible: https://community.openai.com/t/why-the-api-output-is-inconsistent-even-after-the-temperature-is-set-to-0/329541/12
+# see this experiment to figure out if you should use LLM_SUPER_LOW_TEMPERATURE or just 0: https://github.com/gnosis/prediction-market-agent/pull/438.
 LLM_SUPER_LOW_TEMPERATURE = 0.00000001
+# For consistent results, also include seed for models that supports it.
+LLM_SEED = 0
 
 
 def check_not_none(

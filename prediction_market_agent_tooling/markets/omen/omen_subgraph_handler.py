@@ -218,29 +218,44 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def _build_where_statements(
         self,
-        creator: t.Optional[HexAddress] = None,
-        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
-        outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
-        created_after: t.Optional[DatetimeUTC] = None,
-        opened_before: t.Optional[DatetimeUTC] = None,
-        opened_after: t.Optional[DatetimeUTC] = None,
-        finalized_before: t.Optional[DatetimeUTC] = None,
-        finalized_after: t.Optional[DatetimeUTC] = None,
-        resolved: bool | None = None,
-        liquidity_bigger_than: Wei | None = None,
-        condition_id_in: list[HexBytes] | None = None,
-        id_in: list[str] | None = None,
-        excluded_questions: set[str] | None = None,
-        collateral_token_address_in: tuple[ChecksumAddress, ...] | None = None,
-        category: str | None = None,
+        creator: HexAddress | None,
+        creator_in: t.Sequence[HexAddress] | None,
+        outcomes: list[str],
+        created_after: DatetimeUTC | None,
+        question_opened_before: DatetimeUTC | None,
+        question_opened_after: DatetimeUTC | None,
+        question_finalized_before: DatetimeUTC | None,
+        question_finalized_after: DatetimeUTC | None,
+        question_with_answers: bool | None,
+        question_id: HexBytes | None,
+        question_id_in: list[HexBytes] | None,
+        question_current_answer_before: DatetimeUTC | None,
+        question_excluded_titles: set[str] | None,
+        resolved: bool | None,
+        liquidity_bigger_than: Wei | None,
+        condition_id_in: list[HexBytes] | None,
+        id_in: list[str] | None,
+        collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
+        category: str | None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
             "isPendingArbitration": False,
             "outcomes": outcomes,
             "title_not": None,
-            "question_": {},
             "condition_": {},
         }
+
+        where_stms["question_"] = self.get_omen_question_filters(
+            question_id=question_id,
+            opened_before=question_opened_before,
+            opened_after=question_opened_after,
+            finalized_before=question_finalized_before,
+            finalized_after=question_finalized_after,
+            with_answers=question_with_answers,
+            current_answer_before=question_current_answer_before,
+            question_id_in=question_id_in,
+            excluded_titles=question_excluded_titles,
+        )
 
         if collateral_token_address_in:
             where_stms["collateralToken_in"] = [
@@ -255,11 +270,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         if created_after:
             where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
-
-        if opened_before:
-            where_stms["question_"]["openingTimestamp_lt"] = to_int_timestamp(
-                opened_before
-            )
 
         if liquidity_bigger_than is not None:
             where_stms["liquidityParameter_gt"] = liquidity_bigger_than
@@ -277,30 +287,9 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             else:
                 where_stms["resolutionTimestamp"] = None
 
-        if opened_after:
-            where_stms["question_"]["openingTimestamp_gt"] = to_int_timestamp(
-                opened_after
-            )
-
-        if finalized_before:
-            where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
-                finalized_before
-            )
-
-        if finalized_after:
-            where_stms["answerFinalizedTimestamp_gt"] = to_int_timestamp(
-                finalized_after
-            )
-
         if category:
             where_stms["category"] = category
 
-        # `excluded_question_titles` can not be an empty list, otherwise the API bugs out and returns nothing.
-        excluded_question_titles = [""]
-        if excluded_questions:
-            excluded_question_titles = [i for i in excluded_questions]
-
-        where_stms["question_"]["title_not_in"] = excluded_question_titles
         return where_stms
 
     def _build_sort_params(
@@ -378,12 +367,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         return self.get_omen_binary_markets(
             limit=limit,
             resolved=resolved,
-            opened_after=opened_after,
+            question_opened_after=opened_after,
             liquidity_bigger_than=liquidity_bigger_than,
             sort_direction=sort_direction,
             sort_by_field=sort_by_field,
             created_after=created_after,
-            excluded_questions=excluded_questions,
+            question_excluded_titles=excluded_questions,
             collateral_token_address_in=collateral_token_address_in,
             category=category,
         )
@@ -391,18 +380,22 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     def get_omen_binary_markets(
         self,
         limit: t.Optional[int],
-        created_after: t.Optional[DatetimeUTC] = None,
-        opened_before: t.Optional[DatetimeUTC] = None,
-        opened_after: t.Optional[DatetimeUTC] = None,
-        finalized_before: t.Optional[DatetimeUTC] = None,
-        finalized_after: t.Optional[DatetimeUTC] = None,
+        creator: HexAddress | None = None,
+        creator_in: t.Sequence[HexAddress] | None = None,
+        created_after: DatetimeUTC | None = None,
+        question_opened_before: DatetimeUTC | None = None,
+        question_opened_after: DatetimeUTC | None = None,
+        question_finalized_before: DatetimeUTC | None = None,
+        question_finalized_after: DatetimeUTC | None = None,
+        question_with_answers: bool | None = None,
+        question_id: HexBytes | None = None,
+        question_id_in: list[HexBytes] | None = None,
+        question_current_answer_before: DatetimeUTC | None = None,
+        question_excluded_titles: set[str] | None = None,
         resolved: bool | None = None,
-        creator: t.Optional[HexAddress] = None,
-        creator_in: t.Optional[t.Sequence[HexAddress]] = None,
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
         id_in: list[str] | None = None,
-        excluded_questions: set[str] | None = None,  # question titles
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
         outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
@@ -419,14 +412,18 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             creator_in=creator_in,
             outcomes=outcomes,
             created_after=created_after,
-            opened_before=opened_before,
-            opened_after=opened_after,
-            finalized_before=finalized_before,
-            finalized_after=finalized_after,
+            question_opened_before=question_opened_before,
+            question_opened_after=question_opened_after,
+            question_finalized_before=question_finalized_before,
+            question_finalized_after=question_finalized_after,
+            question_with_answers=question_with_answers,
+            question_id=question_id,
+            question_id_in=question_id_in,
+            question_current_answer_before=question_current_answer_before,
+            question_excluded_titles=question_excluded_titles,
             resolved=resolved,
             condition_id_in=condition_id_in,
             id_in=id_in,
-            excluded_questions=excluded_questions,
             liquidity_bigger_than=liquidity_bigger_than,
             collateral_token_address_in=collateral_token_address_in,
             category=category,
@@ -644,15 +641,21 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     @staticmethod
     def get_reality_question_filters(
-        user: HexAddress | None = None,
-        claimed: bool | None = None,
-        current_answer_before: DatetimeUTC | None = None,
-        finalized_before: DatetimeUTC | None = None,
-        finalized_after: DatetimeUTC | None = None,
-        id_in: list[str] | None = None,
-        question_id: HexBytes | None = None,
-        question_id_in: list[HexBytes] | None = None,
+        user: HexAddress | None,
+        claimed: bool | None,
+        current_answer_before: DatetimeUTC | None,
+        finalized_before: DatetimeUTC | None,
+        finalized_after: DatetimeUTC | None,
+        with_answers: bool | None,
+        question_id: HexBytes | None,
+        question_id_in: list[HexBytes] | None,
+        opened_before: t.Optional[DatetimeUTC],
+        opened_after: t.Optional[DatetimeUTC],
+        excluded_titles: set[str] | None,
     ) -> dict[str, t.Any]:
+        """
+        Be aware, both Omen subgraph and Reality subgraph are indexing questions, but their fields are a bit different.
+        """
         where_stms: dict[str, t.Any] = {}
 
         if user is not None:
@@ -672,6 +675,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 current_answer_before
             )
 
+        if opened_before:
+            where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
+
+        if opened_after:
+            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
+
         if finalized_before is not None:
             where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
                 finalized_before
@@ -682,11 +691,76 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
                 finalized_after
             )
 
-        if id_in is not None:
-            where_stms["id_in"] = id_in
+        if with_answers is not None:
+            if with_answers:
+                where_stms["answerFinalizedTimestamp_not"] = None
+            else:
+                where_stms["answerFinalizedTimestamp"] = None
 
         if question_id_in is not None:
+            # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
             where_stms["questionId_in"] = [x.hex() for x in question_id_in]
+
+        if excluded_titles:
+            # Be aware: This is called `title_not_in` on Omen subgraph.
+            where_stms["qTitle_not_in"] = [i for i in excluded_titles]
+
+        return where_stms
+
+    @staticmethod
+    def get_omen_question_filters(
+        current_answer_before: DatetimeUTC | None,
+        finalized_before: DatetimeUTC | None,
+        finalized_after: DatetimeUTC | None,
+        with_answers: bool | None,
+        question_id: HexBytes | None,
+        question_id_in: list[HexBytes] | None,
+        opened_before: t.Optional[DatetimeUTC],
+        opened_after: t.Optional[DatetimeUTC],
+        excluded_titles: set[str] | None,
+    ) -> dict[str, t.Any]:
+        """
+        Be aware, both Omen subgraph and Reality subgraph are indexing questions, but their fields are a bit different.
+        """
+        where_stms: dict[str, t.Any] = {}
+
+        if question_id is not None:
+            where_stms["questionId"] = question_id.hex()
+
+        if current_answer_before is not None:
+            where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
+                current_answer_before
+            )
+
+        if opened_before:
+            where_stms["openingTimestamp_lt"] = to_int_timestamp(opened_before)
+
+        if opened_after:
+            where_stms["openingTimestamp_gt"] = to_int_timestamp(opened_after)
+
+        if finalized_before is not None:
+            where_stms["answerFinalizedTimestamp_lt"] = to_int_timestamp(
+                finalized_before
+            )
+
+        if finalized_after is not None:
+            where_stms["answerFinalizedTimestamp_gt"] = to_int_timestamp(
+                finalized_after
+            )
+
+        if with_answers is not None:
+            if with_answers:
+                where_stms["answerFinalizedTimestamp_not"] = None
+            else:
+                where_stms["answerFinalizedTimestamp"] = None
+
+        if question_id_in is not None:
+            # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
+            where_stms["id_in"] = [x.hex() for x in question_id_in]
+
+        if excluded_titles:
+            # Be aware: This is called `qTitle_not_in` on Omen subgraph.
+            where_stms["title_not_in"] = [i for i in excluded_titles]
 
         return where_stms
 
@@ -698,17 +772,25 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         current_answer_before: DatetimeUTC | None = None,
         finalized_before: DatetimeUTC | None = None,
         finalized_after: DatetimeUTC | None = None,
-        id_in: list[str] | None = None,
+        with_answers: bool | None = None,
         question_id_in: list[HexBytes] | None = None,
+        question_id: HexBytes | None = None,
+        opened_before: DatetimeUTC | None = None,
+        opened_after: DatetimeUTC | None = None,
+        excluded_titles: set[str] | None = None,
     ) -> list[RealityQuestion]:
         where_stms: dict[str, t.Any] = self.get_reality_question_filters(
             user=user,
             claimed=claimed,
             finalized_before=finalized_before,
             finalized_after=finalized_after,
+            with_answers=with_answers,
             current_answer_before=current_answer_before,
-            id_in=id_in,
             question_id_in=question_id_in,
+            question_id=question_id,
+            opened_before=opened_before,
+            opened_after=opened_after,
+            excluded_titles=excluded_titles,
         )
         questions = self.realityeth_subgraph.Query.questions(
             first=(
@@ -738,12 +820,17 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         self,
         limit: int | None,
         user: HexAddress | None = None,
-        question_id: HexBytes | None = None,
+        question_user: HexAddress | None = None,
         question_claimed: bool | None = None,
-        question_finalized_before: DatetimeUTC | None = None,
-        question_finalized_after: DatetimeUTC | None = None,
-        question_current_answer_before: DatetimeUTC | None = None,
+        question_opened_before: t.Optional[DatetimeUTC] = None,
+        question_opened_after: t.Optional[DatetimeUTC] = None,
+        question_finalized_before: t.Optional[DatetimeUTC] = None,
+        question_finalized_after: t.Optional[DatetimeUTC] = None,
+        question_with_answers: bool | None = None,
+        question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
+        question_current_answer_before: DatetimeUTC | None = None,
+        question_excluded_titles: set[str] | None = None,
     ) -> list[RealityResponse]:
         where_stms: dict[str, t.Any] = {}
 
@@ -751,12 +838,17 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["user"] = user.lower()
 
         where_stms["question_"] = self.get_reality_question_filters(
+            user=question_user,
             question_id=question_id,
             claimed=question_claimed,
+            opened_before=question_opened_before,
+            opened_after=question_opened_after,
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
+            with_answers=question_with_answers,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
+            excluded_titles=question_excluded_titles,
         )
 
         responses = self.realityeth_subgraph.Query.responses(

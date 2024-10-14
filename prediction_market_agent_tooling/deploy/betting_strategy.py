@@ -33,7 +33,12 @@ class BettingStrategy(ABC):
         answer: ProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
-        pass
+        raise NotImplementedError("Subclass should implement this.")
+
+    @property
+    @abstractmethod
+    def maximum_possible_bet_amount(self) -> float:
+        raise NotImplementedError("Subclass should implement this.")
 
     def build_zero_token_amount(self, currency: Currency) -> TokenAmount:
         return TokenAmount(amount=0, currency=currency)
@@ -104,6 +109,10 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
     def __init__(self, bet_amount: float):
         self.bet_amount = bet_amount
 
+    @property
+    def maximum_possible_bet_amount(self) -> float:
+        return self.bet_amount
+
     def calculate_trades(
         self,
         existing_position: Position | None,
@@ -145,6 +154,10 @@ class KellyBettingStrategy(BettingStrategy):
     def __init__(self, max_bet_amount: float, max_price_impact: float | None = None):
         self.max_bet_amount = max_bet_amount
         self.max_price_impact = max_price_impact
+
+    @property
+    def maximum_possible_bet_amount(self) -> float:
+        return self.max_bet_amount
 
     def calculate_trades(
         self,
@@ -263,6 +276,10 @@ class KellyBettingStrategy(BettingStrategy):
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
     def __init__(self, max_bet_amount: float = 10):
         self.max_bet_amount = max_bet_amount
+
+    @property
+    def maximum_possible_bet_amount(self) -> float:
+        return self.max_bet_amount
 
     def adjust_bet_amount(
         self, existing_position: Position | None, market: AgentMarket

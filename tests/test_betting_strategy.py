@@ -1,11 +1,19 @@
+from datetime import timedelta
 from unittest.mock import Mock
 
 import pytest
+from web3 import Web3
 
 from prediction_market_agent_tooling.deploy.betting_strategy import (
+    BettingStrategy,
     MaxAccuracyBettingStrategy,
 )
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import (
+    HexAddress,
+    HexBytes,
+    HexStr,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     Position,
@@ -13,7 +21,14 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
     TradeType,
 )
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_BINARY_MARKET_OUTCOMES,
+)
+from prediction_market_agent_tooling.markets.omen.omen import Condition, OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    WrappedxDaiContract,
+)
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 @pytest.mark.parametrize(
@@ -62,3 +77,67 @@ def test_rebalance() -> None:
     sell_trade = trades[1]
     assert sell_trade.trade_type == TradeType.SELL
     assert sell_trade.amount.amount == mock_amount.amount
+
+
+@pytest.mark.parametrize(
+    "strategy, liquidity, fee, should_raise",
+    [
+        (
+            MaxAccuracyBettingStrategy(bet_amount=100),
+            1,
+            0.02,
+            True,  # Should raise because fee will eat the profit.
+        ),
+        (
+            MaxAccuracyBettingStrategy(bet_amount=100),
+            10,
+            0.02,
+            False,  # Should be okay, because liquidity + fee combo is reasonable.
+        ),
+        (
+            MaxAccuracyBettingStrategy(bet_amount=100),
+            10,
+            0.5,
+            True,  # Should raise because fee will eat the profit.
+        ),
+    ],
+)
+def test_attacking_market(
+    strategy: BettingStrategy, liquidity: float, fee: float, should_raise: bool
+) -> None:
+    """
+    Test if markets with unreasonably low liquidity and/or high fees won't put agent into immediate loss.
+    """
+    market = OmenAgentMarket(
+        id="0x0",
+        question="How you doing?",
+        outcomes=OMEN_BINARY_MARKET_OUTCOMES,
+        resolution=None,
+        url="",
+        volume=None,
+        creator=HexAddress(HexStr("0x0")),
+        collateral_token_contract_address_checksummed=WrappedxDaiContract().address,
+        market_maker_contract_address_checksummed=Web3.to_checksum_address(
+            "0x0000000000000000000000000000000000000001"
+        ),
+        condition=Condition(
+            id=HexBytes("0x0"), outcomeSlotCount=len(OMEN_BINARY_MARKET_OUTCOMES)
+        ),
+        finalized_time=None,
+        created_time=utcnow(),
+        close_time=utcnow() + timedelta(days=3),
+        current_p_yes=Probability(0.5),
+        outcome_token_pool={
+            OMEN_BINARY_MARKET_OUTCOMES[0]: liquidity,
+            OMEN_BINARY_MARKET_OUTCOMES[1]: liquidity,
+        },
+        fee=fee,
+    )
+    answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=1.0)
+
+    try:
+        trades = strategy.calculate_trades(None, answer, market)
+        assert not should_raise, "Should not have raised and return trades normally."
+        assert trades, "No trades available."
+    except Exception:
+        assert should_raise, "Should have raise to prevent placing of bet."

@@ -58,11 +58,13 @@ def test_rebalance() -> None:
         },
     )
     bet_amount = tiny_amount.amount + mock_existing_position.total_amount.amount
+    buy_token_amount = TokenAmount(amount=10, currency=Currency.xDai)
     strategy = MaxAccuracyBettingStrategy(bet_amount=bet_amount)
     mock_answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=0.5)
     mock_market = Mock(OmenAgentMarket, wraps=OmenAgentMarket)
     mock_market.get_liquidity.return_value = liquidity_amount
     mock_market.get_tiny_bet_amount.return_value = tiny_amount
+    mock_market.get_buy_token_amount.return_value = buy_token_amount
     mock_market.current_p_yes = 0.5
     mock_market.currency = Currency.xDai
     mock_market.id = "0x123"

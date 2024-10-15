@@ -4,7 +4,10 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.omen.omen import omen_remove_fund_market_tx
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
+    omen_remove_fund_market_tx,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
@@ -31,8 +34,10 @@ def main(
         BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
         SAFE_ADDRESS=safe_address_checksum,
     )
-    market = OmenSubgraphHandler().get_omen_market_by_market_id(
-        Web3.to_checksum_address(market_id)
+    market = OmenAgentMarket.from_data_model(
+        OmenSubgraphHandler().get_omen_market_by_market_id(
+            Web3.to_checksum_address(market_id)
+        )
     )
     omen_remove_fund_market_tx(api_keys=api_keys, market=market, shares=None)
     logger.info(f"Liquidity removed from: {market_id}")

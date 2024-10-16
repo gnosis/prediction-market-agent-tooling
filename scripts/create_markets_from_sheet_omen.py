@@ -77,21 +77,21 @@ def main(
         logger.info(
             f"Going to create `{row[QUESTION_COLUMN]}` with closing time `{row[CLOSING_DATE_COLUMN]}`."
         )
-        # market = OmenMarket.from_created_market(
-        #     omen_create_market_tx(
-        #         api_keys=api_keys,
-        #         collateral_token_address=COLLATERAL_TOKEN_CHOICE_TO_ADDRESS[cl_token],
-        #         initial_funds=xdai_type(initial_funds),
-        #         fee_perc=fee_perc,
-        #         question=row[QUESTION_COLUMN],
-        #         closing_time=row["Created date"],
-        #         category=category,
-        #         language=language,
-        #         outcomes=outcomes,
-        #         auto_deposit=auto_deposit,
-        #     )
-        # )
-        # logger.info(f"Market '{row['Question']}' created at url: {market.url}.")
+        market = OmenMarket.from_created_market(
+            omen_create_market_tx(
+                api_keys=api_keys,
+                collateral_token_address=COLLATERAL_TOKEN_CHOICE_TO_ADDRESS[cl_token],
+                initial_funds=xdai_type(initial_funds),
+                fee_perc=fee_perc,
+                question=row[QUESTION_COLUMN],
+                closing_time=row["Created date"],
+                category=category,
+                language=language,
+                outcomes=outcomes,
+                auto_deposit=auto_deposit,
+            )
+        )
+        logger.info(f"Market '{row['Question']}' created at url: {market.url}.")
 
 
 if __name__ == "__main__":

@@ -138,11 +138,11 @@ class OmenAgentMarket(AgentMarket):
             else None
         )
 
-    def get_liquidity_in_wei(self) -> Wei:
-        return self.get_contract().totalSupply()
+    def get_liquidity_in_wei(self, web3: Web3 | None = None) -> Wei:
+        return self.get_contract().totalSupply(web3)
 
-    def get_liquidity_in_xdai(self) -> xDai:
-        return wei_to_xdai(self.get_liquidity_in_wei())
+    def get_liquidity_in_xdai(self, web3: Web3 | None = None) -> xDai:
+        return wei_to_xdai(self.get_liquidity_in_wei(web3))
 
     def get_liquidity(self) -> TokenAmount:
         return TokenAmount(

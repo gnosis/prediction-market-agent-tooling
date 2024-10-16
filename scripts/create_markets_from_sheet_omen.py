@@ -41,6 +41,7 @@ def main(
         devconflict.csv \
         --category devconflict \
         --initial-funds 10 \
+        --auto-deposit \
         --from-private-key your-private-key
     ```
     """
@@ -84,14 +85,14 @@ def main(
                 initial_funds=xdai_type(initial_funds),
                 fee_perc=fee_perc,
                 question=row[QUESTION_COLUMN],
-                closing_time=row["Created date"],
+                closing_time=row[CLOSING_DATE_COLUMN],
                 category=category,
                 language=language,
                 outcomes=outcomes,
                 auto_deposit=auto_deposit,
             )
         )
-        logger.info(f"Market '{row['Question']}' created at url: {market.url}.")
+        logger.info(f"Market '{row[QUESTION_COLUMN]}' created at url: {market.url}.")
 
 
 if __name__ == "__main__":

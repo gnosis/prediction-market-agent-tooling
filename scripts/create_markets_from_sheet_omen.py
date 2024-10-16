@@ -1,8 +1,6 @@
-from datetime import datetime
-
+import pandas as pd
 import typer
 from web3 import Web3
-import pandas as pd
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type

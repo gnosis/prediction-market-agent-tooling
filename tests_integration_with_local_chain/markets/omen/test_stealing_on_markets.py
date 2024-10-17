@@ -37,6 +37,10 @@ def test_stealing_on_markets(
     accounts: list[TestAccount],
     local_web3: Web3,
 ) -> None:
+    """
+    TLDR: If someone places incorrect bet and the liquidity is removed, that someone is locked-in and liquidity provider will receive it.
+    """
+
     # Get two accounts, one will create a job market (A) and one will try to sabotage it (B)
     account_A, account_B = accounts[2], accounts[3]
     api_keys_A, api_keys_B = APIKeys(
@@ -146,7 +150,7 @@ def test_stealing_on_markets(
     ), "Balance after failed trading should be the same as after buying of tokens in the beginning, because nothing should have happened."
 
     # Wait for market's closing time
-    time.sleep(close_in * 1.1)
+    time.sleep(close_in * 1.2)
     # Do a dummy block again, so the time in the contract is updated and it knows it's opened already.
     mint_new_block(api_keys_A, local_web3)
 
@@ -160,7 +164,7 @@ def test_stealing_on_markets(
     )
 
     # Wait for the finalization.
-    time.sleep(finalization_wait_time_seconds * 1.1)
+    time.sleep(finalization_wait_time_seconds * 1.2)
     # Update the time in the chain again.
     mint_new_block(api_keys_A, local_web3)
 

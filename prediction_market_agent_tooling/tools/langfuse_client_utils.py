@@ -93,15 +93,18 @@ def get_traces_for_agent(
 
 def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket | None:
     if not trace.input:
+        logger.warning(f"No input in the trace: {trace}")
         return None
     if not trace.input["args"]:
+        logger.warning(f"No args in the trace: {trace}")
         return None
     assert len(trace.input["args"]) == 2 and trace.input["args"][0] == "omen"
     try:
         # If the market model is invalid (e.g. outdated), it will raise an exception
         market = OmenAgentMarket.model_validate(trace.input["args"][1])
         return market
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Market not parsed from langfuse because: {e}")
         return None
 
 

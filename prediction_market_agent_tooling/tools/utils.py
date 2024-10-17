@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.gtypes import (
     SecretStr,
 )
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 
 T = TypeVar("T")
 
@@ -189,7 +190,7 @@ def calculate_sell_amount_in_collateral(
     shares_to_sell: float,
     holdings: float,
     other_holdings: float,
-    fee: float,
+    fees: MarketFees,
 ) -> float:
     """
     Computes the amount of collateral that needs to be sold to get `shares`
@@ -198,16 +199,12 @@ def calculate_sell_amount_in_collateral(
     Taken from https://github.com/protofire/omen-exchange/blob/29d0ab16bdafa5cc0d37933c1c7608a055400c73/app/src/util/tools/fpmm/trading/index.ts#L99
     Simplified for binary markets.
     """
-
-    if not (0 <= fee < 1.0):
-        raise ValueError("Fee must be between 0 and 1")
-
     for v in [shares_to_sell, holdings, other_holdings]:
         if v <= 0:
             raise ValueError("All share args must be greater than 0")
 
     def f(r: float) -> float:
-        R = r / (1 - fee)
+        R = (r + fees.absolute) / (1 - fees.bet_proportion)
         first_term = other_holdings - R
         second_term = holdings + shares_to_sell - R
         third_term = holdings * other_holdings

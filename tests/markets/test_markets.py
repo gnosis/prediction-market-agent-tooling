@@ -4,6 +4,7 @@ from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketFees,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.markets import (
@@ -32,6 +33,7 @@ def test_valid_token_pool() -> None:
         current_p_yes=Probability(0.5),
         url="https://example.com",
         volume=None,
+        fees=MarketFees.get_zero_fees(),
     )
     assert market.has_token_pool() is True
     assert market.get_pool_tokens("yes") == 1.1
@@ -52,6 +54,7 @@ def test_invalid_token_pool() -> None:
             current_p_yes=Probability(0.5),
             url="https://example.com",
             volume=None,
+            fees=MarketFees.get_zero_fees(),
         )
     assert "do not match outcomes" in str(e.value)
 

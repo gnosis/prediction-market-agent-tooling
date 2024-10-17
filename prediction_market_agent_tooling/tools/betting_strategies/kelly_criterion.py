@@ -62,7 +62,7 @@ def get_kelly_bet_full(
     estimated_p_yes: float,
     confidence: float,
     max_bet: float,
-    fees: MarketFees,
+    fees: MarketFees = MarketFees.get_zero_fees(),  # TODO: Remove default value.
 ) -> SimpleBet:
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.

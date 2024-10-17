@@ -1,4 +1,3 @@
-import os
 import time
 from datetime import timedelta
 from unittest.mock import patch
@@ -315,12 +314,7 @@ def test_omen_buy_and_sell_outcome(
     outcome = True
     outcome_str = get_bet_outcome(outcome)
     bet_amount = market.get_bet_amount(amount=0.4)
-
-    # TODO hack until https://github.com/gnosis/prediction-market-agent-tooling/issues/266 is complete
-    os.environ[
-        "BET_FROM_PRIVATE_KEY"
-    ] = test_keys.bet_from_private_key.get_secret_value()
-    api_keys = APIKeys()
+    api_keys = APIKeys(BET_FROM_PRIVATE_KEY=test_keys.bet_from_private_key)
 
     def get_market_outcome_tokens() -> TokenAmount:
         return market.get_token_balance(
@@ -333,7 +327,12 @@ def test_omen_buy_and_sell_outcome(
     balances = get_balances(address=api_keys.bet_from_address, web3=local_web3)
     assert balances.xdai + balances.wxdai > bet_amount.amount
 
-    buy_id = market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
+    buy_id = market.place_bet(
+        outcome=outcome,
+        amount=bet_amount,
+        web3=local_web3,
+        api_keys=api_keys,
+    )
 
     # Check that we now have a position in the market.
     outcome_tokens = get_market_outcome_tokens()
@@ -541,3 +540,44 @@ def test_place_bet_with_prev_existing_positions(
     # in the position. This is because of implementation details in the ConditionalTokens contract,
     # avoiding the position to be fully sold.
     assert position_balance_after_sell < 0.01 * position_balance  # xDAI
+
+
+def test_get_most_recent_trade_datetime(
+    local_web3: Web3,
+    test_keys: APIKeys,
+) -> None:
+    """
+    Tests that `get_most_recent_trade_datetime` gives correct datetimes for
+    both buying and selling trades.
+    """
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    outcome = True
+    api_keys = APIKeys(BET_FROM_PRIVATE_KEY=test_keys.bet_from_private_key)
+
+    dt_before_buy_trade = utcnow()
+    market.buy_tokens(
+        outcome=outcome,
+        amount=market.get_bet_amount(amount=0.4),
+        web3=local_web3,
+        api_keys=api_keys,
+    )
+    dt_after_buy_trade = utcnow()
+    assert (
+        dt_before_buy_trade
+        < market.get_most_recent_trade_datetime()
+        < dt_after_buy_trade
+    )
+
+    dt_before_sell_trade = utcnow()
+    market.sell_tokens(
+        outcome=outcome,
+        amount=market.get_bet_amount(amount=0.2),
+        web3=local_web3,
+        api_keys=api_keys,
+    )
+    dt_after_sell_trade = utcnow()
+    assert (
+        dt_before_sell_trade
+        < market.get_most_recent_trade_datetime()
+        < dt_after_sell_trade
+    )

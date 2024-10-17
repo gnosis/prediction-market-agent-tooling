@@ -295,3 +295,6 @@ class AgentMarket(BaseModel):
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
         raise NotImplementedError("Subclasses must implement this method")
+
+    def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
+        raise NotImplementedError("Subclasses must implement this method")

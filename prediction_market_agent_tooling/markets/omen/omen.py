@@ -658,6 +658,18 @@ class OmenAgentMarket(AgentMarket):
     def get_user_id(api_keys: APIKeys) -> str:
         return api_keys.bet_from_address
 
+    def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
+        trades = OmenSubgraphHandler().get_trades(
+            better_address=Web3.to_checksum_address(user_id),
+            market_id=Web3.to_checksum_address(self.id),
+        )
+        if not trades:
+            return None
+
+        # Sort trades by creation timestamp and return the most recent one. TODO is it already sorted?
+        trades.sort(key=lambda x: x.creation_datetime, reverse=True)
+        return trades[0].creation_datetime
+
 
 def get_omen_user_url(address: ChecksumAddress) -> str:
     return f"https://gnosisscan.io/address/{address}"

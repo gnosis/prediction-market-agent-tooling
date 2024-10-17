@@ -125,6 +125,11 @@ class ManifoldAgentMarket(AgentMarket):
             )
         ]
 
+    @staticmethod
+    def redeem_winnings(api_keys: APIKeys) -> None:
+        # It's done automatically on Manifold.
+        pass
+
     @classmethod
     def get_user_url(cls, keys: APIKeys) -> str:
         return get_authenticated_user(keys.manifold_api_key.get_secret_value()).url

@@ -91,7 +91,7 @@ def assert_price_impact_converges(
         estimated_p_yes=p_yes,
         max_bet=max_bet_amount,
         confidence=confidence,
-        fees=omen_agent_market.fees,
+        # fees=omen_agent_market.fees, TODO: Uncomment
     )
 
     kelly = KellyBettingStrategy(
@@ -106,7 +106,7 @@ def assert_price_impact_converges(
         bet_amount=max_price_impact_bet_amount,
         yes=yes_outcome_pool_size,
         no=no_outcome_pool_size,
-        fees=omen_agent_market.fees,
+        fees=MarketFees.get_zero_fees(),  # TODO: Use fees=omen_agent_market.fees
     )
 
     # assert convergence

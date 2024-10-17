@@ -317,9 +317,9 @@ def test_omen_buy_and_sell_outcome(
     bet_amount = market.get_bet_amount(amount=0.4)
 
     # TODO hack until https://github.com/gnosis/prediction-market-agent-tooling/issues/266 is complete
-    os.environ[
-        "BET_FROM_PRIVATE_KEY"
-    ] = test_keys.bet_from_private_key.get_secret_value()
+    os.environ["BET_FROM_PRIVATE_KEY"] = (
+        test_keys.bet_from_private_key.get_secret_value()
+    )
     api_keys = APIKeys()
 
     def get_market_outcome_tokens() -> TokenAmount:
@@ -404,7 +404,7 @@ def test_place_bet_with_autodeposit(
         OmenSubgraphHandler().get_omen_binary_markets_simple(
             limit=1,
             filter_by=FilterBy.OPEN,
-            sort_by=SortBy.CLOSING_SOONEST,
+            sort_by=SortBy.NEWEST,
             collateral_token_address_in=(collateral_token_address,),
         )[0]
     )

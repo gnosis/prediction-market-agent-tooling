@@ -19,7 +19,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet_full,
-    get_kelly_bet_simplified,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -47,6 +46,26 @@ class BettingStrategy(ABC):
             raise ValueError(
                 "Cannot handle trades with currencies that deviate from market's currency"
             )
+
+    @staticmethod
+    def assert_buy_trade_wont_be_guaranteed_loss(
+        market: AgentMarket, trades: list[Trade]
+    ) -> None:
+        for trade in trades:
+            if trade.trade_type == TradeType.BUY:
+                outcome_tokens_to_get = market.get_buy_token_amount(
+                    trade.amount, trade.outcome
+                )
+
+                if outcome_tokens_to_get.amount < trade.amount.amount:
+                    raise RuntimeError(
+                        f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}."
+                    )
+
+    @staticmethod
+    def check_trades(market: AgentMarket, trades: list[Trade]) -> None:
+        BettingStrategy.assert_trades_currency_match_markets(market, trades)
+        BettingStrategy.assert_buy_trade_wont_be_guaranteed_loss(market, trades)
 
     def _build_rebalance_trades_from_positions(
         self,
@@ -96,7 +115,10 @@ class BettingStrategy(ABC):
 
         # Sort inplace with SELL last
         trades.sort(key=lambda t: t.trade_type == TradeType.SELL)
-        BettingStrategy.assert_trades_currency_match_markets(market, trades)
+
+        # Run some sanity checks to not place unreasonable bets.
+        BettingStrategy.check_trades(market, trades)
+
         return trades
 
 
@@ -153,25 +175,17 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         outcome_token_pool = check_not_none(market.outcome_token_pool)
-        kelly_bet = (
-            get_kelly_bet_full(
-                yes_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(True)
-                ],
-                no_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(False)
-                ],
-                estimated_p_yes=answer.p_yes,
-                max_bet=self.max_bet_amount,
-                confidence=answer.confidence,
-            )
-            if market.has_token_pool()
-            else get_kelly_bet_simplified(
-                self.max_bet_amount,
-                market.current_p_yes,
-                answer.p_yes,
-                answer.confidence,
-            )
+        kelly_bet = get_kelly_bet_full(
+            yes_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(True)
+            ],
+            no_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(False)
+            ],
+            estimated_p_yes=answer.p_yes,
+            max_bet=self.max_bet_amount,
+            confidence=answer.confidence,
+            fees=market.fees,
         )
 
         kelly_bet_size = kelly_bet.size
@@ -230,7 +244,7 @@ class KellyBettingStrategy(BettingStrategy):
                 bet_amount,
                 yes_outcome_pool_size,
                 no_outcome_pool_size,
-                MarketFees.get_zero_fees(),  # TODO: Use market.fees
+                market.fees,
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
 
@@ -289,25 +303,17 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         estimated_p_yes = float(answer.p_yes > 0.5)
         confidence = 1.0
 
-        kelly_bet = (
-            get_kelly_bet_full(
-                yes_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(True)
-                ],
-                no_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(False)
-                ],
-                estimated_p_yes=estimated_p_yes,
-                max_bet=adjusted_bet_amount,
-                confidence=confidence,
-            )
-            if market.has_token_pool()
-            else get_kelly_bet_simplified(
-                adjusted_bet_amount,
-                market.current_p_yes,
-                estimated_p_yes,
-                confidence,
-            )
+        kelly_bet = get_kelly_bet_full(
+            yes_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(True)
+            ],
+            no_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(False)
+            ],
+            estimated_p_yes=estimated_p_yes,
+            max_bet=adjusted_bet_amount,
+            confidence=confidence,
+            fees=market.fees,
         )
 
         amounts = {

@@ -186,6 +186,7 @@ class OmenAgentMarket(AgentMarket):
                         amount=token_amount,
                         auto_withdraw=False,
                         web3=web3,
+                        api_keys=api_keys,
                     )
 
     def place_bet(

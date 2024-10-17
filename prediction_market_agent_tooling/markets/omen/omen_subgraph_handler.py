@@ -546,7 +546,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def get_trades(
         self,
-        limit: int | None,
+        limit: int | None = None,
         better_address: ChecksumAddress | None = None,
         start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,

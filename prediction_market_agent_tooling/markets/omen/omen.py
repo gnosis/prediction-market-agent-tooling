@@ -660,15 +660,17 @@ class OmenAgentMarket(AgentMarket):
         return api_keys.bet_from_address
 
     def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
-        trades = OmenSubgraphHandler().get_trades(
+        sgh = OmenSubgraphHandler()
+        trades = sgh.get_trades(
+            sort_by_field=sgh.trades_subgraph.FpmmTrade.creationTimestamp,
+            sort_direction="desc",
+            limit=1,
             better_address=Web3.to_checksum_address(user_id),
             market_id=Web3.to_checksum_address(self.id),
         )
         if not trades:
             return None
 
-        # Sort trades by creation timestamp and return the most recent one. TODO is it already sorted?
-        trades.sort(key=lambda x: x.creation_datetime, reverse=True)
         return trades[0].creation_datetime
 
 

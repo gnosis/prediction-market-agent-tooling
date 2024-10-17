@@ -546,6 +546,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     def get_trades(
         self,
+        limit: int | None,
         better_address: ChecksumAddress | None = None,
         start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,
@@ -554,6 +555,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         type_: t.Literal["Buy", "Sell"] | None = None,
         market_opening_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
+        sort_by_field: FieldPath | None = None,
+        sort_direction: str | None = None,
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
@@ -579,8 +582,17 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if collateral_amount_more_than is not None:
             where_stms.append(trade.collateralAmount > collateral_amount_more_than)
 
+        # These values can not be set to `None`, but they can be omitted.
+        optional_params = {}
+        if sort_by_field is not None:
+            optional_params["orderBy"] = sort_by_field
+        if sort_direction is not None:
+            optional_params["orderDirection"] = sort_direction
+
         trades = self.trades_subgraph.Query.fpmmTrades(
-            first=sys.maxsize, where=where_stms
+            first=limit if limit else sys.maxsize,
+            where=where_stms,
+            **optional_params,
         )
         fields = self._get_fields_for_bets(trades)
         result = self.sg.query_json(fields)

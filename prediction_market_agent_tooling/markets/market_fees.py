@@ -33,4 +33,4 @@ class MarketFees(BaseModel):
         return total_fee / bet_amount
 
     def get_bet_size_after_fees(self, bet_amount: float) -> float:
-        return bet_amount * (1 - self.bet_proportion) - self.absolute
+        return bet_amount - self.total_fee_absolute_value(bet_amount)

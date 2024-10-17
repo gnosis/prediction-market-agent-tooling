@@ -346,7 +346,7 @@ class DeployableTraderAgent(DeployableAgent):
 
         # Get the strategy to know how much it will bet.
         strategy = self.get_betting_strategy(market)
-        # Have a little bandwich after the bet.
+        # Have a little bandwidth after the bet.
         min_required_balance_to_trade = strategy.maximum_possible_bet_amount * 1.01
 
         if market.get_trade_balance(api_keys) < min_required_balance_to_trade:

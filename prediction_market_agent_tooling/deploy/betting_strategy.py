@@ -19,7 +19,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet_full,
-    get_kelly_bet_simplified,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -153,25 +152,17 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         outcome_token_pool = check_not_none(market.outcome_token_pool)
-        kelly_bet = (
-            get_kelly_bet_full(
-                yes_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(True)
-                ],
-                no_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(False)
-                ],
-                estimated_p_yes=answer.p_yes,
-                max_bet=self.max_bet_amount,
-                confidence=answer.confidence,
-            )
-            if market.has_token_pool()
-            else get_kelly_bet_simplified(
-                self.max_bet_amount,
-                market.current_p_yes,
-                answer.p_yes,
-                answer.confidence,
-            )
+        kelly_bet = get_kelly_bet_full(
+            yes_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(True)
+            ],
+            no_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(False)
+            ],
+            estimated_p_yes=answer.p_yes,
+            max_bet=self.max_bet_amount,
+            confidence=answer.confidence,
+            fees=market.fees,
         )
 
         kelly_bet_size = kelly_bet.size
@@ -230,7 +221,7 @@ class KellyBettingStrategy(BettingStrategy):
                 bet_amount,
                 yes_outcome_pool_size,
                 no_outcome_pool_size,
-                MarketFees.get_zero_fees(),  # TODO: Use market.fees
+                market.fees,
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
 
@@ -289,25 +280,17 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         estimated_p_yes = float(answer.p_yes > 0.5)
         confidence = 1.0
 
-        kelly_bet = (
-            get_kelly_bet_full(
-                yes_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(True)
-                ],
-                no_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(False)
-                ],
-                estimated_p_yes=estimated_p_yes,
-                max_bet=adjusted_bet_amount,
-                confidence=confidence,
-            )
-            if market.has_token_pool()
-            else get_kelly_bet_simplified(
-                adjusted_bet_amount,
-                market.current_p_yes,
-                estimated_p_yes,
-                confidence,
-            )
+        kelly_bet = get_kelly_bet_full(
+            yes_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(True)
+            ],
+            no_outcome_pool_size=outcome_token_pool[
+                market.get_outcome_str_from_bool(False)
+            ],
+            estimated_p_yes=estimated_p_yes,
+            max_bet=adjusted_bet_amount,
+            confidence=confidence,
+            fees=market.fees,
         )
 
         amounts = {

@@ -58,7 +58,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
@@ -551,6 +551,7 @@ def test_get_most_recent_trade_datetime(
     """
     market = OmenAgentMarket.from_data_model(pick_binary_market())
     outcome = True
+    user_id = test_keys.bet_from_address
 
     dt_before_buy_trade = utcnow()
     market.buy_tokens(
@@ -562,7 +563,7 @@ def test_get_most_recent_trade_datetime(
     dt_after_buy_trade = utcnow()
     assert (
         dt_before_buy_trade
-        < market.get_most_recent_trade_datetime()
+        < check_not_none(market.get_most_recent_trade_datetime(user_id=user_id))
         < dt_after_buy_trade
     )
 
@@ -576,6 +577,6 @@ def test_get_most_recent_trade_datetime(
     dt_after_sell_trade = utcnow()
     assert (
         dt_before_sell_trade
-        < market.get_most_recent_trade_datetime()
+        < check_not_none(market.get_most_recent_trade_datetime(user_id=user_id))
         < dt_after_sell_trade
     )

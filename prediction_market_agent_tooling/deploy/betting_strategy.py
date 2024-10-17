@@ -222,7 +222,6 @@ class KellyBettingStrategy(BettingStrategy):
                 yes_outcome_pool_size,
                 no_outcome_pool_size,
                 market.fees,
-                MarketFees.get_zero_fees(),  # TODO: Use market.fees
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
 

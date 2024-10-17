@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pytest
 from eth_account import Account
@@ -289,3 +291,33 @@ def test_calculate_marginal_prices(
     expected_marginal_prices: list[xDai] | None,
 ) -> None:
     assert calculate_marginal_prices(outcome_token_amounts) == expected_marginal_prices
+
+
+def test_get_most_recent_trade_datetime() -> None:
+    """
+    Tests that `get_most_recent_trade_datetime` returns the correct datetime
+    from all possible trade datetimes.
+    """
+    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    user_id = Web3.to_checksum_address(
+        "0x2DD9f5678484C1F59F97eD334725858b938B4102"
+    )  # A user with trade history
+
+    sgh = OmenSubgraphHandler()
+    market_id = Web3.to_checksum_address("0x1e0e1d092bffebfb4fa90eeba7bfeddcebc9751c")
+    trades: list[OmenBet] = sgh.get_trades(
+        limit=sys.maxsize,
+        better_address=user_id,
+        market_id=market_id,
+    )
+    market = OmenAgentMarket.get_binary_market(id=market_id)
+    assert len(trades) > 2, "We have made multiple trades in this market"
+
+    assert len(set(trade.creation_datetime for trade in trades)) == len(
+        trades
+    ), "All trades have unique timestamps"
+    most_recent_trade_0 = max(trades, key=lambda x: x.creation_datetime)
+    most_recent_trade_datetime_1 = check_not_none(
+        market.get_most_recent_trade_datetime(user_id=user_id)
+    )
+    assert most_recent_trade_0.creation_datetime == most_recent_trade_datetime_1

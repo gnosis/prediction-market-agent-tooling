@@ -1,4 +1,3 @@
-import os
 import time
 from datetime import timedelta
 from unittest.mock import patch
@@ -316,24 +315,23 @@ def test_omen_buy_and_sell_outcome(
     outcome_str = get_bet_outcome(outcome)
     bet_amount = market.get_bet_amount(amount=0.4)
 
-    # TODO hack until https://github.com/gnosis/prediction-market-agent-tooling/issues/266 is complete
-    os.environ[
-        "BET_FROM_PRIVATE_KEY"
-    ] = test_keys.bet_from_private_key.get_secret_value()
-    api_keys = APIKeys()
-
     def get_market_outcome_tokens() -> TokenAmount:
         return market.get_token_balance(
-            user_id=api_keys.bet_from_address,
+            user_id=test_keys.bet_from_address,
             outcome=outcome_str,
             web3=local_web3,
         )
 
     # Check our wallet has sufficient funds
-    balances = get_balances(address=api_keys.bet_from_address, web3=local_web3)
+    balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     assert balances.xdai + balances.wxdai > bet_amount.amount
 
-    buy_id = market.place_bet(outcome=outcome, amount=bet_amount, web3=local_web3)
+    buy_id = market.place_bet(
+        outcome=outcome,
+        amount=bet_amount,
+        web3=local_web3,
+        api_keys=test_keys,
+    )
 
     # Check that we now have a position in the market.
     outcome_tokens = get_market_outcome_tokens()
@@ -343,7 +341,7 @@ def test_omen_buy_and_sell_outcome(
         outcome=outcome,
         amount=outcome_tokens,
         web3=local_web3,
-        api_keys=api_keys,
+        api_keys=test_keys,
     )
 
     # Check that we have sold our entire stake in the market.
@@ -355,7 +353,7 @@ def test_omen_buy_and_sell_outcome(
     sell_tx = local_web3.eth.get_transaction(HexStr(sell_id))
     for tx in [buy_tx, sell_tx]:
         assert tx is not None
-        assert tx["from"] == api_keys.bet_from_address
+        assert tx["from"] == test_keys.bet_from_address
 
 
 def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> None:

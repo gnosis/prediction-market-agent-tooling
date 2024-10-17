@@ -186,6 +186,7 @@ class OmenAgentMarket(AgentMarket):
                         amount=token_amount,
                         auto_withdraw=False,
                         web3=web3,
+                        api_keys=api_keys,
                     )
 
     def place_bet(
@@ -657,6 +658,20 @@ class OmenAgentMarket(AgentMarket):
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
         return api_keys.bet_from_address
+
+    def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
+        sgh = OmenSubgraphHandler()
+        trades = sgh.get_trades(
+            sort_by_field=sgh.trades_subgraph.FpmmTrade.creationTimestamp,
+            sort_direction="desc",
+            limit=1,
+            better_address=Web3.to_checksum_address(user_id),
+            market_id=Web3.to_checksum_address(self.id),
+        )
+        if not trades:
+            return None
+
+        return trades[0].creation_datetime
 
 
 def get_omen_user_url(address: ChecksumAddress) -> str:

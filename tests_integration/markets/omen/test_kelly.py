@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 
 from prediction_market_agent_tooling.deploy.betting_strategy import KellyBettingStrategy
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
+    MarketFees,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -57,7 +61,7 @@ def test_kelly_price_impact_works_small_pool(
     max_bet_amount: int, max_price_impact: float, p_yes: float
 ) -> None:
     large_market = OmenSubgraphHandler().get_omen_binary_markets_simple(
-        limit=2, filter_by=FilterBy.OPEN, sort_by=SortBy.LOWEST_LIQUIDITY
+        limit=1, filter_by=FilterBy.OPEN, sort_by=SortBy.LOWEST_LIQUIDITY
     )[0]
     omen_agent_market = OmenAgentMarket.from_data_model(large_market)
     confidence = 1.0
@@ -87,6 +91,7 @@ def assert_price_impact_converges(
         estimated_p_yes=p_yes,
         max_bet=max_bet_amount,
         confidence=confidence,
+        fees=omen_agent_market.fees,
     )
 
     kelly = KellyBettingStrategy(
@@ -94,14 +99,14 @@ def assert_price_impact_converges(
     )
 
     max_price_impact_bet_amount = kelly.calculate_bet_amount_for_price_impact(
-        omen_agent_market, kelly_bet, 0
+        omen_agent_market, kelly_bet
     )
     price_impact = kelly.calculate_price_impact_for_bet_amount(
         kelly_bet.direction,
         bet_amount=max_price_impact_bet_amount,
         yes=yes_outcome_pool_size,
         no=no_outcome_pool_size,
-        fee=0,
+        fees=omen_agent_market.fees,
     )
 
     # assert convergence
@@ -116,7 +121,11 @@ def assert_price_impact(
     kelly: KellyBettingStrategy,
 ) -> None:
     price_impact = kelly.calculate_price_impact_for_bet_amount(
-        buy_direction, bet_amount=bet_amount, yes=yes, no=no, fee=0
+        buy_direction,
+        bet_amount=bet_amount,
+        yes=yes,
+        no=no,
+        fees=MarketFees.get_zero_fees(),
     )
 
     # Calculation is done assuming buy_direction is True. Else, we invert the reserves.

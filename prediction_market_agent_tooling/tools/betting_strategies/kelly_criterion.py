@@ -1,3 +1,4 @@
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 
 
@@ -61,7 +62,7 @@ def get_kelly_bet_full(
     estimated_p_yes: float,
     confidence: float,
     max_bet: float,
-    fee: float = 0.0,  # proportion, 0 to 1
+    fees: MarketFees,
 ) -> SimpleBet:
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
@@ -86,9 +87,14 @@ def get_kelly_bet_full(
     limitations under the License.
     ```
     """
+    fee = fees.bet_proportion
+    if fees.absolute > 0:
+        raise RuntimeError(
+            f"Kelly works only with bet-proportional fees, but the fees are {fees=}."
+        )
+
     check_is_valid_probability(estimated_p_yes)
     check_is_valid_probability(confidence)
-    check_is_valid_probability(fee)
 
     if max_bet == 0:
         return SimpleBet(direction=True, size=0)

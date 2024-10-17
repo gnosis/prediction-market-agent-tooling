@@ -5,6 +5,7 @@ from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketFees,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.metaculus.api import (
@@ -29,6 +30,7 @@ class MetaculusAgentMarket(AgentMarket):
     description: str | None = (
         None  # Metaculus markets don't have a description, so just default to None.
     )
+    fees: MarketFees = MarketFees.get_zero_fees()  # No fees on Metaculus.
 
     @staticmethod
     def from_data_model(model: MetaculusQuestion) -> "MetaculusAgentMarket":

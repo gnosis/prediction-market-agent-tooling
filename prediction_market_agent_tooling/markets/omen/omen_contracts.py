@@ -163,10 +163,10 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         self,
         api_keys: APIKeys,
         collateral_token_address: ChecksumAddress,
-        parent_collection_id: HexStr,
         conditionId: HexBytes,
         index_sets: t.List[int],
         amount: Wei,
+        parent_collection_id: HexStr = build_parent_collection_id(),
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(

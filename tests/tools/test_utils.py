@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.utils import (
     calculate_sell_amount_in_collateral,
 )
@@ -13,7 +14,7 @@ def test_calculate_sell_amount_in_collateral_0() -> None:
         shares_to_sell=1,
         holdings=1000000000000 - 1,
         other_holdings=1000000000000,
-        fee=0,
+        fees=MarketFees.get_zero_fees(),
     )
     assert np.isclose(collateral, 0.5)
 
@@ -24,7 +25,7 @@ def test_calculate_sell_amount_in_collateral_1() -> None:
         shares_to_sell=1,
         holdings=10000000000000,
         other_holdings=1,
-        fee=0,
+        fees=MarketFees.get_zero_fees(),
     )
     assert np.isclose(near_zero_collateral, 0)
 
@@ -33,43 +34,45 @@ def test_calculate_sell_amount_in_collateral_1() -> None:
         shares_to_sell=1,
         holdings=1,
         other_holdings=10000000000000,
-        fee=0,
+        fees=MarketFees.get_zero_fees(),
     )
     assert np.isclose(near_zero_collateral, 1)
 
 
 def test_calculate_sell_amount_in_collateral_2() -> None:
     # Sanity check: the value of sold shares decreases as the fee increases
-    def get_collateral(fee: float) -> float:
+    def get_collateral(bet_proportion_fee: float) -> float:
+        fees = MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee)
         return calculate_sell_amount_in_collateral(
             shares_to_sell=2.5,
             holdings=10,
             other_holdings=3,
-            fee=fee,
+            fees=fees,
         )
 
-    c1 = get_collateral(fee=0.1)
-    c2 = get_collateral(fee=0.35)
+    c1 = get_collateral(bet_proportion_fee=0.1)
+    c2 = get_collateral(bet_proportion_fee=0.35)
     assert c1 > c2
 
 
 def test_calculate_sell_amount_in_collateral_3() -> None:
     # Check error handling when fee is invalid
-    def get_collateral(fee: float) -> float:
+    def get_collateral(bet_proportion_fee: float) -> float:
+        fees = MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee)
         return calculate_sell_amount_in_collateral(
             shares_to_sell=2.5,
             holdings=10,
             other_holdings=3,
-            fee=fee,
+            fees=fees,
         )
 
     with pytest.raises(ValueError) as e:
-        get_collateral(fee=-0.1)
-    assert str(e.value) == "Fee must be between 0 and 1"
+        get_collateral(bet_proportion_fee=-0.1)
+    assert "Input should be greater than or equal to 0" in str(e.value)
 
     with pytest.raises(ValueError) as e:
-        get_collateral(fee=1.0)
-    assert str(e.value) == "Fee must be between 0 and 1"
+        get_collateral(bet_proportion_fee=1.0)
+    assert "Input should be less than 1" in str(e.value)
 
 
 def test_calculate_sell_amount_in_collateral_4() -> None:
@@ -78,6 +81,6 @@ def test_calculate_sell_amount_in_collateral_4() -> None:
             shares_to_sell=100,
             holdings=10,
             other_holdings=0,
-            fee=0,
+            fees=MarketFees.get_zero_fees(),
         )
     assert str(e.value) == "All share args must be greater than 0"

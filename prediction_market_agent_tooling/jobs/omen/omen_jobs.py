@@ -75,7 +75,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             market_maker_contract_address_checksummed=market.market_maker_contract_address_checksummed,
             condition=market.condition,
             finalized_time=market.finalized_time,
-            fee=market.fee,
+            fees=market.fees,
         )
 
 

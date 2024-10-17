@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -89,6 +90,9 @@ def get_outcome_for_trace(
 
 
 if __name__ == "__main__":
+    output_directory = Path("bet_strategy_benchmark")
+    output_directory.mkdir(parents=True, exist_ok=True)
+
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
         "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
@@ -240,7 +244,8 @@ if __name__ == "__main__":
 
             details.sort(key=lambda x: x["sim_profit"], reverse=True)
             pd.DataFrame.from_records(details).to_csv(
-                f"{agent_name} - {strategy} - all bets.csv", index=False
+                output_directory / f"{agent_name} - {strategy} - all bets.csv",
+                index=False,
             )
 
             sum_squared_errors = 0.0
@@ -297,7 +302,9 @@ if __name__ == "__main__":
             + simulations_df.to_markdown(index=False)
         )
         # export details per agent
-        pd.DataFrame.from_records(details).to_csv(f"{agent_name}_details.csv")
+        pd.DataFrame.from_records(details).to_csv(
+            output_directory / f"{agent_name}_details.csv"
+        )
 
     print(f"Correlation between p_yes mse and total profit:")
     for strategy_name, mse_profit in strat_mse_profits.items():
@@ -306,5 +313,7 @@ if __name__ == "__main__":
         correlation = pd.Series(mse).corr(pd.Series(profit))
         print(f"{strategy_name}: {correlation=}")
 
-    with open("match_bets_with_langfuse_traces_overall.md", "w") as overall_f:
+    with open(
+        output_directory / "match_bets_with_langfuse_traces_overall.md", "w"
+    ) as overall_f:
         overall_f.write(overall_md)

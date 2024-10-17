@@ -3,7 +3,10 @@ from functools import reduce
 import numpy as np
 
 from prediction_market_agent_tooling.gtypes import Probability, Wei, xDai
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen import (
+    MarketFees,
+    OmenAgentMarket,
+)
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
@@ -14,7 +17,7 @@ def get_market_moving_bet(
     no_outcome_pool_size: float,
     market_p_yes: float,
     target_p_yes: float,
-    fee: float = 0.0,  # proportion, 0 to 1
+    fees: MarketFees,
     max_iters: int = 100,
 ) -> SimpleBet:
     """
@@ -47,7 +50,7 @@ def get_market_moving_bet(
     # Binary search for the optimal bet amount
     for _ in range(max_iters):
         bet_amount = (min_bet_amount + max_bet_amount) / 2
-        amounts_diff = bet_amount * (1 - fee)
+        amounts_diff = fees.get_bet_size_after_fees(bet_amount)
 
         # Initial new amounts are old amounts + equal new amounts for each outcome
         yes_outcome_new_pool_size = yes_outcome_pool_size + amounts_diff
@@ -106,16 +109,20 @@ def _sanity_check_omen_market_moving_bet(
     no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
     market_const = yes_outcome_pool_size * no_outcome_pool_size
 
+    bet_to_check_size_after_fees = market.fees.get_bet_size_after_fees(
+        bet_to_check.size
+    )
+
     # When you buy 'yes' tokens, you add your bet size to the both pools, then
     # subtract `buy_amount` from the 'yes' pool. And vice versa for 'no' tokens.
     new_yes_outcome_pool_size = (
         yes_outcome_pool_size
-        + (bet_to_check.size * (1 - market.fee))
+        + bet_to_check_size_after_fees
         - float(bet_to_check.direction) * buy_amount
     )
     new_no_outcome_pool_size = (
         no_outcome_pool_size
-        + (bet_to_check.size * (1 - market.fee))
+        + bet_to_check_size_after_fees
         - float(not bet_to_check.direction) * buy_amount
     )
     new_market_const = new_yes_outcome_pool_size * new_no_outcome_pool_size

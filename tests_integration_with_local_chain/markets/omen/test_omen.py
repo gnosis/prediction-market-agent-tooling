@@ -404,7 +404,7 @@ def test_place_bet_with_autodeposit(
         OmenSubgraphHandler().get_omen_binary_markets_simple(
             limit=1,
             filter_by=FilterBy.OPEN,
-            sort_by=SortBy.CLOSING_SOONEST,
+            sort_by=SortBy.NEWEST,
             collateral_token_address_in=(collateral_token_address,),
         )[0]
     )

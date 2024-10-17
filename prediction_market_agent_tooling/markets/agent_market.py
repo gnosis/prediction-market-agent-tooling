@@ -2,7 +2,7 @@ import typing as t
 from enum import Enum
 
 from eth_typing import ChecksumAddress
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from pydantic_core.core_schema import FieldValidationInfo
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
     TokenAmount,
 )
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
@@ -60,6 +61,7 @@ class AgentMarket(BaseModel):
     current_p_yes: Probability
     url: str
     volume: float | None  # Should be in currency of `currency` above.
+    fees: MarketFees
 
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(
@@ -76,6 +78,14 @@ class AgentMarket(BaseModel):
                     f"Keys of outcome_token_pool ({outcome_keys}) do not match outcomes ({expected_keys})."
                 )
         return outcome_token_pool
+
+    @model_validator(mode="before")
+    def handle_legacy_fee(cls, data: dict[str, t.Any]) -> dict[str, t.Any]:
+        # Backward compatibility for older `AgentMarket` without `fees`.
+        if "fees" not in data and "fee" in data:
+            data["fees"] = MarketFees(absolute=0.0, bet_proportion=data["fee"])
+            del data["fee"]
+        return data
 
     @property
     def current_p_no(self) -> Probability:
@@ -165,6 +175,11 @@ class AgentMarket(BaseModel):
 
     def buy_tokens(self, outcome: bool, amount: TokenAmount) -> str:
         return self.place_bet(outcome=outcome, amount=amount)
+
+    def get_buy_token_amount(
+        self, bet_amount: BetAmount, direction: bool
+    ) -> TokenAmount:
+        raise NotImplementedError("Subclasses must implement this method")
 
     def sell_tokens(self, outcome: bool, amount: TokenAmount) -> str:
         raise NotImplementedError("Subclasses must implement this method")

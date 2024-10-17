@@ -278,7 +278,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             where_stms["condition_"]["id_in"] = [x.hex() for x in condition_id_in]
 
         if id_in is not None:
-            where_stms["id_in"] = id_in
+            where_stms["id_in"] = [i.lower() for i in id_in]
 
         if resolved is not None:
             if resolved:

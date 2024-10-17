@@ -47,6 +47,26 @@ class BettingStrategy(ABC):
                 "Cannot handle trades with currencies that deviate from market's currency"
             )
 
+    @staticmethod
+    def assert_buy_trade_wont_be_guaranteed_loss(
+        market: AgentMarket, trades: list[Trade]
+    ) -> None:
+        for trade in trades:
+            if trade.trade_type == TradeType.BUY:
+                outcome_tokens_to_get = market.get_buy_token_amount(
+                    trade.amount, trade.outcome
+                )
+
+                if outcome_tokens_to_get.amount < trade.amount.amount:
+                    raise RuntimeError(
+                        f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}."
+                    )
+
+    @staticmethod
+    def check_trades(market: AgentMarket, trades: list[Trade]) -> None:
+        BettingStrategy.assert_trades_currency_match_markets(market, trades)
+        BettingStrategy.assert_buy_trade_wont_be_guaranteed_loss(market, trades)
+
     def _build_rebalance_trades_from_positions(
         self,
         existing_position: Position | None,
@@ -95,7 +115,10 @@ class BettingStrategy(ABC):
 
         # Sort inplace with SELL last
         trades.sort(key=lambda t: t.trade_type == TradeType.SELL)
-        BettingStrategy.assert_trades_currency_match_markets(market, trades)
+
+        # Run some sanity checks to not place unreasonable bets.
+        BettingStrategy.check_trades(market, trades)
+
         return trades
 
 

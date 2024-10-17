@@ -3,6 +3,7 @@ import typing as t
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketFees,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
@@ -25,6 +26,12 @@ class PolymarketAgentMarket(AgentMarket):
 
     currency: t.ClassVar[Currency] = Currency.USDC
     base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
+
+    # Based on https://docs.polymarket.com/#fees, there are currently no fees, except for transactions fees.
+    # However they do have `maker_fee_base_rate` and `taker_fee_base_rate`, but impossible to test out our implementation without them actually taking the fees.
+    # But then in the new subgraph API, they have `fee: BigInt! (Percentage fee of trades taken by market maker. A 2% fee is represented as 2*10^16)`.
+    # TODO: Check out the fees while integrating the subgraph API or if we implement placing of bets on Polymarket.
+    fees: MarketFees = MarketFees.get_zero_fees()
 
     @staticmethod
     def from_data_model(model: PolymarketMarketWithPrices) -> "PolymarketAgentMarket":

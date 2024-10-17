@@ -6,6 +6,7 @@ from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketFees,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
@@ -32,6 +33,13 @@ class ManifoldAgentMarket(AgentMarket):
 
     currency: t.ClassVar[Currency] = Currency.Mana
     base_url: t.ClassVar[str] = MANIFOLD_BASE_URL
+
+    # Manifold has additional fees than `platform_absolute`, but they don't expose them in the API before placing the bet, see https://docs.manifold.markets/api.
+    # So we just consider them as 0, which anyway is true for all markets I randomly checked on Manifold.
+    fees: MarketFees = MarketFees(
+        bet_proportion=0,
+        absolute=0.25,  # For doing trades via API.
+    )
 
     def get_last_trade_p_yes(self) -> Probability:
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""

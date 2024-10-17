@@ -25,7 +25,10 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     Question,
 )
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen import (
+    MarketFees,
+    OmenAgentMarket,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
@@ -119,7 +122,7 @@ def test_minimum_bet_to_win(
             url="url",
             volume=None,
             finalized_time=None,
-            fee=0.02,
+            fees=MarketFees.get_zero_fees(bet_proportion=0.02),
             outcome_token_pool=None,
         ),
     )
@@ -180,7 +183,7 @@ def test_get_market_moving_bet(
         no_outcome_pool_size=wei_to_xdai(
             Wei(omen_market.outcomeTokenAmounts[omen_market.no_index])
         ),
-        fee=wei_to_xdai(check_not_none(omen_market.fee)),
+        fees=OmenAgentMarket.from_data_model(omen_market).fees,
     )
     assert np.isclose(
         bet.size,
@@ -207,7 +210,7 @@ def test_sanity_check_market_moving_bet(target_p_yes: float) -> None:
         no_outcome_pool_size=no_outcome_pool_size,
         market_p_yes=market.current_p_yes,
         target_p_yes=target_p_yes,
-        fee=market.fee,
+        fees=market.fees,
     )
     _sanity_check_omen_market_moving_bet(market_moving_bet, market, target_p_yes)
 
@@ -258,6 +261,7 @@ def test_kelly_bet(est_p_yes: Probability, omen_market: OmenMarket) -> None:
             estimated_p_yes=est_p_yes,
             max_bet=max_bet,
             confidence=confidence,
+            fees=MarketFees.get_zero_fees(),
         ).direction
         == expected_bet_direction
     )
@@ -279,7 +283,7 @@ def test_zero_bets() -> None:
         no_outcome_pool_size=no_outcome_pool_size,
         market_p_yes=market.current_p_yes,
         target_p_yes=market.current_p_yes,
-        fee=market.fee,
+        fees=market.fees,
     )
     assert np.isclose(market_moving_bet.size, 0.0, atol=1e-3)
 
@@ -289,7 +293,7 @@ def test_zero_bets() -> None:
         estimated_p_yes=market.current_p_yes,
         confidence=1.0,
         max_bet=0,
-        fee=market.fee,
+        fees=market.fees,
     )
     assert kelly_bet.size == 0
 

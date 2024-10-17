@@ -4,7 +4,7 @@ from scipy.optimize import minimize_scalar
 
 from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
     Position,
@@ -178,7 +178,7 @@ class KellyBettingStrategy(BettingStrategy):
         if self.max_price_impact:
             # Adjust amount
             max_price_impact_bet_amount = self.calculate_bet_amount_for_price_impact(
-                market, kelly_bet, 0
+                market, kelly_bet
             )
 
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
@@ -196,7 +196,12 @@ class KellyBettingStrategy(BettingStrategy):
         return trades
 
     def calculate_price_impact_for_bet_amount(
-        self, buy_direction: bool, bet_amount: float, yes: float, no: float, fee: float
+        self,
+        buy_direction: bool,
+        bet_amount: float,
+        yes: float,
+        no: float,
+        fees: MarketFees,
     ) -> float:
         total_outcome_tokens = yes + no
         expected_price = (
@@ -204,7 +209,7 @@ class KellyBettingStrategy(BettingStrategy):
         )
 
         tokens_to_buy = get_buy_outcome_token_amount(
-            bet_amount, buy_direction, yes, no, fee
+            bet_amount, buy_direction, yes, no, fees
         )
 
         actual_price = bet_amount / tokens_to_buy
@@ -216,7 +221,6 @@ class KellyBettingStrategy(BettingStrategy):
         self,
         market: AgentMarket,
         kelly_bet: SimpleBet,
-        fee: float,
     ) -> float:
         def calculate_price_impact_deviation_from_target_price_impact(
             bet_amount: xDai,
@@ -226,7 +230,7 @@ class KellyBettingStrategy(BettingStrategy):
                 bet_amount,
                 yes_outcome_pool_size,
                 no_outcome_pool_size,
-                fee,
+                MarketFees.get_zero_fees(),  # TODO: Use market.fees
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
 

@@ -162,3 +162,5 @@ cython_debug/
 
 tests_files/*
 !tests_files/.gitkeep
+
+bet_strategy_benchmark*

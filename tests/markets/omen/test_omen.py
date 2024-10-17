@@ -242,7 +242,7 @@ def test_get_new_p_yes() -> None:
         no_outcome_pool_size=no_outcome_pool_size,
         market_p_yes=market.current_p_yes,
         target_p_yes=0.95,
-        fee=market.fee,
+        fees=market.fees,
     )
     new_p_yes = market.get_new_p_yes(
         bet_amount=market.get_bet_amount(bet.size), direction=bet.direction

@@ -355,7 +355,7 @@ class DeployableTraderAgent(DeployableAgent):
         api_keys = APIKeys()
 
         # On blockchain markets, check if we have enough of crypto to cover transactions, otherwise we can't do anything at all anymore.
-        if market_type == MarketType.OMEN and not is_minimum_required_balance(
+        if market_type.is_blockchain_market and not is_minimum_required_balance(
             api_keys.public_key,
             min_required_balance=xdai_type(0.001),
             sum_wxdai=False,
@@ -374,7 +374,7 @@ class DeployableTraderAgent(DeployableAgent):
         # Have a little bandwich after the bet.
         min_required_balance_to_trade = strategy.maximum_possible_bet_amount * 1.01
 
-        if market_type == MarketType.OMEN and not is_minimum_required_balance(
+        if market_type.is_blockchain_market and not is_minimum_required_balance(
             api_keys.bet_from_address,
             min_required_balance=xdai_type(min_required_balance_to_trade),
         ):
@@ -445,7 +445,7 @@ class DeployableTraderAgent(DeployableAgent):
 
         api_keys = APIKeys()
 
-        if market_type == MarketType.OMEN:
+        if market_type.is_blockchain_market:
             self.check_min_required_balance_to_trade(market_type, market)
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
             if self.min_balance_to_keep_in_native_currency is not None:
@@ -569,8 +569,10 @@ class DeployableTraderAgent(DeployableAgent):
         """
         api_keys = APIKeys()
 
-        if market_type == MarketType.OMEN:
+        if market_type.is_blockchain_market:
             self.check_min_required_balance_to_operate(market_type)
+
+        if market_type == MarketType.OMEN:
             # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
             redeem_from_all_user_positions(api_keys)
 

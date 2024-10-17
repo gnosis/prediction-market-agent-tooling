@@ -25,7 +25,7 @@ def main(
     initial_funds: str = typer.Option(),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(None),
-    cl_token: CollateralTokenChoice = CollateralTokenChoice.wxdai,
+    cl_token: CollateralTokenChoice = CollateralTokenChoice.sdai,
     fee_perc: float = typer.Option(OMEN_DEFAULT_MARKET_FEE_PERC),
     language: str = typer.Option("en"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
@@ -42,8 +42,6 @@ def main(
         --initial-funds 0.01 \
         --from-private-key your-private-key
     ```
-
-    Market can be created also on the web: https://aiomen.eth.limo/#/create
     """
     safe_address_checksum = (
         Web3.to_checksum_address(safe_address) if safe_address else None
@@ -52,7 +50,7 @@ def main(
         BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
         SAFE_ADDRESS=safe_address_checksum,
     )
-    market_address = omen_create_market_tx(
+    market = omen_create_market_tx(
         api_keys=api_keys,
         collateral_token_address=COLLATERAL_TOKEN_CHOICE_TO_ADDRESS[cl_token],
         initial_funds=xdai_type(initial_funds),
@@ -64,7 +62,7 @@ def main(
         outcomes=outcomes,
         auto_deposit=auto_deposit,
     )
-    logger.info(f"Market created at address: {market_address}")
+    logger.info(f"Market created: {market}")
 
 
 if __name__ == "__main__":

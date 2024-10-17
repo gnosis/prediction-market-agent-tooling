@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketFees,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -101,7 +102,6 @@ class OmenAgentMarket(AgentMarket):
     finalized_time: DatetimeUTC | None
     created_time: DatetimeUTC
     close_time: DatetimeUTC
-    fee: float  # proportion, from 0 to 1
 
     _binary_market_p_yes_history: list[Probability] | None = None
     description: str | None = (
@@ -240,7 +240,7 @@ class OmenAgentMarket(AgentMarket):
             shares_to_sell=amount.amount,
             holdings=wei_to_xdai(pool_balance[self.get_index_set(sell_str)]),
             other_holdings=wei_to_xdai(pool_balance[self.get_index_set(other_str)]),
-            fee=self.fee,
+            fees=self.fees,
         )
         return xDai(collateral)
 
@@ -352,7 +352,12 @@ class OmenAgentMarket(AgentMarket):
             url=model.url,
             volume=wei_to_xdai(model.collateralVolume),
             close_time=model.close_time,
-            fee=float(wei_to_xdai(model.fee)) if model.fee is not None else 0.0,
+            fees=MarketFees(
+                bet_proportion=(
+                    float(wei_to_xdai(model.fee)) if model.fee is not None else 0.0
+                ),
+                absolute=0,
+            ),
             outcome_token_pool={
                 model.outcomes[i]: wei_to_xdai(Wei(model.outcomeTokenAmounts[i]))
                 for i in range(len(model.outcomes))
@@ -598,7 +603,7 @@ class OmenAgentMarket(AgentMarket):
             buy_direction=direction,
             yes_outcome_pool_size=outcome_token_pool[OMEN_TRUE_OUTCOME],
             no_outcome_pool_size=outcome_token_pool[OMEN_FALSE_OUTCOME],
-            fee=self.fee,
+            fees=self.fees,
         )
         return TokenAmount(amount=amount, currency=self.currency)
 
@@ -628,10 +633,10 @@ class OmenAgentMarket(AgentMarket):
         no_outcome_pool_size = outcome_token_pool[self.get_outcome_str_from_bool(False)]
 
         new_yes_outcome_pool_size = yes_outcome_pool_size + (
-            bet_amount.amount * (1 - self.fee)
+            self.fees.get_bet_size_after_fees(bet_amount.amount)
         )
         new_no_outcome_pool_size = no_outcome_pool_size + (
-            bet_amount.amount * (1 - self.fee)
+            self.fees.get_bet_size_after_fees(bet_amount.amount)
         )
 
         received_token_amount = self.get_buy_token_amount(bet_amount, direction).amount
@@ -1104,7 +1109,6 @@ def omen_remove_fund_market_tx(
     market_contract.removeFunding(api_keys=api_keys, remove_funding=shares, web3=web3)
 
     conditional_tokens = OmenConditionalTokenContract()
-    parent_collection_id = build_parent_collection_id()
     amount_per_index_set = get_conditional_tokens_balance_for_market(
         market, from_address, web3
     )
@@ -1116,7 +1120,6 @@ def omen_remove_fund_market_tx(
     result = conditional_tokens.mergePositions(
         api_keys=api_keys,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
-        parent_collection_id=parent_collection_id,
         conditionId=market.condition.id,
         index_sets=market.condition.index_sets,
         amount=amount_to_merge,
@@ -1266,14 +1269,14 @@ def get_buy_outcome_token_amount(
     buy_direction: bool,
     yes_outcome_pool_size: float,
     no_outcome_pool_size: float,
-    fee: float,
+    fees: MarketFees,
 ) -> float:
     """
     Calculates the amount of outcome tokens received for a given investment
 
     Taken from https://github.com/gnosis/conditional-tokens-market-makers/blob/6814c0247c745680bb13298d4f0dd7f5b574d0db/contracts/FixedProductMarketMaker.sol#L264
     """
-    investment_amount_minus_fees = investment_amount * (1 - fee)
+    investment_amount_minus_fees = fees.get_bet_size_after_fees(investment_amount)
     buy_token_pool_balance = (
         yes_outcome_pool_size if buy_direction else no_outcome_pool_size
     )

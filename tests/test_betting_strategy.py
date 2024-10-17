@@ -24,7 +24,11 @@ from prediction_market_agent_tooling.markets.data_models import (
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
 )
-from prediction_market_agent_tooling.markets.omen.omen import Condition, OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen import (
+    Condition,
+    MarketFees,
+    OmenAgentMarket,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
@@ -82,7 +86,7 @@ def test_rebalance() -> None:
 
 
 @pytest.mark.parametrize(
-    "strategy, liquidity, fee, should_raise",
+    "strategy, liquidity, bet_proportion_fee, should_raise",
     [
         (
             MaxAccuracyBettingStrategy(bet_amount=100),
@@ -105,7 +109,10 @@ def test_rebalance() -> None:
     ],
 )
 def test_attacking_market(
-    strategy: BettingStrategy, liquidity: float, fee: float, should_raise: bool
+    strategy: BettingStrategy,
+    liquidity: float,
+    bet_proportion_fee: float,
+    should_raise: bool,
 ) -> None:
     """
     Test if markets with unreasonably low liquidity and/or high fees won't put agent into immediate loss.
@@ -133,7 +140,7 @@ def test_attacking_market(
             OMEN_BINARY_MARKET_OUTCOMES[0]: liquidity,
             OMEN_BINARY_MARKET_OUTCOMES[1]: liquidity,
         },
-        fee=fee,
+        fees=MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee),
     )
     answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=1.0)
 

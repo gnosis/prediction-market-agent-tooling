@@ -8,10 +8,8 @@ from datetime import timedelta
 from enum import Enum
 from functools import cached_property
 
-from pydantic import BaseModel, BeforeValidator, computed_field
+from pydantic import BeforeValidator, computed_field
 from typing_extensions import Annotated
-from web3 import Web3
-from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
@@ -32,11 +30,12 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
-from prediction_market_agent_tooling.gtypes import HexStr, xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    ProcessedMarket,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -49,28 +48,16 @@ from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     have_bet_on_market_since,
 )
-from prediction_market_agent_tooling.markets.omen.data_models import (
-    ContractPrediction,
-    IPFSAgentResult,
-)
 from prediction_market_agent_tooling.markets.omen.omen import (
-    is_minimum_required_balance,
-    redeem_from_all_user_positions,
     withdraw_wxdai_to_xdai_to_keep_balance,
-)
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OmenAgentResultMappingContract,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.is_invalid import is_invalid
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
-from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
 
 MAX_AVAILABLE_MARKETS = 20
 TRADER_TAG = "trader"
@@ -120,11 +107,6 @@ class CantPayForGasError(ValueError):
 
 class OutOfFundsError(ValueError):
     pass
-
-
-class ProcessedMarket(BaseModel):
-    answer: ProbabilisticAnswer
-    trades: list[PlacedTrade]
 
 
 class AnsweredEnum(str, Enum):
@@ -354,19 +336,12 @@ class DeployableTraderAgent(DeployableAgent):
     def check_min_required_balance_to_operate(self, market_type: MarketType) -> None:
         api_keys = APIKeys()
 
-        # On blockchain markets, check if we have enough of crypto to cover transactions, otherwise we can't do anything at all anymore.
-        if market_type.is_blockchain_market and not is_minimum_required_balance(
-            api_keys.public_key,
-            min_required_balance=xdai_type(0.001),
-            sum_wxdai=False,
-        ):
+        if not market_type.market_class.verify_operational_balance(api_keys):
             raise CantPayForGasError(
-                f"{api_keys.public_key=} doesn't have enough xDai to pay for gas."
+                f"{api_keys=} doesn't have enough operational balance."
             )
 
-    def check_min_required_balance_to_trade(
-        self, market_type: MarketType, market: AgentMarket
-    ) -> None:
+    def check_min_required_balance_to_trade(self, market: AgentMarket) -> None:
         api_keys = APIKeys()
 
         # Get the strategy to know how much it will bet.
@@ -374,13 +349,9 @@ class DeployableTraderAgent(DeployableAgent):
         # Have a little bandwich after the bet.
         min_required_balance_to_trade = strategy.maximum_possible_bet_amount * 1.01
 
-        if market_type.is_blockchain_market and not is_minimum_required_balance(
-            api_keys.bet_from_address,
-            min_required_balance=xdai_type(min_required_balance_to_trade),
-        ):
+        if market.get_trade_balance(api_keys) < min_required_balance_to_trade:
             raise OutOfFundsError(
-                f"Minimum required balance {min_required_balance_to_trade} "
-                f"for agent with address {api_keys.bet_from_address=} is not met."
+                f"Minimum required balance {min_required_balance_to_trade} for agent is not met."
             )
 
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
@@ -445,8 +416,9 @@ class DeployableTraderAgent(DeployableAgent):
 
         api_keys = APIKeys()
 
+        self.check_min_required_balance_to_trade(market)
+
         if market_type.is_blockchain_market:
-            self.check_min_required_balance_to_trade(market_type, market)
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
             if self.min_balance_to_keep_in_native_currency is not None:
                 withdraw_wxdai_to_xdai_to_keep_balance(
@@ -518,63 +490,16 @@ class DeployableTraderAgent(DeployableAgent):
         market: AgentMarket,
         processed_market: ProcessedMarket,
     ) -> None:
-        if market_type != MarketType.OMEN:
-            logger.info(
-                f"Skipping after_process_market since market_type {market_type} != OMEN"
-            )
-            return
         keys = APIKeys()
-        self.store_prediction(
-            market_id=market.id, processed_market=processed_market, keys=keys
-        )
-
-    def store_prediction(
-        self, market_id: str, processed_market: ProcessedMarket, keys: APIKeys
-    ) -> None:
-        reasoning = (
-            processed_market.answer.reasoning
-            if processed_market.answer.reasoning
-            else ""
-        )
-
-        ipfs_hash_decoded = HexBytes(HASH_ZERO)
-        if keys.enable_ipfs_upload:
-            logger.info("Storing prediction on IPFS.")
-            ipfs_hash = IPFSHandler(keys).store_agent_result(
-                IPFSAgentResult(reasoning=reasoning)
-            )
-            ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
-
-        tx_hashes = [
-            HexBytes(HexStr(i.id)) for i in processed_market.trades if i.id is not None
-        ]
-        prediction = ContractPrediction(
-            publisher=keys.public_key,
-            ipfs_hash=ipfs_hash_decoded,
-            tx_hashes=tx_hashes,
-            estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
-        )
-        tx_receipt = OmenAgentResultMappingContract().add_prediction(
-            api_keys=keys,
-            market_address=Web3.to_checksum_address(market_id),
-            prediction=prediction,
-        )
-        logger.info(
-            f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].hex()}."
-        )
+        market.store_prediction(processed_market=processed_market, keys=keys)
 
     def before_process_markets(self, market_type: MarketType) -> None:
         """
         Executes actions that occur before bets are placed.
         """
         api_keys = APIKeys()
-
-        if market_type.is_blockchain_market:
-            self.check_min_required_balance_to_operate(market_type)
-
-        if market_type == MarketType.OMEN:
-            # Omen is specific, because the user (agent) needs to manually withdraw winnings from the market.
-            redeem_from_all_user_positions(api_keys)
+        self.check_min_required_balance_to_operate(market_type)
+        market_type.market_class.redeem_winnings(api_keys)
 
     def process_markets(self, market_type: MarketType) -> None:
         """

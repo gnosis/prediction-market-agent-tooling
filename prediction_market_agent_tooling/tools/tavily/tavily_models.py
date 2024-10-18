@@ -18,7 +18,7 @@ class TavilyResult(BaseModel):
 
 class TavilyResponse(BaseModel):
     query: str
-    follow_up_questions: None = None
+    follow_up_questions: str | None = None
     answer: str
     images: list[str]
     results: list[TavilyResult]

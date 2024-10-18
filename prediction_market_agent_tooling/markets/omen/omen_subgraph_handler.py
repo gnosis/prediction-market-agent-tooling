@@ -341,7 +341,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             tuple[ChecksumAddress, ...] | None
         ) = SAFE_COLLATERAL_TOKEN_MARKETS,
         category: str | None = None,
-        opened_after_delta: timedelta = timedelta(seconds=60),
     ) -> t.List[OmenMarket]:
         """
         Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
@@ -356,8 +355,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         elif filter_by == FilterBy.OPEN:
             # We can not use `resolved=False` + `finalized=False` here,
             # because even closed markets don't need to be resolved yet (e.g. if someone forgot to finalize the question on reality).
-            # By default adds opened after delta, because market that is just about to be closed won't be processed in time anyway.
-            opened_after = utcnow() + opened_after_delta
             # Even if the market isn't closed yet, liquidity can be withdrawn to 0, which essentially closes the market.
             liquidity_bigger_than = wei_type(0)
         elif filter_by == FilterBy.NONE:

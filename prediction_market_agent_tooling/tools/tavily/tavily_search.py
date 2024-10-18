@@ -124,6 +124,7 @@ def get_related_news_since(
     days_ago: int,
     score_threshold: float = DEFAULT_SCORE_THRESHOLD,
     max_results: int = 3,
+    tavily_storage: TavilyStorage | None = None,
 ) -> list[TavilyResult]:
     news = tavily_search(
         query=question,

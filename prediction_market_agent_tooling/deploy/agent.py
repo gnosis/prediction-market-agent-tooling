@@ -297,6 +297,7 @@ class DeployableTraderAgent(DeployableAgent):
     min_required_balance_to_operate: xDai | None = xdai_type(1)
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
     allow_invalid_questions: bool = False
+    time_to_bet_again: timedelta = timedelta(hours=24)
 
     def __init__(
         self,
@@ -394,7 +395,7 @@ class DeployableTraderAgent(DeployableAgent):
         Subclasses can implement their own logic instead of this one, or on top of this one.
         By default, it allows only markets where user didn't bet recently and it's a reasonable question.
         """
-        if self.have_bet_on_market_since(market, since=timedelta(hours=24)):
+        if self.have_bet_on_market_since(market, since=self.time_to_bet_again):
             return False
 
         # Manifold allows to bet only on markets with probability between 1 and 99.

@@ -355,6 +355,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         elif filter_by == FilterBy.OPEN:
             # We can not use `resolved=False` + `finalized=False` here,
             # because even closed markets don't need to be resolved yet (e.g. if someone forgot to finalize the question on reality).
+            opened_after = utcnow()
             # Even if the market isn't closed yet, liquidity can be withdrawn to 0, which essentially closes the market.
             liquidity_bigger_than = wei_type(0)
         elif filter_by == FilterBy.NONE:

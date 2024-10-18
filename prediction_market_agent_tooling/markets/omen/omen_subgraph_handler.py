@@ -1,6 +1,5 @@
 import sys
 import typing as t
-from datetime import timedelta
 
 import requests
 import tenacity

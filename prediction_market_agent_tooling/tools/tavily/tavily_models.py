@@ -34,7 +34,7 @@ class TavilyResponseModel(SQLModel, table=True):
     query: str = Field(index=True, nullable=False)
     search_depth: str
     topic: str
-    days: int = Field(default=None, nullable=True)
+    days: int | None = Field(default=None, nullable=True)
     max_results: int
     include_domains: list[str] | None = Field(
         None, sa_column=Column(ARRAY(String), nullable=True)

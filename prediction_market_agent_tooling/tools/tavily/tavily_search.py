@@ -4,8 +4,13 @@ import tenacity
 from tavily import TavilyClient
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.tools.tavily.tavily_models import TavilyResponse
+from prediction_market_agent_tooling.tools.tavily.tavily_models import (
+    TavilyResponse,
+    TavilyResult,
+)
 from prediction_market_agent_tooling.tools.tavily.tavily_storage import TavilyStorage
+
+DEFAULT_SCORE_THRESHOLD = 0.75  # Based on some empirical testing, anything lower wasn't very relevant to the question being asked
 
 
 def tavily_search(
@@ -112,3 +117,18 @@ def _tavily_search(
         use_cache=use_cache,
     )
     return response
+
+
+def get_related_news_since(
+    question: str,
+    days_ago: int,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+    max_results: int = 3,
+) -> list[TavilyResult]:
+    news = tavily_search(
+        query=question,
+        days=days_ago,
+        max_results=max_results,
+        topic="news",
+    )
+    return [r for r in news.results if r.score > score_threshold]

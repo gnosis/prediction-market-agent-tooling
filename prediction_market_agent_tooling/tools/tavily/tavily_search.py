@@ -131,5 +131,6 @@ def get_related_news_since(
         days=days_ago,
         max_results=max_results,
         topic="news",
+        tavily_storage=tavily_storage,
     )
     return [r for r in news.results if r.score > score_threshold]

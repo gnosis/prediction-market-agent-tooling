@@ -340,6 +340,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             tuple[ChecksumAddress, ...] | None
         ) = SAFE_COLLATERAL_TOKEN_MARKETS,
         category: str | None = None,
+        creator_in: t.Sequence[HexAddress] | None = None,
     ) -> t.List[OmenMarket]:
         """
         Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
@@ -375,6 +376,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             question_excluded_titles=excluded_questions,
             collateral_token_address_in=collateral_token_address_in,
             category=category,
+            creator_in=creator_in,
         )
 
     def get_omen_binary_markets(

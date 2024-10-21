@@ -354,8 +354,8 @@ class DeployableTraderAgent(DeployableAgent):
         )
 
     @property
-    def model(self) -> str | None:
-        return None
+    def agent_name(self) -> str:
+        return self.__class__.__name__
 
     def check_min_required_balance_to_operate(
         self,

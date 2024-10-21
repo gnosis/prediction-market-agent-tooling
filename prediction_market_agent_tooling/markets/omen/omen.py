@@ -417,20 +417,15 @@ class OmenAgentMarket(AgentMarket):
         ) > xdai_type(0.001)
 
     def store_prediction(
-        self, processed_market: ProcessedMarket, keys: APIKeys
+        self,
+        processed_market: ProcessedMarket,
+        keys: APIKeys,
+        agent_result: IPFSAgentResult,
     ) -> None:
-        reasoning = (
-            processed_market.answer.reasoning
-            if processed_market.answer.reasoning
-            else ""
-        )
-
         ipfs_hash_decoded = HexBytes(HASH_ZERO)
         if keys.enable_ipfs_upload:
             logger.info("Storing prediction on IPFS.")
-            ipfs_hash = IPFSHandler(keys).store_agent_result(
-                IPFSAgentResult(reasoning=reasoning)
-            )
+            ipfs_hash = IPFSHandler(keys).store_agent_result(agent_result)
             ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
         tx_hashes = [

@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
+from prediction_market_agent_tooling.markets.omen.data_models import IPFSAgentResult
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
@@ -228,7 +229,10 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def store_prediction(
-        self, processed_market: ProcessedMarket, keys: APIKeys
+        self,
+        processed_market: ProcessedMarket,
+        keys: APIKeys,
+        agent_result: IPFSAgentResult,
     ) -> None:
         """
         If market allows to upload predictions somewhere, implement it in this method.

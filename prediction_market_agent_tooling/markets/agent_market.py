@@ -11,7 +11,9 @@ from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     BetAmount,
     Currency,
+    PlacedTrade,
     Position,
+    ProbabilisticAnswer,
     Resolution,
     ResolvedBet,
     TokenAmount,
@@ -23,6 +25,11 @@ from prediction_market_agent_tooling.tools.utils import (
     should_not_happen,
     utcnow,
 )
+
+
+class ProcessedMarket(BaseModel):
+    answer: ProbabilisticAnswer
+    trades: list[PlacedTrade]
 
 
 class SortBy(str, Enum):
@@ -196,6 +203,36 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_binary_market(id: str) -> "AgentMarket":
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def redeem_winnings(api_keys: APIKeys) -> None:
+        """
+        On some markets (like Omen), it's needed to manually claim the winner bets. If it's not needed, just implement with `pass`.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def get_trade_balance(api_keys: APIKeys) -> float:
+        """
+        Return balance that can be used to trade on the given market.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        """
+        Return `True` if the user has enough of operational balance. If not needed, just return `True`.
+        For example: Omen needs at least some xDai in the wallet to execute transactions.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def store_prediction(
+        self, processed_market: ProcessedMarket, keys: APIKeys
+    ) -> None:
+        """
+        If market allows to upload predictions somewhere, implement it in this method.
+        """
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod

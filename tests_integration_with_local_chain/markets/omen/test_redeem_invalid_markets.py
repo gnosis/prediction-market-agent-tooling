@@ -33,10 +33,10 @@ def test_redeem_invalid_market(
     local_web3: Web3,
 ) -> None:
     """
-    TLDR: If markets is invalid, we can normally redeem it.
+    TLDR: If the market is invalid, we can normally redeem it.
     """
 
-    # Get three accounts, one will create a market with liquidity, and the two will place bets in oposing directions.
+    # Get three accounts, one will create a market with liquidity, and the two will place bets in opposing directions.
     account_A, account_B, account_C = accounts[7], accounts[8], accounts[9]
     api_keys_A, api_keys_B, api_keys_C = (
         APIKeys(
@@ -118,7 +118,7 @@ def test_redeem_invalid_market(
     balance_after_buying_B = get_balances(api_keys_B.bet_from_address, local_web3).total
     assert (
         balance_after_buying_B < starting_balance_B
-    ), "Balance of B should have be lowered from betting"
+    ), "Balance of B should have been lowered from betting"
 
     # Buy NO tokens from account C
     binary_omen_buy_outcome_tx(
@@ -132,7 +132,7 @@ def test_redeem_invalid_market(
     balance_after_buying_C = get_balances(api_keys_C.bet_from_address, local_web3).total
     assert (
         balance_after_buying_C < starting_balance_C
-    ), "Balance of C should have be lowered from betting"
+    ), "Balance of C should have been lowered from betting"
 
     # Wait for market's closing time
     time.sleep(close_in * 1.2)

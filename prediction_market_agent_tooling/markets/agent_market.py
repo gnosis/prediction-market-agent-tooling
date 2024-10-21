@@ -222,7 +222,7 @@ class AgentMarket(BaseModel):
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
         """
-        Return if the user has enough of operational balance, if not needed, just implement with `pass`.
+        Return `True` if the user has enough of operational balance. If not needed, just return `True`.
         For example: Omen needs at least some xDai in the wallet to execute transactions.
         """
         raise NotImplementedError("Subclasses must implement this method")

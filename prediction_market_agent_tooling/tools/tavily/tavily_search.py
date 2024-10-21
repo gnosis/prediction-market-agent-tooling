@@ -4,16 +4,20 @@ import tenacity
 from tavily import TavilyClient
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.tools.tavily_storage.tavily_models import (
+from prediction_market_agent_tooling.tools.tavily.tavily_models import (
     TavilyResponse,
-    TavilyStorage,
+    TavilyResult,
 )
+from prediction_market_agent_tooling.tools.tavily.tavily_storage import TavilyStorage
+
+DEFAULT_SCORE_THRESHOLD = 0.75  # Based on some empirical testing, anything lower wasn't very relevant to the question being asked
 
 
 def tavily_search(
     query: str,
     search_depth: t.Literal["basic", "advanced"] = "advanced",
     topic: t.Literal["general", "news"] = "general",
+    days: int | None = None,
     max_results: int = 5,
     include_domains: t.Sequence[str] | None = None,
     exclude_domains: t.Sequence[str] | None = None,
@@ -35,6 +39,7 @@ def tavily_search(
             search_depth=search_depth,
             topic=topic,
             max_results=max_results,
+            days=days,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             include_answer=include_answer,
@@ -49,6 +54,7 @@ def tavily_search(
         search_depth=search_depth,
         topic=topic,
         max_results=max_results,
+        days=days,
         include_domains=include_domains,
         exclude_domains=exclude_domains,
         include_answer=include_answer,
@@ -63,6 +69,7 @@ def tavily_search(
             query=query,
             search_depth=search_depth,
             topic=topic,
+            days=days,
             max_results=max_results,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
@@ -80,6 +87,7 @@ def _tavily_search(
     query: str,
     search_depth: t.Literal["basic", "advanced"],
     topic: t.Literal["general", "news"],
+    days: int | None,
     max_results: int,
     include_domains: t.Sequence[str] | None,
     exclude_domains: t.Sequence[str] | None,
@@ -99,6 +107,7 @@ def _tavily_search(
         query=query,
         search_depth=search_depth,
         topic=topic,
+        days=days,
         max_results=max_results,
         include_domains=include_domains,
         exclude_domains=exclude_domains,
@@ -108,3 +117,20 @@ def _tavily_search(
         use_cache=use_cache,
     )
     return response
+
+
+def get_related_news_since(
+    question: str,
+    days_ago: int,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+    max_results: int = 3,
+    tavily_storage: TavilyStorage | None = None,
+) -> list[TavilyResult]:
+    news = tavily_search(
+        query=question,
+        days=days_ago,
+        max_results=max_results,
+        topic="news",
+        tavily_storage=tavily_storage,
+    )
+    return [r for r in news.results if r.score > score_threshold]

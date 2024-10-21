@@ -8,9 +8,7 @@ from web3.types import Wei
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import private_key_type, xDai, xdai_type
-from prediction_market_agent_tooling.markets.omen.omen import (
-    is_minimum_required_balance,
-)
+from prediction_market_agent_tooling.markets.omen.omen import get_total_balance
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import DebuggingContract
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -88,16 +86,13 @@ def test_anvil_account_has_more_than_minimum_required_balance(
     accounts: list[TestAccount],
 ) -> None:
     account_adr = Web3.to_checksum_address(accounts[0].address)
-    assert is_minimum_required_balance(account_adr, xdai_type(0.5), local_web3)
+    assert get_total_balance(account_adr, local_web3) > xdai_type(0.5)
 
 
-def test_fresh_account_has_less_than_minimum_required_balance(
-    local_web3: Web3,
-    accounts: list[TestAccount],
-) -> None:
+def test_fresh_account_has_less_than_minimum_required_balance(local_web3: Web3) -> None:
     fresh_account_adr = Account.create().address
     account_adr = Web3.to_checksum_address(fresh_account_adr)
-    assert not is_minimum_required_balance(account_adr, xdai_type(0.5), local_web3)
+    assert get_total_balance(account_adr, local_web3) < xdai_type(0.5)
 
 
 def test_now(local_web3: Web3, test_keys: APIKeys) -> None:

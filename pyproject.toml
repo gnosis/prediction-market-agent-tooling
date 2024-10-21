@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.53.0"
+version = "0.54.0"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -63,7 +63,7 @@ pytest = "*"
 mypy = "^1.11.1"
 black = "^23.12.1"
 ape-foundry = "^0.8.2"
-eth-ape = "^0.8.10"
+eth-ape = "^0.8.10,<0.8.17"  # 0.8.17 doesn't work with the current configuration and needs a fix, see https://github.com/gnosis/prediction-market-agent-tooling/issues/518.
 
 [build-system]
 requires = ["poetry-core"]

@@ -46,6 +46,10 @@ class MarketType(str, Enum):
             raise ValueError(f"Unknown market type: {self}")
         return MARKET_TYPE_TO_AGENT_MARKET[self]
 
+    @property
+    def is_blockchain_market(self) -> bool:
+        return self in [MarketType.OMEN, MarketType.POLYMARKET]
+
 
 MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.MANIFOLD: ManifoldAgentMarket,

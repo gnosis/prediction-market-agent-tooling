@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import tenacity
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -23,6 +24,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
+    ProcessedMarket,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -39,7 +41,9 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     PRESAGIO_BASE_URL,
     Condition,
     ConditionPreparationEvent,
+    ContractPrediction,
     CreatedMarket,
+    IPFSAgentResult,
     OmenBet,
     OmenMarket,
     OmenUserPosition,
@@ -50,6 +54,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
     REALITY_DEFAULT_FINALIZATION_TIMEOUT,
     Arbitrator,
+    OmenAgentResultMappingContract,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -70,6 +75,7 @@ from prediction_market_agent_tooling.tools.contract import (
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
@@ -78,6 +84,7 @@ from prediction_market_agent_tooling.tools.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     get_receipt_block_timestamp,
+    ipfscidv0_to_byte32,
     remove_fraction,
     wei_to_xdai,
     xdai_to_wei,
@@ -390,6 +397,58 @@ class OmenAgentMarket(AgentMarket):
             OmenSubgraphHandler().get_omen_market_by_market_id(
                 market_id=HexAddress(HexStr(id))
             )
+        )
+
+    @staticmethod
+    def redeem_winnings(api_keys: APIKeys) -> None:
+        redeem_from_all_user_positions(api_keys)
+
+    @staticmethod
+    def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> xDai:
+        return get_total_balance(
+            address=api_keys.bet_from_address, web3=web3, sum_xdai=True, sum_wxdai=True
+        )
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        return get_total_balance(
+            api_keys.public_key,  # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
+            sum_wxdai=False,
+        ) > xdai_type(0.001)
+
+    def store_prediction(
+        self, processed_market: ProcessedMarket, keys: APIKeys
+    ) -> None:
+        reasoning = (
+            processed_market.answer.reasoning
+            if processed_market.answer.reasoning
+            else ""
+        )
+
+        ipfs_hash_decoded = HexBytes(HASH_ZERO)
+        if keys.enable_ipfs_upload:
+            logger.info("Storing prediction on IPFS.")
+            ipfs_hash = IPFSHandler(keys).store_agent_result(
+                IPFSAgentResult(reasoning=reasoning)
+            )
+            ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
+
+        tx_hashes = [
+            HexBytes(HexStr(i.id)) for i in processed_market.trades if i.id is not None
+        ]
+        prediction = ContractPrediction(
+            publisher=keys.public_key,
+            ipfs_hash=ipfs_hash_decoded,
+            tx_hashes=tx_hashes,
+            estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
+        )
+        tx_receipt = OmenAgentResultMappingContract().add_prediction(
+            api_keys=keys,
+            market_address=Web3.to_checksum_address(self.id),
+            prediction=prediction,
+        )
+        logger.info(
+            f"Added prediction to market {self.id}. - receipt {tx_receipt['transactionHash'].hex()}."
         )
 
     @staticmethod
@@ -1222,13 +1281,12 @@ def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability
     return history
 
 
-def is_minimum_required_balance(
+def get_total_balance(
     address: ChecksumAddress,
-    min_required_balance: xDai,
     web3: Web3 | None = None,
     sum_xdai: bool = True,
     sum_wxdai: bool = True,
-) -> bool:
+) -> xDai:
     """
     Checks if the total balance of xDai and wxDai in the wallet is above the minimum required balance.
     """
@@ -1239,7 +1297,7 @@ def is_minimum_required_balance(
         total_balance += current_balances.xdai
     if sum_wxdai:
         total_balance += current_balances.wxdai
-    return total_balance >= min_required_balance
+    return xdai_type(total_balance)
 
 
 def withdraw_wxdai_to_xdai_to_keep_balance(

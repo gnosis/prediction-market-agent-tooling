@@ -798,7 +798,7 @@ class ContractPrediction(BaseModel):
 
 class IPFSAgentResult(BaseModel):
     reasoning: str
-
+    model: str | None
     model_config = ConfigDict(
         extra="forbid",
     )

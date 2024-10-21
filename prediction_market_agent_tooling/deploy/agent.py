@@ -353,6 +353,10 @@ class DeployableTraderAgent(DeployableAgent):
             ]
         )
 
+    @property
+    def model(self) -> str | None:
+        return None
+
     def check_min_required_balance_to_operate(
         self,
         market_type: MarketType,
@@ -533,7 +537,7 @@ class DeployableTraderAgent(DeployableAgent):
         if keys.enable_ipfs_upload:
             logger.info("Storing prediction on IPFS.")
             ipfs_hash = IPFSHandler(keys).store_agent_result(
-                IPFSAgentResult(reasoning=reasoning)
+                IPFSAgentResult(reasoning=reasoning, model=self.model)
             )
             ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 

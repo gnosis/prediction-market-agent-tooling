@@ -270,7 +270,7 @@ def test_omen_fund_and_remove_fund_market(
         OmenSubgraphHandler().get_omen_binary_markets_simple(
             limit=1,
             filter_by=FilterBy.OPEN,
-            sort_by=SortBy.CLOSING_SOONEST,
+            sort_by=SortBy.NEWEST,
             collateral_token_address_in=(collateral_token_address,),
         )[0]
     )
@@ -488,7 +488,7 @@ def test_place_bet_with_prev_existing_positions(
     # Fetch an open binary market.
     sh = OmenSubgraphHandler()
     market = sh.get_omen_binary_markets_simple(
-        limit=1, filter_by=FilterBy.OPEN, sort_by=SortBy.CLOSING_SOONEST
+        limit=1, filter_by=FilterBy.OPEN, sort_by=SortBy.NEWEST
     )[0]
     omen_agent_market = OmenAgentMarket.from_data_model(market)
 

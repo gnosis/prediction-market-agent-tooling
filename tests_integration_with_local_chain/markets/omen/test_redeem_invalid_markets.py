@@ -186,10 +186,10 @@ def test_redeem_invalid_market(
 
     assert (
         -bet_size < account_B_difference < 0
-    ), "Assumption was that B will get most of the money back, but it will be in loss because he was buying tokens for higher price than 0.5."
+    ), "Assumption was that B will get most of the money back but would incur a loss because he bought tokens at a higher price than 0.5."
     assert (
         account_C_difference > 0
-    ), "Assumption was that C will be profitable, because he were buying the cheaper tokens."
+    ), "Assumption was that C will be profitable because he was buying the cheaper tokens."
     assert (
         account_C_difference > account_B_difference
     ), "Assumption was that C will profit more than B, because he bought the cheaper tokens."

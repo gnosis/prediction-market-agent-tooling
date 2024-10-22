@@ -33,6 +33,11 @@ def tavily_search(
 
     Argument default values are different from the original method, to return everything by default, because it can be handy in the future and it doesn't increase the costs.
     """
+    if topic == "news" and days is None:
+        raise ValueError("When topic is 'news', days must be an integer")
+    if topic == "general" and days is not None:
+        raise ValueError("When topic is 'general', days must be None")
+
     if tavily_storage and (
         response_parsed := tavily_storage.find(
             query=query,
@@ -103,11 +108,15 @@ def _tavily_search(
     tavily = TavilyClient(
         api_key=(api_keys or APIKeys()).tavily_api_key.get_secret_value()
     )
+
+    # Optional `days` arg can only be specified if not None, otherwise Tavily
+    # will throw an error
+    kwargs = {"days": days} if days else {}
+
     response: dict[str, t.Any] = tavily.search(
         query=query,
         search_depth=search_depth,
         topic=topic,
-        days=days,
         max_results=max_results,
         include_domains=include_domains,
         exclude_domains=exclude_domains,
@@ -115,6 +124,7 @@ def _tavily_search(
         include_raw_content=include_raw_content,
         include_images=include_images,
         use_cache=use_cache,
+        **kwargs,
     )
     return response
 

@@ -43,12 +43,12 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     ConditionPreparationEvent,
     ContractPrediction,
     CreatedMarket,
-    IPFSAgentResult,
     OmenBet,
     OmenMarket,
     OmenUserPosition,
     get_bet_outcome,
     get_boolean_outcome,
+    IPFSAgentResult,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
@@ -420,11 +420,19 @@ class OmenAgentMarket(AgentMarket):
         self,
         processed_market: ProcessedMarket,
         keys: APIKeys,
-        agent_result: IPFSAgentResult,
+        agent_name: str,
     ) -> None:
         ipfs_hash_decoded = HexBytes(HASH_ZERO)
         if keys.enable_ipfs_upload:
             logger.info("Storing prediction on IPFS.")
+            reasoning = (
+                processed_market.answer.reasoning
+                if processed_market.answer.reasoning
+                else ""
+            )
+            agent_result = IPFSAgentResult(
+                reasoning=reasoning, agent_name=self.agent_name
+            )
             ipfs_hash = IPFSHandler(keys).store_agent_result(agent_result)
             ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 

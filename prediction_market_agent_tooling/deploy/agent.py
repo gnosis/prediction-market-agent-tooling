@@ -48,7 +48,6 @@ from prediction_market_agent_tooling.markets.markets import (
     MarketType,
     have_bet_on_market_since,
 )
-from prediction_market_agent_tooling.markets.omen.data_models import IPFSAgentResult
 from prediction_market_agent_tooling.markets.omen.omen import (
     withdraw_wxdai_to_xdai_to_keep_balance,
 )
@@ -497,14 +496,8 @@ class DeployableTraderAgent(DeployableAgent):
         processed_market: ProcessedMarket,
     ) -> None:
         keys = APIKeys()
-        reasoning = (
-            processed_market.answer.reasoning
-            if processed_market.answer.reasoning
-            else ""
-        )
-        agent_result = IPFSAgentResult(reasoning=reasoning, agent_name=self.agent_name)
         market.store_prediction(
-            processed_market=processed_market, keys=keys, agent_result=agent_result
+            processed_market=processed_market, keys=keys, agent_name=self.agent_name
         )
 
     def before_process_markets(self, market_type: MarketType) -> None:

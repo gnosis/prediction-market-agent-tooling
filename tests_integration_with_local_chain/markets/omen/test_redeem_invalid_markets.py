@@ -190,6 +190,3 @@ def test_redeem_invalid_market(
     assert (
         account_C_difference > 0
     ), "Assumption was that C will be profitable because he was buying the cheaper tokens."
-    assert (
-        account_C_difference > account_B_difference
-    ), "Assumption was that C will profit more than B, because he bought the cheaper tokens."

@@ -577,7 +577,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         self,
         market_type: MarketType,
         market: AgentMarket,
-        processed_market: ProcessedMarket | ProcessedTradedMarket | None,
+        processed_market: ProcessedMarket | None,
     ) -> None:
         api_keys = APIKeys()
         super().after_process_market(market_type, market, processed_market)

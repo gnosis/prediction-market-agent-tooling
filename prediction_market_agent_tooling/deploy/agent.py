@@ -166,9 +166,11 @@ class DeployableAgent:
         return f"{self.__class__.__name__} - {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}"
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
-        if "DeployableAgent" not in str(
-            cls.__init__
-        ) and "DeployableTraderAgent" not in str(cls.__init__):
+        if (
+            "DeployableAgent" not in str(cls.__init__)
+            and "DeployableTraderAgent" not in str(cls.__init__)
+            and "DeployablePredictionAgent" not in str(cls.__init__)
+        ):
             raise TypeError(
                 "Cannot override __init__ method of deployable agent class, please override the `load` method to set up the agent."
             )

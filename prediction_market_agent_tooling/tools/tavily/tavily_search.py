@@ -129,7 +129,7 @@ def _tavily_search(
     return response
 
 
-def get_related_news_since(
+def get_relevant_news_since(
     question: str,
     days_ago: int,
     score_threshold: float = DEFAULT_SCORE_THRESHOLD,

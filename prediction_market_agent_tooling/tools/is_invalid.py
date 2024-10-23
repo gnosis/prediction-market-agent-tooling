@@ -24,7 +24,7 @@ QUESTION_IS_INVALID_PROMPT = """Main signs about an invalid question (sometimes 
 - The violent event can be caused by a single conscious being.
 - The violent event is done illegally.
 - The market should not directly incentivize immoral violent (such as murder, rape or unjust imprisonment) actions which could likely be performed by any participant.
-- Invalid: Will Donald Trump be alive on the 01/12/2021? (Anyone could bet on “No” and kill him for a guaranteed profit. Anyone could bet on “Yes” to effectively put a bounty on his head).
+- Invalid: Will Donald Trump be alive on the 01/12/2021? (Anyone could bet on "No" and kill him for a guaranteed profit. Anyone could bet on "Yes" to effectively put a bounty on his head).
 - Invalid: Will Hera be a victim of swatting in 2020? (Anyone could falsely call the emergency services on him in order to win the bet)
 - This does not prevent markets:
   - Whose topics are violent events not caused by conscious beings.
@@ -35,9 +35,10 @@ QUESTION_IS_INVALID_PROMPT = """Main signs about an invalid question (sometimes 
   - Valid: Will the US be engaged in a military conflict with a UN member state in 2021? (It’s unlikely for the US to declare war in order to win a bet on this market).
   - Valid: Will Derek Chauvin go to jail for the murder of George Flyod? (It’s unlikely that the jurors would collude to make a wrong verdict in order to win this market).
 - Questions with relative dates will resolve as invalid. Dates must be stated in absolute terms, not relative depending on the current time.
-- Invalid: Who will be the president of the United States in 6 months? (“in 6 months depends on the current time”).
+- Invalid: Who will be the president of the United States in 6 months? ("in 6 months depends on the current time").
+- Invalid: In the next 14 days, will Gnosis Chain gain another 1M users? ("in the next 14 days depends on the current time").
 - Questions about moral values and not facts will be resolved as invalid.
-- Invalid: “Is it ethical to eat meat?”.
+- Invalid: "Is it ethical to eat meat?".
 
 Follow a chain of thought to evaluate if the question is invalid:
 

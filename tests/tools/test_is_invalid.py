@@ -73,6 +73,14 @@ from tests.utils import RUN_PAID_TESTS
             "Is it okay to hunt?",
             True,  # Invalid because it's about ethicalness.
         ),
+        (
+            "In the next 12 months will the GenAI scaling craze see a group spend >$1B to train a single large-scale model?",
+            True,  # Invalid because it's relative timing that depends on "now".
+        ),
+        (
+            "In the next 12 months will an AI-generated song break into the Billboard Hot 100 top 10 or the Spotify Top Hits?",
+            True,  # Invalid because it's relative timing that depends on "now".
+        ),
     ],
 )
 def test_is_invalid(question: str, invalid: bool) -> None:

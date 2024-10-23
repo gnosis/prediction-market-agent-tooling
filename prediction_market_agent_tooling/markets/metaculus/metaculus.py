@@ -1,11 +1,11 @@
 import typing as t
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
+    ProcessedMarket,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.metaculus.api import (
@@ -17,7 +17,7 @@ from prediction_market_agent_tooling.markets.metaculus.api import (
 from prediction_market_agent_tooling.markets.metaculus.data_models import (
     MetaculusQuestion,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
 
 class MetaculusAgentMarket(AgentMarket):
@@ -103,9 +103,18 @@ class MetaculusAgentMarket(AgentMarket):
                 break
         return [MetaculusAgentMarket.from_data_model(q) for q in all_questions[:limit]]
 
-    def submit_prediction(self, p_yes: Probability, reasoning: str) -> None:
-        make_prediction(self.id, p_yes)
-        post_question_comment(self.id, reasoning)
+    def store_prediction(
+        self, processed_market: ProcessedMarket | None, keys: APIKeys
+    ) -> None:
+        if processed_market is not None:
+            make_prediction(self.id, processed_market.answer.p_yes)
+            post_question_comment(
+                self.id,
+                check_not_none(
+                    processed_market.answer.reasoning,
+                    "Reasoning must be provided for Metaculus.",
+                ),
+            )
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:

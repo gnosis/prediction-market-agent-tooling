@@ -29,6 +29,9 @@ from prediction_market_agent_tooling.tools.utils import (
 
 class ProcessedMarket(BaseModel):
     answer: ProbabilisticAnswer
+
+
+class ProcessedTradedMarket(ProcessedMarket):
     trades: list[PlacedTrade]
 
 
@@ -228,10 +231,18 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def store_prediction(
-        self, processed_market: ProcessedMarket, keys: APIKeys
+        self, processed_market: ProcessedMarket | None, keys: APIKeys
     ) -> None:
         """
         If market allows to upload predictions somewhere, implement it in this method.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def store_trades(
+        self, traded_market: ProcessedTradedMarket | None, keys: APIKeys
+    ) -> None:
+        """
+        If market allows to upload trades somewhere, implement it in this method.
         """
         raise NotImplementedError("Subclasses must implement this method")
 

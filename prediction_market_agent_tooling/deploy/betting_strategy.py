@@ -24,6 +24,10 @@ from prediction_market_agent_tooling.tools.betting_strategies.utils import Simpl
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
+class GuaranteedLossError(RuntimeError):
+    pass
+
+
 class BettingStrategy(ABC):
     @abstractmethod
     def calculate_trades(
@@ -63,7 +67,7 @@ class BettingStrategy(ABC):
                 )
 
                 if outcome_tokens_to_get.amount < trade.amount.amount:
-                    raise RuntimeError(
+                    raise GuaranteedLossError(
                         f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}."
                     )
 

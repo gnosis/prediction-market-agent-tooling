@@ -122,3 +122,13 @@ class MetaculusAgentMarket(AgentMarket):
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
         return str(api_keys.metaculus_user_id)
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        # No operational balance for Metaculus.
+        return True
+
+    @staticmethod
+    def redeem_winnings(api_keys: APIKeys) -> None:
+        # Nothing to redeem on Metaculus.
+        pass

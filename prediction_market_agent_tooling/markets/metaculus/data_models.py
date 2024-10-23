@@ -56,6 +56,9 @@ class Question(BaseModel):
     my_forecasts: MyAggregation
     type: QuestionType
     possibilities: dict[str, str] | None
+    description: str
+    fine_print: str
+    resolution_criteria: str
 
 
 class MetaculusQuestion(BaseModel):
@@ -64,7 +67,7 @@ class MetaculusQuestion(BaseModel):
     author_username: str
     title: str
     created_at: DatetimeUTC
-    published_at: DatetimeUTC
+    published_at: DatetimeUTC | None
     scheduled_close_time: DatetimeUTC
     scheduled_resolve_time: DatetimeUTC
     user_permission: str

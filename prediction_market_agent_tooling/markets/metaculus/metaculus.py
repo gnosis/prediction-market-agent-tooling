@@ -27,9 +27,9 @@ class MetaculusAgentMarket(AgentMarket):
 
     have_predicted: bool
     base_url: t.ClassVar[str] = METACULUS_API_BASE_URL
-    description: str | None = (
-        None  # Metaculus markets don't have a description, so just default to None.
-    )
+    description: str
+    fine_print: str
+    resolution_criteria: str
     fees: MarketFees = MarketFees.get_zero_fees()  # No fees on Metaculus.
 
     @staticmethod
@@ -46,6 +46,9 @@ class MetaculusAgentMarket(AgentMarket):
             volume=None,
             have_predicted=model.question.my_forecasts.latest is not None,
             outcome_token_pool=None,
+            description=model.question.description,
+            fine_print=model.question.fine_print,
+            resolution_criteria=model.question.resolution_criteria,
         )
 
     @staticmethod

@@ -458,10 +458,10 @@ class DeployableTraderAgent(DeployableAgent):
         )
 
         placed_trades = []
-        if self.place_bet:
-            for trade in trades:
-                logger.info(f"Executing trade {trade} on market {market.id}")
+        for trade in trades:
+            logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
 
+            if self.place_bet:
                 match trade.trade_type:
                     case TradeType.BUY:
                         id = market.buy_tokens(
@@ -474,6 +474,8 @@ class DeployableTraderAgent(DeployableAgent):
                     case _:
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")
                 placed_trades.append(PlacedTrade.from_trade(trade, id))
+            else:
+                logger.info(f"Trade execution skipped because {self.place_bet=}.")
 
         processed_market = ProcessedMarket(answer=answer, trades=placed_trades)
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)

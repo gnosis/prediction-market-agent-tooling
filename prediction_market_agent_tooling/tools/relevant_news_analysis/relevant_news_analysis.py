@@ -3,48 +3,25 @@ from datetime import datetime, timedelta
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.langfuse_ import (
     get_langfuse_langchain_config,
     observe,
 )
-from prediction_market_agent_tooling.tools.tavily.tavily_models import TavilyResult
+from prediction_market_agent_tooling.tools.relevant_news_analysis.data_models import (
+    NoRelevantNews,
+    RelevantNews,
+    RelevantNewsAnalysis,
+)
+from prediction_market_agent_tooling.tools.relevant_news_analysis.relevant_news_cache import (
+    RelevantNewsResponseCache,
+)
 from prediction_market_agent_tooling.tools.tavily.tavily_search import (
     get_relevant_news_since,
 )
 from prediction_market_agent_tooling.tools.tavily.tavily_storage import TavilyStorage
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
-
-
-class RelevantNewsAnalysis(BaseModel):
-    reasoning: str = Field(
-        ...,
-        description="The reason why the news contains information relevant to the given question. Or if no news is relevant, why not.",
-    )
-    contains_relevant_news: bool = Field(
-        ...,
-        description="A boolean flag for whether the news contains information relevant to the given question.",
-    )
-
-
-class RelevantNews(BaseModel):
-    url: str
-    summary: str
-    relevance_reasoning: str
-
-    @staticmethod
-    def from_tavily_result_and_analysis(
-        taviy_result: TavilyResult,
-        relevant_news_analysis: RelevantNewsAnalysis,
-    ) -> "RelevantNews":
-        return RelevantNews(
-            url=taviy_result.url,
-            summary=taviy_result.content,
-            relevance_reasoning=relevant_news_analysis.reasoning,
-        )
-
 
 SUMMARISE_RELEVANT_NEWS_PROMPT_TEMPLATE = """
 You are an expert news analyst, tracking stories that may affect your prediction to the outcome of a particular QUESTION.
@@ -114,24 +91,18 @@ def analyse_news_relevance(
 def get_certified_relevant_news_since(
     question: str,
     days_ago: int,
-    model: str = "gpt-4o",
-    temperature: float = 0.0,
-    max_search_results: int = 3,
     tavily_storage: TavilyStorage | None = None,
 ) -> RelevantNews | None:
     """
     Get relevant news since a given date for a given question. Retrieves
     possibly relevant news from tavily, then checks that it is relevant via
     an LLM call.
-
-    TODO save/restore from a cache
-    TODO generate subquestions and get relevant news for each
     """
     results = get_relevant_news_since(
         question=question,
         days_ago=days_ago,
         score_threshold=0.0,  # Be conservative to avoid missing relevant information
-        max_results=max_search_results,
+        max_results=3,
         tavily_storage=tavily_storage,
     )
 
@@ -148,16 +119,44 @@ def get_certified_relevant_news_since(
             raw_content=check_not_none(result.raw_content),
             question=question,
             date_of_interest=utcnow() - timedelta(days=days_ago),
-            model=model,
-            temperature=temperature,
+            model="gpt-4o",
+            temperature=0.0,
         )
 
         # Return first relevant news found
         if relevant_news_analysis.contains_relevant_news:
             return RelevantNews.from_tavily_result_and_analysis(
+                question=question,
+                days_ago=days_ago,
                 taviy_result=result,
                 relevant_news_analysis=relevant_news_analysis,
             )
 
     # No relevant news found
     return None
+
+
+def get_certified_relevant_news_since_cached(
+    question: str,
+    days_ago: int,
+    cache: RelevantNewsResponseCache,
+    tavily_storage: TavilyStorage | None = None,
+) -> RelevantNews | None:
+    cached = cache.find(question=question, days_ago=days_ago)
+
+    if isinstance(cached, NoRelevantNews):
+        return None
+    elif cached is None:
+        relevant_news = get_certified_relevant_news_since(
+            question=question,
+            days_ago=days_ago,
+            tavily_storage=tavily_storage,
+        )
+        cache.save(
+            question=question,
+            days_ago=days_ago,
+            relevant_news=relevant_news,
+        )
+        return relevant_news
+    else:
+        return cached

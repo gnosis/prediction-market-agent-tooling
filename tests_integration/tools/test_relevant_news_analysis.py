@@ -1,10 +1,13 @@
+import pytest
 from langchain_community.callbacks import get_openai_callback
 
-from prediction_market_agent_tooling.tools.relevant_news_analysis import (
+from prediction_market_agent_tooling.tools.relevant_news_analysis.relevant_news_analysis import (
     get_certified_relevant_news_since,
 )
+from tests.utils import RUN_PAID_TESTS
 
 
+@pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_get_certified_relevant_news_since() -> None:
     questions_days_ago_expected_results = [
         (
@@ -36,7 +39,6 @@ def test_get_certified_relevant_news_since() -> None:
             news = get_certified_relevant_news_since(
                 question=question,
                 days_ago=days_ago,
-                model="gpt-4o",
             )
             running_cost += cb.total_cost
             iterations += 1
@@ -48,3 +50,6 @@ def test_get_certified_relevant_news_since() -> None:
 
     average_cost = running_cost / iterations
     assert average_cost < 0.03, f"Expected average: {average_cost}. Expected < 0.03"
+
+
+# TODO test cache and get_certified_relevant_news_since_cached

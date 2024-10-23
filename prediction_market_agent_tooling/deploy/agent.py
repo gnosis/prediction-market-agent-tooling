@@ -476,7 +476,11 @@ class DeployablePredictionAgent(DeployableAgent):
 
 class DeployableTraderAgent(DeployablePredictionAgent):
     # These markets require place of bet, not just predictions.
-    supported_markets = [MarketType.OMEN, MarketType.MANIFOLD, MarketType.POLYMARKET]
+    supported_markets: t.Sequence[MarketType] = [
+        MarketType.OMEN,
+        MarketType.MANIFOLD,
+        MarketType.POLYMARKET,
+    ]
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()

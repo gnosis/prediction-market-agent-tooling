@@ -43,5 +43,4 @@ class NoRelevantNews(BaseModel):
     distinguish between 'a cache hit with no news' and 'a cache miss'.
     """
 
-    # TODO not nice, but not sure how else to distinguish between no news and no
     pass

@@ -410,7 +410,7 @@ class DeployablePredictionAgent(DeployableAgent):
             answer = None
         else:
             answer = self.answer_binary_market(market)
-            
+
         processed_market = (
             ProcessedMarket(answer=answer) if answer is not None else None
         )

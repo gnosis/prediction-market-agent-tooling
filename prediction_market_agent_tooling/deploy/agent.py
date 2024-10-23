@@ -288,10 +288,10 @@ class DeployablePredictionAgent(DeployableAgent):
     def __init__(
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
-        place_bet: bool = True,
+        store_prediction: bool = True,
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
-        self.place_bet = place_bet
+        self.store_prediction = store_prediction
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -384,8 +384,6 @@ class DeployablePredictionAgent(DeployableAgent):
     def before_process_market(
         self, market_type: MarketType, market: AgentMarket
     ) -> None:
-        self.update_langfuse_trace_by_market(market_type, market)
-
         api_keys = APIKeys()
 
         if market_type.is_blockchain_market:
@@ -403,6 +401,7 @@ class DeployablePredictionAgent(DeployableAgent):
         market: AgentMarket,
         verify_market: bool = True,
     ) -> ProcessedMarket | None:
+        self.update_langfuse_trace_by_market(market_type, market)
         logger.info(f"Processing market {market.question=} from {market.url=}.")
 
         if verify_market and not self.verify_market(market_type, market):
@@ -414,6 +413,7 @@ class DeployablePredictionAgent(DeployableAgent):
             ProcessedMarket(answer=answer) if answer is not None else None
         )
 
+        self.update_langfuse_trace_by_processed_market(market_type, processed_market)
         logger.info(
             f"Processed market {market.question=} from {market.url=} with {answer=}."
         )
@@ -426,8 +426,12 @@ class DeployablePredictionAgent(DeployableAgent):
         processed_market: ProcessedMarket | None,
     ) -> None:
         keys = APIKeys()
-        self.update_langfuse_trace_by_processed_market(market_type, processed_market)
-        market.store_prediction(processed_market=processed_market, keys=keys)
+        if self.store_prediction:
+            market.store_prediction(processed_market=processed_market, keys=keys)
+        else:
+            logger.info(
+                f"Prediction {processed_market} not stored because {self.store_prediction=}."
+            )
 
     def before_process_markets(self, market_type: MarketType) -> None:
         """
@@ -481,6 +485,20 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         MarketType.MANIFOLD,
         MarketType.POLYMARKET,
     ]
+
+    def __init__(
+        self,
+        enable_langfuse: bool = APIKeys().default_enable_langfuse,
+        store_prediction: bool = True,
+        store_trades: bool = True,
+        place_trades: bool = True,
+    ) -> None:
+        super().__init__(
+            enable_langfuse=enable_langfuse, store_prediction=store_prediction
+        )
+        self.store_prediction = store_prediction
+        self.store_trades = store_trades
+        self.place_trades = place_trades
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -551,7 +569,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         for trade in trades:
             logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
 
-            if self.place_bet:
+            if self.place_trades:
                 match trade.trade_type:
                     case TradeType.BUY:
                         id = market.buy_tokens(
@@ -565,7 +583,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")
                 placed_trades.append(PlacedTrade.from_trade(trade, id))
             else:
-                logger.info(f"Trade execution skipped because {self.place_bet=}.")
+                logger.info(f"Trade execution skipped because {self.place_trades=}.")
 
         traded_market = ProcessedTradedMarket(
             answer=processed_market.answer, trades=placed_trades
@@ -582,4 +600,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         api_keys = APIKeys()
         super().after_process_market(market_type, market, processed_market)
         if isinstance(processed_market, ProcessedTradedMarket):
-            market.store_trades(processed_market, api_keys)
+            if self.store_trades:
+                market.store_trades(processed_market, api_keys)
+            else:
+                logger.info(
+                    f"Trades {processed_market.trades} not stored because {self.store_trades=}."
+                )

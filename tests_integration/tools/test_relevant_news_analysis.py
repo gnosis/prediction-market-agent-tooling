@@ -70,7 +70,7 @@ def test_get_certified_relevant_news_since_cached() -> None:
     )
     days_ago = 5
     assert (
-        cache.find(question=question, days_ago=days_ago) == None
+        cache.find(question=question, days_ago=days_ago) is None
     ), "Cache should be empty"
 
     mock_news = RelevantNews(

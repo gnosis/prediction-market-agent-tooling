@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from pydantic import ValidationError
 from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -67,7 +68,7 @@ class RelevantNewsResponseCache:
                 else:
                     try:
                         return RelevantNews.model_validate_json(item.json_dump)
-                    except ValueError as e:
+                    except ValidationError as e:
                         logger.error(
                             f"Error deserializing RelevantNews from cache for {question=}, {days_ago=} and {item=}: {e}"
                         )

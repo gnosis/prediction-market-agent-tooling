@@ -9,7 +9,7 @@ from prediction_market_agent_tooling.tools.relevant_news_analysis.data_models im
     NoRelevantNews,
     RelevantNews,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class RelevantNewsCacheModel(SQLModel, table=True):

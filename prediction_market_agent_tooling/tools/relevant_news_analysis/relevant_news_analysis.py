@@ -102,7 +102,7 @@ def get_certified_relevant_news_since(
         question=question,
         days_ago=days_ago,
         score_threshold=0.0,  # Be conservative to avoid missing relevant information
-        max_results=3,
+        max_results=3,  # A tradeoff between cost and quality. 3 seems to be a good balance.
         tavily_storage=tavily_storage,
     )
 
@@ -119,7 +119,7 @@ def get_certified_relevant_news_since(
             raw_content=check_not_none(result.raw_content),
             question=question,
             date_of_interest=utcnow() - timedelta(days=days_ago),
-            model="gpt-4o",
+            model="gpt-4o",  # 4o-mini isn't good enough, 1o and 1o-mini are too expensive
             temperature=0.0,
         )
 

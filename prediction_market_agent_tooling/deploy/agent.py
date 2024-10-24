@@ -498,7 +498,6 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         super().__init__(
             enable_langfuse=enable_langfuse, store_prediction=store_prediction
         )
-        self.store_prediction = store_prediction
         self.store_trades = store_trades
         self.place_trades = place_trades
 

@@ -404,11 +404,13 @@ class DeployablePredictionAgent(DeployableAgent):
         self.update_langfuse_trace_by_market(market_type, market)
         logger.info(f"Processing market {market.question=} from {market.url=}.")
 
+        answer: ProbabilisticAnswer | None
         if verify_market and not self.verify_market(market_type, market):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
-            return None
+            answer = None
+        else:
+            answer = self.answer_binary_market(market)
 
-        answer = self.answer_binary_market(market)
         processed_market = (
             ProcessedMarket(answer=answer) if answer is not None else None
         )
@@ -496,7 +498,6 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         super().__init__(
             enable_langfuse=enable_langfuse, store_prediction=store_prediction
         )
-        self.store_prediction = store_prediction
         self.store_trades = store_trades
         self.place_trades = place_trades
 

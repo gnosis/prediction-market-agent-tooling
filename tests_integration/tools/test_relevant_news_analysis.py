@@ -48,8 +48,8 @@ def test_get_certified_relevant_news_since() -> None:
             has_related_news == expected_result
         ), f"Was relevant news found for question '{question}'?: {has_related_news}. Expected result {expected_result}"
 
-    average_cost = running_cost / iterations
-    assert average_cost < 0.03, f"Expected average: {average_cost}. Expected < 0.03"
+    average_cost = running_cost / iterations  # $0.01289 when run on 2022-10-24
+    assert average_cost < 0.02, f"Expected average: {average_cost}. Expected < 0.02"
 
 
 # TODO test cache and get_certified_relevant_news_since_cached

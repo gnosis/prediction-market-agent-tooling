@@ -55,7 +55,7 @@ class RelevantNewsResponseCache:
                 query.order_by(desc(RelevantNewsCacheModel.datetime_))
             ).first()
 
-            if item == None:
+            if item is None:
                 return None
             else:
                 item = check_not_none(item)

@@ -26,7 +26,7 @@ from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 SUMMARISE_RELEVANT_NEWS_PROMPT_TEMPLATE = """
 You are an expert news analyst, tracking stories that may affect your prediction to the outcome of a particular QUESTION.
 
-Your role is to identify only the relevant information from a scraped news site (RAW_CONTENT), analyse it, and determine whether it contains developments or announcements occuring **after** the DATE_OF_INTEREST that could affect the outcome of the QUESTION.
+Your role is to identify only the relevant information from a scraped news site (RAW_CONTENT), analyse it, and determine whether it contains developments or announcements occurring **after** the DATE_OF_INTEREST that could affect the outcome of the QUESTION.
 
 Note that the news article may be published after the DATE_OF_INTEREST, but reference information that is older than the DATE_OF_INTEREST.
 
@@ -41,8 +41,8 @@ Note that the news article may be published after the DATE_OF_INTEREST, but refe
 
 For your analysis, you should:
 - Discard the 'noise' from the raw content (e.g. ads, irrelevant content)
-- Consider ONLY information that would have a noteable impact on the outcome of the question.
-- Consider ONLY information relating to an announcement or development that occured **after** the DATE_OF_INTEREST.
+- Consider ONLY information that would have a notable impact on the outcome of the question.
+- Consider ONLY information relating to an announcement or development that occurred **after** the DATE_OF_INTEREST.
 - Present this information concisely in your reasoning.
 - In your reasoning, do not use the term 'DATE_OF_INTEREST' directly. Use the actual date you are referring to instead.
 - In your reasoning, do not use the term 'RAW_CONTENT' directly. Refer to it as 'the article', or quote the content you are referring to.
@@ -66,7 +66,7 @@ def analyse_news_relevance(
     parser = PydanticOutputParser(pydantic_object=RelevantNewsAnalysis)
     prompt = PromptTemplate(
         template=SUMMARISE_RELEVANT_NEWS_PROMPT_TEMPLATE,
-        input_variables=["question"],
+        input_variables=["question", "date_of_interest", "raw_content"],
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
     llm = ChatOpenAI(
@@ -128,7 +128,7 @@ def get_certified_relevant_news_since(
             return RelevantNews.from_tavily_result_and_analysis(
                 question=question,
                 days_ago=days_ago,
-                taviy_result=result,
+                tavily_result=result,
                 relevant_news_analysis=relevant_news_analysis,
             )
 

@@ -25,13 +25,13 @@ class RelevantNews(BaseModel):
     def from_tavily_result_and_analysis(
         question: str,
         days_ago: int,
-        taviy_result: TavilyResult,
+        tavily_result: TavilyResult,
         relevant_news_analysis: RelevantNewsAnalysis,
     ) -> "RelevantNews":
         return RelevantNews(
             question=question,
-            url=taviy_result.url,
-            summary=taviy_result.content,
+            url=tavily_result.url,
+            summary=tavily_result.content,
             relevance_reasoning=relevant_news_analysis.reasoning,
             days_ago=days_ago,
         )

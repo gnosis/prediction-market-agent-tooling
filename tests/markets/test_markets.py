@@ -1,5 +1,9 @@
 import pytest
 
+from prediction_market_agent_tooling.deploy.agent import (
+    DeployablePredictionAgent,
+    DeployableTraderAgent,
+)
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -86,3 +90,11 @@ def test_get_markets(market_type: MarketType) -> None:
         limit=limit, sort_by=SortBy.NONE, filter_by=FilterBy.OPEN
     )
     assert len(markets) <= limit
+
+
+@pytest.mark.parametrize("market_type", list(MarketType))
+def test_market_is_covered(market_type: MarketType) -> None:
+    assert (
+        market_type in DeployablePredictionAgent.supported_markets
+        or market_type in DeployableTraderAgent.supported_markets
+    ), f"Market {market_type} isn't supported in any of our deployable agents."

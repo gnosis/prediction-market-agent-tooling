@@ -430,9 +430,7 @@ class OmenAgentMarket(AgentMarket):
             return
 
         reasoning = (
-            traded_market.answer.reasoning
-            if traded_market.answer and traded_market.answer.reasoning
-            else ""
+            traded_market.answer.reasoning if traded_market.answer.reasoning else ""
         )
 
         ipfs_hash_decoded = HexBytes(HASH_ZERO)

@@ -42,5 +42,3 @@ class NoRelevantNews(BaseModel):
     A placeholder model for when no relevant news is found. Enables ability to
     distinguish between 'a cache hit with no news' and 'a cache miss'.
     """
-
-    pass  # noqa: WPS420

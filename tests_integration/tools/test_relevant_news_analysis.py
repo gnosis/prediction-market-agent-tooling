@@ -61,7 +61,6 @@ def test_get_certified_relevant_news_since() -> None:
     assert average_cost < 0.02, f"Expected average: {average_cost}. Expected < 0.02"
 
 
-# TODO test cache and get_certified_relevant_news_since_cached
 def test_get_certified_relevant_news_since_cached() -> None:
     cache = RelevantNewsResponseCache(sqlalchemy_db_url="sqlite:///:memory:")
 

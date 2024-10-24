@@ -62,7 +62,6 @@ class RelevantNewsResponseCache:
             if item is None:
                 return None
             else:
-                item = check_not_none(item)
                 if item.json_dump is None:
                     return NoRelevantNews()
                 else:

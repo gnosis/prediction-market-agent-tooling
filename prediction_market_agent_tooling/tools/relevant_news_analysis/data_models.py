@@ -43,4 +43,4 @@ class NoRelevantNews(BaseModel):
     distinguish between 'a cache hit with no news' and 'a cache miss'.
     """
 
-    pass
+    pass  # noqa: WPS420

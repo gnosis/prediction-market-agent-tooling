@@ -228,7 +228,10 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def store_prediction(
-        self, processed_market: ProcessedMarket, keys: APIKeys
+        self,
+        processed_market: ProcessedMarket,
+        keys: APIKeys,
+        agent_name: str,
     ) -> None:
         """
         If market allows to upload predictions somewhere, implement it in this method.

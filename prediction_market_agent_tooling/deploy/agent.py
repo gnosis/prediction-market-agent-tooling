@@ -334,6 +334,10 @@ class DeployableTraderAgent(DeployableAgent):
             ]
         )
 
+    @property
+    def agent_name(self) -> str:
+        return self.__class__.__name__
+
     def check_min_required_balance_to_operate(self, market_type: MarketType) -> None:
         api_keys = APIKeys()
 
@@ -494,7 +498,9 @@ class DeployableTraderAgent(DeployableAgent):
         processed_market: ProcessedMarket,
     ) -> None:
         keys = APIKeys()
-        market.store_prediction(processed_market=processed_market, keys=keys)
+        market.store_prediction(
+            processed_market=processed_market, keys=keys, agent_name=self.agent_name
+        )
 
     def before_process_markets(self, market_type: MarketType) -> None:
         """

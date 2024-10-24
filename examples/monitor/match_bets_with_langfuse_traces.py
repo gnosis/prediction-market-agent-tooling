@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    GuaranteedLossError,
     KellyBettingStrategy,
     MaxAccuracyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
@@ -50,14 +51,17 @@ def get_outcome_for_trace(
     market = trace.market
     answer = trace.answer
 
-    trades = strategy.calculate_trades(
-        existing_position=None,
-        answer=ProbabilisticAnswer(
-            p_yes=answer.p_yes,
-            confidence=answer.confidence,
-        ),
-        market=market,
-    )
+    try:
+        trades = strategy.calculate_trades(
+            existing_position=None,
+            answer=ProbabilisticAnswer(
+                p_yes=answer.p_yes,
+                confidence=answer.confidence,
+            ),
+            market=market,
+        )
+    except GuaranteedLossError:
+        return None
     # For example, when our predicted p_yes is 95%, but market is already trading at 99%, and we don't have anything to sell, Kelly will yield no trades.
     if not trades:
         return None

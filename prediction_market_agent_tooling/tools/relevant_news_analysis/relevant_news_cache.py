@@ -49,7 +49,9 @@ class RelevantNewsResponseCache:
                 select(RelevantNewsCacheModel)
                 .where(RelevantNewsCacheModel.question == question)
                 .where(RelevantNewsCacheModel.days_ago <= days_ago)
-                .where(RelevantNewsCacheModel.datetime_ >= utcnow() - timedelta(days=1))
+                .where(
+                    RelevantNewsCacheModel.datetime_ >= utcnow() - timedelta(days=1)
+                )  # Cache entries expire after 1 day
             )
             item = session.exec(
                 query.order_by(desc(RelevantNewsCacheModel.datetime_))

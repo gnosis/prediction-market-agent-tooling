@@ -1,8 +1,17 @@
+from unittest.mock import patch
+
 import pytest
 from langchain_community.callbacks import get_openai_callback
 
+from prediction_market_agent_tooling.tools.relevant_news_analysis.data_models import (
+    RelevantNews,
+)
 from prediction_market_agent_tooling.tools.relevant_news_analysis.relevant_news_analysis import (
     get_certified_relevant_news_since,
+    get_certified_relevant_news_since_cached,
+)
+from prediction_market_agent_tooling.tools.relevant_news_analysis.relevant_news_cache import (
+    RelevantNewsResponseCache,
 )
 from tests.utils import RUN_PAID_TESTS
 
@@ -53,3 +62,37 @@ def test_get_certified_relevant_news_since() -> None:
 
 
 # TODO test cache and get_certified_relevant_news_since_cached
+def test_get_certified_relevant_news_since_cached() -> None:
+    cache = RelevantNewsResponseCache(sqlalchemy_db_url="sqlite:///:memory:")
+
+    question = (
+        "Will the price of Bitcoin be higher than $100,000 by the end of the year?"
+    )
+    days_ago = 5
+    assert (
+        cache.find(question=question, days_ago=days_ago) == None
+    ), "Cache should be empty"
+
+    mock_news = RelevantNews(
+        question=question,
+        url="https://www.example.com",
+        summary="This is a summary",
+        relevance_reasoning="some reasoning",
+        days_ago=days_ago,
+    )
+    with patch(
+        "prediction_market_agent_tooling.tools.relevant_news_analysis.relevant_news_analysis.get_certified_relevant_news_since"
+    ) as get_certified_relevant_news_since:
+        # Mock the response
+        get_certified_relevant_news_since.return_value = mock_news
+
+        news = get_certified_relevant_news_since_cached(
+            question=question,
+            days_ago=1,
+            cache=cache,
+        )
+
+    assert news == mock_news
+    assert (
+        cache.find(question=question, days_ago=days_ago) == mock_news
+    ), "Cache should contain the news"

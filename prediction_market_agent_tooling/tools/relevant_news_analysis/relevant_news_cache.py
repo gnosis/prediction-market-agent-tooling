@@ -34,10 +34,11 @@ class RelevantNewsResponseCache:
         """
         Creates the tables if they don't exist
         """
-
-        # trick for making models import mandatory - models must be imported for metadata.create_all to work
-        logger.debug(f"tables being added {RelevantNewsCacheModel}")
-        SQLModel.metadata.create_all(self.engine)
+        with self.engine.connect() as conn:
+            SQLModel.metadata.create_all(
+                conn,
+                tables=[SQLModel.metadata.tables[RelevantNewsCacheModel.__tablename__]],
+            )
 
     def find(
         self,

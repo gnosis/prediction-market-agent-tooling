@@ -200,6 +200,6 @@ class APIKeys(BaseSettings):
         if not self.SAFE_ADDRESS:
             raise ValueError("Cannot check ownership if safe_address is not defined.")
 
-        s = Safe(self.SAFE_ADDRESS, ethereum_client)  # type: ignore[abstract]
+        s = Safe(self.SAFE_ADDRESS, ethereum_client)
         public_key_from_signer = private_key_to_public_key(self.bet_from_private_key)
-        return s.retrieve_is_owner(public_key_from_signer)
+        return bool(s.retrieve_is_owner(public_key_from_signer))

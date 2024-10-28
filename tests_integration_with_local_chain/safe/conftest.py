@@ -32,5 +32,5 @@ def test_safe(local_web3: Web3, test_keys: APIKeys) -> Safe:
         threshold=1,
     )
     assert safe_address is not None, "Safe needs to be deployed."
-    deployed_safe = Safe(safe_address, local_ethereum_client)  # type: ignore[abstract]
+    deployed_safe = Safe(safe_address, local_ethereum_client)
     return deployed_safe

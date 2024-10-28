@@ -1,16 +1,17 @@
 from eth_account.signers.local import LocalAccount
 from eth_typing import ChecksumAddress
-from gnosis.eth import EthereumClient
-from gnosis.eth.constants import NULL_ADDRESS
-from gnosis.eth.contracts import get_safe_V1_4_1_contract
-from gnosis.safe.proxy_factory import ProxyFactoryV141
-from gnosis.safe.safe import Safe
 from safe_cli.safe_addresses import (
     get_default_fallback_handler_address,
     get_proxy_factory_address,
     get_safe_contract_address,
     get_safe_l2_contract_address,
 )
+from safe_eth.eth import EthereumClient
+from safe_eth.eth.constants import NULL_ADDRESS
+from safe_eth.eth.contracts import get_safe_V1_4_1_contract
+from safe_eth.safe import Safe
+from safe_eth.safe.proxy_factory import ProxyFactoryV141
+from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.loggers import logger
@@ -87,7 +88,7 @@ def create_safe(
 
     # We ignore mypy below because using the proper class SafeV141 yields an error and mypy
     # doesn't understand that there is a hacky factory method (__new__) on this abstract class.
-    safe_version = Safe(safe_contract_address, ethereum_client).retrieve_version()  # type: ignore
+    safe_version = Safe(safe_contract_address, ethereum_client).retrieve_version()
     logger.info(
         f"Safe-master-copy={safe_contract_address} version={safe_version}\n"
         f"Fallback-handler={fallback_handler}\n"
@@ -112,7 +113,7 @@ def create_safe(
     )
 
     proxy_factory = ProxyFactoryV141(proxy_factory_address, ethereum_client)
-    expected_safe_address = proxy_factory.calculate_proxy_address(
+    expected_safe_address: ChecksumAddress = proxy_factory.calculate_proxy_address(
         safe_contract_address, safe_creation_tx_data, salt_nonce
     )
     if ethereum_client.is_contract(expected_safe_address):
@@ -127,4 +128,8 @@ def create_safe(
         f"Safe={ethereum_tx_sent.contract_address} is being created"
     )
     logger.info(f"Tx parameters={ethereum_tx_sent.tx}")
-    return ethereum_tx_sent.contract_address
+    return (
+        Web3.to_checksum_address(ethereum_tx_sent.contract_address)
+        if ethereum_tx_sent.contract_address
+        else None
+    )

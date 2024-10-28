@@ -219,7 +219,7 @@ def send_function_on_contract_tx_using_safe(
     if not web3.provider.endpoint_uri:  # type: ignore
         raise EnvironmentError("RPC_URL not available in web3 object.")
     ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
-    s = Safe(safe_address, ethereum_client)  # type: ignore
+    s = Safe(safe_address, ethereum_client)
     safe_master_copy_address = s.retrieve_master_copy_address()
     eoa_public_key = private_key_to_public_key(from_private_key)
     # See https://ethereum.stackexchange.com/questions/123750/how-to-implement-eip-2930-access-list for details,

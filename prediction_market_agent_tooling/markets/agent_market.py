@@ -1,5 +1,4 @@
 import typing as t
-from datetime import timedelta
 from enum import Enum
 
 from eth_typing import ChecksumAddress

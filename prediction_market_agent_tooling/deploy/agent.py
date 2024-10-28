@@ -279,6 +279,7 @@ def {entrypoint_function_name}(request) -> str:
 
 class DeployablePredictionAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
+    n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
     allow_invalid_questions: bool = False
     same_market_bet_interval: timedelta = timedelta(hours=24)
@@ -370,12 +371,13 @@ class DeployablePredictionAgent(DeployableAgent):
     def get_markets(
         self,
         market_type: MarketType,
-        limit: int = MAX_AVAILABLE_MARKETS,
+        limit: int | None = None,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
         filter_by: FilterBy = FilterBy.OPEN,
     ) -> t.Sequence[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
+        limit = limit if limit else self.n_markets_to_fetch
         available_markets = cls.get_binary_markets(
             limit=limit, sort_by=sort_by, filter_by=filter_by
         )

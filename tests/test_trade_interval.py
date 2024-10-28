@@ -19,14 +19,14 @@ def mock_market() -> Mock:
     return mock_market
 
 
-def test_fixed_interval(mock_market: Mock):
+def test_fixed_interval(mock_market: Mock) -> None:
     interval = timedelta(days=1)
     fixed_interval = FixedInterval(interval=interval)
 
     assert fixed_interval.get(mock_market) == interval
 
 
-def test_market_lifetime_proportional_interval(mock_market: Mock):
+def test_market_lifetime_proportional_interval(mock_market: Mock) -> None:
     proportional_interval = MarketLifetimeProportionalInterval(max_trades=5)
 
     assert proportional_interval.get(mock_market) == timedelta(days=2)

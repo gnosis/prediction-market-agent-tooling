@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class TradeInterval(ABC):
@@ -40,4 +41,6 @@ class MarketLifetimeProportionalInterval(TradeInterval):
         self,
         market: AgentMarket,
     ) -> timedelta:
-        return (market.close_time - market.created_time) / self.max_trades
+        created_time = check_not_none(market.created_time)
+        close_time = check_not_none(market.close_time)
+        return (close_time - created_time) / self.max_trades

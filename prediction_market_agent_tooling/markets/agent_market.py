@@ -352,6 +352,3 @@ class AgentMarket(BaseModel):
 
     def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
         raise NotImplementedError("Subclasses must implement this method")
-
-    def uniform_betting_interval(self, num_trades: int) -> timedelta:
-        return timedelta((self.close_time - self.created_time) / num_trades)

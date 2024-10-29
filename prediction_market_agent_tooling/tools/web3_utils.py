@@ -6,6 +6,7 @@ import tenacity
 from eth_account import Account
 from eth_typing import URI
 from pydantic.types import SecretStr
+from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -199,7 +200,7 @@ def send_function_on_contract_tx(
     # Don't retry on `reverted` messages, as they would always fail again.
     retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
-    stop=tenacity.stop_after_attempt(9),
+    stop=tenacity.stop_after_attempt(5),
     after=lambda x: logger.debug(
         f"send_function_on_contract_tx_using_safe failed, {x.attempt_number=}."
     ),

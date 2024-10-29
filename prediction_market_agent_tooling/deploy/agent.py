@@ -376,9 +376,8 @@ class DeployablePredictionAgent(DeployableAgent):
     ) -> t.Sequence[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
-        limit = limit if limit else self.n_markets_to_fetch
         available_markets = cls.get_binary_markets(
-            limit=limit, sort_by=sort_by, filter_by=filter_by
+            limit=self.n_markets_to_fetch, sort_by=sort_by, filter_by=filter_by
         )
         return available_markets
 

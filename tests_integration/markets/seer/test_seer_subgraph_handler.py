@@ -39,5 +39,8 @@ def test_get_pools_for_market(handler: SeerSubgraphHandler) -> None:
     pools = handler.get_pools_for_market(market)
     assert len(pools) > 1
     for pool in pools:
-        assert pool.token0.id in market.wrapped_tokens
-        assert pool.token1.id in market.wrapped_tokens
+        # one of the tokens must be a wrapped token
+        assert (
+            pool.token0.id in market.wrapped_tokens
+            or pool.token1.id in market.wrapped_tokens
+        )

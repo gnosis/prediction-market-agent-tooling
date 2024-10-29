@@ -30,6 +30,10 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
+from prediction_market_agent_tooling.deploy.trade_interval import (
+    FixedInterval,
+    TradeInterval,
+)
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -282,7 +286,7 @@ class DeployablePredictionAgent(DeployableAgent):
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
     min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
     allow_invalid_questions: bool = False
-    same_market_bet_interval: timedelta = timedelta(hours=24)
+    same_market_trade_interval: TradeInterval = FixedInterval(timedelta(hours=24))
     # Only Metaculus allows to post predictions without trading (buying/selling of outcome tokens).
     supported_markets: t.Sequence[MarketType] = [MarketType.METACULUS]
 
@@ -346,7 +350,9 @@ class DeployablePredictionAgent(DeployableAgent):
         Subclasses can implement their own logic instead of this one, or on top of this one.
         By default, it allows only markets where user didn't bet recently and it's a reasonable question.
         """
-        if self.have_bet_on_market_since(market, since=self.same_market_bet_interval):
+        if self.have_bet_on_market_since(
+            market, since=self.same_market_trade_interval.get(market=market)
+        ):
             return False
 
         # Manifold allows to bet only on markets with probability between 1 and 99.

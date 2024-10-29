@@ -371,7 +371,6 @@ class DeployablePredictionAgent(DeployableAgent):
     def get_markets(
         self,
         market_type: MarketType,
-        limit: int | None = None,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
         filter_by: FilterBy = FilterBy.OPEN,
     ) -> t.Sequence[AgentMarket]:

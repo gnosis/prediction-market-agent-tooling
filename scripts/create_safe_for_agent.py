@@ -3,8 +3,8 @@ import secrets
 import typer
 from eth_account import Account
 from eth_typing import URI
-from gnosis.eth import EthereumClient
 from pydantic import SecretStr
+from safe_eth.eth import EthereumClient
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai

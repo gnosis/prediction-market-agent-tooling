@@ -1,6 +1,6 @@
 from ape_test import TestAccount
 from eth_account import Account
-from gnosis.safe import Safe
+from safe_eth.safe import Safe
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys

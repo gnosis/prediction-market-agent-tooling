@@ -9,8 +9,8 @@ from safe_cli.safe_addresses import (
 from safe_eth.eth import EthereumClient
 from safe_eth.eth.constants import NULL_ADDRESS
 from safe_eth.eth.contracts import get_safe_V1_4_1_contract
-from safe_eth.safe import Safe
 from safe_eth.safe.proxy_factory import ProxyFactoryV141
+from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.types import Wei
 
@@ -88,7 +88,7 @@ def create_safe(
 
     # We ignore mypy below because using the proper class SafeV141 yields an error and mypy
     # doesn't understand that there is a hacky factory method (__new__) on this abstract class.
-    safe_version = Safe(safe_contract_address, ethereum_client).retrieve_version()
+    safe_version = SafeV141(safe_contract_address, ethereum_client).retrieve_version()
     logger.info(
         f"Safe-master-copy={safe_contract_address} version={safe_version}\n"
         f"Fallback-handler={fallback_handler}\n"

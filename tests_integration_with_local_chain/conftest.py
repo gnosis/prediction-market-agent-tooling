@@ -7,7 +7,7 @@ from ape_test import TestAccount
 from dotenv import load_dotenv
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from gnosis.eth import EthereumClient
+from safe_eth.eth import EthereumClient
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys

@@ -1,7 +1,7 @@
 import pytest
 from eth_account import Account
-from gnosis.eth import EthereumClient
-from gnosis.safe import Safe
+from safe_eth.eth import EthereumClient
+from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -14,7 +14,7 @@ def print_current_block(web3: Web3) -> None:
 
 
 @pytest.fixture(scope="module")
-def test_safe(local_web3: Web3, test_keys: APIKeys) -> Safe:
+def test_safe(local_web3: Web3, test_keys: APIKeys) -> SafeV141:
     web3 = local_web3
     print_current_block(web3)
     # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
@@ -32,5 +32,5 @@ def test_safe(local_web3: Web3, test_keys: APIKeys) -> Safe:
         threshold=1,
     )
     assert safe_address is not None, "Safe needs to be deployed."
-    deployed_safe = Safe(safe_address, local_ethereum_client)  # type: ignore[abstract]
+    deployed_safe = SafeV141(safe_address, local_ethereum_client)
     return deployed_safe

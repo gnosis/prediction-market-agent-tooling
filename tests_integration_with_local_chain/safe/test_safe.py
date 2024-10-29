@@ -1,7 +1,7 @@
 from eth_account import Account
-from gnosis.eth import EthereumClient
-from gnosis.safe import Safe
 from pydantic import SecretStr
+from safe_eth.eth import EthereumClient
+from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -31,7 +31,7 @@ from tests_integration_with_local_chain.safe.conftest import print_current_block
 def test_create_safe(
     local_ethereum_client: EthereumClient,
     test_keys: APIKeys,
-    test_safe: Safe,
+    test_safe: SafeV141,
 ) -> None:
     account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     version = test_safe.retrieve_version()
@@ -47,7 +47,7 @@ def test_send_function_on_contract_tx_using_safe(
     local_ethereum_client: EthereumClient,
     local_web3: Web3,
     test_keys: APIKeys,
-    test_safe: Safe,
+    test_safe: SafeV141,
 ) -> None:
     print_current_block(local_web3)
 

@@ -5,9 +5,9 @@ import base58
 import tenacity
 from eth_account import Account
 from eth_typing import URI
-from gnosis.eth import EthereumClient
-from gnosis.safe.safe import Safe
 from pydantic.types import SecretStr
+from safe_eth.eth import EthereumClient
+from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
 from web3.types import AccessList, AccessListEntry, Nonce, TxParams, TxReceipt, Wei
@@ -200,7 +200,7 @@ def send_function_on_contract_tx(
     # Don't retry on `reverted` messages, as they would always fail again.
     retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
-    stop=tenacity.stop_after_attempt(9),
+    stop=tenacity.stop_after_attempt(5),
     after=lambda x: logger.debug(
         f"send_function_on_contract_tx_using_safe failed, {x.attempt_number=}."
     ),
@@ -219,7 +219,7 @@ def send_function_on_contract_tx_using_safe(
     if not web3.provider.endpoint_uri:  # type: ignore
         raise EnvironmentError("RPC_URL not available in web3 object.")
     ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
-    s = Safe(safe_address, ethereum_client)  # type: ignore
+    s = SafeV141(safe_address, ethereum_client)
     safe_master_copy_address = s.retrieve_master_copy_address()
     eoa_public_key = private_key_to_public_key(from_private_key)
     # See https://ethereum.stackexchange.com/questions/123750/how-to-implement-eip-2930-access-list for details,

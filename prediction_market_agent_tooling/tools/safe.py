@@ -11,7 +11,6 @@ from safe_eth.eth.constants import NULL_ADDRESS
 from safe_eth.eth.contracts import get_safe_V1_4_1_contract
 from safe_eth.safe.proxy_factory import ProxyFactoryV141
 from safe_eth.safe.safe import SafeV141
-from web3 import Web3
 from web3.types import Wei
 
 from prediction_market_agent_tooling.loggers import logger
@@ -113,7 +112,7 @@ def create_safe(
     )
 
     proxy_factory = ProxyFactoryV141(proxy_factory_address, ethereum_client)
-    expected_safe_address: ChecksumAddress = proxy_factory.calculate_proxy_address(
+    expected_safe_address = proxy_factory.calculate_proxy_address(
         safe_contract_address, safe_creation_tx_data, salt_nonce
     )
     if ethereum_client.is_contract(expected_safe_address):
@@ -128,8 +127,4 @@ def create_safe(
         f"Safe={ethereum_tx_sent.contract_address} is being created"
     )
     logger.info(f"Tx parameters={ethereum_tx_sent.tx}")
-    return (
-        Web3.to_checksum_address(ethereum_tx_sent.contract_address)
-        if ethereum_tx_sent.contract_address
-        else None
-    )
+    return ethereum_tx_sent.contract_address

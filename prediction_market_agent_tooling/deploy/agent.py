@@ -283,10 +283,18 @@ def {entrypoint_function_name}(request) -> str:
 
 class DeployablePredictionAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
+
+    # Agent behaviour when fetching markets
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
-    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+    bet_on_markets_created_after: DatetimeUTC | None = None
+    get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
+
+    # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
     same_market_trade_interval: TradeInterval = FixedInterval(timedelta(hours=24))
+
+    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+
     # Only Metaculus allows to post predictions without trading (buying/selling of outcome tokens).
     supported_markets: t.Sequence[MarketType] = [MarketType.METACULUS]
 
@@ -383,7 +391,10 @@ class DeployablePredictionAgent(DeployableAgent):
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(
-            limit=self.n_markets_to_fetch, sort_by=sort_by, filter_by=filter_by
+            limit=self.n_markets_to_fetch,
+            sort_by=sort_by,
+            filter_by=filter_by,
+            created_after=self.bet_on_markets_created_after,
         )
         return available_markets
 

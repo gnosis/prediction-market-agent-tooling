@@ -286,7 +286,7 @@ class DeployablePredictionAgent(DeployableAgent):
 
     # Agent behaviour when fetching markets
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
-    bet_on_markets_created_after: DatetimeUTC | None = None
+    trade_on_markets_created_after: DatetimeUTC | None = None
     get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
 
     # Agent behaviour when filtering fetched markets
@@ -394,7 +394,7 @@ class DeployablePredictionAgent(DeployableAgent):
             limit=self.n_markets_to_fetch,
             sort_by=sort_by,
             filter_by=filter_by,
-            created_after=self.bet_on_markets_created_after,
+            created_after=self.trade_on_markets_created_after,
         )
         return available_markets
 

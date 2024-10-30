@@ -1,27 +1,21 @@
 import typing as t
-from abc import ABC
 
 import tenacity
 from pydantic import BaseModel
-from subgrounds import Subgrounds, FieldPath
+from subgrounds import FieldPath, Subgrounds
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 
-
-class SingletonABCMeta(SingletonMeta, ABC):
-    pass
-
-
 T = t.TypeVar("T", bound=BaseModel)
 
 
-class BaseSubgraphHandler(metaclass=SingletonABCMeta):
+class BaseSubgraphHandler(metaclass=SingletonMeta):
     sg: Subgrounds
     keys: APIKeys
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sg = Subgrounds()
         # Patch methods to retry on failure.
         self.sg.query_json = tenacity.retry(

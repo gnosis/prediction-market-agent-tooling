@@ -1,9 +1,6 @@
-# ToDo - Inherit from same BaseClass as OmenMarket
-from pydantic import ConfigDict, Field, BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
-from prediction_market_agent_tooling.gtypes import (
-    HexBytes,
-)
+from prediction_market_agent_tooling.gtypes import HexBytes
 
 
 class SeerMarket(BaseModel):

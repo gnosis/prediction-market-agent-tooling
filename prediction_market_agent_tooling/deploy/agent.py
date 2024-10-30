@@ -385,14 +385,13 @@ class DeployablePredictionAgent(DeployableAgent):
     def get_markets(
         self,
         market_type: MarketType,
-        sort_by: SortBy = SortBy.CLOSING_SOONEST,
         filter_by: FilterBy = FilterBy.OPEN,
     ) -> t.Sequence[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(
             limit=self.n_markets_to_fetch,
-            sort_by=sort_by,
+            sort_by=self.get_markets_sort_by,
             filter_by=filter_by,
             created_after=self.trade_on_markets_created_after,
         )

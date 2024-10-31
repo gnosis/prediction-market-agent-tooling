@@ -4,16 +4,8 @@ on:
   pull_request:
   release:
     types: [ published ]
-  workflow_dispatch:
 
 jobs:
-  placeholder:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: 'Placeholder'
-        run: echo "This workflow now appears in pull request checks."
-
   publish-pypi-package:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
@@ -33,7 +25,7 @@ jobs:
         shell: bash
 
   publish-dev-package:
-    if: github.event_name == 'workflow_dispatch'
+    if: contains(github.event.comment.body, 'deploy') && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -49,4 +41,3 @@ jobs:
       - name: Build and Publish Development Package
         run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
         shell: bash
-

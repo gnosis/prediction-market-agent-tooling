@@ -81,3 +81,22 @@ jobs:
         run: |
           poetry run isort --profile black .
           git diff --exit-code || exit 1
+
+  publish-dev-package:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [mypy, pytest] 
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/python_prepare
+      - name: Set Development Version
+        run: |
+          current_version=$(poetry version -s)
+          poetry version "${current_version}.dev${{ github.run_number }}"
+        shell: bash
+      - name: Build and Publish Development Package
+        run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
+        shell: bash

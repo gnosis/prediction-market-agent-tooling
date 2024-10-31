@@ -6,6 +6,7 @@ on:
 
 jobs:
   publish-pypi-package:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,3 +22,4 @@ jobs:
       - name: Build and Publish
         run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
         shell: bash
+

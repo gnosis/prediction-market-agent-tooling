@@ -72,7 +72,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     def build_filter_for_conditional_markets(
         include_conditional_markets: bool = True,
     ) -> dict[Any, Any]:
-        return {} if include_conditional_markets else {"parentMarket": ADDRESS_ZERO}
+        return {} if include_conditional_markets else {"parentMarket": ADDRESS_ZERO.lower()}
 
     def get_bicategorical_markets(
         self, include_conditional_markets: bool = True

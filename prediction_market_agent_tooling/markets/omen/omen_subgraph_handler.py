@@ -2,12 +2,10 @@ import sys
 import typing as t
 
 import requests
-import tenacity
 from PIL import Image
 from PIL.Image import Image as ImageType
-from subgrounds import FieldPath, Subgrounds
+from subgrounds import FieldPath
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
@@ -15,8 +13,10 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     wei_type,
 )
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.base_subgraph_handler import (
+    BaseSubgraphHandler,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
     ContractPrediction,
@@ -33,7 +33,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
 )
-from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     to_int_timestamp,
@@ -51,7 +50,7 @@ SAFE_COLLATERAL_TOKEN_MARKETS = (
 )
 
 
-class OmenSubgraphHandler(metaclass=SingletonMeta):
+class OmenSubgraphHandler(BaseSubgraphHandler):
     """
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """
@@ -69,47 +68,33 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
     def __init__(self) -> None:
-        self.sg = Subgrounds()
-
-        # Patch methods to retry on failure.
-        self.sg.query_json = tenacity.retry(
-            stop=tenacity.stop_after_attempt(3),
-            wait=tenacity.wait_fixed(1),
-            after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
-        )(self.sg.query_json)
-        self.sg.load_subgraph = tenacity.retry(
-            stop=tenacity.stop_after_attempt(3),
-            wait=tenacity.wait_fixed(1),
-            after=lambda x: logger.debug(f"load_subgraph failed, {x.attempt_number=}."),
-        )(self.sg.load_subgraph)
-
-        keys = APIKeys()
+        super().__init__()
 
         # Load the subgraph
         self.trades_subgraph = self.sg.load_subgraph(
             self.OMEN_TRADES_SUBGRAPH.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
         self.conditional_tokens_subgraph = self.sg.load_subgraph(
             self.CONDITIONAL_TOKENS_SUBGRAPH.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
         self.realityeth_subgraph = self.sg.load_subgraph(
             self.REALITYETH_GRAPH_URL.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
         self.omen_image_mapping_subgraph = self.sg.load_subgraph(
             self.OMEN_IMAGE_MAPPING_GRAPH_URL.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
 
         self.omen_agent_result_mapping_subgraph = self.sg.load_subgraph(
             self.OMEN_AGENT_RESULT_MAPPING_GRAPH_URL.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
 
@@ -446,14 +431,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             **optional_params,
         )
 
-        omen_markets = self.do_markets_query(markets)
-        return omen_markets
-
-    def do_markets_query(self, markets: FieldPath) -> list[OmenMarket]:
         fields = self._get_fields_for_markets(markets)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        omen_markets = [OmenMarket.model_validate(i) for i in items]
+        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
         return omen_markets
 
     def get_omen_market_by_market_id(self, market_id: HexAddress) -> OmenMarket:
@@ -461,7 +440,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             id=market_id.lower()
         )
 
-        omen_markets = self.do_markets_query(markets)
+        fields = self._get_fields_for_markets(markets)
+        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
 
         if len(omen_markets) != 1:
             raise ValueError(
@@ -469,22 +449,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             )
 
         return omen_markets[0]
-
-    def _parse_items_from_json(
-        self, result: list[dict[str, t.Any]]
-    ) -> list[dict[str, t.Any]]:
-        """subgrounds return a weird key as a dict key"""
-        items = []
-        for result_chunk in result:
-            for k, v in result_chunk.items():
-                # subgrounds might pack all items as a list, indexed by a key, or pack it as a dictionary (if one single element)
-                if v is None:
-                    continue
-                elif isinstance(v, dict):
-                    items.extend([v])
-                else:
-                    items.extend(v)
-        return items
 
     def _get_fields_for_user_positions(
         self, user_positions: FieldPath

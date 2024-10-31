@@ -12,9 +12,6 @@ T = t.TypeVar("T", bound=BaseModel)
 
 
 class BaseSubgraphHandler(metaclass=SingletonMeta):
-    sg: Subgrounds
-    keys: APIKeys
-
     def __init__(self) -> None:
         self.sg = Subgrounds()
         # Patch methods to retry on failure.

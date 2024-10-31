@@ -1,3 +1,5 @@
+from typing import Any
+
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
@@ -10,7 +12,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
-BINARY_MARKETS_FILTER = {"parentMarket": ADDRESS_ZERO.lower()}
+INVALID_OUTCOME = "Invalid result"
 
 
 class SeerSubgraphHandler(BaseSubgraphHandler):
@@ -51,11 +53,51 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         ]
         return fields
 
-    def get_binary_markets(self) -> list[SeerMarket]:
-        markets_field = self.seer_subgraph.Query.markets(where=BINARY_MARKETS_FILTER)
+    @staticmethod
+    def filter_bicategorical_markets(markets: list[SeerMarket]) -> list[SeerMarket]:
+        # We do an extra check for the invalid outcome for safety.
+        return [
+            m for m in markets if len(m.outcomes) == 3 and INVALID_OUTCOME in m.outcomes
+        ]
+
+    @staticmethod
+    def filter_binary_markets(markets: list[SeerMarket]) -> list[SeerMarket]:
+        return [
+            market
+            for market in markets
+            if {"yes", "no"}.issubset({o.lower() for o in market.outcomes})
+        ]
+
+    @staticmethod
+    def build_filter_for_conditional_markets(
+        include_conditional_markets: bool = True,
+    ) -> dict[Any, Any]:
+        return {} if include_conditional_markets else {"parentMarket": ADDRESS_ZERO}
+
+    def get_bicategorical_markets(
+        self, include_conditional_markets: bool = True
+    ) -> list[SeerMarket]:
+        """Returns markets that contain 2 categories plus an invalid outcome."""
+        # Binary markets on Seer contain 3 outcomes: OutcomeA, outcomeB and an Invalid option.
+        query_filter = self.build_filter_for_conditional_markets(
+            include_conditional_markets
+        )
+        query_filter["outcomes_contains"] = INVALID_OUTCOME
+        markets_field = self.seer_subgraph.Query.markets(where=query_filter)
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
-        return markets
+        two_category_markets = self.filter_bicategorical_markets(markets)
+        return two_category_markets
+
+    def get_binary_markets(
+        self, include_conditional_markets: bool = True
+    ) -> list[SeerMarket]:
+        two_category_markets = self.get_bicategorical_markets(
+            include_conditional_markets=include_conditional_markets
+        )
+        # Now we additionally filter markets based on YES/NO being the only outcomes.
+        binary_markets = self.filter_binary_markets(two_category_markets)
+        return binary_markets
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
         markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())

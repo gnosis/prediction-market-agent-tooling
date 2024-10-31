@@ -7,6 +7,10 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
+CONDITIONAL_MARKET_ID = HexBytes("0xe12f48ecdd6e64d95d1d8f1d5d7aa37e14f2888b")
+BINARY_MARKET_ID = HexBytes("0x7d72aa56ecdda207005fd7a02dbfd33f92d0def7")
+BINARY_CONDITIONAL_MARKET_ID = HexBytes("0xbc82402814f7db8736980c0debb01df6aad8846e")
+
 
 @pytest.fixture(scope="module")
 def handler() -> t.Generator[SeerSubgraphHandler, None, None]:
@@ -14,7 +18,7 @@ def handler() -> t.Generator[SeerSubgraphHandler, None, None]:
 
 
 def test_get_all_seer_markets(handler: SeerSubgraphHandler) -> None:
-    markets = handler.get_binary_markets()
+    markets = handler.get_bicategorical_markets()
     assert len(markets) > 1
 
 
@@ -26,10 +30,22 @@ def test_get_seer_market_by_id(handler: SeerSubgraphHandler) -> None:
 
 
 def test_conditional_market_not_retrieved(handler: SeerSubgraphHandler) -> None:
-    conditional_market_id = HexBytes("0xe12f48ecdd6e64d95d1d8f1d5d7aa37e14f2888b")
-    markets = handler.get_binary_markets()
+    markets = handler.get_bicategorical_markets(include_conditional_markets=False)
     market_ids = [m.id for m in markets]
-    assert conditional_market_id not in market_ids
+    assert CONDITIONAL_MARKET_ID not in market_ids
+
+
+def test_conditional_market__retrieved(handler: SeerSubgraphHandler) -> None:
+    markets = handler.get_bicategorical_markets(include_conditional_markets=True)
+    market_ids = [m.id for m in markets]
+    assert CONDITIONAL_MARKET_ID not in market_ids
+
+
+def test_binary_market_retrieved(handler: SeerSubgraphHandler) -> None:
+    markets = handler.get_binary_markets(include_conditional_markets=True)
+    market_ids = [m.id for m in markets]
+    assert BINARY_MARKET_ID in market_ids
+    assert BINARY_CONDITIONAL_MARKET_ID in market_ids
 
 
 def test_get_pools_for_market(handler: SeerSubgraphHandler) -> None:

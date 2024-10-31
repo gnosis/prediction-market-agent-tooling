@@ -35,10 +35,10 @@ def test_conditional_market_not_retrieved(handler: SeerSubgraphHandler) -> None:
     assert CONDITIONAL_MARKET_ID not in market_ids
 
 
-def test_conditional_market__retrieved(handler: SeerSubgraphHandler) -> None:
+def test_conditional_market_retrieved(handler: SeerSubgraphHandler) -> None:
     markets = handler.get_bicategorical_markets(include_conditional_markets=True)
     market_ids = [m.id for m in markets]
-    assert CONDITIONAL_MARKET_ID not in market_ids
+    assert CONDITIONAL_MARKET_ID in market_ids
 
 
 def test_binary_market_retrieved(handler: SeerSubgraphHandler) -> None:

@@ -3,6 +3,7 @@ name: Python CD
 on:
   release:
     types: [ published ]
+  workflow_dispatch:
 
 jobs:
   publish-pypi-package:
@@ -20,6 +21,24 @@ jobs:
         shell: bash
       - uses: ./.github/actions/python_prepare
       - name: Build and Publish
+        run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
+        shell: bash
+
+  publish-dev-package:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/python_prepare
+      - name: Set Development Version
+        run: |
+          current_version=$(poetry version -s)
+          poetry version "${current_version}.dev${{ github.run_number }}"
+        shell: bash
+      - name: Build and Publish Development Package
         run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
         shell: bash
 

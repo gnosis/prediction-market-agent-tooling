@@ -1,0 +1,1 @@
+poetry run black --check . & poetry run autoflake --in-place --remove-all-unused-imports --remove-unused-variables --recursive . & git diff --exit-code --quiet || exit 1 & poetry run isort black . & git diff --exit-code --quiet || exit 1

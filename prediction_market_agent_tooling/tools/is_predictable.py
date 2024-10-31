@@ -2,7 +2,7 @@ import tenacity
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
+from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.langfuse_ import (
     get_langfuse_langchain_config,
     observe,
@@ -76,9 +76,9 @@ Finally, write your final decision, write `decision: ` followed by either "yes i
 """
 
 
-@persistent_inmemory_cache
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @observe()
+@db_cache
 def is_predictable_binary(
     question: str,
     engine: str = "gpt-4-1106-preview",
@@ -112,9 +112,9 @@ def is_predictable_binary(
     return parse_decision_yes_no_completion(question, completion)
 
 
-@persistent_inmemory_cache
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @observe()
+@db_cache
 def is_predictable_without_description(
     question: str,
     description: str,

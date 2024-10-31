@@ -1,23 +1,25 @@
 import typing as t
+from datetime import date, timedelta
 
 import tenacity
 from tavily import TavilyClient
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.tavily.tavily_models import (
     TavilyResponse,
     TavilyResult,
 )
-from prediction_market_agent_tooling.tools.tavily.tavily_storage import TavilyStorage
 
 DEFAULT_SCORE_THRESHOLD = 0.75  # Based on some empirical testing, anything lower wasn't very relevant to the question being asked
 
 
+@db_cache(max_age=timedelta(days=1), ignore_args=["api_keys"])
 def tavily_search(
     query: str,
     search_depth: t.Literal["basic", "advanced"] = "advanced",
     topic: t.Literal["general", "news"] = "general",
-    days: int | None = None,
+    news_since: date | None = None,
     max_results: int = 5,
     include_domains: t.Sequence[str] | None = None,
     exclude_domains: t.Sequence[str] | None = None,
@@ -26,34 +28,16 @@ def tavily_search(
     include_images: bool = True,
     use_cache: bool = False,
     api_keys: APIKeys | None = None,
-    tavily_storage: TavilyStorage | None = None,
 ) -> TavilyResponse:
     """
-    Wrapper around Tavily's search method that will save the response to `TavilyResponseCache`, if provided.
-
     Argument default values are different from the original method, to return everything by default, because it can be handy in the future and it doesn't increase the costs.
     """
-    if topic == "news" and days is None:
-        raise ValueError("When topic is 'news', days must be an integer")
-    if topic == "general" and days is not None:
-        raise ValueError("When topic is 'general', days must be None")
+    if topic == "news" and news_since is None:
+        raise ValueError("When topic is 'news', news_since must be provided")
+    if topic == "general" and news_since is not None:
+        raise ValueError("When topic is 'general', news_since must be None")
 
-    if tavily_storage and (
-        response_parsed := tavily_storage.find(
-            query=query,
-            search_depth=search_depth,
-            topic=topic,
-            max_results=max_results,
-            days=days,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            include_answer=include_answer,
-            include_raw_content=include_raw_content,
-            include_images=include_images,
-            use_cache=use_cache,
-        )
-    ):
-        return response_parsed
+    days = None if news_since is None else (date.today() - news_since).days
     response = _tavily_search(
         query=query,
         search_depth=search_depth,
@@ -69,21 +53,7 @@ def tavily_search(
         api_keys=api_keys,
     )
     response_parsed = TavilyResponse.model_validate(response)
-    if tavily_storage:
-        tavily_storage.save(
-            query=query,
-            search_depth=search_depth,
-            topic=topic,
-            days=days,
-            max_results=max_results,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            include_answer=include_answer,
-            include_raw_content=include_raw_content,
-            include_images=include_images,
-            use_cache=use_cache,
-            response=response_parsed,
-        )
+
     return response_parsed
 
 
@@ -131,16 +101,14 @@ def _tavily_search(
 
 def get_relevant_news_since(
     question: str,
-    days_ago: int,
+    news_since: date,
     score_threshold: float = DEFAULT_SCORE_THRESHOLD,
     max_results: int = 3,
-    tavily_storage: TavilyStorage | None = None,
 ) -> list[TavilyResult]:
     news = tavily_search(
         query=question,
-        days=days_ago,
+        news_since=news_since,
         max_results=max_results,
         topic="news",
-        tavily_storage=tavily_storage,
     )
     return [r for r in news.results if r.score > score_threshold]

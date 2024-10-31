@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -20,8 +20,7 @@ from prediction_market_agent_tooling.tools.relevant_news_analysis.relevant_news_
 from prediction_market_agent_tooling.tools.tavily.tavily_search import (
     get_relevant_news_since,
 )
-from prediction_market_agent_tooling.tools.tavily.tavily_storage import TavilyStorage
-from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 SUMMARISE_RELEVANT_NEWS_PROMPT_TEMPLATE = """
 You are an expert news analyst, tracking stories that may affect your prediction to the outcome of a particular QUESTION.
@@ -55,7 +54,7 @@ For your analysis, you should:
 def analyse_news_relevance(
     raw_content: str,
     question: str,
-    date_of_interest: datetime,
+    date_of_interest: date,
     model: str,
     temperature: float,
 ) -> RelevantNewsAnalysis:
@@ -91,19 +90,18 @@ def analyse_news_relevance(
 def get_certified_relevant_news_since(
     question: str,
     days_ago: int,
-    tavily_storage: TavilyStorage | None = None,
 ) -> RelevantNews | None:
     """
     Get relevant news since a given date for a given question. Retrieves
     possibly relevant news from tavily, then checks that it is relevant via
     an LLM call.
     """
+    news_since = date.today() - timedelta(days=days_ago)
     results = get_relevant_news_since(
         question=question,
-        days_ago=days_ago,
+        news_since=news_since,
         score_threshold=0.0,  # Be conservative to avoid missing relevant information
         max_results=3,  # A tradeoff between cost and quality. 3 seems to be a good balance.
-        tavily_storage=tavily_storage,
     )
 
     # Sort results by descending 'relevance score' to maximise the chance of
@@ -118,7 +116,7 @@ def get_certified_relevant_news_since(
         relevant_news_analysis = analyse_news_relevance(
             raw_content=check_not_none(result.raw_content),
             question=question,
-            date_of_interest=utcnow() - timedelta(days=days_ago),
+            date_of_interest=news_since,
             model="gpt-4o",  # 4o-mini isn't good enough, 1o and 1o-mini are too expensive
             temperature=0.0,
         )
@@ -140,7 +138,6 @@ def get_certified_relevant_news_since_cached(
     question: str,
     days_ago: int,
     cache: RelevantNewsResponseCache,
-    tavily_storage: TavilyStorage | None = None,
 ) -> RelevantNews | None:
     cached = cache.find(question=question, days_ago=days_ago)
 
@@ -150,7 +147,6 @@ def get_certified_relevant_news_since_cached(
         relevant_news = get_certified_relevant_news_since(
             question=question,
             days_ago=days_ago,
-            tavily_storage=tavily_storage,
         )
         cache.save(
             question=question,

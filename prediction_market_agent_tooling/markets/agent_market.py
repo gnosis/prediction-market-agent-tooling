@@ -242,7 +242,10 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def store_trades(
-        self, traded_market: ProcessedTradedMarket | None, keys: APIKeys
+        self,
+        traded_market: ProcessedTradedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
     ) -> None:
         """
         If market allows to upload trades somewhere, implement it in this method.

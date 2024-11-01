@@ -25,6 +25,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketFees,
     ProcessedMarket,
+    ProcessedTradedMarket,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -43,12 +44,12 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     ConditionPreparationEvent,
     ContractPrediction,
     CreatedMarket,
+    IPFSAgentResult,
     OmenBet,
     OmenMarket,
     OmenUserPosition,
     get_bet_outcome,
     get_boolean_outcome,
-    IPFSAgentResult,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
@@ -417,33 +418,37 @@ class OmenAgentMarket(AgentMarket):
         ) > xdai_type(0.001)
 
     def store_prediction(
-        self,
-        processed_market: ProcessedMarket,
-        keys: APIKeys,
-        agent_name: str,
+        self, processed_market: ProcessedMarket | None, keys: APIKeys
     ) -> None:
+        """On Omen, we have to store predictions along with trades, see `store_trades`."""
+
+    def store_trades(
+        self, traded_market: ProcessedTradedMarket | None, keys: APIKeys
+    ) -> None:
+        if traded_market is None:
+            logger.warning(f"No prediction for market {self.id}, not storing anything.")
+            return
+
+        reasoning = (
+            traded_market.answer.reasoning if traded_market.answer.reasoning else ""
+        )
+
         ipfs_hash_decoded = HexBytes(HASH_ZERO)
         if keys.enable_ipfs_upload:
             logger.info("Storing prediction on IPFS.")
-            reasoning = (
-                processed_market.answer.reasoning
-                if processed_market.answer.reasoning
-                else ""
+            ipfs_hash = IPFSHandler(keys).store_agent_result(
+                IPFSAgentResult(reasoning=reasoning)
             )
-            agent_result = IPFSAgentResult(
-                reasoning=reasoning, agent_name=self.agent_name
-            )
-            ipfs_hash = IPFSHandler(keys).store_agent_result(agent_result)
             ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
         tx_hashes = [
-            HexBytes(HexStr(i.id)) for i in processed_market.trades if i.id is not None
+            HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
         ]
         prediction = ContractPrediction(
             publisher=keys.public_key,
             ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
-            estimated_probability_bps=int(processed_market.answer.p_yes * 10000),
+            estimated_probability_bps=int(traded_market.answer.p_yes * 10000),
         )
         tx_receipt = OmenAgentResultMappingContract().add_prediction(
             api_keys=keys,

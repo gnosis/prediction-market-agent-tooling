@@ -30,12 +30,17 @@ from prediction_market_agent_tooling.deploy.gcp.utils import (
     gcp_function_is_active,
     gcp_resolve_api_keys_secrets,
 )
+from prediction_market_agent_tooling.deploy.trade_interval import (
+    FixedInterval,
+    TradeInterval,
+)
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     ProcessedMarket,
+    ProcessedTradedMarket,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -165,9 +170,11 @@ class DeployableAgent:
         return f"{self.__class__.__name__} - {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}"
 
     def __init_subclass__(cls, **kwargs: t.Any) -> None:
-        if "DeployableAgent" not in str(
-            cls.__init__
-        ) and "DeployableTraderAgent" not in str(cls.__init__):
+        if (
+            "DeployableAgent" not in str(cls.__init__)
+            and "DeployableTraderAgent" not in str(cls.__init__)
+            and "DeployablePredictionAgent" not in str(cls.__init__)
+        ):
             raise TypeError(
                 "Cannot override __init__ method of deployable agent class, please override the `load` method to set up the agent."
             )
@@ -274,28 +281,30 @@ def {entrypoint_function_name}(request) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{utcnow().strftime('%Y-%m-%d--%H-%M-%S')}"
 
 
-class DeployableTraderAgent(DeployableAgent):
+class DeployablePredictionAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
-    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+
+    # Agent behaviour when fetching markets
+    n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
+    trade_on_markets_created_after: DatetimeUTC | None = None
+    get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
+
+    # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
-    same_market_bet_interval: timedelta = timedelta(hours=24)
+    same_market_trade_interval: TradeInterval = FixedInterval(timedelta(hours=24))
+
+    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+
+    # Only Metaculus allows to post predictions without trading (buying/selling of outcome tokens).
+    supported_markets: t.Sequence[MarketType] = [MarketType.METACULUS]
 
     def __init__(
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
-        place_bet: bool = True,
+        store_prediction: bool = True,
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
-        self.place_bet = place_bet
-
-    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
-        user_id = market.get_user_id(api_keys=APIKeys())
-
-        total_amount = market.get_tiny_bet_amount().amount
-        if existing_position := market.get_position(user_id=user_id):
-            total_amount += existing_position.total_amount.amount
-
-        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
+        self.store_prediction = store_prediction
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -304,7 +313,6 @@ class DeployableTraderAgent(DeployableAgent):
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
-        self.build_trades = observe()(self.build_trades)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
         self, market_type: MarketType, market: AgentMarket
@@ -346,19 +354,6 @@ class DeployableTraderAgent(DeployableAgent):
                 f"{api_keys=} doesn't have enough operational balance."
             )
 
-    def check_min_required_balance_to_trade(self, market: AgentMarket) -> None:
-        api_keys = APIKeys()
-
-        # Get the strategy to know how much it will bet.
-        strategy = self.get_betting_strategy(market)
-        # Have a little bandwidth after the bet.
-        min_required_balance_to_trade = strategy.maximum_possible_bet_amount * 1.01
-
-        if market.get_trade_balance(api_keys) < min_required_balance_to_trade:
-            raise OutOfFundsError(
-                f"Minimum required balance {min_required_balance_to_trade} for agent is not met."
-            )
-
     def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
         return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
 
@@ -367,7 +362,9 @@ class DeployableTraderAgent(DeployableAgent):
         Subclasses can implement their own logic instead of this one, or on top of this one.
         By default, it allows only markets where user didn't bet recently and it's a reasonable question.
         """
-        if self.have_bet_on_market_since(market, since=self.same_market_bet_interval):
+        if self.have_bet_on_market_since(
+            market, since=self.same_market_trade_interval.get(market=market)
+        ):
             return False
 
         # Manifold allows to bet only on markets with probability between 1 and 99.
@@ -392,36 +389,21 @@ class DeployableTraderAgent(DeployableAgent):
     def get_markets(
         self,
         market_type: MarketType,
-        limit: int = MAX_AVAILABLE_MARKETS,
-        sort_by: SortBy = SortBy.CLOSING_SOONEST,
-        filter_by: FilterBy = FilterBy.OPEN,
     ) -> t.Sequence[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(
-            limit=limit, sort_by=sort_by, filter_by=filter_by
+            limit=self.n_markets_to_fetch,
+            sort_by=self.get_markets_sort_by,
+            filter_by=FilterBy.OPEN,
+            created_after=self.trade_on_markets_created_after,
         )
         return available_markets
-
-    def build_trades(
-        self,
-        market: AgentMarket,
-        answer: ProbabilisticAnswer,
-        existing_position: Position | None,
-    ) -> list[Trade]:
-        strategy = self.get_betting_strategy(market=market)
-        trades = strategy.calculate_trades(existing_position, answer, market)
-        BettingStrategy.assert_trades_currency_match_markets(market, trades)
-        return trades
 
     def before_process_market(
         self, market_type: MarketType, market: AgentMarket
     ) -> None:
-        self.update_langfuse_trace_by_market(market_type, market)
-
         api_keys = APIKeys()
-
-        self.check_min_required_balance_to_trade(market)
 
         if market_type.is_blockchain_market:
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
@@ -438,67 +420,41 @@ class DeployableTraderAgent(DeployableAgent):
         market: AgentMarket,
         verify_market: bool = True,
     ) -> ProcessedMarket | None:
+        self.update_langfuse_trace_by_market(market_type, market)
         logger.info(f"Processing market {market.question=} from {market.url=}.")
 
-        self.before_process_market(market_type, market)
-
+        answer: ProbabilisticAnswer | None
         if verify_market and not self.verify_market(market_type, market):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
-            self.update_langfuse_trace_by_processed_market(market_type, None)
-            return None
+            answer = None
+        else:
+            answer = self.answer_binary_market(market)
 
-        answer = self.answer_binary_market(market)
-
-        if answer is None:
-            logger.info(f"No answer for market '{market.question}'.")
-            self.update_langfuse_trace_by_processed_market(market_type, None)
-            return None
-
-        existing_position = market.get_position(user_id=APIKeys().bet_from_address)
-        trades = self.build_trades(
-            market=market,
-            answer=answer,
-            existing_position=existing_position,
+        processed_market = (
+            ProcessedMarket(answer=answer) if answer is not None else None
         )
 
-        placed_trades = []
-        if self.place_bet:
-            for trade in trades:
-                logger.info(f"Executing trade {trade} on market {market.id}")
-
-                match trade.trade_type:
-                    case TradeType.BUY:
-                        id = market.buy_tokens(
-                            outcome=trade.outcome, amount=trade.amount
-                        )
-                    case TradeType.SELL:
-                        id = market.sell_tokens(
-                            outcome=trade.outcome, amount=trade.amount
-                        )
-                    case _:
-                        raise ValueError(f"Unexpected trade type {trade.trade_type}.")
-                placed_trades.append(PlacedTrade.from_trade(trade, id))
-
-        processed_market = ProcessedMarket(answer=answer, trades=placed_trades)
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
-
-        self.after_process_market(
-            market_type, market, processed_market=processed_market
+        logger.info(
+            f"Processed market {market.question=} from {market.url=} with {answer=}."
         )
-
-        logger.info(f"Processed market {market.question=} from {market.url=}.")
         return processed_market
 
     def after_process_market(
         self,
         market_type: MarketType,
         market: AgentMarket,
-        processed_market: ProcessedMarket,
+        processed_market: ProcessedMarket | None,
     ) -> None:
         keys = APIKeys()
-        market.store_prediction(
+        if self.store_prediction:
+            market.store_prediction(
             processed_market=processed_market, keys=keys, agent_name=self.agent_name
         )
+        else:
+            logger.info(
+                f"Prediction {processed_market} not stored because {self.store_prediction=}."
+            )
 
     def before_process_markets(self, market_type: MarketType) -> None:
         """
@@ -520,7 +476,9 @@ class DeployableTraderAgent(DeployableAgent):
         processed = 0
 
         for market in available_markets:
+            self.before_process_market(market_type, market)
             processed_market = self.process_market(market_type, market)
+            self.after_process_market(market_type, market, processed_market)
 
             if processed_market is not None:
                 processed += 1
@@ -534,6 +492,139 @@ class DeployableTraderAgent(DeployableAgent):
         "Executes actions that occur after bets are placed."
 
     def run(self, market_type: MarketType) -> None:
+        if market_type not in self.supported_markets:
+            raise ValueError(
+                f"Only {self.supported_markets} are supported by this agent."
+            )
         self.before_process_markets(market_type)
         self.process_markets(market_type)
         self.after_process_markets(market_type)
+
+
+class DeployableTraderAgent(DeployablePredictionAgent):
+    # These markets require place of bet, not just predictions.
+    supported_markets: t.Sequence[MarketType] = [
+        MarketType.OMEN,
+        MarketType.MANIFOLD,
+        MarketType.POLYMARKET,
+    ]
+
+    def __init__(
+        self,
+        enable_langfuse: bool = APIKeys().default_enable_langfuse,
+        store_prediction: bool = True,
+        store_trades: bool = True,
+        place_trades: bool = True,
+    ) -> None:
+        super().__init__(
+            enable_langfuse=enable_langfuse, store_prediction=store_prediction
+        )
+        self.store_trades = store_trades
+        self.place_trades = place_trades
+
+    def initialize_langfuse(self) -> None:
+        super().initialize_langfuse()
+        # Auto-observe all the methods where it makes sense, so that subclassses don't need to do it manually.
+        self.get_betting_strategy = observe()(self.get_betting_strategy)  # type: ignore[method-assign]
+        self.build_trades = observe()(self.build_trades)  # type: ignore[method-assign]
+
+    def check_min_required_balance_to_trade(self, market: AgentMarket) -> None:
+        api_keys = APIKeys()
+
+        # Get the strategy to know how much it will bet.
+        strategy = self.get_betting_strategy(market)
+        # Have a little bandwidth after the bet.
+        min_required_balance_to_trade = strategy.maximum_possible_bet_amount * 1.01
+
+        if market.get_trade_balance(api_keys) < min_required_balance_to_trade:
+            raise OutOfFundsError(
+                f"Minimum required balance {min_required_balance_to_trade} for agent is not met."
+            )
+
+    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
+        user_id = market.get_user_id(api_keys=APIKeys())
+
+        total_amount = market.get_tiny_bet_amount().amount
+        if existing_position := market.get_position(user_id=user_id):
+            total_amount += existing_position.total_amount.amount
+
+        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
+
+    def build_trades(
+        self,
+        market: AgentMarket,
+        answer: ProbabilisticAnswer,
+        existing_position: Position | None,
+    ) -> list[Trade]:
+        strategy = self.get_betting_strategy(market=market)
+        trades = strategy.calculate_trades(existing_position, answer, market)
+        BettingStrategy.assert_trades_currency_match_markets(market, trades)
+        return trades
+
+    def before_process_market(
+        self, market_type: MarketType, market: AgentMarket
+    ) -> None:
+        super().before_process_market(market_type, market)
+        self.check_min_required_balance_to_trade(market)
+
+    def process_market(
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        verify_market: bool = True,
+    ) -> ProcessedTradedMarket | None:
+        processed_market = super().process_market(market_type, market, verify_market)
+        if processed_market is None:
+            return None
+
+        api_keys = APIKeys()
+        existing_position = market.get_position(
+            user_id=market.get_user_id(api_keys=api_keys)
+        )
+        trades = self.build_trades(
+            market=market,
+            answer=processed_market.answer,
+            existing_position=existing_position,
+        )
+
+        placed_trades = []
+        for trade in trades:
+            logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
+
+            if self.place_trades:
+                match trade.trade_type:
+                    case TradeType.BUY:
+                        id = market.buy_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
+                    case TradeType.SELL:
+                        id = market.sell_tokens(
+                            outcome=trade.outcome, amount=trade.amount
+                        )
+                    case _:
+                        raise ValueError(f"Unexpected trade type {trade.trade_type}.")
+                placed_trades.append(PlacedTrade.from_trade(trade, id))
+            else:
+                logger.info(f"Trade execution skipped because {self.place_trades=}.")
+
+        traded_market = ProcessedTradedMarket(
+            answer=processed_market.answer, trades=placed_trades
+        )
+        logger.info(f"Traded market {market.question=} from {market.url=}.")
+        return traded_market
+
+    def after_process_market(
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        processed_market: ProcessedMarket | None,
+    ) -> None:
+        api_keys = APIKeys()
+        super().after_process_market(market_type, market, processed_market)
+        if isinstance(processed_market, ProcessedTradedMarket):
+            if self.store_trades:
+                market.store_trades(processed_market, api_keys)
+            else:
+                logger.info(
+                    f"Trades {processed_market.trades} not stored because {self.store_trades=}."
+                )

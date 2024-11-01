@@ -1,10 +1,10 @@
 import typing as t
 
-from gnosis.eth import EthereumClient
-from gnosis.safe import Safe
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from safe_eth.eth import EthereumClient
+from safe_eth.safe.safe import SafeV141
 
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
@@ -200,6 +200,6 @@ class APIKeys(BaseSettings):
         if not self.SAFE_ADDRESS:
             raise ValueError("Cannot check ownership if safe_address is not defined.")
 
-        s = Safe(self.SAFE_ADDRESS, ethereum_client)  # type: ignore[abstract]
+        s = SafeV141(self.SAFE_ADDRESS, ethereum_client)
         public_key_from_signer = private_key_to_public_key(self.bet_from_private_key)
         return s.retrieve_is_owner(public_key_from_signer)

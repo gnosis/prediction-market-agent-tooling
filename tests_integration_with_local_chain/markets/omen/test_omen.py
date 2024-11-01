@@ -66,7 +66,6 @@ DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see 
 
 
 def is_contract(web3: Web3, contract_address: ChecksumAddress) -> bool:
-    # From gnosis.eth.EthereumClient
     return bool(web3.eth.get_code(contract_address))
 
 

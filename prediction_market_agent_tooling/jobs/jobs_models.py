@@ -44,7 +44,10 @@ class JobAgentMarket(AgentMarket, ABC):
     @classmethod
     @abstractmethod
     def get_jobs(
-        cls, limit: int | None, filter_by: FilterBy, sort_by: SortBy
+        cls,
+        limit: int | None,
+        filter_by: FilterBy = FilterBy.OPEN,
+        sort_by: SortBy = SortBy.CLOSING_SOONEST,
     ) -> t.Sequence["JobAgentMarket"]:
         """Get all available jobs."""
 

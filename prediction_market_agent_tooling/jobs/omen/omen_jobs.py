@@ -52,7 +52,10 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
 
     @classmethod
     def get_jobs(
-        cls, limit: int | None, filter_by: FilterBy, sort_by: SortBy
+        cls,
+        limit: int | None,
+        filter_by: FilterBy = FilterBy.OPEN,
+        sort_by: SortBy = SortBy.CLOSING_SOONEST,
     ) -> t.Sequence["OmenJobAgentMarket"]:
         markets = OmenSubgraphHandler().get_omen_binary_markets_simple(
             limit=limit,

@@ -63,7 +63,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
     OMEN_IMAGE_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/EWN14ciGK53PpUiKSm7kMWQ6G4iz3tDrRLyZ1iXMQEdu"
 
-    OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/GoE3UFyc8Gg9xzv92oinonyhRCphpGu62qB2Eh2XvJ8F"
+    OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/J6bJEnbqJpAvNyQE8i58M9mKF4zqo33BEJRdnXmqa6Kn"
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 

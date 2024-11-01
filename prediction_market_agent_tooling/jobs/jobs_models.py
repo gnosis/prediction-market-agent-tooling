@@ -3,7 +3,12 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.deploy.betting_strategy import ProbabilisticAnswer
+from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    ProcessedTradedMarket,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     FilterBy,
     SortBy,
@@ -43,6 +48,10 @@ class JobAgentMarket(AgentMarket, ABC):
     ) -> t.Sequence["JobAgentMarket"]:
         """Get all available jobs."""
 
+    @abstractmethod
+    def submit_job_result(self, max_bond: float, result: str) -> ProcessedTradedMarket:
+        """Submit the completed result for this job."""
+
     def to_simple_job(self, max_bond: float) -> SimpleJob:
         return SimpleJob(
             id=self.id,
@@ -50,4 +59,10 @@ class JobAgentMarket(AgentMarket, ABC):
             reward=self.get_reward(max_bond),
             currency=self.currency.value,
             deadline=self.deadline,
+        )
+
+    def get_job_answer(self, result: str) -> ProbabilisticAnswer:
+        # Just return 100% yes with 100% confidence, because we assume the job is completed correctly.
+        return ProbabilisticAnswer(
+            p_yes=Probability(1.0), confidence=1.0, reasoning=result
         )

@@ -72,6 +72,11 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         )
 
     def submit_job_result(self, max_bond: float, result: str) -> ProcessedTradedMarket:
+        if not APIKeys().enable_ipfs_upload:
+            raise RuntimeError(
+                f"ENABLE_IPFS_UPLOAD must be set to True to upload job results."
+            )
+
         trade = self.get_job_trade(max_bond, result)
         buy_id = self.buy_tokens(outcome=trade.outcome, amount=trade.amount)
 

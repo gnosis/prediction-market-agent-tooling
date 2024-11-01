@@ -62,6 +62,12 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         )
         return [OmenJobAgentMarket.from_omen_market(market) for market in markets]
 
+    @staticmethod
+    def get_job(id: str) -> "OmenJobAgentMarket":
+        return OmenJobAgentMarket.from_omen_agent_market(
+            OmenJobAgentMarket.get_binary_market(id=id)
+        )
+
     def submit_job_result(self, max_bond: float, result: str) -> ProcessedTradedMarket:
         trade = self.get_job_trade(max_bond, result)
         buy_id = self.buy_tokens(outcome=trade.outcome, amount=trade.amount)

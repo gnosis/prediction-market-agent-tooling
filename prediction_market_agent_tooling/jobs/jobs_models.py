@@ -51,6 +51,11 @@ class JobAgentMarket(AgentMarket, ABC):
     ) -> t.Sequence["JobAgentMarket"]:
         """Get all available jobs."""
 
+    @staticmethod
+    @abstractmethod
+    def get_job(id: str) -> "JobAgentMarket":
+        """Get a single job by its id."""
+
     @abstractmethod
     def submit_job_result(self, max_bond: float, result: str) -> ProcessedTradedMarket:
         """Submit the completed result for this job."""

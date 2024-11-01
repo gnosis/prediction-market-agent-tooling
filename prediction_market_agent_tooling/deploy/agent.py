@@ -528,7 +528,6 @@ class DeployableTraderAgent(DeployablePredictionAgent):
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
         # Auto-observe all the methods where it makes sense, so that subclassses don't need to do it manually.
-        self.get_betting_strategy = observe()(self.get_betting_strategy)  # type: ignore[method-assign]
         self.build_trades = observe()(self.build_trades)  # type: ignore[method-assign]
 
     def check_min_required_balance_to_trade(self, market: AgentMarket) -> None:

@@ -445,7 +445,6 @@ class DeployablePredictionAgent(DeployableAgent):
         market_type: MarketType,
         market: AgentMarket,
         processed_market: ProcessedMarket | None,
-        agent_name: str,
     ) -> None:
         keys = APIKeys()
         if self.store_prediction:
@@ -479,9 +478,7 @@ class DeployablePredictionAgent(DeployableAgent):
         for market in available_markets:
             self.before_process_market(market_type, market)
             processed_market = self.process_market(market_type, market)
-            self.after_process_market(
-                market_type, market, processed_market, self.agent_name
-            )
+            self.after_process_market(market_type, market, processed_market)
 
             if processed_market is not None:
                 processed += 1
@@ -620,11 +617,12 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         market_type: MarketType,
         market: AgentMarket,
         processed_market: ProcessedMarket | None,
-        agent_name: str,
     ) -> None:
         api_keys = APIKeys()
         super().after_process_market(
-            market_type, market, processed_market, self.agent_name
+            market_type,
+            market,
+            processed_market,
         )
         if isinstance(processed_market, ProcessedTradedMarket):
             if self.store_trades:

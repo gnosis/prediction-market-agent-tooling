@@ -6,15 +6,17 @@ from tavily import TavilyClient
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tavily.tavily_models import (
     TavilyResponse,
     TavilyResult,
 )
+from scripts.adhoc.deprecated_tavily_storage import TAVILY_STORAGE
 
 DEFAULT_SCORE_THRESHOLD = 0.75  # Based on some empirical testing, anything lower wasn't very relevant to the question being asked
 
 
-@db_cache(max_age=timedelta(days=1), ignore_args=["api_keys"])
+@db_cache(max_age=None, ignore_args=["api_keys", "old_created_at"])
 def tavily_search(
     query: str,
     search_depth: t.Literal["basic", "advanced"] = "advanced",
@@ -28,6 +30,9 @@ def tavily_search(
     include_images: bool = True,
     use_cache: bool = False,
     api_keys: APIKeys | None = None,
+    old_created_at: (
+        DatetimeUTC | None
+    ) = None,  # Hacky way to get old created_at into db_cache wrapper.
 ) -> TavilyResponse:
     """
     Argument default values are different from the original method, to return everything by default, because it can be handy in the future and it doesn't increase the costs.
@@ -38,6 +43,28 @@ def tavily_search(
         raise ValueError("When topic is 'general', news_since must be None")
 
     days = None if news_since is None else (date.today() - news_since).days
+
+    ts = TAVILY_STORAGE.find(
+        query=query,
+        search_depth=search_depth,
+        topic=topic,
+        days=days,
+        max_results=max_results,
+        include_domains=include_domains,
+        exclude_domains=exclude_domains,
+        include_answer=include_answer,
+        include_raw_content=include_raw_content,
+        include_images=include_images,
+        use_cache=use_cache,
+        max_age=timedelta(days=1000),
+    )
+    if ts is not None:
+        return ts
+    else:
+        raise RuntimeError(
+            f"All should be there in this script, but didn't found: {query=}"
+        )
+
     response = _tavily_search(
         query=query,
         search_depth=search_depth,

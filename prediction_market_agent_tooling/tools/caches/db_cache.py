@@ -17,7 +17,7 @@ from typing import (
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
+from sqlmodel import Field, Session, SQLModel, create_engine
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
@@ -132,6 +132,9 @@ def db_cache(
         if "cls" in args_dict:
             del args_dict["cls"]
 
+        old_created_at = args_dict["old_created_at"]
+        assert old_created_at is not None, f"{old_created_at=}"
+
         # Remove ignored arguments
         if ignore_args:
             for arg in ignore_args:
@@ -164,21 +167,23 @@ def db_cache(
 
         # If postgres access was specified, try to find a hit
         if engine is not None:
-            with Session(engine) as session:
-                # Try to get cached result
-                statement = (
-                    select(FunctionCache)
-                    .where(
-                        FunctionCache.function_name == function_name,
-                        FunctionCache.full_function_name == full_function_name,
-                        FunctionCache.args_hash == args_hash,
-                    )
-                    .order_by(desc(FunctionCache.created_at))
-                )
-                if max_age is not None:
-                    cutoff_time = utcnow() - max_age
-                    statement = statement.where(FunctionCache.created_at >= cutoff_time)
-                cached_result = session.exec(statement).first()
+            # Don't look for cache hits in this hacky branch, if multiple queries was saved at different times, we want to refill them all.
+            cached_result = None
+            # with Session(engine) as session:
+            #     # Try to get cached result
+            #     statement = (
+            #         select(FunctionCache)
+            #         .where(
+            #             FunctionCache.function_name == function_name,
+            #             FunctionCache.full_function_name == full_function_name,
+            #             FunctionCache.args_hash == args_hash,
+            #         )
+            #         .order_by(desc(FunctionCache.created_at))
+            #     )
+            #     if max_age is not None:
+            #         cutoff_time = utcnow() - max_age
+            #         statement = statement.where(FunctionCache.created_at >= cutoff_time)
+            #     cached_result = session.exec(statement).first()
         else:
             cached_result = None
 
@@ -205,9 +210,6 @@ def db_cache(
         # On cache miss, compute the result
         computed_result = func(*args, **kwargs)
         # Keep the special [case-miss] identifier so we can easily track it in GCP.
-        logger.info(
-            f"[cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
-        )
 
         # If postgres access was specified, save it.
         if engine is not None and (cache_none or computed_result is not None):
@@ -223,10 +225,9 @@ def db_cache(
                 args_hash=args_hash,
                 args=args_dict,
                 result=result_data,
-                created_at=utcnow(),
+                created_at=old_created_at,
             )
             with Session(engine) as session:
-                logger.info(f"Saving {cache_entry} into database.")
                 session.add(cache_entry)
                 session.commit()
 

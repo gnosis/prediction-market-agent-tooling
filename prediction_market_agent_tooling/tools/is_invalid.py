@@ -34,9 +34,10 @@ QUESTION_IS_INVALID_PROMPT = """Main signs about an invalid question (sometimes 
   - Which could give an incentive only to specific participants to commit an immoral violent action, but are in practice unlikely.
   - Valid: Will the US be engaged in a military conflict with a UN member state in 2021? (It’s unlikely for the US to declare war in order to win a bet on this market).
   - Valid: Will Derek Chauvin go to jail for the murder of George Flyod? (It’s unlikely that the jurors would collude to make a wrong verdict in order to win this market).
-- Questions with relative dates will resolve as invalid. Dates must be stated in absolute terms, not relative depending on the current time.
+- Questions with relative dates will resolve as invalid. Dates must be stated in absolute terms, not relative depending on the current time. But they can be relative to the event specified in the question itself.
 - Invalid: Who will be the president of the United States in 6 months? ("in 6 months depends on the current time").
 - Invalid: In the next 14 days, will Gnosis Chain gain another 1M users? ("in the next 14 days depends on the current time").
+- Valid: Will GNO price go up 10 days after Gnosis Pay cashback program is annouced? ("10 days after" is relative to the event in the question, so we can determine absolute value).
 - Questions about moral values and not facts will be resolved as invalid.
 - Invalid: "Is it ethical to eat meat?".
 

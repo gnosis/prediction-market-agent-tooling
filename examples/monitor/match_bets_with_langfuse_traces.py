@@ -170,7 +170,7 @@ if __name__ == "__main__":
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
 
         # Pick a time after pool token number is stored in OmenAgentMarket
-        start_time = utc_datetime(2024, 9, 13)
+        start_time = utc_datetime(2024, 10, 1)
 
         langfuse = Langfuse(
             secret_key=api_keys.langfuse_secret_key.get_secret_value(),
@@ -206,6 +206,10 @@ if __name__ == "__main__":
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
 
         print(f"Number of bets since {start_time}: {len(bets_with_traces)}\n")
+
+        if len(bets_with_traces) == 0:
+            continue
+
         if len(bets_with_traces) != len(bets):
             print(
                 f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."

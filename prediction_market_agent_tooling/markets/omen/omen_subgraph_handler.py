@@ -908,3 +908,17 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         if not items:
             return []
         return [ContractPrediction.model_validate(i) for i in items]
+
+    def get_agent_results_for_bet(self, bet: OmenBet) -> ContractPrediction | None:
+        results = [
+            result
+            for result in self.get_agent_results_for_market(bet.fpmm.id)
+            if bet.transactionHash in result.tx_hashes
+        ]
+
+        if not results:
+            return None
+        elif len(results) > 1:
+            raise RuntimeError("Multiple results found for a single bet.")
+
+        return results[0]

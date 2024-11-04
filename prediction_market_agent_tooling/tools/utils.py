@@ -28,6 +28,8 @@ LLM_SUPER_LOW_TEMPERATURE = 0.00000001
 # For consistent results, also include seed for models that supports it.
 LLM_SEED = 0
 
+BPS_CONSTANT = 10000
+
 
 def check_not_none(
     value: Optional[T],

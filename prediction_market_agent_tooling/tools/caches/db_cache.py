@@ -49,8 +49,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
-) -> Callable[[FunctionT], FunctionT]:
-    ...
+) -> Callable[[FunctionT], FunctionT]: ...
 
 
 @overload
@@ -62,8 +61,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
-) -> FunctionT:
-    ...
+) -> FunctionT: ...
 
 
 def db_cache(
@@ -124,7 +122,7 @@ def db_cache(
         bound_arguments.apply_defaults()
 
         # Convert any argument that is Pydantic model into classic dictionary, otherwise it won't be json-serializable.
-        args_dict = convert_pydantic_to_dict(bound_arguments.arguments)
+        args_dict: dict[str, Any] = bound_arguments.arguments
 
         # Remove `self` or `cls` if present (in case of class' methods)
         if "self" in args_dict:
@@ -211,18 +209,12 @@ def db_cache(
 
         # If postgres access was specified, save it.
         if engine is not None and (cache_none or computed_result is not None):
-            # In case of Pydantic outputs, we need to dictionarize it for it to be serializable.
-            result_data = (
-                convert_pydantic_to_dict(computed_result)
-                if is_pydantic_model
-                else computed_result
-            )
             cache_entry = FunctionCache(
                 function_name=function_name,
                 full_function_name=full_function_name,
                 args_hash=args_hash,
                 args=args_dict,
-                result=result_data,
+                result=computed_result,
                 created_at=utcnow(),
             )
             with Session(engine) as session:
@@ -249,9 +241,12 @@ def contains_pydantic_model(return_type: Any) -> bool:
     return False
 
 
-def json_serializer_default_fn(y: DatetimeUTC | timedelta | date) -> str:
+def json_serializer_default_fn(
+    y: DatetimeUTC | timedelta | date | BaseModel,
+) -> str | dict[str, Any]:
     """
     Used to serialize objects that don't support it by default into a specific string that can be deserialized out later.
+    If this function returns a dictionary, it will be called recursivelly.
     If you add something here, also add it to `replace_custom_stringified_objects` below.
     """
     if isinstance(y, DatetimeUTC):
@@ -260,6 +255,8 @@ def json_serializer_default_fn(y: DatetimeUTC | timedelta | date) -> str:
         return f"timedelta::{y.total_seconds()}"
     elif isinstance(y, date):
         return f"date::{y.isoformat()}"
+    elif isinstance(y, BaseModel):
+        return y.model_dump()
     raise TypeError(
         f"Unsuported type for the default json serialize function, value is {y}."
     )
@@ -296,22 +293,6 @@ def replace_custom_stringified_objects(obj: Any) -> Any:
 def json_deserializer(s: str) -> Any:
     data = json.loads(s)
     return replace_custom_stringified_objects(data)
-
-
-def convert_pydantic_to_dict(value: Any) -> Any:
-    """
-    Convert Pydantic models to dictionaries, including if they are in nested structures.
-    """
-    if isinstance(value, BaseModel):
-        return value.model_dump()
-    elif isinstance(value, dict):
-        return {k: convert_pydantic_to_dict(v) for k, v in value.items()}
-    elif isinstance(value, (list, tuple)):
-        return type(value)(convert_pydantic_to_dict(v) for v in value)
-    elif isinstance(value, set):
-        return {convert_pydantic_to_dict(v) for v in value}
-    else:
-        return value
 
 
 def convert_cached_output_to_pydantic(return_type: Any, data: Any) -> Any:

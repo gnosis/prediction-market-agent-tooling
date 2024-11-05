@@ -1,11 +1,13 @@
 name: Python CD
 
 on:
+  pull_request:
   release:
     types: [ published ]
 
 jobs:
   publish-pypi-package:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,5 +21,23 @@ jobs:
         shell: bash
       - uses: ./.github/actions/python_prepare
       - name: Build and Publish
+        run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
+        shell: bash
+
+  publish-dev-package:
+    if: contains(github.event.pull_request.body, 'deploy please') && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/python_prepare
+      - name: Set Development Version
+        run: |
+          current_version=$(poetry version -s)
+          poetry version "${current_version}.dev${{ github.run_number }}"
+        shell: bash
+      - name: Build and Publish Development Package
         run: poetry publish -p ${{ secrets.PYPI_TOKEN }} -u "__token__" --build
         shell: bash

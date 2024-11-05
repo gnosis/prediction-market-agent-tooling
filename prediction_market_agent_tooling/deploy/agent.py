@@ -153,10 +153,10 @@ class DeployableAgent:
             input=input,
             output=output,
             user_id=user_id or getpass.getuser(),
-            session_id=session_id
-            or self.session_id,  # All traces within a single run execution will be grouped under a single session.
-            version=version
-            or APIKeys().LANGFUSE_DEPLOYMENT_VERSION,  # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
+            session_id=session_id or self.session_id,
+            # All traces within a single run execution will be grouped under a single session.
+            version=version or APIKeys().LANGFUSE_DEPLOYMENT_VERSION,
+            # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
             release=release,
             metadata=metadata,
             tags=tags,
@@ -342,6 +342,10 @@ class DeployablePredictionAgent(DeployableAgent):
             ]
         )
 
+    @property
+    def agent_name(self) -> str:
+        return self.__class__.__name__
+
     def check_min_required_balance_to_operate(self, market_type: MarketType) -> None:
         api_keys = APIKeys()
 
@@ -444,7 +448,9 @@ class DeployablePredictionAgent(DeployableAgent):
     ) -> None:
         keys = APIKeys()
         if self.store_prediction:
-            market.store_prediction(processed_market=processed_market, keys=keys)
+            market.store_prediction(
+                processed_market=processed_market, keys=keys, agent_name=self.agent_name
+            )
         else:
             logger.info(
                 f"Prediction {processed_market} not stored because {self.store_prediction=}."
@@ -613,10 +619,14 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         processed_market: ProcessedMarket | None,
     ) -> None:
         api_keys = APIKeys()
-        super().after_process_market(market_type, market, processed_market)
+        super().after_process_market(
+            market_type,
+            market,
+            processed_market,
+        )
         if isinstance(processed_market, ProcessedTradedMarket):
             if self.store_trades:
-                market.store_trades(processed_market, api_keys)
+                market.store_trades(processed_market, api_keys, self.agent_name)
             else:
                 logger.info(
                     f"Trades {processed_market.trades} not stored because {self.store_trades=}."

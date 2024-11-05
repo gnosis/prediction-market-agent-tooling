@@ -78,6 +78,7 @@ from prediction_market_agent_tooling.tools.contract import (
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import (
+    BPS_CONSTANT,
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
     check_not_none,
@@ -448,7 +449,7 @@ class OmenAgentMarket(AgentMarket):
             publisher=keys.public_key,
             ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
-            estimated_probability_bps=int(traded_market.answer.p_yes * 10000),
+            estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
         )
         tx_receipt = OmenAgentResultMappingContract().add_prediction(
             api_keys=keys,

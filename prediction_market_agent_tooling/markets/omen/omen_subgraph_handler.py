@@ -121,7 +121,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return fields_for_bets + fields_for_markets
 
     def _get_fields_for_reality_questions(
-        self, questions_field: FieldPath
+            self, questions_field: FieldPath
     ) -> list[FieldPath]:
         # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
         return [
@@ -160,7 +160,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         ] + self._get_fields_for_reality_questions(responses_field.question)
 
     def _get_fields_for_market_questions(
-        self, questions_field: FieldPath
+            self, questions_field: FieldPath
     ) -> list[FieldPath]:
         # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
         return [
@@ -202,26 +202,26 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         ] + self._get_fields_for_market_questions(markets_field.question)
 
     def _build_where_statements(
-        self,
-        creator: HexAddress | None,
-        creator_in: t.Sequence[HexAddress] | None,
-        outcomes: list[str],
-        created_after: DatetimeUTC | None,
-        question_opened_before: DatetimeUTC | None,
-        question_opened_after: DatetimeUTC | None,
-        question_finalized_before: DatetimeUTC | None,
-        question_finalized_after: DatetimeUTC | None,
-        question_with_answers: bool | None,
-        question_id: HexBytes | None,
-        question_id_in: list[HexBytes] | None,
-        question_current_answer_before: DatetimeUTC | None,
-        question_excluded_titles: set[str] | None,
-        resolved: bool | None,
-        liquidity_bigger_than: Wei | None,
-        condition_id_in: list[HexBytes] | None,
-        id_in: list[str] | None,
-        collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
-        category: str | None,
+            self,
+            creator: HexAddress | None,
+            creator_in: t.Sequence[HexAddress] | None,
+            outcomes: list[str],
+            created_after: DatetimeUTC | None,
+            question_opened_before: DatetimeUTC | None,
+            question_opened_after: DatetimeUTC | None,
+            question_finalized_before: DatetimeUTC | None,
+            question_finalized_after: DatetimeUTC | None,
+            question_with_answers: bool | None,
+            question_id: HexBytes | None,
+            question_id_in: list[HexBytes] | None,
+            question_current_answer_before: DatetimeUTC | None,
+            question_excluded_titles: set[str] | None,
+            resolved: bool | None,
+            liquidity_bigger_than: Wei | None,
+            condition_id_in: list[HexBytes] | None,
+            id_in: list[str] | None,
+            collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
+            category: str | None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
             "isPendingArbitration": False,
@@ -278,7 +278,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return where_stms
 
     def _build_sort_params(
-        self, sort_by: SortBy
+            self, sort_by: SortBy
     ) -> tuple[str | None, FieldPath | None]:
         sort_direction: str | None
         sort_by_field: FieldPath | None
@@ -313,19 +313,19 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return sort_direction, sort_by_field
 
     def get_omen_binary_markets_simple(
-        self,
-        limit: t.Optional[int],
-        # Enumerated values for simpler usage.
-        filter_by: FilterBy,
-        sort_by: SortBy,
-        # Additional filters, these can not be modified by the enums above.
-        created_after: DatetimeUTC | None = None,
-        excluded_questions: set[str] | None = None,  # question titles
-        collateral_token_address_in: (
-            tuple[ChecksumAddress, ...] | None
-        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
-        category: str | None = None,
-        creator_in: t.Sequence[HexAddress] | None = None,
+            self,
+            limit: t.Optional[int],
+            # Enumerated values for simpler usage.
+            filter_by: FilterBy,
+            sort_by: SortBy,
+            # Additional filters, these can not be modified by the enums above.
+            created_after: DatetimeUTC | None = None,
+            excluded_questions: set[str] | None = None,  # question titles
+            collateral_token_address_in: (
+                    tuple[ChecksumAddress, ...] | None
+            ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+            category: str | None = None,
+            creator_in: t.Sequence[HexAddress] | None = None,
     ) -> t.List[OmenMarket]:
         """
         Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
@@ -365,31 +365,31 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         )
 
     def get_omen_binary_markets(
-        self,
-        limit: t.Optional[int],
-        creator: HexAddress | None = None,
-        creator_in: t.Sequence[HexAddress] | None = None,
-        created_after: DatetimeUTC | None = None,
-        question_opened_before: DatetimeUTC | None = None,
-        question_opened_after: DatetimeUTC | None = None,
-        question_finalized_before: DatetimeUTC | None = None,
-        question_finalized_after: DatetimeUTC | None = None,
-        question_with_answers: bool | None = None,
-        question_id: HexBytes | None = None,
-        question_id_in: list[HexBytes] | None = None,
-        question_current_answer_before: DatetimeUTC | None = None,
-        question_excluded_titles: set[str] | None = None,
-        resolved: bool | None = None,
-        liquidity_bigger_than: Wei | None = None,
-        condition_id_in: list[HexBytes] | None = None,
-        id_in: list[str] | None = None,
-        sort_by_field: FieldPath | None = None,
-        sort_direction: str | None = None,
-        outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
-        collateral_token_address_in: (
-            tuple[ChecksumAddress, ...] | None
-        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
-        category: str | None = None,
+            self,
+            limit: t.Optional[int],
+            creator: HexAddress | None = None,
+            creator_in: t.Sequence[HexAddress] | None = None,
+            created_after: DatetimeUTC | None = None,
+            question_opened_before: DatetimeUTC | None = None,
+            question_opened_after: DatetimeUTC | None = None,
+            question_finalized_before: DatetimeUTC | None = None,
+            question_finalized_after: DatetimeUTC | None = None,
+            question_with_answers: bool | None = None,
+            question_id: HexBytes | None = None,
+            question_id_in: list[HexBytes] | None = None,
+            question_current_answer_before: DatetimeUTC | None = None,
+            question_excluded_titles: set[str] | None = None,
+            resolved: bool | None = None,
+            liquidity_bigger_than: Wei | None = None,
+            condition_id_in: list[HexBytes] | None = None,
+            id_in: list[str] | None = None,
+            sort_by_field: FieldPath | None = None,
+            sort_direction: str | None = None,
+            outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
+            collateral_token_address_in: (
+                    tuple[ChecksumAddress, ...] | None
+            ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+            category: str | None = None,
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
@@ -435,9 +435,14 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
         return omen_markets
 
-    def get_omen_market_by_market_id(self, market_id: HexAddress) -> OmenMarket:
+    def get_omen_market_by_market_id(self, market_id: HexAddress, block_number: int | None = None) -> OmenMarket:
+
+        query_filters = {"id": market_id.lower()}
+        if block_number:
+            query_filters["block"] = {"number": block_number}
+
         markets = self.trades_subgraph.Query.fixedProductMarketMaker(
-            id=market_id.lower()
+            **query_filters
         )
 
         fields = self._get_fields_for_markets(markets)
@@ -451,7 +456,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return omen_markets[0]
 
     def _get_fields_for_user_positions(
-        self, user_positions: FieldPath
+            self, user_positions: FieldPath
     ) -> list[FieldPath]:
         return [
             user_positions.id,
@@ -469,8 +474,8 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         ]
 
     def get_positions(
-        self,
-        condition_id: HexBytes | None = None,
+            self,
+            condition_id: HexBytes | None = None,
     ) -> list[OmenPosition]:
         where_stms: dict[str, t.Any] = {}
 
@@ -486,10 +491,10 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return [OmenPosition.model_validate(i) for i in items]
 
     def get_user_positions(
-        self,
-        better_address: ChecksumAddress,
-        position_id_in: list[HexBytes] | None = None,
-        total_balance_bigger_than: Wei | None = None,
+            self,
+            better_address: ChecksumAddress,
+            position_id_in: list[HexBytes] | None = None,
+            total_balance_bigger_than: Wei | None = None,
     ) -> list[OmenUserPosition]:
         where_stms: dict[str, t.Any] = {
             "user": better_address.lower(),
@@ -511,18 +516,18 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return [OmenUserPosition.model_validate(i) for i in items]
 
     def get_trades(
-        self,
-        limit: int | None = None,
-        better_address: ChecksumAddress | None = None,
-        start_time: DatetimeUTC | None = None,
-        end_time: t.Optional[DatetimeUTC] = None,
-        market_id: t.Optional[ChecksumAddress] = None,
-        filter_by_answer_finalized_not_null: bool = False,
-        type_: t.Literal["Buy", "Sell"] | None = None,
-        market_opening_after: DatetimeUTC | None = None,
-        collateral_amount_more_than: Wei | None = None,
-        sort_by_field: FieldPath | None = None,
-        sort_direction: str | None = None,
+            self,
+            limit: int | None = None,
+            better_address: ChecksumAddress | None = None,
+            start_time: DatetimeUTC | None = None,
+            end_time: t.Optional[DatetimeUTC] = None,
+            market_id: t.Optional[ChecksumAddress] = None,
+            filter_by_answer_finalized_not_null: bool = False,
+            type_: t.Literal["Buy", "Sell"] | None = None,
+            market_opening_after: DatetimeUTC | None = None,
+            collateral_amount_more_than: Wei | None = None,
+            sort_by_field: FieldPath | None = None,
+            sort_direction: str | None = None,
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
@@ -566,14 +571,14 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return [OmenBet.model_validate(i) for i in items]
 
     def get_bets(
-        self,
-        better_address: ChecksumAddress | None = None,
-        start_time: DatetimeUTC | None = None,
-        end_time: t.Optional[DatetimeUTC] = None,
-        market_id: t.Optional[ChecksumAddress] = None,
-        filter_by_answer_finalized_not_null: bool = False,
-        market_opening_after: DatetimeUTC | None = None,
-        collateral_amount_more_than: Wei | None = None,
+            self,
+            better_address: ChecksumAddress | None = None,
+            start_time: DatetimeUTC | None = None,
+            end_time: t.Optional[DatetimeUTC] = None,
+            market_id: t.Optional[ChecksumAddress] = None,
+            filter_by_answer_finalized_not_null: bool = False,
+            market_opening_after: DatetimeUTC | None = None,
+            collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         return self.get_trades(
             better_address=better_address,
@@ -587,11 +592,11 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         )
 
     def get_resolved_bets(
-        self,
-        better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
-        end_time: t.Optional[DatetimeUTC] = None,
-        market_id: t.Optional[ChecksumAddress] = None,
+            self,
+            better_address: ChecksumAddress,
+            start_time: DatetimeUTC,
+            end_time: t.Optional[DatetimeUTC] = None,
+            market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         omen_bets = self.get_bets(
             better_address=better_address,
@@ -603,11 +608,11 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return [b for b in omen_bets if b.fpmm.is_resolved]
 
     def get_resolved_bets_with_valid_answer(
-        self,
-        better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
-        end_time: t.Optional[DatetimeUTC] = None,
-        market_id: t.Optional[ChecksumAddress] = None,
+            self,
+            better_address: ChecksumAddress,
+            start_time: DatetimeUTC,
+            end_time: t.Optional[DatetimeUTC] = None,
+            market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         bets = self.get_resolved_bets(
             better_address=better_address,
@@ -619,17 +624,17 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
     @staticmethod
     def get_reality_question_filters(
-        user: HexAddress | None,
-        claimed: bool | None,
-        current_answer_before: DatetimeUTC | None,
-        finalized_before: DatetimeUTC | None,
-        finalized_after: DatetimeUTC | None,
-        with_answers: bool | None,
-        question_id: HexBytes | None,
-        question_id_in: list[HexBytes] | None,
-        opened_before: t.Optional[DatetimeUTC],
-        opened_after: t.Optional[DatetimeUTC],
-        excluded_titles: set[str] | None,
+            user: HexAddress | None,
+            claimed: bool | None,
+            current_answer_before: DatetimeUTC | None,
+            finalized_before: DatetimeUTC | None,
+            finalized_after: DatetimeUTC | None,
+            with_answers: bool | None,
+            question_id: HexBytes | None,
+            question_id_in: list[HexBytes] | None,
+            opened_before: t.Optional[DatetimeUTC],
+            opened_after: t.Optional[DatetimeUTC],
+            excluded_titles: set[str] | None,
     ) -> dict[str, t.Any]:
         """
         Be aware, both Omen subgraph and Reality subgraph are indexing questions, but their fields are a bit different.
@@ -687,15 +692,15 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
     @staticmethod
     def get_omen_question_filters(
-        current_answer_before: DatetimeUTC | None,
-        finalized_before: DatetimeUTC | None,
-        finalized_after: DatetimeUTC | None,
-        with_answers: bool | None,
-        question_id: HexBytes | None,
-        question_id_in: list[HexBytes] | None,
-        opened_before: t.Optional[DatetimeUTC],
-        opened_after: t.Optional[DatetimeUTC],
-        excluded_titles: set[str] | None,
+            current_answer_before: DatetimeUTC | None,
+            finalized_before: DatetimeUTC | None,
+            finalized_after: DatetimeUTC | None,
+            with_answers: bool | None,
+            question_id: HexBytes | None,
+            question_id_in: list[HexBytes] | None,
+            opened_before: t.Optional[DatetimeUTC],
+            opened_after: t.Optional[DatetimeUTC],
+            excluded_titles: set[str] | None,
     ) -> dict[str, t.Any]:
         """
         Be aware, both Omen subgraph and Reality subgraph are indexing questions, but their fields are a bit different.
@@ -743,19 +748,19 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return where_stms
 
     def get_questions(
-        self,
-        limit: int | None,
-        user: HexAddress | None = None,
-        claimed: bool | None = None,
-        current_answer_before: DatetimeUTC | None = None,
-        finalized_before: DatetimeUTC | None = None,
-        finalized_after: DatetimeUTC | None = None,
-        with_answers: bool | None = None,
-        question_id_in: list[HexBytes] | None = None,
-        question_id: HexBytes | None = None,
-        opened_before: DatetimeUTC | None = None,
-        opened_after: DatetimeUTC | None = None,
-        excluded_titles: set[str] | None = None,
+            self,
+            limit: int | None,
+            user: HexAddress | None = None,
+            claimed: bool | None = None,
+            current_answer_before: DatetimeUTC | None = None,
+            finalized_before: DatetimeUTC | None = None,
+            finalized_after: DatetimeUTC | None = None,
+            with_answers: bool | None = None,
+            question_id_in: list[HexBytes] | None = None,
+            question_id: HexBytes | None = None,
+            opened_before: DatetimeUTC | None = None,
+            opened_after: DatetimeUTC | None = None,
+            excluded_titles: set[str] | None = None,
     ) -> list[RealityQuestion]:
         where_stms: dict[str, t.Any] = self.get_reality_question_filters(
             user=user,
@@ -795,20 +800,20 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return [RealityAnswer.model_validate(i) for i in items]
 
     def get_responses(
-        self,
-        limit: int | None,
-        user: HexAddress | None = None,
-        question_user: HexAddress | None = None,
-        question_claimed: bool | None = None,
-        question_opened_before: t.Optional[DatetimeUTC] = None,
-        question_opened_after: t.Optional[DatetimeUTC] = None,
-        question_finalized_before: t.Optional[DatetimeUTC] = None,
-        question_finalized_after: t.Optional[DatetimeUTC] = None,
-        question_with_answers: bool | None = None,
-        question_id: HexBytes | None = None,
-        question_id_in: list[HexBytes] | None = None,
-        question_current_answer_before: DatetimeUTC | None = None,
-        question_excluded_titles: set[str] | None = None,
+            self,
+            limit: int | None,
+            user: HexAddress | None = None,
+            question_user: HexAddress | None = None,
+            question_claimed: bool | None = None,
+            question_opened_before: t.Optional[DatetimeUTC] = None,
+            question_opened_after: t.Optional[DatetimeUTC] = None,
+            question_finalized_before: t.Optional[DatetimeUTC] = None,
+            question_finalized_after: t.Optional[DatetimeUTC] = None,
+            question_with_answers: bool | None = None,
+            question_id: HexBytes | None = None,
+            question_id_in: list[HexBytes] | None = None,
+            question_current_answer_before: DatetimeUTC | None = None,
+            question_excluded_titles: set[str] | None = None,
     ) -> list[RealityResponse]:
         where_stms: dict[str, t.Any] = {}
 
@@ -841,7 +846,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return [RealityResponse.model_validate(i) for i in items]
 
     def get_markets_from_all_user_positions(
-        self, user_positions: list[OmenUserPosition]
+            self, user_positions: list[OmenUserPosition]
     ) -> list[OmenMarket]:
         unique_condition_ids: list[HexBytes] = list(
             set(sum([u.position.conditionIds for u in user_positions], []))
@@ -852,7 +857,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return markets
 
     def get_market_from_user_position(
-        self, user_position: OmenUserPosition
+            self, user_position: OmenUserPosition
     ) -> OmenMarket:
         """Markets and user positions are uniquely connected via condition_ids"""
         condition_ids = user_position.position.conditionIds
@@ -884,7 +889,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         )
 
     def get_agent_results_for_market(
-        self, market_id: HexAddress | None = None
+            self, market_id: HexAddress | None = None
     ) -> list[ContractPrediction]:
         where_stms = {}
         if market_id:

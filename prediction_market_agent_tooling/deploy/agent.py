@@ -153,10 +153,10 @@ class DeployableAgent:
             input=input,
             output=output,
             user_id=user_id or getpass.getuser(),
-            session_id=session_id
-            or self.session_id,  # All traces within a single run execution will be grouped under a single session.
-            version=version
-            or APIKeys().LANGFUSE_DEPLOYMENT_VERSION,  # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
+            session_id=session_id or self.session_id,
+            # All traces within a single run execution will be grouped under a single session.
+            version=version or APIKeys().LANGFUSE_DEPLOYMENT_VERSION,
+            # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
             release=release,
             metadata=metadata,
             tags=tags,
@@ -283,10 +283,18 @@ def {entrypoint_function_name}(request) -> str:
 
 class DeployablePredictionAgent(DeployableAgent):
     bet_on_n_markets_per_run: int = 1
+
+    # Agent behaviour when fetching markets
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
-    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+    trade_on_markets_created_after: DatetimeUTC | None = None
+    get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
+
+    # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
     same_market_trade_interval: TradeInterval = FixedInterval(timedelta(hours=24))
+
+    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+
     # Only Metaculus allows to post predictions without trading (buying/selling of outcome tokens).
     supported_markets: t.Sequence[MarketType] = [MarketType.METACULUS]
 
@@ -334,6 +342,10 @@ class DeployablePredictionAgent(DeployableAgent):
             ]
         )
 
+    @property
+    def agent_name(self) -> str:
+        return self.__class__.__name__
+
     def check_min_required_balance_to_operate(self, market_type: MarketType) -> None:
         api_keys = APIKeys()
 
@@ -377,13 +389,14 @@ class DeployablePredictionAgent(DeployableAgent):
     def get_markets(
         self,
         market_type: MarketType,
-        sort_by: SortBy = SortBy.CLOSING_SOONEST,
-        filter_by: FilterBy = FilterBy.OPEN,
     ) -> t.Sequence[AgentMarket]:
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(
-            limit=self.n_markets_to_fetch, sort_by=sort_by, filter_by=filter_by
+            limit=self.n_markets_to_fetch,
+            sort_by=self.get_markets_sort_by,
+            filter_by=FilterBy.OPEN,
+            created_after=self.trade_on_markets_created_after,
         )
         return available_markets
 
@@ -435,7 +448,9 @@ class DeployablePredictionAgent(DeployableAgent):
     ) -> None:
         keys = APIKeys()
         if self.store_prediction:
-            market.store_prediction(processed_market=processed_market, keys=keys)
+            market.store_prediction(
+                processed_market=processed_market, keys=keys, agent_name=self.agent_name
+            )
         else:
             logger.info(
                 f"Prediction {processed_market} not stored because {self.store_prediction=}."
@@ -510,7 +525,6 @@ class DeployableTraderAgent(DeployablePredictionAgent):
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
         # Auto-observe all the methods where it makes sense, so that subclassses don't need to do it manually.
-        self.get_betting_strategy = observe()(self.get_betting_strategy)  # type: ignore[method-assign]
         self.build_trades = observe()(self.build_trades)  # type: ignore[method-assign]
 
     def check_min_required_balance_to_trade(self, market: AgentMarket) -> None:
@@ -605,10 +619,14 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         processed_market: ProcessedMarket | None,
     ) -> None:
         api_keys = APIKeys()
-        super().after_process_market(market_type, market, processed_market)
+        super().after_process_market(
+            market_type,
+            market,
+            processed_market,
+        )
         if isinstance(processed_market, ProcessedTradedMarket):
             if self.store_trades:
-                market.store_trades(processed_market, api_keys)
+                market.store_trades(processed_market, api_keys, self.agent_name)
             else:
                 logger.info(
                     f"Trades {processed_market.trades} not stored because {self.store_trades=}."

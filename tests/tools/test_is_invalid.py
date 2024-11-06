@@ -81,6 +81,10 @@ from tests.utils import RUN_PAID_TESTS
             "In the next 12 months will an AI-generated song break into the Billboard Hot 100 top 10 or the Spotify Top Hits?",
             True,  # Invalid because it's relative timing that depends on "now".
         ),
+        (
+            "Will Trump’s polling averages go down by 1% two weeks after The Apprentice is released?",
+            False,  # Valid, because absolute time can be determined based on The Apprentice release.
+        ),
     ],
 )
 def test_is_invalid(question: str, invalid: bool) -> None:

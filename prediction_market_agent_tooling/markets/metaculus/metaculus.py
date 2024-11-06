@@ -107,7 +107,7 @@ class MetaculusAgentMarket(AgentMarket):
         return [MetaculusAgentMarket.from_data_model(q) for q in all_questions[:limit]]
 
     def store_prediction(
-        self, processed_market: ProcessedMarket | None, keys: APIKeys
+        self, processed_market: ProcessedMarket | None, keys: APIKeys, agent_name: str
     ) -> None:
         if processed_market is not None:
             make_prediction(self.id, processed_market.answer.p_yes)

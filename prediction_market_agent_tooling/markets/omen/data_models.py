@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
 )
 from prediction_market_agent_tooling.tools.utils import (
+    BPS_CONSTANT,
     DatetimeUTC,
     check_not_none,
     should_not_happen,
@@ -502,7 +503,7 @@ class OmenBet(BaseModel):
     feeAmount: Wei
     outcomeIndex: int
     outcomeTokensTraded: Wei
-    transactionHash: HexAddress
+    transactionHash: HexBytes
     fpmm: OmenMarket
 
     @property
@@ -785,6 +786,14 @@ class ContractPrediction(BaseModel):
     tx_hashes: list[HexBytes] = Field(..., alias="txHashes")
     estimated_probability_bps: int = Field(..., alias="estimatedProbabilityBps")
 
+    @property
+    def estimated_probability(self) -> Probability:
+        return Probability(self.estimated_probability_bps / BPS_CONSTANT)
+
+    @property
+    def boolean_outcome(self) -> bool:
+        return self.estimated_probability > 0.5
+
     @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
     @property
     def publisher_checksummed(self) -> ChecksumAddress:
@@ -798,7 +807,7 @@ class ContractPrediction(BaseModel):
 
 class IPFSAgentResult(BaseModel):
     reasoning: str
-
+    agent_name: str
     model_config = ConfigDict(
         extra="forbid",
     )

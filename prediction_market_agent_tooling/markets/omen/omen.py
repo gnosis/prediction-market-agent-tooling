@@ -78,6 +78,7 @@ from prediction_market_agent_tooling.tools.contract import (
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import (
+    BPS_CONSTANT,
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
     check_not_none,
@@ -413,17 +414,21 @@ class OmenAgentMarket(AgentMarket):
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
         return get_total_balance(
-            api_keys.public_key,  # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
+            api_keys.public_key,
+            # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
             sum_wxdai=False,
         ) > xdai_type(0.001)
 
     def store_prediction(
-        self, processed_market: ProcessedMarket | None, keys: APIKeys
+        self, processed_market: ProcessedMarket | None, keys: APIKeys, agent_name: str
     ) -> None:
         """On Omen, we have to store predictions along with trades, see `store_trades`."""
 
     def store_trades(
-        self, traded_market: ProcessedTradedMarket | None, keys: APIKeys
+        self,
+        traded_market: ProcessedTradedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
     ) -> None:
         if traded_market is None:
             logger.warning(f"No prediction for market {self.id}, not storing anything.")
@@ -437,7 +442,7 @@ class OmenAgentMarket(AgentMarket):
         if keys.enable_ipfs_upload:
             logger.info("Storing prediction on IPFS.")
             ipfs_hash = IPFSHandler(keys).store_agent_result(
-                IPFSAgentResult(reasoning=reasoning)
+                IPFSAgentResult(reasoning=reasoning, agent_name=agent_name)
             )
             ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
@@ -448,7 +453,7 @@ class OmenAgentMarket(AgentMarket):
             publisher=keys.public_key,
             ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
-            estimated_probability_bps=int(traded_market.answer.p_yes * 10000),
+            estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
         )
         tx_receipt = OmenAgentResultMappingContract().add_prediction(
             api_keys=keys,
@@ -1237,12 +1242,12 @@ def redeem_from_all_user_positions(
 
         if not conditional_token_contract.is_condition_resolved(condition_id):
             logger.info(
-                f"[{index+1} / {len(user_positions)}] Skipping redeem, {user_position.id=} isn't resolved yet."
+                f"[{index + 1} / {len(user_positions)}] Skipping redeem, {user_position.id=} isn't resolved yet."
             )
             continue
 
         logger.info(
-            f"[{index+1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
+            f"[{index + 1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
         )
 
         original_balances = get_balances(public_key, web3)
@@ -1263,9 +1268,11 @@ def redeem_from_all_user_positions(
 def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability]:
     history: list[Probability] = []
     trades = sorted(
-        OmenSubgraphHandler().get_trades(  # We need to look at price both after buying or selling, so get trades, not bets.
+        OmenSubgraphHandler().get_trades(
+            # We need to look at price both after buying or selling, so get trades, not bets.
             market_id=market.market_maker_contract_address_checksummed,
-            end_time=market.close_time,  # Even after market is closed, there can be many `Sell` trades which will converge the probability to the true one.
+            end_time=market.close_time,
+            # Even after market is closed, there can be many `Sell` trades which will converge the probability to the true one.
         ),
         key=lambda x: x.creation_datetime,
     )

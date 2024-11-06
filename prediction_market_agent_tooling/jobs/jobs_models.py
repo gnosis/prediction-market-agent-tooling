@@ -57,7 +57,9 @@ class JobAgentMarket(AgentMarket, ABC):
         """Get a single job by its id."""
 
     @abstractmethod
-    def submit_job_result(self, max_bond: float, result: str) -> ProcessedTradedMarket:
+    def submit_job_result(
+        self, agent_name: str, max_bond: float, result: str
+    ) -> ProcessedTradedMarket:
         """Submit the completed result for this job."""
 
     def to_simple_job(self, max_bond: float) -> SimpleJob:

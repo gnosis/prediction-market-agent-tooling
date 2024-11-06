@@ -1,11 +1,12 @@
 import typing as t
+from datetime import timedelta
 
 import tenacity
 from googleapiclient.discovery import build
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
+from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 
 
 @tenacity.retry(
@@ -13,7 +14,7 @@ from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cach
     stop=tenacity.stop_after_attempt(3),
     after=lambda x: logger.debug(f"search_google failed, {x.attempt_number=}."),
 )
-@persistent_inmemory_cache
+@db_cache(max_age=timedelta(days=1))
 def search_google(
     query: str | None = None,
     num: int = 3,

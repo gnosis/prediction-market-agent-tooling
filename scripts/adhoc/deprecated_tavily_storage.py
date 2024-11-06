@@ -22,7 +22,7 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 
 class TavilyResponseModel(SQLModel, table=True):
-    __tablename__ = "tavily_response"
+    __tablename__ = "tavily_response_backup"
     __table_args__ = {"extend_existing": True}
     id: int | None = Field(None, primary_key=True)
     agent_id: str = Field(index=True, nullable=False)

@@ -49,8 +49,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
-) -> Callable[[FunctionT], FunctionT]:
-    ...
+) -> Callable[[FunctionT], FunctionT]: ...
 
 
 @overload
@@ -62,8 +61,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
-) -> FunctionT:
-    ...
+) -> FunctionT: ...
 
 
 def db_cache(
@@ -151,7 +149,6 @@ def db_cache(
         if return_type is not None and contains_pydantic_model(return_type):
             is_pydantic_model = True
 
-        # If postgres access was specified, try to find a hit
         with Session(engine) as session:
             # Try to get cached result
             statement = (

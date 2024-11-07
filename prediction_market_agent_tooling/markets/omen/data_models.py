@@ -530,7 +530,6 @@ class OmenBet(BaseModel):
             if self.boolean_outcome == self.fpmm.boolean_outcome
             else -bet_amount_xdai
         )
-        #profit -= wei_to_xdai(self.feeAmount)
         return ProfitAmount(
             amount=profit,
             currency=Currency.xDai,
@@ -538,9 +537,8 @@ class OmenBet(BaseModel):
 
     def to_bet(self) -> Bet:
         return Bet(
-            id=str(
-                self.transactionHash
-            ),  # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
+            id=str(self.transactionHash),
+            # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
@@ -555,9 +553,8 @@ class OmenBet(BaseModel):
             )
 
         return ResolvedBet(
-            id=str(
-                self.transactionHash
-            ),  # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
+            id=str(self.transactionHash),
+            # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,

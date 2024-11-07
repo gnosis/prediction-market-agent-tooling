@@ -7,8 +7,12 @@ from eth_typing import HexAddress, HexStr
 from examples.monitor.data_models import SimulationDetail
 from examples.monitor.financial_metrics import SharpeRatioCalculator
 from examples.monitor.transaction_cache import TransactionBlockCache
-from prediction_market_agent_tooling.markets.omen.omen_contracts import OmenConditionalTokenContract
-from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import OmenSubgraphHandler
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenConditionalTokenContract,
+)
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
 
 dotenv.load_dotenv()
 import pandas as pd
@@ -51,11 +55,11 @@ class MSEProfit(BaseModel):
 
 
 def get_outcome_for_trace(
-        strategy: BettingStrategy,
-        trace: ProcessMarketTrace,
-        market_outcome: bool,
-        actual_placed_bet: ResolvedBet,
-        tx_block_cache: TransactionBlockCache
+    strategy: BettingStrategy,
+    trace: ProcessMarketTrace,
+    market_outcome: bool,
+    actual_placed_bet: ResolvedBet,
+    tx_block_cache: TransactionBlockCache,
 ) -> SimulatedOutcome | None:
     market = trace.market
     answer = trace.answer
@@ -75,10 +79,10 @@ def get_outcome_for_trace(
     if not trades:
         return None
     assert (
-            len(trades) == 1
+        len(trades) == 1
     ), f"Should be always one trade if no existing position is given: {trades=}; {answer=}; {market=}"
     assert (
-            trades[0].trade_type == TradeType.BUY
+        trades[0].trade_type == TradeType.BUY
     ), "Can only buy without previous position."
     buy_trade = trades[0]
     correct = buy_trade.outcome == market_outcome
@@ -88,12 +92,15 @@ def get_outcome_for_trace(
     else:
         # We use a historical state (by passing in a block_number as arg) to get the correct outcome token balances.
         tx_block_number = tx_block_cache.get_block_number(actual_placed_bet.id)
-        market_at_block = OmenSubgraphHandler().get_omen_market_by_market_id(HexAddress(HexStr(market.id)),
-                                                                             block_number=tx_block_number)
+        market_at_block = OmenSubgraphHandler().get_omen_market_by_market_id(
+            HexAddress(HexStr(market.id)), block_number=tx_block_number
+        )
         omen_agent_market_at_block = OmenAgentMarket.from_data_model(market_at_block)
 
         received_outcome_tokens = omen_agent_market_at_block.get_buy_token_amount(
-            bet_amount=omen_agent_market_at_block.get_bet_amount(buy_trade.amount.amount),
+            bet_amount=omen_agent_market_at_block.get_bet_amount(
+                buy_trade.amount.amount
+            ),
             direction=buy_trade.outcome,
         ).amount
         profit = (
@@ -188,7 +195,9 @@ if __name__ == "__main__":
 
     print("# Agent Bet vs Simulated Bet Comparison")
 
-    tx_block_cache = TransactionBlockCache(web3=OmenConditionalTokenContract().get_web3())
+    tx_block_cache = TransactionBlockCache(
+        web3=OmenConditionalTokenContract().get_web3()
+    )
 
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
@@ -256,8 +265,11 @@ if __name__ == "__main__":
                 bet = bet_with_trace.bet
                 trace = bet_with_trace.trace
                 simulated_outcome = get_outcome_for_trace(
-                    strategy=strategy, trace=trace, market_outcome=bet.market_outcome,
-                    actual_placed_bet=bet, tx_block_cache=tx_block_cache
+                    strategy=strategy,
+                    trace=trace,
+                    market_outcome=bet.market_outcome,
+                    actual_placed_bet=bet,
+                    tx_block_cache=tx_block_cache,
                 )
                 if simulated_outcome is None:
                     continue
@@ -291,7 +303,9 @@ if __name__ == "__main__":
             # Financial analysis
             calc = SharpeRatioCalculator(details=details)
             sharpe_output_simulation = calc.calculate_annual_sharpe_ratio()
-            sharpe_output_original = calc.calculate_annual_sharpe_ratio(profit_col_name="org_profit")
+            sharpe_output_original = calc.calculate_annual_sharpe_ratio(
+                profit_col_name="org_profit"
+            )
 
             sum_squared_errors = 0.0
             for bet_with_trace in bets_with_traces:
@@ -310,7 +324,6 @@ if __name__ == "__main__":
 
             # At the beginning, add also the agent's current strategy.
             if strategy_idx == 0:
-
                 simulations.append(
                     {
                         "strategy": "original",
@@ -346,8 +359,8 @@ if __name__ == "__main__":
         simulations_df = pd.DataFrame.from_records(simulations)
         simulations_df.sort_values(by="bet_profit", ascending=False, inplace=True)
         overall_md += (
-                f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"
-                + simulations_df.to_markdown(index=False)
+            f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"
+            + simulations_df.to_markdown(index=False)
         )
         # export details per agent
         pd.DataFrame.from_records(details).to_csv(
@@ -362,6 +375,6 @@ if __name__ == "__main__":
         print(f"{strategy_name}: {correlation=}")
 
     with open(
-            output_directory / "match_bets_with_langfuse_traces_overall.md", "w"
+        output_directory / "match_bets_with_langfuse_traces_overall.md", "w"
     ) as overall_f:
         overall_f.write(overall_md)

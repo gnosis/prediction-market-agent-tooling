@@ -43,7 +43,7 @@ def local_web3(
     else:
         print("using foundry")
         with chain.network_manager.parse_network_choice(
-            "gnosis:mainnet_fork:foundry"
+            "gnosis:mainnet-fork:foundry"
         ) as provider:
             w3 = Web3(Web3.HTTPProvider(provider.http_uri))
             yield w3

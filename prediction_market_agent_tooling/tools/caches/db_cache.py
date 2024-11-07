@@ -15,7 +15,7 @@ from typing import (
 )
 
 from pydantic import BaseModel
-from sqlalchemy import Column
+from sqlalchemy import Column, Engine
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
 
@@ -38,6 +38,9 @@ class FunctionCache(SQLModel, table=True):
     args_hash: str = Field(index=True)
     result: Any = Field(sa_column=Column(JSONB, nullable=False))
     created_at: DatetimeUTC = Field(default_factory=utcnow, index=True)
+
+
+DB_CACHE_ENGINE: None | Engine = None
 
 
 @overload
@@ -97,15 +100,16 @@ def db_cache(
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        engine = create_engine(
-            api_keys.sqlalchemy_db_url.get_secret_value(),
-            # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
-            json_serializer=json_serializer,
-            json_deserializer=json_deserializer,
-        )
-
-        # Create table if it doesn't exist
-        SQLModel.metadata.create_all(engine)
+        global DB_CACHE_ENGINE
+        if DB_CACHE_ENGINE is None:
+            DB_CACHE_ENGINE = create_engine(
+                api_keys.sqlalchemy_db_url.get_secret_value(),
+                # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
+                json_serializer=json_serializer,
+                json_deserializer=json_deserializer,
+            )
+            # Create table if it doesn't exist
+            SQLModel.metadata.create_all(DB_CACHE_ENGINE)
 
         # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
         signature = inspect.signature(func)
@@ -151,7 +155,7 @@ def db_cache(
         if return_type is not None and contains_pydantic_model(return_type):
             is_pydantic_model = True
 
-        with Session(engine) as session:
+        with Session(DB_CACHE_ENGINE) as session:
             # Try to get cached result
             statement = (
                 select(FunctionCache)
@@ -195,7 +199,7 @@ def db_cache(
         )
 
         # If postgres access was specified, save it.
-        if engine is not None and (cache_none or computed_result is not None):
+        if cache_none or computed_result is not None:
             cache_entry = FunctionCache(
                 function_name=function_name,
                 full_function_name=full_function_name,
@@ -204,7 +208,7 @@ def db_cache(
                 result=computed_result,
                 created_at=utcnow(),
             )
-            with Session(engine) as session:
+            with Session(DB_CACHE_ENGINE) as session:
                 logger.info(f"Saving {cache_entry} into database.")
                 session.add(cache_entry)
                 session.commit()

@@ -227,8 +227,6 @@ if __name__ == "__main__":
         bets_with_traces: list[ResolvedBetWithTrace] = []
         for bet in bets:
             trace = get_trace_for_bet(bet, process_market_traces)
-            if not trace:
-                print('no trace')
             if trace:
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
 
@@ -263,7 +261,7 @@ if __name__ == "__main__":
                 )
                 if simulated_outcome is None:
                     continue
-                # ToDo - Add new metrics
+
                 simulated_outcomes.append(simulated_outcome)
                 agent_balance += simulated_outcome.profit
 
@@ -312,7 +310,7 @@ if __name__ == "__main__":
 
             # At the beginning, add also the agent's current strategy.
             if strategy_idx == 0:
-                # ToDo - Add sharpe also to original strategy - see bets with traces (create new df)
+
                 simulations.append(
                     {
                         "strategy": "original",

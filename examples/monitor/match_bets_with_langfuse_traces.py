@@ -4,6 +4,8 @@ from typing import Any
 import dotenv
 from eth_typing import HexAddress, HexStr
 
+from examples.monitor.data_models import SimulationDetail
+from examples.monitor.financial_metrics import SharpeRatioCalculator
 from examples.monitor.transaction_cache import TransactionBlockCache
 from prediction_market_agent_tooling.markets.omen.omen_contracts import OmenConditionalTokenContract
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import OmenSubgraphHandler
@@ -186,9 +188,7 @@ if __name__ == "__main__":
 
     print("# Agent Bet vs Simulated Bet Comparison")
 
-    w3 = OmenConditionalTokenContract().get_web3()
-    
-    tx_block_cache = TransactionBlockCache(web3=w3)
+    tx_block_cache = TransactionBlockCache(web3=OmenConditionalTokenContract().get_web3())
 
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
@@ -238,12 +238,13 @@ if __name__ == "__main__":
             continue
 
         if len(bets_with_traces) != len(bets):
+            pct_bets_without_traces = (len(bets) - len(bets_with_traces)) / len(bets)
             print(
-                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."
+                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace ({pct_bets_without_traces * 100:.2f}%), ignoring them."
             )
 
         simulations: list[dict[str, Any]] = []
-        details = []
+        details: list[SimulationDetail] = []
 
         for strategy_idx, strategy in enumerate(strategies):
             # "Born" agent with initial funding, simulate as if he was doing bets one by one.
@@ -266,27 +267,33 @@ if __name__ == "__main__":
                 simulated_outcomes.append(simulated_outcome)
                 agent_balance += simulated_outcome.profit
 
-                details.append(
-                    {
-                        "url": trace.market.url,
-                        "market_p_yes": round(trace.market.current_p_yes, 4),
-                        "agent_p_yes": round(trace.answer.p_yes, 4),
-                        "agent_conf": round(trace.answer.confidence, 4),
-                        "org_bet": round(bet.amount.amount, 4),
-                        "sim_bet": round(simulated_outcome.size, 4),
-                        "org_dir": bet.outcome,
-                        "sim_dir": simulated_outcome.direction,
-                        "org_profit": round(bet.profit.amount, 4),
-                        "sim_profit": round(simulated_outcome.profit, 4),
-                        "timestamp": bet_with_trace.trace.timestamp_datetime,
-                    }
+                simulation_detail = SimulationDetail(
+                    strategy=repr(strategy),
+                    url=trace.market.url,
+                    market_p_yes=round(trace.market.current_p_yes, 4),
+                    agent_p_yes=round(trace.answer.p_yes, 4),
+                    agent_conf=round(trace.answer.confidence, 4),
+                    org_bet=round(bet.amount.amount, 4),
+                    sim_bet=round(simulated_outcome.size, 4),
+                    org_dir=bet.outcome,
+                    sim_dir=simulated_outcome.direction,
+                    org_profit=round(bet.profit.amount, 4),
+                    sim_profit=round(simulated_outcome.profit, 4),
+                    timestamp=bet_with_trace.trace.timestamp_datetime,
                 )
+                details.append(simulation_detail)
 
-            details.sort(key=lambda x: x["sim_profit"], reverse=True)
-            pd.DataFrame.from_records(details).to_csv(
+            details.sort(key=lambda x: x.sim_profit, reverse=True)
+            details_df = pd.DataFrame.from_records([d.model_dump() for d in details])
+            details_df.to_csv(
                 output_directory / f"{agent_name} - {strategy} - all bets.csv",
                 index=False,
             )
+
+            # Financial analysis
+            calc = SharpeRatioCalculator(details=details)
+            sharpe_output_simulation = calc.calculate_annual_sharpe_ratio()
+            sharpe_output_original = calc.calculate_annual_sharpe_ratio(profit_col_name="org_profit")
 
             sum_squared_errors = 0.0
             for bet_with_trace in bets_with_traces:
@@ -305,6 +312,7 @@ if __name__ == "__main__":
 
             # At the beginning, add also the agent's current strategy.
             if strategy_idx == 0:
+                # ToDo - Add sharpe also to original strategy - see bets with traces (create new df)
                 simulations.append(
                     {
                         "strategy": "original",
@@ -315,6 +323,7 @@ if __name__ == "__main__":
                         # We don't know these for the original run.
                         "start_balance": None,
                         "end_balance": None,
+                        **sharpe_output_original.model_dump(),
                     }
                 )
             else:
@@ -332,9 +341,7 @@ if __name__ == "__main__":
                     "p_yes mse": p_yes_mse,
                     "start_balance": starting_balance,
                     "end_balance": agent_balance,
-                    "daily_return": 123,  # ToDo
-                    "annualized_sharpe_ratio": 123,  # ToDo
-                    "annualized_volatility": 123,  # ToDo
+                    **sharpe_output_simulation.model_dump(),
                 }
             )
 

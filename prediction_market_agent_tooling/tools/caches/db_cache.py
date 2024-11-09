@@ -15,13 +15,14 @@ from typing import (
 )
 
 from pydantic import BaseModel
-from sqlalchemy import Column, Engine
+from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.pickle_utils import InitialiseNonPickable
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
@@ -38,9 +39,6 @@ class FunctionCache(SQLModel, table=True):
     args_hash: str = Field(index=True)
     result: Any = Field(sa_column=Column(JSONB, nullable=False))
     created_at: DatetimeUTC = Field(default_factory=utcnow, index=True)
-
-
-DB_CACHE_ENGINE: None | Engine = None
 
 
 @overload
@@ -93,6 +91,17 @@ def db_cache(
         return decorator
 
     api_keys = api_keys if api_keys is not None else APIKeys()
+    wrapped_engine = InitialiseNonPickable(
+        lambda: create_engine(
+            api_keys.sqlalchemy_db_url.get_secret_value(),
+            # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
+        )
+    )
+
+    if api_keys.ENABLE_CACHE:
+        SQLModel.metadata.create_all(wrapped_engine.get_value())
 
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -100,16 +109,7 @@ def db_cache(
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        global DB_CACHE_ENGINE
-        if DB_CACHE_ENGINE is None:
-            DB_CACHE_ENGINE = create_engine(
-                api_keys.sqlalchemy_db_url.get_secret_value(),
-                # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
-                json_serializer=json_serializer,
-                json_deserializer=json_deserializer,
-            )
-            # Create table if it doesn't exist
-            SQLModel.metadata.create_all(DB_CACHE_ENGINE)
+        engine = wrapped_engine.get_value()
 
         # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
         signature = inspect.signature(func)
@@ -155,7 +155,7 @@ def db_cache(
         if return_type is not None and contains_pydantic_model(return_type):
             is_pydantic_model = True
 
-        with Session(DB_CACHE_ENGINE) as session:
+        with Session(engine) as session:
             # Try to get cached result
             statement = (
                 select(FunctionCache)
@@ -208,7 +208,7 @@ def db_cache(
                 result=computed_result,
                 created_at=utcnow(),
             )
-            with Session(DB_CACHE_ENGINE) as session:
+            with Session(engine) as session:
                 logger.info(f"Saving {cache_entry} into database.")
                 session.add(cache_entry)
                 session.commit()

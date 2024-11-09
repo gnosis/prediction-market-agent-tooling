@@ -2,7 +2,7 @@ import hashlib
 import inspect
 import json
 from datetime import date, timedelta
-from functools import wraps
+from functools import partial, wraps
 from typing import (
     Any,
     Callable,
@@ -92,7 +92,8 @@ def db_cache(
 
     api_keys = api_keys if api_keys is not None else APIKeys()
     wrapped_engine = InitialiseNonPickable(
-        lambda: create_engine(
+        partial(
+            create_engine,
             api_keys.sqlalchemy_db_url.get_secret_value(),
             # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
             json_serializer=json_serializer,

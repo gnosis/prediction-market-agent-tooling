@@ -2,7 +2,7 @@ import hashlib
 import inspect
 import json
 from datetime import date, timedelta
-from functools import partial, wraps
+from functools import wraps
 from typing import (
     Any,
     Callable,
@@ -15,7 +15,7 @@ from typing import (
 )
 
 from pydantic import BaseModel
-from sqlalchemy import Column
+from sqlalchemy import Column, Engine
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
 
@@ -91,15 +91,16 @@ def db_cache(
         return decorator
 
     api_keys = api_keys if api_keys is not None else APIKeys()
-    wrapped_engine = InitialiseNonPickable(
-        partial(
-            create_engine,
+
+    def engine_initialiser() -> Engine:
+        return create_engine(
             api_keys.sqlalchemy_db_url.get_secret_value(),
             # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
         )
-    )
+
+    wrapped_engine = InitialiseNonPickable(engine_initialiser)
 
     if api_keys.ENABLE_CACHE:
         SQLModel.metadata.create_all(wrapped_engine.get_value())

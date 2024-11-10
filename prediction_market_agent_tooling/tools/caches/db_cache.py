@@ -208,6 +208,7 @@ def db_cache(
                 session.add(cache_entry)
                 session.commit()
 
+        engine.dispose()
         return computed_result
 
     return cast(FunctionT, wrapper)

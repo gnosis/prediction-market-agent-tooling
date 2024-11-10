@@ -1,7 +1,6 @@
 import hashlib
 import inspect
 import json
-import logging
 from datetime import date, timedelta
 from functools import wraps
 from typing import (
@@ -21,6 +20,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.pickle_utils import InitialiseNonPickable
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -90,7 +90,6 @@ def db_cache(
 
         return decorator
 
-    logger = logging  # For some reason, `loguru` doesn't work in multiprocessing if it's used in in-function-defined functions, so force-patch for just standard logging here.
     api_keys = api_keys if api_keys is not None else APIKeys()
     wrapped_engine = InitialiseNonPickable(
         lambda: create_engine(

@@ -22,7 +22,6 @@ from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.pickle_utils import InitialiseNonPickable
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
@@ -91,17 +90,6 @@ def db_cache(
         return decorator
 
     api_keys = api_keys if api_keys is not None else APIKeys()
-    wrapped_engine = InitialiseNonPickable(
-        lambda: create_engine(
-            api_keys.sqlalchemy_db_url.get_secret_value(),
-            # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
-            json_serializer=json_serializer,
-            json_deserializer=json_deserializer,
-        )
-    )
-
-    if api_keys.ENABLE_CACHE:
-        SQLModel.metadata.create_all(wrapped_engine.get_value())
 
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -109,7 +97,14 @@ def db_cache(
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        engine = wrapped_engine.get_value()
+        engine = create_engine(
+            api_keys.sqlalchemy_db_url.get_secret_value(),
+            # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
+            pool_size=1,
+        )
+        SQLModel.metadata.create_all(engine)
 
         # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
         signature = inspect.signature(func)

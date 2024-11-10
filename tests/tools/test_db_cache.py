@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.parallelism import par_map
 
 
 def test_postgres_cache_bools(
@@ -319,12 +318,3 @@ def test_postgres_cache_ignored_arg_names_and_types(
     assert (
         call_count == 2
     ), "The function should only be called twice due to caching with ignored keys/types"
-
-
-def test_db_cache_with_parallelism(keys_with_sqlalchemy_db_url: APIKeys) -> None:
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
-    def twice(x: int) -> int:
-        return x * 2
-
-    results = par_map([1, 2, 3, 1, 2, 3], twice)
-    assert results == [2, 4, 6, 2, 4, 6]

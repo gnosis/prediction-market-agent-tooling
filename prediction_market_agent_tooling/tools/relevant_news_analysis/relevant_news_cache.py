@@ -25,9 +25,12 @@ class RelevantNewsCacheModel(SQLModel, table=True):
 class RelevantNewsResponseCache:
     def __init__(self, sqlalchemy_db_url: str | None = None):
         self.engine = create_engine(
-            sqlalchemy_db_url
-            if sqlalchemy_db_url
-            else APIKeys().sqlalchemy_db_url.get_secret_value()
+            (
+                sqlalchemy_db_url
+                if sqlalchemy_db_url
+                else APIKeys().sqlalchemy_db_url.get_secret_value()
+            ),
+            pool_size=1,
         )
         self._initialize_db()
 

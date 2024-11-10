@@ -104,6 +104,8 @@ def db_cache(
             json_deserializer=json_deserializer,
             pool_size=1,
         )
+
+        # Create table if it doesn't exist
         SQLModel.metadata.create_all(engine)
 
         # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.

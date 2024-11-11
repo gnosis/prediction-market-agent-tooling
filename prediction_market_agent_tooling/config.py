@@ -53,7 +53,7 @@ class APIKeys(BaseSettings):
 
     SQLALCHEMY_DB_URL: t.Optional[SecretStr] = None
 
-    ENABLE_CACHE: bool = True
+    ENABLE_CACHE: bool = False
     CACHE_DIR: str = "./.cache"
 
     @property

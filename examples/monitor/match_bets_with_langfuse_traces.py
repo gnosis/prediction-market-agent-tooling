@@ -26,7 +26,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.google_utils import get_private_key_from_gcp_secret
+from prediction_market_agent_tooling.tools.google_utils import (
+    get_private_key_from_gcp_secret,
+)
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     ProcessMarketTrace,
@@ -34,10 +36,10 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_trace_for_bet,
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.transaction_cache import TransactionBlockCache
-from prediction_market_agent_tooling.tools.utils import (
-    utc_datetime,
+from prediction_market_agent_tooling.tools.transaction_cache import (
+    TransactionBlockCache,
 )
+from prediction_market_agent_tooling.tools.utils import utc_datetime
 
 
 class SimulatedOutcome(BaseModel):

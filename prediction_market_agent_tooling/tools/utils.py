@@ -9,11 +9,7 @@ from pydantic import BaseModel, ValidationError
 from scipy.optimize import newton
 from scipy.stats import entropy
 
-from prediction_market_agent_tooling.gtypes import (
-    DatetimeUTC,
-    Probability,
-    SecretStr,
-)
+from prediction_market_agent_tooling.gtypes import DatetimeUTC, Probability, SecretStr
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 

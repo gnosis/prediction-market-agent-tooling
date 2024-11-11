@@ -410,7 +410,7 @@ def test_place_bet_with_autodeposit(
         local_web3
     )
     assert (
-        collateral_token_contract.symbol() == expected_symbol
+        collateral_token_contract.symbol(local_web3) == expected_symbol
     ), f"Should have retrieve {expected_symbol} market."
     assert isinstance(
         collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain

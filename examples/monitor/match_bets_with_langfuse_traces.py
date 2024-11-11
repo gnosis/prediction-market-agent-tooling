@@ -4,7 +4,6 @@ from typing import Any
 import dotenv
 from eth_typing import HexAddress, HexStr
 
-from examples.monitor.data_models import SimulationDetail
 from examples.monitor.financial_metrics import SharpeRatioCalculator
 from examples.monitor.transaction_cache import TransactionBlockCache
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -27,7 +26,10 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     ProbabilisticAnswer,
     TradeType,
 )
-from prediction_market_agent_tooling.markets.data_models import ResolvedBet
+from prediction_market_agent_tooling.markets.data_models import (
+    ResolvedBet,
+    SimulationDetail,
+)
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
@@ -108,11 +110,6 @@ def get_outcome_for_trace(
             if correct
             else -buy_trade.amount.amount
         )
-
-    # received_outcome_tokens = market.get_buy_token_amount(
-    #     bet_amount=market.get_bet_amount(buy_trade.amount.amount),
-    #     direction=buy_trade.outcome,
-    # ).amount
 
     return SimulatedOutcome(
         size=buy_trade.amount.amount,
@@ -204,7 +201,7 @@ if __name__ == "__main__":
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
 
         # Pick a time after pool token number is stored in OmenAgentMarket
-        start_time = utc_datetime(2024, 10, 28)
+        start_time = utc_datetime(2024, 10, 1)
 
         langfuse = Langfuse(
             secret_key=api_keys.langfuse_secret_key.get_secret_value(),

@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from examples.monitor.data_models import SharpeOutput, SimulationDetail
+from prediction_market_agent_tooling.markets.data_models import (
+    SharpeOutput,
+    SimulationDetail,
+)
 
 
 class SharpeRatioCalculator:

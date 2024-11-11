@@ -1,5 +1,6 @@
 import typing as t
 
+from pydantic import Field
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -147,9 +148,9 @@ class APIKeys(BaseSettings):
     @property
     def default_enable_langfuse(self) -> bool:
         return (
-            self.LANGFUSE_SECRET_KEY is not None
-            and self.LANGFUSE_PUBLIC_KEY is not None
-            and self.LANGFUSE_HOST is not None
+                self.LANGFUSE_SECRET_KEY is not None
+                and self.LANGFUSE_PUBLIC_KEY is not None
+                and self.LANGFUSE_HOST is not None
         )
 
     @property
@@ -203,3 +204,37 @@ class APIKeys(BaseSettings):
         s = SafeV141(self.SAFE_ADDRESS, ethereum_client)
         public_key_from_signer = private_key_to_public_key(self.bet_from_private_key)
         return s.retrieve_is_owner(public_key_from_signer)
+
+
+class RPCConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    GNOSIS_RPC_URL: t.Optional[str] = Field(default="https://rpc.gnosischain.com")
+    CHAIN_ID: t.Optional[int] = Field(default=100)
+
+    @property
+    def gnosis_rpc_url(self) -> str:
+        return check_not_none(
+            self.GNOSIS_RPC_URL, "GNOSIS_RPC_URL missing in the environment."
+        )
+
+    @property
+    def chain_id(self) -> int:
+        return check_not_none(
+            self.CHAIN_ID, "CHAIN_ID missing in the environment."
+        )
+
+class CloudCredentials(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    GOOGLE_APPLICATION_CREDENTIALS: t.Optional[str] = None
+
+    @property
+    def google_application_credentials(self) -> str:
+        return check_not_none(
+            self.GOOGLE_APPLICATION_CREDENTIALS, "GOOGLE_APPLICATION_CREDENTIALS missing in the environment."
+        )

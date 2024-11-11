@@ -8,7 +8,7 @@ from pydantic import BaseModel, field_validator
 from web3 import Web3
 from web3.contract.contract import Contract as Web3Contract
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
@@ -17,10 +17,6 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
-)
-from prediction_market_agent_tooling.tools.gnosis_rpc import (
-    GNOSIS_NETWORK_ID,
-    GNOSIS_RPC_URL,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
@@ -391,8 +387,8 @@ class ContractOnGnosisChain(ContractBaseClass):
     Contract base class with Gnosis Chain configuration.
     """
 
-    CHAIN_ID = GNOSIS_NETWORK_ID
-    CHAIN_RPC_URL = GNOSIS_RPC_URL
+    CHAIN_ID = ChainID(RPCConfig().chain_id)
+    CHAIN_RPC_URL = RPCConfig().gnosis_rpc_url
 
 
 class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):

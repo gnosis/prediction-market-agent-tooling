@@ -554,7 +554,7 @@ class OmenBet(BaseModel):
             )
 
         return ResolvedBet(
-            id=str(self.transactionHash),
+            id=self.transactionHash.hex(),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
             outcome=self.boolean_outcome,

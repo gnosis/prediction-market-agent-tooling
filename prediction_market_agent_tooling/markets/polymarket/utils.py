@@ -3,7 +3,7 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     PolymarketFullMarket,
 )
-from prediction_market_agent_tooling.tools.google import search_google
+from prediction_market_agent_tooling.tools.google_utils import search_google
 
 
 def find_resolution_on_polymarket(question: str) -> Resolution | None:

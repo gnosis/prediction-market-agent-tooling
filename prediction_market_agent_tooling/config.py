@@ -148,9 +148,9 @@ class APIKeys(BaseSettings):
     @property
     def default_enable_langfuse(self) -> bool:
         return (
-                self.LANGFUSE_SECRET_KEY is not None
-                and self.LANGFUSE_PUBLIC_KEY is not None
-                and self.LANGFUSE_HOST is not None
+            self.LANGFUSE_SECRET_KEY is not None
+            and self.LANGFUSE_PUBLIC_KEY is not None
+            and self.LANGFUSE_HOST is not None
         )
 
     @property
@@ -222,9 +222,8 @@ class RPCConfig(BaseSettings):
 
     @property
     def chain_id(self) -> int:
-        return check_not_none(
-            self.CHAIN_ID, "CHAIN_ID missing in the environment."
-        )
+        return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
+
 
 class CloudCredentials(BaseSettings):
     model_config = SettingsConfigDict(
@@ -236,5 +235,6 @@ class CloudCredentials(BaseSettings):
     @property
     def google_application_credentials(self) -> str:
         return check_not_none(
-            self.GOOGLE_APPLICATION_CREDENTIALS, "GOOGLE_APPLICATION_CREDENTIALS missing in the environment."
+            self.GOOGLE_APPLICATION_CREDENTIALS,
+            "GOOGLE_APPLICATION_CREDENTIALS missing in the environment.",
         )

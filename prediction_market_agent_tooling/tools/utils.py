@@ -207,4 +207,3 @@ def calculate_sell_amount_in_collateral(
 
     amount_to_sell = newton(f, 0)
     return float(amount_to_sell) * 0.999999  # Avoid rounding errors
-

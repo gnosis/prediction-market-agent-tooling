@@ -75,6 +75,7 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
+from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import (
@@ -1339,7 +1340,7 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
     )
 
     if current_balances.wxdai < need_to_withdraw:
-        raise ValueError(
+        raise OutOfFundsError(
             f"Current wxDai balance {current_balances.wxdai} is less than the required minimum wxDai to withdraw {need_to_withdraw}."
         )
 

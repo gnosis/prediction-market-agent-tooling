@@ -387,7 +387,7 @@ class ContractOnGnosisChain(ContractBaseClass):
     Contract base class with Gnosis Chain configuration.
     """
 
-    CHAIN_ID = ChainID(RPCConfig().chain_id)
+    CHAIN_ID = RPCConfig().chain_id
     CHAIN_RPC_URL = RPCConfig().gnosis_rpc_url
 
 

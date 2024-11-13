@@ -10,7 +10,7 @@ from safe_eth.safe.safe import SafeV141
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     PrivateKey,
-    secretstr_to_v1_secretstr,
+    secretstr_to_v1_secretstr, ChainID,
 )
 from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -211,8 +211,8 @@ class RPCConfig(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    GNOSIS_RPC_URL: t.Optional[str] = Field(default="https://rpc.gnosischain.com")
-    CHAIN_ID: t.Optional[int] = Field(default=100)
+    GNOSIS_RPC_URL: str = Field(default="https://rpc.gnosischain.com")
+    CHAIN_ID: ChainID = Field(default=ChainID(100))
 
     @property
     def gnosis_rpc_url(self) -> str:
@@ -221,7 +221,7 @@ class RPCConfig(BaseSettings):
         )
 
     @property
-    def chain_id(self) -> int:
+    def chain_id(self) -> ChainID:
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
 
@@ -231,10 +231,3 @@ class CloudCredentials(BaseSettings):
     )
 
     GOOGLE_APPLICATION_CREDENTIALS: t.Optional[str] = None
-
-    @property
-    def google_application_credentials(self) -> str:
-        return check_not_none(
-            self.GOOGLE_APPLICATION_CREDENTIALS,
-            "GOOGLE_APPLICATION_CREDENTIALS missing in the environment.",
-        )

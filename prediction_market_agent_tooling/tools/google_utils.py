@@ -63,9 +63,7 @@ def get_private_key_from_gcp_secret(
     version_id: str = "latest",
 ) -> PrivateKey:
     # If credentials filename specified, use that, else read using default credentials path.
-    google_application_credentials_filename = (
-        CloudCredentials().google_application_credentials
-    )
+    google_application_credentials_filename = CloudCredentials().GOOGLE_APPLICATION_CREDENTIALS
     if google_application_credentials_filename is not None:
         # mypy interprets incorrectly that from_service_account_json requires further args.
         client = secretmanager.SecretManagerServiceClient.from_service_account_json(filename=google_application_credentials_filename)  # type: ignore [call-arg]

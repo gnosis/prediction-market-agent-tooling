@@ -1,7 +1,7 @@
 import hashlib
 import inspect
 import json
-from datetime import date, timedelta
+from datetime import timedelta
 from functools import wraps
 from typing import (
     Any,
@@ -17,11 +17,12 @@ from typing import (
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
+from sqlmodel import Field, SQLModel, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
@@ -97,16 +98,9 @@ def db_cache(
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        engine = create_engine(
-            api_keys.sqlalchemy_db_url.get_secret_value(),
-            # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
-            json_serializer=json_serializer,
-            json_deserializer=json_deserializer,
-            pool_size=1,
-        )
-
-        # Create table if it doesn't exist
-        SQLModel.metadata.create_all(engine)
+        with DBManager(api_keys).get_connection() as conn:
+            # Create table if it doesn't exist
+            SQLModel.metadata.create_all(conn, tables=[SQLModel.metadata.tables[FunctionCache.__tablename__]],)
 
         # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
         signature = inspect.signature(func)
@@ -152,7 +146,7 @@ def db_cache(
         if return_type is not None and contains_pydantic_model(return_type):
             is_pydantic_model = True
 
-        with Session(engine) as session:
+        with DBManager(api_keys).get_session() as session:
             # Try to get cached result
             statement = (
                 select(FunctionCache)
@@ -167,26 +161,26 @@ def db_cache(
                 cutoff_time = utcnow() - max_age
                 statement = statement.where(FunctionCache.created_at >= cutoff_time)
             cached_result = session.exec(statement).first()
-
-        if cached_result:
-            logger.info(
-                # Keep the special [case-hit] identifier so we can easily track it in GCP.
-                f"[cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
-            )
-            if is_pydantic_model:
-                # If the output contains any Pydantic models, we need to initialise them.
-                try:
-                    return convert_cached_output_to_pydantic(
-                        return_type, cached_result.result
-                    )
-                except ValueError as e:
-                    # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
-                    logger.warning(
-                        f"Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
-                    )
-                    cached_result = None
-            else:
-                return cached_result.result
+            # We indent here to keep the session open, so that cached_result doesn't go out of scope.
+            if cached_result:
+                logger.info(
+                    # Keep the special [case-hit] identifier so we can easily track it in GCP.
+                    f"[cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
+                )
+                if is_pydantic_model:
+                    # If the output contains any Pydantic models, we need to initialise them.
+                    try:
+                        return convert_cached_output_to_pydantic(
+                            return_type, cached_result.result
+                        )
+                    except ValueError as e:
+                        # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
+                        logger.warning(
+                            f"Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
+                        )
+                        cached_result = None
+                else:
+                    return cached_result.result
 
         # On cache miss, compute the result
         computed_result = func(*args, **kwargs)
@@ -205,12 +199,10 @@ def db_cache(
                 result=computed_result,
                 created_at=utcnow(),
             )
-            with Session(engine) as session:
+            with DBManager(api_keys).get_session() as session:
                 logger.info(f"Saving {cache_entry} into database.")
                 session.add(cache_entry)
-                session.commit()
 
-        engine.dispose()
         return computed_result
 
     return cast(FunctionT, wrapper)
@@ -228,60 +220,6 @@ def contains_pydantic_model(return_type: Any) -> bool:
     if inspect.isclass(return_type):
         return issubclass(return_type, BaseModel)
     return False
-
-
-def json_serializer_default_fn(
-    y: DatetimeUTC | timedelta | date | BaseModel,
-) -> str | dict[str, Any]:
-    """
-    Used to serialize objects that don't support it by default into a specific string that can be deserialized out later.
-    If this function returns a dictionary, it will be called recursivelly.
-    If you add something here, also add it to `replace_custom_stringified_objects` below.
-    """
-    if isinstance(y, DatetimeUTC):
-        return f"DatetimeUTC::{y.isoformat()}"
-    elif isinstance(y, timedelta):
-        return f"timedelta::{y.total_seconds()}"
-    elif isinstance(y, date):
-        return f"date::{y.isoformat()}"
-    elif isinstance(y, BaseModel):
-        return y.model_dump()
-    raise TypeError(
-        f"Unsuported type for the default json serialize function, value is {y}."
-    )
-
-
-def json_serializer(x: Any) -> str:
-    return json.dumps(x, default=json_serializer_default_fn)
-
-
-def replace_custom_stringified_objects(obj: Any) -> Any:
-    """
-    Used to deserialize objects from `json_serializer_default_fn` into their proper form.
-    """
-    if isinstance(obj, str):
-        if obj.startswith("DatetimeUTC::"):
-            iso_str = obj[len("DatetimeUTC::") :]
-            return DatetimeUTC.to_datetime_utc(iso_str)
-        elif obj.startswith("timedelta::"):
-            total_seconds_str = obj[len("timedelta::") :]
-            return timedelta(seconds=float(total_seconds_str))
-        elif obj.startswith("date::"):
-            iso_str = obj[len("date::") :]
-            return date.fromisoformat(iso_str)
-        else:
-            return obj
-    elif isinstance(obj, dict):
-        return {k: replace_custom_stringified_objects(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [replace_custom_stringified_objects(item) for item in obj]
-    else:
-        return obj
-
-
-def json_deserializer(s: str) -> Any:
-    data = json.loads(s)
-    return replace_custom_stringified_objects(data)
 
 
 def convert_cached_output_to_pydantic(return_type: Any, data: Any) -> Any:

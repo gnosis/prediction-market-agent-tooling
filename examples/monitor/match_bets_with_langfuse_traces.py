@@ -105,11 +105,7 @@ def get_outcome_for_trace(
             ),
             direction=buy_trade.outcome,
         ).amount
-        profit = (
-            received_outcome_tokens - buy_trade.amount.amount
-            if correct
-            else -buy_trade.amount.amount
-        )
+        profit = received_outcome_tokens - buy_trade.amount.amount
 
     return SimulatedOutcome(
         size=buy_trade.amount.amount,

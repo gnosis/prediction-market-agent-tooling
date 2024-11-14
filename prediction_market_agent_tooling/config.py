@@ -8,9 +8,10 @@ from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 
 from prediction_market_agent_tooling.gtypes import (
+    ChainID,
     ChecksumAddress,
     PrivateKey,
-    secretstr_to_v1_secretstr, ChainID,
+    secretstr_to_v1_secretstr,
 )
 from prediction_market_agent_tooling.markets.manifold.api import get_authenticated_user
 from prediction_market_agent_tooling.tools.utils import check_not_none

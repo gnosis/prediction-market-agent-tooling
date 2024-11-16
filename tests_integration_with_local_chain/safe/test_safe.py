@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     Wei,
     send_xdai_to,
@@ -103,5 +104,7 @@ def fetch_omen_open_binary_market_with_enough_liquidity(
     limit: int = 1, liquidity_bigger_than: Wei = xdai_to_wei(xdai_type(5))
 ) -> list[OmenMarket]:
     return OmenSubgraphHandler().get_omen_binary_markets(
-        limit=limit, resolved=False, liquidity_bigger_than=liquidity_bigger_than
+        limit=limit,
+        question_opened_after=utcnow(),
+        liquidity_bigger_than=liquidity_bigger_than,
     )

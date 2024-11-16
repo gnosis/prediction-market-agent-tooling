@@ -250,7 +250,7 @@ def send_function_on_contract_tx_using_safe(
         web3=web3,
         contract_address=contract_address,
         contract_abi=contract_abi,
-        from_address=eoa_public_key,
+        from_address=safe_address,
         function_name=function_name,
         function_params=function_params,
         access_list=access_list,
@@ -263,9 +263,10 @@ def send_function_on_contract_tx_using_safe(
     )
     safe_tx.sign(from_private_key.get_secret_value())
     safe_tx.call()  # simulate call
+    eoa_nonce = web3.eth.get_transaction_count(eoa_public_key)
     tx_hash, tx = safe_tx.execute(
         from_private_key.get_secret_value(),
-        tx_nonce=tx_params["nonce"],
+        tx_nonce=eoa_nonce,
     )
     receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
     check_tx_receipt(receipt_tx)

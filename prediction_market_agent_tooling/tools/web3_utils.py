@@ -263,7 +263,10 @@ def send_function_on_contract_tx_using_safe(
     )
     safe_tx.sign(from_private_key.get_secret_value())
     safe_tx.call()  # simulate call
-    tx_hash, tx = safe_tx.execute(from_private_key.get_secret_value())
+    tx_hash, tx = safe_tx.execute(
+        from_private_key.get_secret_value(),
+        tx_nonce=tx_params["nonce"],
+    )
     receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
     check_tx_receipt(receipt_tx)
     return receipt_tx

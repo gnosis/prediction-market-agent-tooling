@@ -297,10 +297,10 @@ class DeployablePredictionAgent(DeployableAgent):
     def __init__(
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
-        store_prediction: bool = True,
+        store_predictions: bool = True,
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
-        self.store_prediction = store_prediction
+        self.store_predictions = store_predictions
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -443,13 +443,13 @@ class DeployablePredictionAgent(DeployableAgent):
         processed_market: ProcessedMarket | None,
     ) -> None:
         keys = APIKeys()
-        if self.store_prediction:
+        if self.store_predictions:
             market.store_prediction(
                 processed_market=processed_market, keys=keys, agent_name=self.agent_name
             )
         else:
             logger.info(
-                f"Prediction {processed_market} not stored because {self.store_prediction=}."
+                f"Prediction {processed_market} not stored because {self.store_predictions=}."
             )
 
     def before_process_markets(self, market_type: MarketType) -> None:
@@ -508,12 +508,12 @@ class DeployableTraderAgent(DeployablePredictionAgent):
     def __init__(
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
-        store_prediction: bool = True,
+        store_predictions: bool = True,
         store_trades: bool = True,
         place_trades: bool = True,
     ) -> None:
         super().__init__(
-            enable_langfuse=enable_langfuse, store_prediction=store_prediction
+            enable_langfuse=enable_langfuse, store_predictions=store_predictions
         )
         self.store_trades = store_trades
         self.place_trades = place_trades

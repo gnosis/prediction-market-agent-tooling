@@ -250,7 +250,7 @@ def send_function_on_contract_tx_using_safe(
         web3=web3,
         contract_address=contract_address,
         contract_abi=contract_abi,
-        from_address=safe_address,
+        from_address=eoa_public_key,
         function_name=function_name,
         function_params=function_params,
         access_list=access_list,

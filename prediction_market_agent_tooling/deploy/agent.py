@@ -91,7 +91,7 @@ class AnsweredEnum(str, Enum):
 
 
 class AgentTagEnum(str, Enum):
-    PREDICTIONER = "predictioner"
+    PREDICTOR = "predictor"
     TRADER = "trader"
 
 
@@ -176,7 +176,7 @@ class DeployableAgent:
         Run the agent in the forever cycle every `sleep_time` seconds, until the `run_time` is met.
         """
         start_time = time.time()
-        while run_time is not None and time.time() - start_time > run_time:
+        while run_time is None or time.time() - start_time < run_time:
             self.run(market_type=market_type)
             time.sleep(sleep_time)
 
@@ -279,7 +279,7 @@ class DeployablePredictionAgent(DeployableAgent):
     The agent will process markets and make predictions.
     """
 
-    AGENT_TAG: AgentTagEnum = AgentTagEnum.PREDICTIONER
+    AGENT_TAG: AgentTagEnum = AgentTagEnum.PREDICTOR
 
     bet_on_n_markets_per_run: int = 1
 

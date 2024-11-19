@@ -59,6 +59,10 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
+from prediction_market_agent_tooling.tools.custom_exceptions import (
+    CantPayForGasError,
+    OutOfFundsError,
+)
 from prediction_market_agent_tooling.tools.is_invalid import is_invalid
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
@@ -104,14 +108,6 @@ def initialize_langfuse(enable_langfuse: bool) -> None:
 
 
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
-
-
-class CantPayForGasError(ValueError):
-    pass
-
-
-class OutOfFundsError(ValueError):
-    pass
 
 
 class AnsweredEnum(str, Enum):

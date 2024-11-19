@@ -102,6 +102,7 @@ def db_cache(
             # Use custom json serializer and deserializer, because otherwise, for example `datetime` serialization would fail.
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
+            pool_size=1,
         )
 
         # Create table if it doesn't exist
@@ -195,7 +196,7 @@ def db_cache(
         )
 
         # If postgres access was specified, save it.
-        if engine is not None and (cache_none or computed_result is not None):
+        if cache_none or computed_result is not None:
             cache_entry = FunctionCache(
                 function_name=function_name,
                 full_function_name=full_function_name,
@@ -209,6 +210,7 @@ def db_cache(
                 session.add(cache_entry)
                 session.commit()
 
+        engine.dispose()
         return computed_result
 
     return cast(FunctionT, wrapper)

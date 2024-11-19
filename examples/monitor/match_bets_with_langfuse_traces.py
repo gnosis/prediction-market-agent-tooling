@@ -3,22 +3,9 @@ from typing import Any
 
 import pandas as pd
 from eth_typing import HexAddress, HexStr
-
-from examples.monitor.transaction_cache import TransactionBlockCache
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OmenConditionalTokenContract,
-)
-from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
-    OmenSubgraphHandler,
-)
-from prediction_market_agent_tooling.monitor.financial_metrics.financial_metrics import SharpeRatioCalculator
-
-dotenv.load_dotenv()
-import pandas as pd
 from langfuse import Langfuse
 from pydantic import BaseModel
 
-from examples.monitor.financial_metrics import SharpeRatioCalculator
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
@@ -37,6 +24,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
+)
+from prediction_market_agent_tooling.monitor.financial_metrics.financial_metrics import (
+    SharpeRatioCalculator,
 )
 from prediction_market_agent_tooling.tools.google_utils import (
     get_private_key_from_gcp_secret,

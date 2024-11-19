@@ -480,6 +480,8 @@ class OmenAgentMarket(AgentMarket):
         better_address: ChecksumAddress,
         start_time: DatetimeUTC,
         end_time: DatetimeUTC | None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
     ) -> list[ResolvedBet]:
         subgraph_handler = OmenSubgraphHandler()
         bets = subgraph_handler.get_resolved_bets_with_valid_answer(
@@ -487,6 +489,8 @@ class OmenAgentMarket(AgentMarket):
             start_time=start_time,
             end_time=end_time,
             market_id=None,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
         )
         generic_bets = [b.to_generic_resolved_bet() for b in bets]
         return generic_bets

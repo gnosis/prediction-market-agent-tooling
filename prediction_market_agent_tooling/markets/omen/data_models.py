@@ -531,7 +531,6 @@ class OmenBet(BaseModel):
             if self.boolean_outcome == self.fpmm.boolean_outcome
             else -bet_amount_xdai
         )
-        profit -= wei_to_xdai(self.feeAmount)
         return ProfitAmount(
             amount=profit,
             currency=Currency.xDai,

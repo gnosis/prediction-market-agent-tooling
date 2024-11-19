@@ -1,9 +1,11 @@
+import typing as t
 from pathlib import Path
-from typing import Any
 
+import optuna
 import pandas as pd
 from langfuse import Langfuse
 from pydantic import BaseModel
+from sklearn.model_selection import KFold
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
@@ -26,9 +28,12 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_traces_for_agent,
 )
 from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
     get_private_key_from_gcp_secret,
     utc_datetime,
 )
+
+optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
 class SimulatedOutcome(BaseModel):
@@ -36,11 +41,6 @@ class SimulatedOutcome(BaseModel):
     direction: bool
     correct: bool
     profit: float
-
-
-class MSEProfit(BaseModel):
-    p_yes_mse: list[float]
-    total_profit: list[float]
 
 
 def get_outcome_for_trace(
@@ -93,76 +93,138 @@ def get_outcome_for_trace(
     )
 
 
-if __name__ == "__main__":
+def calc_metrics(
+    bets: list[ResolvedBetWithTrace],
+    strategy: BettingStrategy,
+) -> tuple[list[dict[str, t.Any]], dict[str, float]]:
+    per_bet_details = []
+    simulated_outcomes: list[SimulatedOutcome] = []
+
+    for bet_with_trace in bets:
+        simulated_outcome = get_outcome_for_trace(
+            strategy=strategy,
+            trace=bet_with_trace.trace,
+            market_outcome=bet_with_trace.bet.market_outcome,
+        )
+        if simulated_outcome is None:
+            continue
+        simulated_outcomes.append(simulated_outcome)
+        per_bet_details.append(
+            {
+                "url": bet_with_trace.trace.market.url,
+                "market_p_yes": round(bet_with_trace.trace.market.current_p_yes, 4),
+                "agent_p_yes": round(bet_with_trace.trace.answer.p_yes, 4),
+                "agent_conf": round(bet_with_trace.trace.answer.confidence, 4),
+                "org_bet": round(bet_with_trace.bet.amount.amount, 4),
+                "sim_bet": round(simulated_outcome.size, 4),
+                "org_dir": bet_with_trace.bet.outcome,
+                "sim_dir": simulated_outcome.direction,
+                "org_profit": round(bet_with_trace.bet.profit.amount, 4),
+                "sim_profit": round(simulated_outcome.profit, 4),
+            }
+        )
+
+    sum_squared_errors = 0.0
+    for bet_with_trace in bets:
+        estimated_p_yes = bet_with_trace.trace.answer.p_yes
+        actual_answer = float(bet_with_trace.bet.market_outcome)
+        sum_squared_errors += (estimated_p_yes - actual_answer) ** 2
+
+    p_yes_mse = sum_squared_errors / len(bets)
+    total_bet_amount = sum([bt.bet.amount.amount for bt in bets])
+    total_bet_profit = sum([bt.bet.profit.amount for bt in bets])
+    total_simulated_amount = sum([so.size for so in simulated_outcomes])
+    total_simulated_profit = sum([so.profit for so in simulated_outcomes])
+    roi = 100 * total_bet_profit / total_bet_amount
+    simulated_roi = 100 * total_simulated_profit / total_simulated_amount
+
+    return per_bet_details, {
+        "p_yes_mse": p_yes_mse,
+        "total_bet_amount": total_bet_amount,
+        "total_bet_profit": total_bet_profit,
+        "total_simulated_amount": total_simulated_amount,
+        "total_simulated_profit": total_simulated_profit,
+        "roi": roi,
+        "simulated_roi": simulated_roi,
+        "maximize": total_simulated_profit,  # Metric to be maximized for.
+    }
+
+
+def get_objective(
+    bets: list[ResolvedBetWithTrace],
+) -> t.Callable[[optuna.trial.Trial], float]:
+    def objective(trial: optuna.trial.Trial) -> float:
+        strategy_name = trial.suggest_categorical(
+            "strategy_name",
+            [
+                MaxAccuracyBettingStrategy.__name__,
+                MaxExpectedValueBettingStrategy.__name__,
+                MaxAccuracyWithKellyScaledBetsStrategy.__name__,
+                KellyBettingStrategy.__name__,
+            ],
+        )
+        bet_amount = trial.suggest_float("bet_amount", 0, 25)
+        max_price_impact = (
+            trial.suggest_float("max_price_impact", 0, 1.0)
+            if strategy_name == KellyBettingStrategy.__name__
+            else None
+        )
+        strategy = (
+            MaxAccuracyBettingStrategy(bet_amount=bet_amount)
+            if strategy_name == MaxAccuracyBettingStrategy.__name__
+            else (
+                MaxExpectedValueBettingStrategy(bet_amount=bet_amount)
+                if strategy_name == MaxExpectedValueBettingStrategy.__name__
+                else (
+                    MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=bet_amount)
+                    if strategy_name == MaxAccuracyWithKellyScaledBetsStrategy.__name__
+                    else (
+                        KellyBettingStrategy(
+                            max_bet_amount=bet_amount, max_price_impact=max_price_impact
+                        )
+                        if strategy_name == KellyBettingStrategy.__name__
+                        else None
+                    )
+                )
+            )
+        )
+        assert strategy is not None, f"Invalid {strategy_name=}"
+
+        per_bet_details, metrics = calc_metrics(bets, strategy)
+
+        trial.set_user_attr("per_bet_details", per_bet_details)
+        trial.set_user_attr("metrics", metrics)
+        trial.set_user_attr("strategy", strategy)
+
+        return metrics["maximize"]
+
+    return objective
+
+
+def main() -> None:
     output_directory = Path("bet_strategy_benchmark")
     output_directory.mkdir(parents=True, exist_ok=True)
 
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
-        "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
-        "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
+        # "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
+        # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        # "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
+        # "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
         "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
-        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
-        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
-        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+        # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
 
     agent_pkey_map = {
         k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
     }
 
-    # Define strategies we want to test out
-    strategies = [
-        MaxAccuracyBettingStrategy(bet_amount=1),
-        MaxAccuracyBettingStrategy(bet_amount=2),
-        MaxAccuracyBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=1),
-        KellyBettingStrategy(max_bet_amount=2),
-        KellyBettingStrategy(max_bet_amount=5),
-        KellyBettingStrategy(max_bet_amount=25),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
-        MaxExpectedValueBettingStrategy(bet_amount=1),
-        MaxExpectedValueBettingStrategy(bet_amount=2),
-        MaxExpectedValueBettingStrategy(bet_amount=5),
-        MaxExpectedValueBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.01),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.05),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.1),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.15),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.2),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.25),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.3),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.4),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.5),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.6),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.7),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.1),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.15),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.2),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.3),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.4),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.5),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.6),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.7),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.1),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.2),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.3),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.5),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.7),
-    ]
-
     httpx_client = HttpxCachedClient().get_client()
 
     overall_md = ""
-
-    strat_mse_profits: dict[str, MSEProfit] = {}
-    for strategy in strategies:
-        strat_mse_profits[repr(strategy)] = MSEProfit(p_yes_mse=[], total_profit=[])
 
     print("# Agent Bet vs Simulated Bet Comparison")
     for agent_name, private_key in agent_pkey_map.items():
@@ -170,7 +232,10 @@ if __name__ == "__main__":
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
 
         # Pick a time after pool token number is stored in OmenAgentMarket
-        start_time = utc_datetime(2024, 10, 1)
+        creation_start_time = utc_datetime(2024, 9, 13)  # utc_datetime(2024, 9, 13)
+        creation_end_time = None  # utc_datetime(2024, 9, 23)
+        # If simulating history performance, also cut by resolution time to not include markets that weren't yet resolved back then.
+        resolution_end_time = creation_end_time
 
         langfuse = Langfuse(
             secret_key=api_keys.langfuse_secret_key.get_secret_value(),
@@ -182,7 +247,8 @@ if __name__ == "__main__":
         traces = get_traces_for_agent(
             agent_name=agent_name,
             trace_name="process_market",
-            from_timestamp=start_time,
+            from_timestamp=creation_start_time,
+            to_timestamp=creation_end_time,
             has_output=True,
             client=langfuse,
         )
@@ -193,9 +259,11 @@ if __name__ == "__main__":
 
         bets: list[ResolvedBet] = OmenAgentMarket.get_resolved_bets_made_since(
             better_address=api_keys.bet_from_address,
-            start_time=start_time,
-            end_time=None,
+            start_time=creation_start_time,
+            end_time=creation_end_time,
+            market_resolved_before=resolution_end_time,
         )
+        bets.sort(key=lambda b: b.created_time)
 
         # All bets should have a trace, but not all traces should have a bet
         # (e.g. if all markets are deemed unpredictable), so iterate over bets
@@ -205,9 +273,12 @@ if __name__ == "__main__":
             if trace:
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
 
-        print(f"Number of bets since {start_time}: {len(bets_with_traces)}\n")
+        print(
+            f"Number of bets since {creation_start_time} up to {creation_end_time=}, {resolution_end_time=}: {len(bets_with_traces)}\n"
+        )
 
-        if len(bets_with_traces) == 0:
+        if len(bets_with_traces) < 10:
+            print("Only tiny amount of bets with traces found, skipping.")
             continue
 
         if len(bets_with_traces) != len(bets):
@@ -215,113 +286,57 @@ if __name__ == "__main__":
                 f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."
             )
 
-        simulations: list[dict[str, Any]] = []
-        details = []
+        kf = KFold(n_splits=5, shuffle=False)
+        min_abs_diff: float | None = None
+        best_study: optuna.Study | None = None
 
-        for strategy_idx, strategy in enumerate(strategies):
-            # "Born" agent with initial funding, simulate as if he was doing bets one by one.
-            starting_balance = 50.0
-            agent_balance = starting_balance
-            simulated_outcomes: list[SimulatedOutcome] = []
+        for n_fold, (train_index, test_index) in enumerate(kf.split(bets_with_traces)):
+            train_bets_with_traces = [bets_with_traces[i] for i in train_index]
+            test_bets_with_traces = [bets_with_traces[i] for i in test_index]
 
-            for bet_with_trace in bets_with_traces:
-                bet = bet_with_trace.bet
-                trace = bet_with_trace.trace
-                simulated_outcome = get_outcome_for_trace(
-                    strategy=strategy, trace=trace, market_outcome=bet.market_outcome
-                )
-                if simulated_outcome is None:
-                    continue
-                simulated_outcomes.append(simulated_outcome)
-                agent_balance += simulated_outcome.profit
-
-                details.append(
-                    {
-                        "url": trace.market.url,
-                        "market_p_yes": round(trace.market.current_p_yes, 4),
-                        "agent_p_yes": round(trace.answer.p_yes, 4),
-                        "agent_conf": round(trace.answer.confidence, 4),
-                        "org_bet": round(bet.amount.amount, 4),
-                        "sim_bet": round(simulated_outcome.size, 4),
-                        "org_dir": bet.outcome,
-                        "sim_dir": simulated_outcome.direction,
-                        "org_profit": round(bet.profit.amount, 4),
-                        "sim_profit": round(simulated_outcome.profit, 4),
-                    }
-                )
-
-            details.sort(key=lambda x: x["sim_profit"], reverse=True)
-            pd.DataFrame.from_records(details).to_csv(
-                output_directory / f"{agent_name} - {strategy} - all bets.csv",
-                index=False,
+            k_study = optuna.create_study(direction="maximize")
+            k_study.optimize(get_objective(train_bets_with_traces), n_trials=200)
+            _, testing_metrics = calc_metrics(
+                test_bets_with_traces, k_study.best_trial.user_attrs["strategy"]
             )
 
-            sum_squared_errors = 0.0
-            for bet_with_trace in bets_with_traces:
-                bet = bet_with_trace.bet
-                trace = bet_with_trace.trace
-                estimated_p_yes = trace.answer.p_yes
-                actual_answer = float(bet.market_outcome)
-                sum_squared_errors += (estimated_p_yes - actual_answer) ** 2
-            p_yes_mse = sum_squared_errors / len(bets_with_traces)
-            total_bet_amount = sum([bt.bet.amount.amount for bt in bets_with_traces])
-            total_bet_profit = sum([bt.bet.profit.amount for bt in bets_with_traces])
-            total_simulated_amount = sum([so.size for so in simulated_outcomes])
-            total_simulated_profit = sum([so.profit for so in simulated_outcomes])
-            roi = 100 * total_bet_profit / total_bet_amount
-            simulated_roi = 100 * total_simulated_profit / total_simulated_amount
+            train_best_value = check_not_none(
+                k_study.best_trial.value, "Shouldn't be None after optimizing."
+            )
+            test_maximize_value = testing_metrics["maximize"]
+            abs_diff = abs(train_best_value - test_maximize_value)
 
-            # At the beginning, add also the agent's current strategy.
-            if strategy_idx == 0:
-                simulations.append(
-                    {
-                        "strategy": "original",
-                        "bet_amount": total_bet_amount,
-                        "bet_profit": total_bet_profit,
-                        "roi": roi,
-                        "p_yes mse": p_yes_mse,
-                        # We don't know these for the original run.
-                        "start_balance": None,
-                        "end_balance": None,
-                    }
-                )
-            else:
-                strat_mse_profits[repr(strategy)].p_yes_mse.append(p_yes_mse)
-                strat_mse_profits[repr(strategy)].total_profit.append(
-                    total_simulated_profit
-                )
-
-            simulations.append(
-                {
-                    "strategy": repr(strategy),
-                    "bet_amount": total_simulated_amount,
-                    "bet_profit": total_simulated_profit,
-                    "roi": simulated_roi,
-                    "p_yes mse": p_yes_mse,
-                    "start_balance": starting_balance,
-                    "end_balance": agent_balance,
-                }
+            print(
+                f"[{n_fold}] Best value for {agent_name} (params: {k_study.best_params}): "
+                f"Training: {train_best_value} Testing: {test_maximize_value}"
             )
 
-        simulations_df = pd.DataFrame.from_records(simulations)
-        simulations_df.sort_values(by="bet_profit", ascending=False, inplace=True)
+            if min_abs_diff is None or abs_diff < min_abs_diff:
+                min_abs_diff = abs_diff
+                best_study = k_study
+
+        best_study = check_not_none(
+            best_study, "Shouldn't be None after running k-folds."
+        )
+
+        print(
+            f"Selected strategy with params: {best_study.best_params} (Min Abs Diff: {min_abs_diff})"
+        )
+
+        simulations_df = pd.DataFrame.from_records(
+            [trial.user_attrs["metrics"] for trial in best_study.trials]
+        )
+        simulations_df.sort_values(by="maximize", ascending=False, inplace=True)
         overall_md += (
             f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"
             + simulations_df.to_markdown(index=False)
         )
-        # export details per agent
-        pd.DataFrame.from_records(details).to_csv(
-            output_directory / f"{agent_name}_details.csv"
-        )
 
-    print(f"Correlation between p_yes mse and total profit:")
-    for strategy_name, mse_profit in strat_mse_profits.items():
-        mse = mse_profit.p_yes_mse
-        profit = mse_profit.total_profit
-        correlation = pd.Series(mse).corr(pd.Series(profit))
-        print(f"{strategy_name}: {correlation=}")
+        with open(
+            output_directory / "match_bets_with_langfuse_traces_overall.md", "w"
+        ) as overall_f:
+            overall_f.write(overall_md)
 
-    with open(
-        output_directory / "match_bets_with_langfuse_traces_overall.md", "w"
-    ) as overall_f:
-        overall_f.write(overall_md)
+
+if __name__ == "__main__":
+    main()

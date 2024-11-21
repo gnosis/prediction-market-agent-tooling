@@ -9,8 +9,8 @@ from prediction_market_agent_tooling.loggers import logger
 
 class TransactionBlockCache:
     def __init__(self, web3: Web3):
-        self.block_number_cache = dc.Cache("block_cache_dir")
-        self.block_timestamp_cache = dc.Cache("timestamp_cache_dir")
+        self.block_number_cache = dc.Cache(".cache/block_cache_dir")
+        self.block_timestamp_cache = dc.Cache(".cache/timestamp_cache_dir")
         self.web3 = web3
 
     @tenacity.retry(

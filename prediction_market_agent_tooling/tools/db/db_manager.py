@@ -1,6 +1,6 @@
 import hashlib
 from contextlib import contextmanager
-from typing import Generator, Sequence, cast
+from typing import Generator, Sequence
 
 from sqlalchemy import Connection
 from sqlmodel import Session, SQLModel, create_engine

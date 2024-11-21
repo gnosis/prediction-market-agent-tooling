@@ -800,9 +800,13 @@ class ContractPrediction(BaseModel):
         return Web3.to_checksum_address(self.publisher)
 
     @staticmethod
-    def from_tuple(values: tuple[t.Any]) -> "ContractPrediction":
-        data = {k: v for k, v in zip(ContractPrediction.model_fields.keys(), values)}
-        return ContractPrediction.model_validate(data)
+    def from_tuple(values: tuple[t.Any, ...]) -> "ContractPrediction":
+        return ContractPrediction(
+            publisher=values[0],
+            ipfs_hash=values[1],
+            tx_hashes=values[2],
+            estimated_probability_bps=values[3],
+        )
 
 
 class IPFSAgentResult(BaseModel):

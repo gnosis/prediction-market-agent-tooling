@@ -7,6 +7,7 @@ from ape_test import TestAccount
 from dotenv import load_dotenv
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
+from eth_typing import URI
 from safe_eth.eth import EthereumClient
 from web3 import Web3
 
@@ -53,7 +54,7 @@ def local_web3(
 
 @pytest.fixture(scope="module")
 def local_ethereum_client(local_web3: Web3) -> EthereumClient:
-    return EthereumClient()
+    return EthereumClient(URI(local_web3.provider.endpoint_uri))  # type: ignore
 
 
 @pytest.fixture(scope="session")

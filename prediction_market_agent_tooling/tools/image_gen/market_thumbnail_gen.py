@@ -17,7 +17,7 @@ def rewrite_question_into_image_generation_prompt(question: str) -> str:
             "openai not installed, please install extras `langchain` to use this function."
         )
     llm = ChatOpenAI(
-        model="gpt-4-turbo",
+        model="gpt-4o-2024-08-06",
         temperature=0.0,
         api_key=APIKeys().openai_api_key_secretstr_v1,
     )

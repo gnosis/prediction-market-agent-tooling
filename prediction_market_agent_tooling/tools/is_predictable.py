@@ -7,7 +7,10 @@ from prediction_market_agent_tooling.tools.langfuse_ import (
     get_langfuse_langchain_config,
     observe,
 )
-from prediction_market_agent_tooling.tools.utils import LLM_SUPER_LOW_TEMPERATURE
+from prediction_market_agent_tooling.tools.utils import (
+    LLM_SEED,
+    LLM_SUPER_LOW_TEMPERATURE,
+)
 
 # I tried to make it return a JSON, but it didn't work well in combo with asking it to do chain of thought.
 QUESTION_IS_PREDICTABLE_BINARY_PROMPT = """Main signs about a fully qualified question (sometimes referred to as a "market"):
@@ -81,7 +84,7 @@ Finally, write your final decision, write `decision: ` followed by either "yes i
 @db_cache
 def is_predictable_binary(
     question: str,
-    engine: str = "gpt-4-1106-preview",
+    engine: str = "gpt-4o-2024-08-06",
     prompt_template: str = QUESTION_IS_PREDICTABLE_BINARY_PROMPT,
     max_tokens: int = 1024,
 ) -> bool:
@@ -98,6 +101,7 @@ def is_predictable_binary(
     llm = ChatOpenAI(
         model=engine,
         temperature=LLM_SUPER_LOW_TEMPERATURE,
+        seed=LLM_SEED,
         api_key=APIKeys().openai_api_key_secretstr_v1,
     )
 
@@ -118,7 +122,7 @@ def is_predictable_binary(
 def is_predictable_without_description(
     question: str,
     description: str,
-    engine: str = "gpt-4-1106-preview",
+    engine: str = "gpt-4o-2024-08-06",
     prompt_template: str = QUESTION_IS_PREDICTABLE_WITHOUT_DESCRIPTION_PROMPT,
     max_tokens: int = 1024,
 ) -> bool:
@@ -137,6 +141,7 @@ def is_predictable_without_description(
     llm = ChatOpenAI(
         model=engine,
         temperature=LLM_SUPER_LOW_TEMPERATURE,
+        seed=LLM_SEED,
         api_key=APIKeys().openai_api_key_secretstr_v1,
     )
 

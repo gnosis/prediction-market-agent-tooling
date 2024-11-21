@@ -84,7 +84,7 @@ def test_is_predictable_binary(question: str, answerable: bool) -> None:
         (
             "Will an AI get gold on any International Math Olympiad by 2025?",
             "Resolves to YES if either Eliezer or Paul acknowledge that an AI has succeeded at this task.",
-            True,  # True, because description doesn't provide any extra information.
+            False,  # False, because description says that either `Eliezer or Paul` needs to acknowledge it.
         ),
     ],
 )

@@ -13,6 +13,9 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     GuaranteedLossError,
     KellyBettingStrategy,
+    MaxAccuracyBettingStrategy,
+    MaxAccuracyWithKellyScaledBetsStrategy,
+    MaxExpectedValueBettingStrategy,
     ProbabilisticAnswer,
     TradeType,
 )
@@ -23,16 +26,6 @@ from prediction_market_agent_tooling.markets.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenConditionalTokenContract,
-)
-from prediction_market_agent_tooling.deploy.betting_strategy import (
-    BettingStrategy,
-    GuaranteedLossError,
-    KellyBettingStrategy,
-    MaxAccuracyBettingStrategy,
-    MaxAccuracyWithKellyScaledBetsStrategy,
-    MaxExpectedValueBettingStrategy,
-    ProbabilisticAnswer,
-    TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -50,14 +43,10 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_trace_for_bet,
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    check_not_none,
-    utc_datetime,
-)
 from prediction_market_agent_tooling.tools.transaction_cache import (
     TransactionBlockCache,
 )
-from prediction_market_agent_tooling.tools.utils import utc_datetime
+from prediction_market_agent_tooling.tools.utils import check_not_none, utc_datetime
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 

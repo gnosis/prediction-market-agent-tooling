@@ -3,13 +3,13 @@ import pandas as pd
 
 from prediction_market_agent_tooling.markets.data_models import (
     SharpeOutput,
-    SimulationDetail,
+    SimulatedBetDetail,
 )
 
 
 class SharpeRatioCalculator:
     def __init__(
-        self, details: list[SimulationDetail], risk_free_rate: float = 0.0
+        self, details: list[SimulatedBetDetail], risk_free_rate: float = 0.0
     ) -> None:
         self.details = details
         self.df = pd.DataFrame([d.model_dump() for d in self.details])

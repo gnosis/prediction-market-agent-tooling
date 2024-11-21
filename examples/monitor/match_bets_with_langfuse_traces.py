@@ -21,7 +21,8 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
 )
 from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
-    SimulationDetail,
+    SimulatedBetDetail,
+    SimulatedLifetimeDetail,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -121,8 +122,8 @@ def calc_metrics(
     bets: list[ResolvedBetWithTrace],
     strategy: BettingStrategy,
     tx_block_cache: TransactionBlockCache,
-) -> tuple[list[SimulationDetail], dict[str, t.Any]]:
-    per_bet_details: list[SimulationDetail] = []
+) -> tuple[list[SimulatedBetDetail], SimulatedLifetimeDetail]:
+    per_bet_details: list[SimulatedBetDetail] = []
     simulated_outcomes: list[SimulatedOutcome] = []
 
     for bet_with_trace in bets:
@@ -143,7 +144,7 @@ def calc_metrics(
         if simulated_outcome is None:
             continue
         simulated_outcomes.append(simulated_outcome)
-        simulation_detail = SimulationDetail(
+        simulation_detail = SimulatedBetDetail(
             strategy=repr(strategy),
             url=bet_with_trace.trace.market.url,
             market_p_yes=round(bet_with_trace.trace.market.current_p_yes, 4),
@@ -180,18 +181,18 @@ def calc_metrics(
     roi = 100 * total_bet_profit / total_bet_amount
     simulated_roi = 100 * total_simulated_profit / total_simulated_amount
 
-    return per_bet_details, {
-        "p_yes_mse": p_yes_mse,
-        "total_bet_amount": total_bet_amount,
-        "total_bet_profit": total_bet_profit,
-        "total_simulated_amount": total_simulated_amount,
-        "total_simulated_profit": total_simulated_profit,
-        "roi": roi,
-        "simulated_roi": simulated_roi,
-        "sharpe_output_original": sharpe_output_original.model_dump(),
-        "sharpe_output_simulation": sharpe_output_simulation.model_dump(),
-        "maximize": total_simulated_profit,  # Metric to be maximized for.
-    }
+    return per_bet_details, SimulatedLifetimeDetail(
+        p_yes_mse=p_yes_mse,
+        total_bet_amount=total_bet_amount,
+        total_bet_profit=total_bet_profit,
+        total_simulated_amount=total_simulated_amount,
+        total_simulated_profit=total_simulated_profit,
+        roi=roi,
+        simulated_roi=simulated_roi,
+        sharpe_output_original=sharpe_output_original,
+        sharpe_output_simulation=sharpe_output_simulation,
+        maximize=total_simulated_profit,  # Metric to be maximized for.
+    )
 
 
 def get_objective(
@@ -241,9 +242,7 @@ def get_objective(
         trial.set_user_attr("metrics", metrics)
         trial.set_user_attr("strategy", strategy)
 
-        maximize_value: float = metrics["maximize"]
-
-        return maximize_value
+        return metrics.maximize
 
     return objective
 
@@ -364,7 +363,7 @@ def main() -> None:
             train_best_value = check_not_none(
                 k_study.best_trial.value, "Shouldn't be None after optimizing."
             )
-            test_maximize_value = testing_metrics["maximize"]
+            test_maximize_value = testing_metrics.maximize
             abs_diff = abs(train_best_value - test_maximize_value)
 
             print(

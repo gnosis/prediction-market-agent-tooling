@@ -52,7 +52,6 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
 )
 from prediction_market_agent_tooling.tools.utils import (
     check_not_none,
-    get_private_key_from_gcp_secret,
     utc_datetime,
 )
 from prediction_market_agent_tooling.tools.transaction_cache import (
@@ -133,7 +132,7 @@ def calc_metrics(
     bets: list[ResolvedBetWithTrace],
     strategy: BettingStrategy,
     tx_block_cache: TransactionBlockCache,
-) -> tuple[list[dict[str, t.Any]], dict[str, float]]:
+) -> tuple[list[SimulationDetail], dict[str, t.Any]]:
     per_bet_details: list[SimulationDetail] = []
     simulated_outcomes: list[SimulatedOutcome] = []
 
@@ -142,12 +141,14 @@ def calc_metrics(
             strategy=strategy,
             trace=bet_with_trace.trace,
             market_outcome=bet_with_trace.bet.market_outcome,
+            actual_placed_bet=bet_with_trace.bet,
+            tx_block_cache=tx_block_cache,
         )
         simulated_outcome = get_outcome_for_trace(
             strategy=strategy,
             trace=bet_with_trace.trace,
-            market_outcome=bet_with_trace.trace.bet.market_outcome,
-            actual_placed_bet=bet_with_trace.trace.bet,
+            market_outcome=bet_with_trace.bet.market_outcome,
+            actual_placed_bet=bet_with_trace.bet,
             tx_block_cache=tx_block_cache,
         )
         if simulated_outcome is None:
@@ -206,6 +207,7 @@ def calc_metrics(
 
 def get_objective(
     bets: list[ResolvedBetWithTrace],
+    tx_block_cache: TransactionBlockCache,
 ) -> t.Callable[[optuna.trial.Trial], float]:
     def objective(trial: optuna.trial.Trial) -> float:
         strategy_name = trial.suggest_categorical(
@@ -244,13 +246,15 @@ def get_objective(
         )
         assert strategy is not None, f"Invalid {strategy_name=}"
 
-        per_bet_details, metrics = calc_metrics(bets, strategy)
+        per_bet_details, metrics = calc_metrics(bets, strategy, tx_block_cache)
 
         trial.set_user_attr("per_bet_details", per_bet_details)
         trial.set_user_attr("metrics", metrics)
         trial.set_user_attr("strategy", strategy)
 
-        return metrics["maximize"]
+        maximize_value: float = metrics["maximize"]
+
+        return maximize_value
 
     return objective
 
@@ -346,6 +350,10 @@ def main() -> None:
                 f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace ({pct_bets_without_traces * 100:.2f}%), ignoring them."
             )
 
+        tx_block_cache = TransactionBlockCache(
+            web3=OmenConditionalTokenContract().get_web3()
+        )
+
         kf = TimeSeriesSplit(n_splits=5)
         min_abs_diff: float | None = None
         best_study: optuna.Study | None = None
@@ -355,9 +363,13 @@ def main() -> None:
             test_bets_with_traces = [bets_with_traces[i] for i in test_index]
 
             k_study = optuna.create_study(direction="maximize")
-            k_study.optimize(get_objective(train_bets_with_traces), n_trials=200)
+            k_study.optimize(
+                get_objective(train_bets_with_traces, tx_block_cache), n_trials=200
+            )
             _, testing_metrics = calc_metrics(
-                test_bets_with_traces, k_study.best_trial.user_attrs["strategy"]
+                test_bets_with_traces,
+                k_study.best_trial.user_attrs["strategy"],
+                tx_block_cache,
             )
 
             train_best_value = check_not_none(

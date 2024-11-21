@@ -14,14 +14,7 @@ def print_current_block(web3: Web3) -> None:
 
 
 @pytest.fixture(scope="module")
-def test_safe(local_web3: Web3, test_keys: APIKeys) -> SafeV141:
-    web3 = local_web3
-    print_current_block(web3)
-    # local_ethereum_client = EthereumClient(URI(f"http://localhost:{port}"))
-    local_ethereum_client = EthereumClient()
-    logger.debug(f"is connected {web3.is_connected()} {web3.provider}")
-    print_current_block(web3)
-
+def test_safe(local_ethereum_client: EthereumClient, test_keys: APIKeys) -> SafeV141:
     # Deploy safe
     account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
     safe_address = create_safe(

@@ -200,7 +200,6 @@ class ManifoldBet(BaseModel):
             if self.get_resolved_boolean_outcome() == market_outcome
             else -self.amount
         )
-        profit -= self.fees.get_total()
         return ProfitAmount(
             amount=profit,
             currency=Currency.Mana,

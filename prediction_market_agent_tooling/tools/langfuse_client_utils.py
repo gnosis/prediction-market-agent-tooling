@@ -71,6 +71,7 @@ def get_traces_for_agent(
     page = 1  # index starts from 1
     all_agent_traces = []
     while True:
+        logger.debug(f"fetching page {page}")
         traces = client.fetch_traces(
             name=trace_name,
             limit=100,

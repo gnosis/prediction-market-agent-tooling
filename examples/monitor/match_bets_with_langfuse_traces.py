@@ -3,11 +3,27 @@ from pathlib import Path
 
 import optuna
 import pandas as pd
+from eth_typing import HexAddress, HexStr
 from langfuse import Langfuse
 from pydantic import BaseModel
-from sklearn.model_selection import KFold
+from sklearn.model_selection import TimeSeriesSplit
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.betting_strategy import (
+    BettingStrategy,
+    GuaranteedLossError,
+    KellyBettingStrategy,
+    ProbabilisticAnswer,
+    TradeType,
+)
+from prediction_market_agent_tooling.markets.data_models import (
+    ResolvedBet,
+    SimulationDetail,
+)
+from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenConditionalTokenContract,
+)
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     GuaranteedLossError,
@@ -18,8 +34,15 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     ProbabilisticAnswer,
     TradeType,
 )
-from prediction_market_agent_tooling.markets.data_models import ResolvedBet
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
+from prediction_market_agent_tooling.monitor.financial_metrics.financial_metrics import (
+    SharpeRatioCalculator,
+)
+from prediction_market_agent_tooling.tools.google_utils import (
+    get_private_key_from_gcp_secret,
+)
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     ProcessMarketTrace,
@@ -32,6 +55,10 @@ from prediction_market_agent_tooling.tools.utils import (
     get_private_key_from_gcp_secret,
     utc_datetime,
 )
+from prediction_market_agent_tooling.tools.transaction_cache import (
+    TransactionBlockCache,
+)
+from prediction_market_agent_tooling.tools.utils import utc_datetime
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -47,6 +74,8 @@ def get_outcome_for_trace(
     strategy: BettingStrategy,
     trace: ProcessMarketTrace,
     market_outcome: bool,
+    actual_placed_bet: ResolvedBet,
+    tx_block_cache: TransactionBlockCache,
 ) -> SimulatedOutcome | None:
     market = trace.market
     answer = trace.answer
@@ -72,18 +101,25 @@ def get_outcome_for_trace(
         trades[0].trade_type == TradeType.BUY
     ), "Can only buy without previous position."
     buy_trade = trades[0]
-
-    received_outcome_tokens = market.get_buy_token_amount(
-        bet_amount=market.get_bet_amount(buy_trade.amount.amount),
-        direction=buy_trade.outcome,
-    ).amount
-
     correct = buy_trade.outcome == market_outcome
-    profit = (
-        received_outcome_tokens - buy_trade.amount.amount
-        if correct
-        else -buy_trade.amount.amount
-    )
+    # If not correct, stop early because profit is known.
+    if not correct:
+        profit = -buy_trade.amount.amount
+    else:
+        # We use a historical state (by passing in a block_number as arg) to get the correct outcome token balances.
+        tx_block_number = tx_block_cache.get_block_number(actual_placed_bet.id)
+        market_at_block = OmenSubgraphHandler().get_omen_market_by_market_id(
+            HexAddress(HexStr(market.id)), block_number=tx_block_number
+        )
+        omen_agent_market_at_block = OmenAgentMarket.from_data_model(market_at_block)
+
+        received_outcome_tokens = omen_agent_market_at_block.get_buy_token_amount(
+            bet_amount=omen_agent_market_at_block.get_bet_amount(
+                buy_trade.amount.amount
+            ),
+            direction=buy_trade.outcome,
+        ).amount
+        profit = received_outcome_tokens - buy_trade.amount.amount
 
     return SimulatedOutcome(
         size=buy_trade.amount.amount,
@@ -96,8 +132,9 @@ def get_outcome_for_trace(
 def calc_metrics(
     bets: list[ResolvedBetWithTrace],
     strategy: BettingStrategy,
+    tx_block_cache: TransactionBlockCache,
 ) -> tuple[list[dict[str, t.Any]], dict[str, float]]:
-    per_bet_details = []
+    per_bet_details: list[SimulationDetail] = []
     simulated_outcomes: list[SimulatedOutcome] = []
 
     for bet_with_trace in bets:
@@ -106,23 +143,38 @@ def calc_metrics(
             trace=bet_with_trace.trace,
             market_outcome=bet_with_trace.bet.market_outcome,
         )
+        simulated_outcome = get_outcome_for_trace(
+            strategy=strategy,
+            trace=bet_with_trace.trace,
+            market_outcome=bet_with_trace.trace.bet.market_outcome,
+            actual_placed_bet=bet_with_trace.trace.bet,
+            tx_block_cache=tx_block_cache,
+        )
         if simulated_outcome is None:
             continue
         simulated_outcomes.append(simulated_outcome)
-        per_bet_details.append(
-            {
-                "url": bet_with_trace.trace.market.url,
-                "market_p_yes": round(bet_with_trace.trace.market.current_p_yes, 4),
-                "agent_p_yes": round(bet_with_trace.trace.answer.p_yes, 4),
-                "agent_conf": round(bet_with_trace.trace.answer.confidence, 4),
-                "org_bet": round(bet_with_trace.bet.amount.amount, 4),
-                "sim_bet": round(simulated_outcome.size, 4),
-                "org_dir": bet_with_trace.bet.outcome,
-                "sim_dir": simulated_outcome.direction,
-                "org_profit": round(bet_with_trace.bet.profit.amount, 4),
-                "sim_profit": round(simulated_outcome.profit, 4),
-            }
+        simulation_detail = SimulationDetail(
+            strategy=repr(strategy),
+            url=bet_with_trace.trace.market.url,
+            market_p_yes=round(bet_with_trace.trace.market.current_p_yes, 4),
+            agent_p_yes=round(bet_with_trace.trace.answer.p_yes, 4),
+            agent_conf=round(bet_with_trace.trace.answer.confidence, 4),
+            org_bet=round(bet_with_trace.bet.amount.amount, 4),
+            sim_bet=round(simulated_outcome.size, 4),
+            org_dir=bet_with_trace.bet.outcome,
+            sim_dir=simulated_outcome.direction,
+            org_profit=round(bet_with_trace.bet.profit.amount, 4),
+            sim_profit=round(simulated_outcome.profit, 4),
+            timestamp=bet_with_trace.trace.timestamp_datetime,
         )
+        per_bet_details.append(simulation_detail)
+
+    # Financial analysis
+    calc = SharpeRatioCalculator(details=per_bet_details)
+    sharpe_output_simulation = calc.calculate_annual_sharpe_ratio()
+    sharpe_output_original = calc.calculate_annual_sharpe_ratio(
+        profit_col_name="org_profit"
+    )
 
     sum_squared_errors = 0.0
     for bet_with_trace in bets:
@@ -146,6 +198,8 @@ def calc_metrics(
         "total_simulated_profit": total_simulated_profit,
         "roi": roi,
         "simulated_roi": simulated_roi,
+        "sharpe_output_original": sharpe_output_original.model_dump(),
+        "sharpe_output_simulation": sharpe_output_simulation.model_dump(),
         "maximize": total_simulated_profit,  # Metric to be maximized for.
     }
 
@@ -227,6 +281,11 @@ def main() -> None:
     overall_md = ""
 
     print("# Agent Bet vs Simulated Bet Comparison")
+
+    tx_block_cache = TransactionBlockCache(
+        web3=OmenConditionalTokenContract().get_web3()
+    )
+
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
@@ -282,11 +341,12 @@ def main() -> None:
             continue
 
         if len(bets_with_traces) != len(bets):
+            pct_bets_without_traces = (len(bets) - len(bets_with_traces)) / len(bets)
             print(
-                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."
+                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace ({pct_bets_without_traces * 100:.2f}%), ignoring them."
             )
 
-        kf = KFold(n_splits=5, shuffle=False)
+        kf = TimeSeriesSplit(n_splits=5)
         min_abs_diff: float | None = None
         best_study: optuna.Study | None = None
 

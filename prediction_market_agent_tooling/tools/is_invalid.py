@@ -60,7 +60,7 @@ Finally, write your final decision, write `decision: ` followed by either "yes i
 @db_cache
 def is_invalid(
     question: str,
-    engine: str = "gpt-4o",
+    engine: str = "gpt-4o-2024-08-06",
     temperature: float = LLM_SUPER_LOW_TEMPERATURE,
     seed: int = LLM_SEED,
     prompt_template: str = QUESTION_IS_INVALID_PROMPT,

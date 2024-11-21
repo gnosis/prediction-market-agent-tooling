@@ -8,8 +8,7 @@ from datetime import timedelta
 from enum import Enum
 from functools import cached_property
 
-from pydantic import BeforeValidator, computed_field
-from typing_extensions import Annotated
+from pydantic import computed_field
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
@@ -69,27 +68,6 @@ from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, ob
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 MAX_AVAILABLE_MARKETS = 20
-TRADER_TAG = "trader"
-
-
-def to_boolean_outcome(value: str | bool) -> bool:
-    if isinstance(value, bool):
-        return value
-
-    elif isinstance(value, str):
-        value = value.lower().strip()
-
-        if value in {"true", "yes", "y", "1"}:
-            return True
-
-        elif value in {"false", "no", "n", "0"}:
-            return False
-
-        else:
-            raise ValueError(f"Expected a boolean string, but got {value}")
-
-    else:
-        raise ValueError(f"Expected a boolean or a string, but got {value}")
 
 
 def initialize_langfuse(enable_langfuse: bool) -> None:
@@ -107,15 +85,21 @@ def initialize_langfuse(enable_langfuse: bool) -> None:
         langfuse_context.configure(enabled=enable_langfuse)
 
 
-Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
-
-
 class AnsweredEnum(str, Enum):
     ANSWERED = "answered"
     NOT_ANSWERED = "not_answered"
 
 
+class AgentTagEnum(str, Enum):
+    PREDICTOR = "predictor"
+    TRADER = "trader"
+
+
 class DeployableAgent:
+    """
+    Subclass this class to create agent with standardized interface.
+    """
+
     def __init__(
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
@@ -176,20 +160,25 @@ class DeployableAgent:
             )
 
     def load(self) -> None:
-        pass
+        """
+        Implement this method to load arbitrary instances needed across the whole run of the agent.
+
+        Do not customize __init__ method.
+        """
 
     def deploy_local(
         self,
         market_type: MarketType,
         sleep_time: float,
-        timeout: float,
+        run_time: float | None,
     ) -> None:
+        """
+        Run the agent in the forever cycle every `sleep_time` seconds, until the `run_time` is met.
+        """
         start_time = time.time()
-        while True:
+        while run_time is None or time.time() - start_time < run_time:
             self.run(market_type=market_type)
             time.sleep(sleep_time)
-            if time.time() - start_time > timeout:
-                break
 
     def deploy_gcp(
         self,
@@ -205,6 +194,9 @@ class DeployableAgent:
         start_time: DatetimeUTC | None = None,
         timeout: int = 180,
     ) -> None:
+        """
+        Deploy the agent as GCP Function.
+        """
         path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
 
         entrypoint_function_name = "main"
@@ -271,6 +263,9 @@ def {entrypoint_function_name}(request) -> str:
             schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
 
     def run(self, market_type: MarketType) -> None:
+        """
+        Run single iteration of the agent.
+        """
         raise NotImplementedError("This method must be implemented by the subclass.")
 
     def get_gcloud_fname(self, market_type: MarketType) -> str:
@@ -278,6 +273,14 @@ def {entrypoint_function_name}(request) -> str:
 
 
 class DeployablePredictionAgent(DeployableAgent):
+    """
+    Subclass this class to create your own prediction market agent.
+
+    The agent will process markets and make predictions.
+    """
+
+    AGENT_TAG: AgentTagEnum = AgentTagEnum.PREDICTOR
+
     bet_on_n_markets_per_run: int = 1
 
     # Agent behaviour when fetching markets
@@ -297,10 +300,10 @@ class DeployablePredictionAgent(DeployableAgent):
     def __init__(
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
-        store_prediction: bool = True,
+        store_predictions: bool = True,
     ) -> None:
         super().__init__(enable_langfuse=enable_langfuse)
-        self.store_prediction = store_prediction
+        self.store_predictions = store_predictions
 
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
@@ -328,7 +331,7 @@ class DeployablePredictionAgent(DeployableAgent):
     ) -> None:
         self.langfuse_update_current_trace(
             tags=[
-                TRADER_TAG,
+                self.AGENT_TAG,
                 (
                     AnsweredEnum.ANSWERED
                     if processed_market is not None
@@ -386,6 +389,9 @@ class DeployablePredictionAgent(DeployableAgent):
         self,
         market_type: MarketType,
     ) -> t.Sequence[AgentMarket]:
+        """
+        Override this method to customize what markets will fetch for processing.
+        """
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_binary_markets(
@@ -399,6 +405,9 @@ class DeployablePredictionAgent(DeployableAgent):
     def before_process_market(
         self, market_type: MarketType, market: AgentMarket
     ) -> None:
+        """
+        Executed before processing of each market.
+        """
         api_keys = APIKeys()
 
         if market_type.is_blockchain_market:
@@ -442,19 +451,22 @@ class DeployablePredictionAgent(DeployableAgent):
         market: AgentMarket,
         processed_market: ProcessedMarket | None,
     ) -> None:
+        """
+        Executed after processing of each market.
+        """
         keys = APIKeys()
-        if self.store_prediction:
+        if self.store_predictions:
             market.store_prediction(
                 processed_market=processed_market, keys=keys, agent_name=self.agent_name
             )
         else:
             logger.info(
-                f"Prediction {processed_market} not stored because {self.store_prediction=}."
+                f"Prediction {processed_market} not stored because {self.store_predictions=}."
             )
 
     def before_process_markets(self, market_type: MarketType) -> None:
         """
-        Executes actions that occur before bets are placed.
+        Executed before market processing loop starts.
         """
         api_keys = APIKeys()
         self.check_min_required_balance_to_operate(market_type)
@@ -485,7 +497,9 @@ class DeployablePredictionAgent(DeployableAgent):
         logger.info("All markets processed.")
 
     def after_process_markets(self, market_type: MarketType) -> None:
-        "Executes actions that occur after bets are placed."
+        """
+        Executed after market processing loop ends.
+        """
 
     def run(self, market_type: MarketType) -> None:
         if market_type not in self.supported_markets:
@@ -498,6 +512,14 @@ class DeployablePredictionAgent(DeployableAgent):
 
 
 class DeployableTraderAgent(DeployablePredictionAgent):
+    """
+    Subclass this class to create your own prediction market trading agent.
+
+    The agent will process markets, make predictions and place trades (bets) based off these predictions.
+    """
+
+    AGENT_TAG: AgentTagEnum = AgentTagEnum.TRADER
+
     # These markets require place of bet, not just predictions.
     supported_markets: t.Sequence[MarketType] = [
         MarketType.OMEN,
@@ -508,12 +530,12 @@ class DeployableTraderAgent(DeployablePredictionAgent):
     def __init__(
         self,
         enable_langfuse: bool = APIKeys().default_enable_langfuse,
-        store_prediction: bool = True,
+        store_predictions: bool = True,
         store_trades: bool = True,
         place_trades: bool = True,
     ) -> None:
         super().__init__(
-            enable_langfuse=enable_langfuse, store_prediction=store_prediction
+            enable_langfuse=enable_langfuse, store_predictions=store_predictions
         )
         self.store_trades = store_trades
         self.place_trades = place_trades
@@ -537,6 +559,11 @@ class DeployableTraderAgent(DeployablePredictionAgent):
             )
 
     def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
+        """
+        Override this method to customize betting strategy of your agent.
+
+        Given the market and prediction, agent uses this method to calculate optimal outcome and bet size.
+        """
         user_id = market.get_user_id(api_keys=APIKeys())
 
         total_amount = market.get_tiny_bet_amount().amount

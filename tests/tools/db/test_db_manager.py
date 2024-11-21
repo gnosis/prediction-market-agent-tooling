@@ -25,11 +25,3 @@ def test_DBManager_creates_only_one_instance() -> None:
     assert (
         are_not_same_instance
     ), "DBManager returned isntance with a different SQLALCHEMY_DB_URL!"
-
-
-# TODO: Gabriel what was the goal in this test?
-# def test_session_can_be_used_by_metadata() -> None:
-#     db = DBManager()
-#     session = db.get_session()
-#     # ToDo - add more tests
-#     SQLModel.metadata.create_all(session.bind)

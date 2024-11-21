@@ -51,22 +51,25 @@ class DBManager:
     def create_tables(
         self, sqlmodel_tables: Sequence[type[SQLModel]] | None = None
     ) -> None:
-        tables_to_create = (
-            [
-                table
-                for sqlmodel_table in sqlmodel_tables
-                if not self.cache_table_initialized.get(
-                    (
-                        table := SQLModel.metadata.tables[
-                            cast(str, sqlmodel_table.__tablename__)
-                        ]
-                    ).name
+        # Determine tables to create
+        if sqlmodel_tables is not None:
+            tables_to_create = []
+            for sqlmodel_table in sqlmodel_tables:
+                table_name = (
+                    sqlmodel_table.__tablename__()
+                    if callable(sqlmodel_table.__tablename__)
+                    else sqlmodel_table.__tablename__
                 )
-            ]
-            if sqlmodel_tables is not None
-            else None
-        )
+                table = SQLModel.metadata.tables[table_name]
+                if not self.cache_table_initialized.get(table.name):
+                    tables_to_create.append(table)
+        else:
+            tables_to_create = None
+
+        # Create tables in the database
         SQLModel.metadata.create_all(self._engine, tables=tables_to_create)
 
-        for table in tables_to_create or []:
-            self.cache_table_initialized[table.name] = True
+        # Update cache to mark tables as initialized
+        if tables_to_create:
+            for table in tables_to_create:
+                self.cache_table_initialized[table.name] = True

@@ -7,10 +7,10 @@ from pydantic import SecretStr
 from safe_eth.eth import EthereumClient
 from web3 import Web3
 
+from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.balances import get_balances
-from prediction_market_agent_tooling.tools.gnosis_rpc import GNOSIS_RPC_URL
 from prediction_market_agent_tooling.tools.safe import create_safe
 from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
 
@@ -36,9 +36,8 @@ def create_safe_for_agent(
         """
 
     salt_nonce = salt_nonce or secrets.randbits(256)
-    ethereum_client = EthereumClient(URI(GNOSIS_RPC_URL))
-    if rpc_url:
-        ethereum_client = EthereumClient(URI(rpc_url))
+    rpc_url = rpc_url if rpc_url else RPCConfig().gnosis_rpc_url
+    ethereum_client = EthereumClient(URI(rpc_url))
     account = Account.from_key(from_private_key)
     safe_address = create_safe(
         ethereum_client=ethereum_client,

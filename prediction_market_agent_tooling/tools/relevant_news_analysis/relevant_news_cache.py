@@ -24,19 +24,15 @@ class RelevantNewsCacheModel(SQLModel, table=True):
 
 
 class RelevantNewsResponseCache:
-    def __init__(self, api_keys: APIKeys|None = None):
-        self.db_manager = DBManager(api_keys if api_keys else APIKeys())
+    def __init__(self, api_keys: APIKeys | None = None):
+        self.db_manager = DBManager(api_keys)
         self._initialize_db()
 
     def _initialize_db(self) -> None:
         """
         Creates the tables if they don't exist
         """
-        with self.db_manager.get_connection() as conn:
-            SQLModel.metadata.create_all(
-                conn,
-                tables=[SQLModel.metadata.tables[RelevantNewsCacheModel.__tablename__]],
-            )
+        self.db_manager.create_tables([RelevantNewsCacheModel])
 
     def find(
         self,

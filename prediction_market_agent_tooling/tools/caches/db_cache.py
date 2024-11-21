@@ -98,9 +98,7 @@ def db_cache(
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        with DBManager(api_keys).get_connection() as conn:
-            # Create table if it doesn't exist
-            SQLModel.metadata.create_all(conn, tables=[SQLModel.metadata.tables[FunctionCache.__tablename__]],)
+        DBManager(api_keys).create_tables([FunctionCache])
 
         # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
         signature = inspect.signature(func)
@@ -141,10 +139,9 @@ def db_cache(
 
         # Determine if the function returns or contains Pydantic BaseModel(s)
         return_type = func.__annotations__.get("return", None)
-        is_pydantic_model = False
-
-        if return_type is not None and contains_pydantic_model(return_type):
-            is_pydantic_model = True
+        is_pydantic_model = return_type is not None and contains_pydantic_model(
+            return_type
+        )
 
         with DBManager(api_keys).get_session() as session:
             # Try to get cached result
@@ -161,26 +158,26 @@ def db_cache(
                 cutoff_time = utcnow() - max_age
                 statement = statement.where(FunctionCache.created_at >= cutoff_time)
             cached_result = session.exec(statement).first()
-            # We indent here to keep the session open, so that cached_result doesn't go out of scope.
-            if cached_result:
-                logger.info(
-                    # Keep the special [case-hit] identifier so we can easily track it in GCP.
-                    f"[cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
-                )
-                if is_pydantic_model:
-                    # If the output contains any Pydantic models, we need to initialise them.
-                    try:
-                        return convert_cached_output_to_pydantic(
-                            return_type, cached_result.result
-                        )
-                    except ValueError as e:
-                        # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
-                        logger.warning(
-                            f"Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
-                        )
-                        cached_result = None
-                else:
-                    return cached_result.result
+
+        if cached_result:
+            logger.info(
+                # Keep the special [case-hit] identifier so we can easily track it in GCP.
+                f"[cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
+            )
+            if is_pydantic_model:
+                # If the output contains any Pydantic models, we need to initialise them.
+                try:
+                    return convert_cached_output_to_pydantic(
+                        return_type, cached_result.result
+                    )
+                except ValueError as e:
+                    # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
+                    logger.warning(
+                        f"Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
+                    )
+                    cached_result = None
+            else:
+                return cached_result.result
 
         # On cache miss, compute the result
         computed_result = func(*args, **kwargs)
@@ -202,6 +199,7 @@ def db_cache(
             with DBManager(api_keys).get_session() as session:
                 logger.info(f"Saving {cache_entry} into database.")
                 session.add(cache_entry)
+                session.commit()
 
         return computed_result
 

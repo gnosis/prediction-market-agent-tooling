@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from langchain_community.callbacks import get_openai_callback
+from pydantic import SecretStr
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.relevant_news_analysis.data_models import (
@@ -63,7 +64,9 @@ def test_get_certified_relevant_news_since() -> None:
 
 
 def test_get_certified_relevant_news_since_cached() -> None:
-    cache = RelevantNewsResponseCache(APIKeys(SQLALCHEMY_DB_URL="sqlite:///:memory:"))
+    cache = RelevantNewsResponseCache(
+        APIKeys(SQLALCHEMY_DB_URL=SecretStr("sqlite:///:memory:"))
+    )
 
     question = (
         "Will the price of Bitcoin be higher than $100,000 by the end of the year?"

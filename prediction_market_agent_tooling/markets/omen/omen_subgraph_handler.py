@@ -115,7 +115,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             bets_field.creator.id,
             bets_field.creationTimestamp,
             bets_field.collateralAmount,
-            bets_field.collateralAmountUSD,
             bets_field.feeAmount,
             bets_field.outcomeIndex,
             bets_field.outcomeTokensTraded,

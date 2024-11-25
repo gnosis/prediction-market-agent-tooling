@@ -3,10 +3,11 @@ from pathlib import Path
 
 import optuna
 import pandas as pd
+import tenacity
 from eth_typing import HexAddress, HexStr
 from langfuse import Langfuse
 from pydantic import BaseModel
-from sklearn.model_selection import TimeSeriesSplit
+from web3.exceptions import TransactionNotFound
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
@@ -29,11 +30,12 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenConditionalTokenContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
-    OmenSubgraphHandler,
+    get_omen_market_by_market_id_cached,
 )
 from prediction_market_agent_tooling.monitor.financial_metrics.financial_metrics import (
     SharpeRatioCalculator,
 )
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.google_utils import (
     get_private_key_from_gcp_secret,
 )
@@ -47,7 +49,10 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
 from prediction_market_agent_tooling.tools.transaction_cache import (
     TransactionBlockCache,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none, utc_datetime
+from prediction_market_agent_tooling.tools.utils import utc_datetime
+
+if t.TYPE_CHECKING:
+    from optuna.trial import FrozenTrial
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -96,18 +101,25 @@ def get_outcome_for_trace(
         profit = -buy_trade.amount.amount
     else:
         # We use a historical state (by passing in a block_number as arg) to get the correct outcome token balances.
-        tx_block_number = tx_block_cache.get_block_number(actual_placed_bet.id)
-        market_at_block = OmenSubgraphHandler().get_omen_market_by_market_id(
-            HexAddress(HexStr(market.id)), block_number=tx_block_number
+        try:
+            bet_tx_block_number = tx_block_cache.get_block_number(actual_placed_bet.id)
+        except tenacity.RetryError as e:
+            if isinstance(e.last_attempt.exception(), TransactionNotFound):
+                return None
+            raise
+        # We need market at state before the bet was placed, otherwise it wouldn't be fair (outcome price is higher from the original bet at `bet_tx_block_number`)
+        market_before_placing_bet = get_omen_market_by_market_id_cached(
+            HexAddress(HexStr(market.id)), block_number=bet_tx_block_number - 1
         )
-        omen_agent_market_at_block = OmenAgentMarket.from_data_model(market_at_block)
+        omen_agent_market_before_placing_bet = OmenAgentMarket.from_data_model(
+            market_before_placing_bet
+        )
 
-        received_outcome_tokens = omen_agent_market_at_block.get_buy_token_amount(
-            bet_amount=omen_agent_market_at_block.get_bet_amount(
-                buy_trade.amount.amount
-            ),
-            direction=buy_trade.outcome,
-        ).amount
+        received_outcome_tokens = (
+            omen_agent_market_before_placing_bet.get_buy_token_amount(
+                buy_trade.amount, direction=buy_trade.outcome
+            ).amount
+        )
         profit = received_outcome_tokens - buy_trade.amount.amount
 
     return SimulatedOutcome(
@@ -127,13 +139,6 @@ def calc_metrics(
     simulated_outcomes: list[SimulatedOutcome] = []
 
     for bet_with_trace in bets:
-        simulated_outcome = get_outcome_for_trace(
-            strategy=strategy,
-            trace=bet_with_trace.trace,
-            market_outcome=bet_with_trace.bet.market_outcome,
-            actual_placed_bet=bet_with_trace.bet,
-            tx_block_cache=tx_block_cache,
-        )
         simulated_outcome = get_outcome_for_trace(
             strategy=strategy,
             trace=bet_with_trace.trace,
@@ -195,11 +200,18 @@ def calc_metrics(
     )
 
 
+def group_datetime(dt: DatetimeUTC) -> tuple[int, int]:
+    week_number = dt.isocalendar().week
+    return dt.year, week_number
+
+
 def get_objective(
-    bets: list[ResolvedBetWithTrace],
+    bets: list[list[ResolvedBetWithTrace]],
+    upper_bet_amount: float,
+    upper_max_price_impact: float,
     tx_block_cache: TransactionBlockCache,
-) -> t.Callable[[optuna.trial.Trial], float]:
-    def objective(trial: optuna.trial.Trial) -> float:
+) -> t.Callable[[optuna.trial.Trial], list[float]]:
+    def objective(trial: optuna.trial.Trial) -> list[float]:
         strategy_name = trial.suggest_categorical(
             "strategy_name",
             [
@@ -209,9 +221,9 @@ def get_objective(
                 KellyBettingStrategy.__name__,
             ],
         )
-        bet_amount = trial.suggest_float("bet_amount", 0, 25)
+        bet_amount = trial.suggest_float("bet_amount", 0, upper_bet_amount)
         max_price_impact = (
-            trial.suggest_float("max_price_impact", 0, 1.0)
+            trial.suggest_float("max_price_impact", 0, upper_max_price_impact)
             if strategy_name == KellyBettingStrategy.__name__
             else None
         )
@@ -236,15 +248,89 @@ def get_objective(
         )
         assert strategy is not None, f"Invalid {strategy_name=}"
 
-        per_bet_details, metrics = calc_metrics(bets, strategy, tx_block_cache)
+        per_bet_details, metrics = list(
+            zip(*[calc_metrics(bs, strategy, tx_block_cache) for bs in bets])
+        )
 
-        trial.set_user_attr("per_bet_details", per_bet_details)
-        trial.set_user_attr("metrics", metrics)
+        trial.set_user_attr("per_bet_details", per_bet_details[-1])
+        trial.set_user_attr("metrics_dict", metrics[-1].model_dump())
         trial.set_user_attr("strategy", strategy)
 
-        return metrics.maximize
+        if bets[0][0].bet.created_time > bets[-1][0].bet.created_time:
+            raise RuntimeError(
+                "Groups of bets should be sorted ascending by created time."
+            )
+
+        # During optimization, but more weight into recent weeks.
+        n = len(metrics)
+        weights = (
+            [0.5 + i * (1.0 - 0.5) / (n - 1) for i in range(n)] if n > 1 else [1.0]
+        )
+        return [w * m.maximize for w, m in zip(weights, metrics)]
 
     return objective
+
+
+def generate_folds(
+    bets_with_traces: list[ResolvedBetWithTrace],
+) -> list[tuple[list[ResolvedBetWithTrace], list[ResolvedBetWithTrace]]]:
+    """
+    Custom implementation similar to scikit's TimeSeriesSplit, but allows to create k-groups based on arbitrary function.
+    """
+    groups = sorted(
+        set(
+            group_datetime(bets_with_trace.bet.created_time)
+            for bets_with_trace in bets_with_traces
+        )
+    )
+    folds = []
+
+    for train_group, test_group in zip(groups, groups[1:]):
+        train_bets_with_traces = [
+            bets_with_trace
+            for bets_with_trace in bets_with_traces
+            if group_datetime(bets_with_trace.bet.created_time) == train_group
+        ]
+        test_bets_with_traces = [
+            bets_with_trace
+            for bets_with_trace in bets_with_traces
+            if group_datetime(bets_with_trace.bet.created_time) == test_group
+        ]
+        folds.append((train_bets_with_traces, test_bets_with_traces))
+
+    return folds
+
+
+def choose_best_trial(study: optuna.Study) -> "FrozenTrial":
+    # Just returns the first one as sorted by default by Optuna, but keep as separate function in case we want to experiment with this.
+    return study.best_trials[0]
+
+
+def run_optuna_study(
+    train_bets_with_traces: list[list[ResolvedBetWithTrace]],
+    test_bets_with_traces: list[ResolvedBetWithTrace],
+    upper_bet_amount: float,
+    upper_max_price_impact: float,
+    tx_block_cache: TransactionBlockCache,
+) -> tuple[optuna.Study, SimulatedLifetimeDetail]:
+    study = optuna.create_study(directions=["maximize" for _ in train_bets_with_traces])
+    study.optimize(
+        get_objective(
+            bets=train_bets_with_traces,
+            upper_bet_amount=upper_bet_amount,
+            upper_max_price_impact=upper_max_price_impact,
+            tx_block_cache=tx_block_cache,
+        ),
+        # Give it 10 more seconds with each fold, because there are more samples, so more time is needed to reach something optimal.
+        timeout=30 + 10 * len(train_bets_with_traces),
+        n_jobs=-1,
+    )
+    _, testing_metrics = calc_metrics(
+        test_bets_with_traces,
+        choose_best_trial(study).user_attrs["strategy"],
+        tx_block_cache,
+    )
+    return study, testing_metrics
 
 
 def main() -> None:
@@ -253,12 +339,12 @@ def main() -> None:
 
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
-        # "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
+        "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
         # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
         # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
         # "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
         # "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
-        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        # "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
         # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
         # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
         # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
@@ -282,11 +368,10 @@ def main() -> None:
         print(f"\n## {agent_name}\n")
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
 
-        # Pick a time after pool token number is stored in OmenAgentMarket
-        creation_start_time = utc_datetime(2024, 9, 13)  # utc_datetime(2024, 9, 13)
-        creation_end_time = None  # utc_datetime(2024, 9, 23)
-        # If simulating history performance, also cut by resolution time to not include markets that weren't yet resolved back then.
-        resolution_end_time = creation_end_time
+        # Two reasons for this date:
+        # 1. Time after pool token number is stored in OmenAgentMarket
+        # 2. The day when we used customized betting strategies: https://github.com/gnosis/prediction-market-agent/pull/494
+        creation_start_time = utc_datetime(2024, 10, 5)
 
         langfuse = Langfuse(
             secret_key=api_keys.langfuse_secret_key.get_secret_value(),
@@ -299,7 +384,6 @@ def main() -> None:
             agent_name=agent_name,
             trace_name="process_market",
             from_timestamp=creation_start_time,
-            to_timestamp=creation_end_time,
             has_output=True,
             client=langfuse,
         )
@@ -311,8 +395,7 @@ def main() -> None:
         bets: list[ResolvedBet] = OmenAgentMarket.get_resolved_bets_made_since(
             better_address=api_keys.bet_from_address,
             start_time=creation_start_time,
-            end_time=creation_end_time,
-            market_resolved_before=resolution_end_time,
+            end_time=None,
         )
         bets.sort(key=lambda b: b.created_time)
 
@@ -324,9 +407,7 @@ def main() -> None:
             if trace:
                 bets_with_traces.append(ResolvedBetWithTrace(bet=bet, trace=trace))
 
-        print(
-            f"Number of bets since {creation_start_time} up to {creation_end_time=}, {resolution_end_time=}: {len(bets_with_traces)}\n"
-        )
+        print(f"Number of bets since {creation_start_time}: {len(bets_with_traces)}\n")
 
         if len(bets_with_traces) < 10:
             print("Only tiny amount of bets with traces found, skipping.")
@@ -335,56 +416,76 @@ def main() -> None:
         if len(bets_with_traces) != len(bets):
             pct_bets_without_traces = (len(bets) - len(bets_with_traces)) / len(bets)
             print(
-                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace ({pct_bets_without_traces * 100:.2f}%), ignoring them."
+                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace ({pct_bets_without_traces * 100:.2f}%), ignoring them.\n"
             )
 
         tx_block_cache = TransactionBlockCache(
             web3=OmenConditionalTokenContract().get_web3()
         )
 
-        kf = TimeSeriesSplit(n_splits=5)
-        min_abs_diff: float | None = None
-        best_study: optuna.Study | None = None
+        upper_bet_amount = 10
+        upper_max_price_impact = 1.0
+        folds = generate_folds(bets_with_traces)
 
-        for n_fold, (train_index, test_index) in enumerate(kf.split(bets_with_traces)):
-            train_bets_with_traces = [bets_with_traces[i] for i in train_index]
-            test_bets_with_traces = [bets_with_traces[i] for i in test_index]
+        total_simulation_profit, total_original_profit = 0.0, 0.0
 
-            k_study = optuna.create_study(direction="maximize")
-            k_study.optimize(
-                get_objective(train_bets_with_traces, tx_block_cache), n_trials=200
-            )
-            _, testing_metrics = calc_metrics(
+        for fold_idx, (_, test_bets_with_traces) in enumerate(folds):
+            used_training_folds = [train for train, _ in folds[: fold_idx + 1]]
+            k_study_on_train, testing_metrics = run_optuna_study(
+                used_training_folds,
                 test_bets_with_traces,
-                k_study.best_trial.user_attrs["strategy"],
+                upper_bet_amount,
+                upper_max_price_impact,
                 tx_block_cache,
             )
-
-            train_best_value = check_not_none(
-                k_study.best_trial.value, "Shouldn't be None after optimizing."
-            )
-            test_maximize_value = testing_metrics.maximize
-            abs_diff = abs(train_best_value - test_maximize_value)
+            k_study_best_trial = choose_best_trial(k_study_on_train)
+            last_study = k_study_on_train
 
             print(
-                f"[{n_fold}] Best value for {agent_name} (params: {k_study.best_params}): "
-                f"Training: {train_best_value} Testing: {test_maximize_value}"
+                f"[{fold_idx+1} / {len(folds)}] Best value for {agent_name} (params: {k_study_best_trial.params}, n train bets: {sum(1 for fold in used_training_folds for _ in fold)}, n test bets: {len(test_bets_with_traces)}): "
+                f"Training maximization: {k_study_best_trial.values} "
+                f"Testing profit: {testing_metrics.total_simulated_profit:.2f} "
+                f"Original profit on Testing: {testing_metrics.total_bet_profit:.2f} "
+                f"(testing dates {test_bets_with_traces[0].bet.created_time.date()} to {test_bets_with_traces[-1].bet.created_time.date()})"
             )
 
-            if min_abs_diff is None or abs_diff < min_abs_diff:
-                min_abs_diff = abs_diff
-                best_study = k_study
+            total_simulation_profit += testing_metrics.total_simulated_profit
+            total_original_profit += testing_metrics.total_bet_profit
 
-        best_study = check_not_none(
-            best_study, "Shouldn't be None after running k-folds."
-        )
+            # After the initial parameters are found, allow only small upgrades.
+            # As there is no good reason for the agent to be suddenly better by a huge margin.
+            # TODO: If we would run this script in an automated way, then I think this should be uncommented.
+            # upper_bet_amount = (
+            #     k_study_best_trial.params["bet_amount"] * 1.5
+            # )
+            # upper_max_price_impact = (
+            #     k_study_best_trial.params["max_price_impact"] * 1.5
+            #     if "max_price_impact" in k_study_best_trial.params
+            #     else upper_max_price_impact
+            # )
 
-        print(
-            f"Selected strategy with params: {best_study.best_params} (Min Abs Diff: {min_abs_diff})"
-        )
+            # If we were in loss on testing set, check out if it's even possible to be profitable on it.
+            # If the result is negative or very small, there was no chance of being in profit.
+            if testing_metrics.maximize < 0:
+                k_study_on_test = run_optuna_study(
+                    [
+                        test_bets_with_traces  # Not a bug, we really want to test out study on test data itself here.
+                    ],
+                    test_bets_with_traces,
+                    upper_bet_amount,
+                    upper_max_price_impact,
+                    tx_block_cache,
+                )[0]
+                print(
+                    f"  !!! Best value on this testing set: {k_study_on_test.best_trial.value:.2f}"
+                )
+
+        print()
+        print(f"Total simulated profit: {total_simulation_profit}")
+        print(f"Total original profit: {total_original_profit}")
 
         simulations_df = pd.DataFrame.from_records(
-            [trial.user_attrs["metrics"] for trial in best_study.trials]
+            [trial.user_attrs["metrics_dict"] for trial in last_study.trials]
         )
         simulations_df.sort_values(by="maximize", ascending=False, inplace=True)
         overall_md += (

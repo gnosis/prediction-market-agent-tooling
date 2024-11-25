@@ -33,6 +33,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
 )
+from prediction_market_agent_tooling.tools.caches.inmemory_cache import (
+    persistent_inmemory_cache,
+)
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     to_int_timestamp,
@@ -608,7 +611,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
     def get_resolved_bets(
         self,
         better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,
         market_id: t.Optional[ChecksumAddress] = None,
         market_resolved_before: DatetimeUTC | None = None,
@@ -628,7 +631,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
     def get_resolved_bets_with_valid_answer(
         self,
         better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,
         market_resolved_before: DatetimeUTC | None = None,
         market_resolved_after: DatetimeUTC | None = None,
@@ -949,3 +952,13 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             raise RuntimeError("Multiple results found for a single bet.")
 
         return results[0]
+
+
+@persistent_inmemory_cache
+def get_omen_market_by_market_id_cached(
+    market_id: HexAddress,
+    block_number: int,  # Force `block_number` to be provided, because `latest` block constantly updates.
+) -> OmenMarket:
+    return OmenSubgraphHandler().get_omen_market_by_market_id(
+        market_id, block_number=block_number
+    )

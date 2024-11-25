@@ -47,7 +47,7 @@ def sell_all(
         better_address=better_address,
         market_opening_after=utcnow() + timedelta(days=closing_later_than_days),
     )
-    bets_total_usd = sum(b.collateralAmountUSD for b in bets)
+    bets_total_usd = sum(b.collateral_amount_usd for b in bets)
     unique_market_urls = set(b.fpmm.url for b in bets)
     starting_balance = get_balances(better_address)
     new_balance = starting_balance  # initialisation

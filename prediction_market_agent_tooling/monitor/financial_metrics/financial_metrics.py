@@ -19,7 +19,9 @@ class SharpeRatioCalculator:
         self, required_columns: list[str]
     ) -> None:
         if not set(required_columns).issubset(self.df.columns):
-            raise ValueError("Dataframe doesn't contain all the required columns.")
+            raise ValueError(
+                f"Dataframe doesn't contain all the required columns. {required_columns=} {self.df.columns=}"
+            )
 
     def prepare_wallet_daily_balance_df(
         self, timestamp_col_name: str, profit_col_name: str

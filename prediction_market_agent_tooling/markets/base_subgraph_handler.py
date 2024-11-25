@@ -12,8 +12,8 @@ T = t.TypeVar("T", bound=BaseModel)
 
 
 class BaseSubgraphHandler(metaclass=SingletonMeta):
-    def __init__(self) -> None:
-        self.sg = Subgrounds()
+    def __init__(self, timeout: int = 30) -> None:
+        self.sg = Subgrounds(timeout=timeout)
         # Patch methods to retry on failure.
         self.sg.query_json = tenacity.retry(
             stop=tenacity.stop_after_attempt(3),

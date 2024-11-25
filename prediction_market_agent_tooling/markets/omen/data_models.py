@@ -499,12 +499,16 @@ class OmenBet(BaseModel):
     creator: OmenBetCreator
     creationTimestamp: int
     collateralAmount: Wei
-    collateralAmountUSD: USD
     feeAmount: Wei
     outcomeIndex: int
     outcomeTokensTraded: Wei
     transactionHash: HexBytes
     fpmm: OmenMarket
+
+    @property
+    def collateral_amount_usd(self) -> USD:
+        # Convert manually instad of using the field `collateralAmountUSD` available on the graph, because it's bugged, it's 0 for non-xDai markets.
+        return USD(wei_to_xdai(self.collateralAmount))
 
     @property
     def creation_datetime(self) -> DatetimeUTC:
@@ -540,7 +544,7 @@ class OmenBet(BaseModel):
         return Bet(
             id=str(self.transactionHash),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
-            amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
+            amount=BetAmount(amount=self.collateral_amount_usd, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
             market_question=self.title,
@@ -556,7 +560,7 @@ class OmenBet(BaseModel):
         return ResolvedBet(
             id=self.transactionHash.hex(),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
-            amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
+            amount=BetAmount(amount=self.collateral_amount_usd, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
             market_question=self.title,

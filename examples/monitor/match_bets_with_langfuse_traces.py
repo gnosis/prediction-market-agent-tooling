@@ -261,7 +261,7 @@ def get_objective(
                 "Groups of bets should be sorted ascending by created time."
             )
 
-        # During optimization, but more weight into recent weeks.
+        # During optimization, put more weight into recent weeks.
         n = len(metrics)
         weights = (
             [0.5 + i * (1.0 - 0.5) / (n - 1) for i in range(n)] if n > 1 else [1.0]

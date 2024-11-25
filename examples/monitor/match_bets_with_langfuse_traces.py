@@ -340,14 +340,14 @@ def main() -> None:
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
         "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        # "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
-        # "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
-        # "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
-        # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
-        # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
-        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
+        "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
+        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
 
     agent_pkey_map = {

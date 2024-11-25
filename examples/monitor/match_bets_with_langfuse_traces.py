@@ -322,7 +322,7 @@ def run_optuna_study(
             tx_block_cache=tx_block_cache,
         ),
         # Give it 10 more seconds with each fold, because there are more samples, so more time is needed to reach something optimal.
-        timeout=30 + 10 * len(train_bets_with_traces),
+        timeout=60 + 10 * len(train_bets_with_traces),
         n_jobs=-1,
     )
     _, testing_metrics = calc_metrics(
@@ -483,6 +483,7 @@ def main() -> None:
         print()
         print(f"Total simulated profit: {total_simulation_profit}")
         print(f"Total original profit: {total_original_profit}")
+        print()
 
         simulations_df = pd.DataFrame.from_records(
             [trial.user_attrs["metrics_dict"] for trial in last_study.trials]

@@ -538,7 +538,7 @@ class OmenKlerosContract(ContractOnGnosisChain):
             address = "0xe40DD83a262da3f56976038F1554Fe541Fa75ecd"
 
         elif arbitrator == Arbitrator.KLEROS_31_JURORS_WITH_APPEAL:
-            address = "0x29f39de98d750eb77b5fafb31b2837f079fce222"
+            address = "0x5562Ac605764DC4039fb6aB56a74f7321396Cdf2"
 
         else:
             raise ValueError(f"Unsupported arbitrator: {arbitrator=}")

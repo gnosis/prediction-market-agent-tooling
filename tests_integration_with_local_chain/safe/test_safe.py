@@ -8,19 +8,17 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
-from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_TRUE_OUTCOME,
-    OmenMarket,
-)
+from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.markets.omen.omen import (
+    FilterBy,
     OmenAgentMarket,
+    SortBy,
     binary_omen_buy_outcome_tx,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
-    Wei,
     send_xdai_to,
     xdai_to_wei,
     xdai_type,
@@ -69,8 +67,11 @@ def test_send_function_on_contract_tx_using_safe(
     safe_balance = local_ethereum_client.get_balance(test_safe.address)
     logger.debug(f"safe balance {safe_balance} xDai")
     # Fetch existing market with enough liquidity
-    min_liquidity_wei = xdai_to_wei(xdai_type(5))
-    markets = fetch_omen_open_binary_market_with_enough_liquidity(1, min_liquidity_wei)
+    markets = OmenSubgraphHandler().get_omen_binary_markets_simple(
+        limit=1,
+        filter_by=FilterBy.OPEN,
+        sort_by=SortBy.NONE,
+    )
     # Check that there is a market with enough liquidity
     assert len(markets) == 1
     omen_market = markets[0]
@@ -97,11 +98,3 @@ def test_send_function_on_contract_tx_using_safe(
     logger.debug(f"final Yes token balance {final_yes_token_balance}")
     print_current_block(local_web3)
     assert initial_yes_token_balance.amount < final_yes_token_balance.amount
-
-
-def fetch_omen_open_binary_market_with_enough_liquidity(
-    limit: int = 1, liquidity_bigger_than: Wei = xdai_to_wei(xdai_type(5))
-) -> list[OmenMarket]:
-    return OmenSubgraphHandler().get_omen_binary_markets(
-        limit=limit, resolved=False, liquidity_bigger_than=liquidity_bigger_than
-    )

@@ -296,6 +296,17 @@ def generate_folds(
             for bets_with_trace in bets_with_traces
             if group_datetime(bets_with_trace.bet.created_time) == test_group
         ]
+
+        # Skip training fold if it has less than 3 days of data, otherwise, Sharpe calculation returns NaNs.
+        n_of_unique_days = len(
+            set(
+                bets_with_trace.bet.created_time.date()
+                for bets_with_trace in train_bets_with_traces
+            )
+        )
+        if n_of_unique_days < 3:
+            continue
+
         folds.append((train_bets_with_traces, test_bets_with_traces))
 
     return folds

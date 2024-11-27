@@ -309,6 +309,9 @@ def generate_folds(
 
         folds.append((train_bets_with_traces, test_bets_with_traces))
 
+    if not folds:
+        raise RuntimeError(f"No data was split into folds groups!")
+
     return folds
 
 

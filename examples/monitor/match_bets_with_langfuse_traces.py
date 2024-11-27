@@ -434,7 +434,7 @@ def main() -> None:
             web3=OmenConditionalTokenContract().get_web3()
         )
 
-        upper_bet_amount = 10
+        upper_bet_amount = 25
         upper_max_price_impact = 1.0
         folds = generate_folds(bets_with_traces)
 

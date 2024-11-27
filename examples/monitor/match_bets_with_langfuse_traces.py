@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from eth_typing import HexAddress, HexStr
 from langfuse import Langfuse
 from pydantic import BaseModel
 
@@ -10,14 +11,26 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     GuaranteedLossError,
     KellyBettingStrategy,
-    MaxAccuracyBettingStrategy,
-    MaxAccuracyWithKellyScaledBetsStrategy,
-    MaxExpectedValueBettingStrategy,
     ProbabilisticAnswer,
     TradeType,
 )
-from prediction_market_agent_tooling.markets.data_models import ResolvedBet
+from prediction_market_agent_tooling.markets.data_models import (
+    ResolvedBet,
+    SimulationDetail,
+)
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenConditionalTokenContract,
+)
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
+from prediction_market_agent_tooling.monitor.financial_metrics.financial_metrics import (
+    SharpeRatioCalculator,
+)
+from prediction_market_agent_tooling.tools.google_utils import (
+    get_private_key_from_gcp_secret,
+)
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     ProcessMarketTrace,
@@ -25,10 +38,10 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_trace_for_bet,
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    get_private_key_from_gcp_secret,
-    utc_datetime,
+from prediction_market_agent_tooling.tools.transaction_cache import (
+    TransactionBlockCache,
 )
+from prediction_market_agent_tooling.tools.utils import utc_datetime
 
 
 class SimulatedOutcome(BaseModel):
@@ -47,6 +60,8 @@ def get_outcome_for_trace(
     strategy: BettingStrategy,
     trace: ProcessMarketTrace,
     market_outcome: bool,
+    actual_placed_bet: ResolvedBet,
+    tx_block_cache: TransactionBlockCache,
 ) -> SimulatedOutcome | None:
     market = trace.market
     answer = trace.answer
@@ -72,18 +87,25 @@ def get_outcome_for_trace(
         trades[0].trade_type == TradeType.BUY
     ), "Can only buy without previous position."
     buy_trade = trades[0]
-
-    received_outcome_tokens = market.get_buy_token_amount(
-        bet_amount=market.get_bet_amount(buy_trade.amount.amount),
-        direction=buy_trade.outcome,
-    ).amount
-
     correct = buy_trade.outcome == market_outcome
-    profit = (
-        received_outcome_tokens - buy_trade.amount.amount
-        if correct
-        else -buy_trade.amount.amount
-    )
+    # If not correct, stop early because profit is known.
+    if not correct:
+        profit = -buy_trade.amount.amount
+    else:
+        # We use a historical state (by passing in a block_number as arg) to get the correct outcome token balances.
+        tx_block_number = tx_block_cache.get_block_number(actual_placed_bet.id)
+        market_at_block = OmenSubgraphHandler().get_omen_market_by_market_id(
+            HexAddress(HexStr(market.id)), block_number=tx_block_number
+        )
+        omen_agent_market_at_block = OmenAgentMarket.from_data_model(market_at_block)
+
+        received_outcome_tokens = omen_agent_market_at_block.get_buy_token_amount(
+            bet_amount=omen_agent_market_at_block.get_bet_amount(
+                buy_trade.amount.amount
+            ),
+            direction=buy_trade.outcome,
+        ).amount
+        profit = received_outcome_tokens - buy_trade.amount.amount
 
     return SimulatedOutcome(
         size=buy_trade.amount.amount,
@@ -100,14 +122,14 @@ if __name__ == "__main__":
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
         "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
-        "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
-        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
-        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
-        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
-        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        # "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        # "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
+        # "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
+        # "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+        # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
     }
 
     agent_pkey_map = {
@@ -116,44 +138,44 @@ if __name__ == "__main__":
 
     # Define strategies we want to test out
     strategies = [
-        MaxAccuracyBettingStrategy(bet_amount=1),
-        MaxAccuracyBettingStrategy(bet_amount=2),
-        MaxAccuracyBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=1),
-        KellyBettingStrategy(max_bet_amount=2),
+        # MaxAccuracyBettingStrategy(bet_amount=1),
+        # MaxAccuracyBettingStrategy(bet_amount=2),
+        # MaxAccuracyBettingStrategy(bet_amount=25),
+        # KellyBettingStrategy(max_bet_amount=1),
+        # KellyBettingStrategy(max_bet_amount=2),
         KellyBettingStrategy(max_bet_amount=5),
-        KellyBettingStrategy(max_bet_amount=25),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
-        MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
-        MaxExpectedValueBettingStrategy(bet_amount=1),
-        MaxExpectedValueBettingStrategy(bet_amount=2),
-        MaxExpectedValueBettingStrategy(bet_amount=5),
-        MaxExpectedValueBettingStrategy(bet_amount=25),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.01),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.05),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.1),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.15),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.2),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.25),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.3),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.4),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.5),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.6),
-        KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.7),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.1),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.15),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.2),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.3),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.4),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.5),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.6),
-        KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.7),
+        # KellyBettingStrategy(max_bet_amount=25),
+        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=1),
+        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=2),
+        # MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=25),
+        # MaxExpectedValueBettingStrategy(bet_amount=1),
+        # MaxExpectedValueBettingStrategy(bet_amount=2),
+        # MaxExpectedValueBettingStrategy(bet_amount=5),
+        # MaxExpectedValueBettingStrategy(bet_amount=25),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.01),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.05),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.1),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.15),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.2),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.25),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.3),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.4),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.5),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.6),
+        # KellyBettingStrategy(max_bet_amount=2, max_price_impact=0.7),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.1),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.15),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.2),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.3),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.4),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.5),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.6),
+        # KellyBettingStrategy(max_bet_amount=5, max_price_impact=0.7),
         KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.1),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.2),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.3),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.5),
-        KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.7),
+        # KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.2),
+        # KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.3),
+        # KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.5),
+        # KellyBettingStrategy(max_bet_amount=25, max_price_impact=0.7),
     ]
 
     httpx_client = HttpxCachedClient().get_client()
@@ -165,6 +187,11 @@ if __name__ == "__main__":
         strat_mse_profits[repr(strategy)] = MSEProfit(p_yes_mse=[], total_profit=[])
 
     print("# Agent Bet vs Simulated Bet Comparison")
+
+    tx_block_cache = TransactionBlockCache(
+        web3=OmenConditionalTokenContract().get_web3()
+    )
+
     for agent_name, private_key in agent_pkey_map.items():
         print(f"\n## {agent_name}\n")
         api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
@@ -211,12 +238,13 @@ if __name__ == "__main__":
             continue
 
         if len(bets_with_traces) != len(bets):
+            pct_bets_without_traces = (len(bets) - len(bets_with_traces)) / len(bets)
             print(
-                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace, ignoring them."
+                f"{len(bets) - len(bets_with_traces)} bets do not have a corresponding trace ({pct_bets_without_traces * 100:.2f}%), ignoring them."
             )
 
         simulations: list[dict[str, Any]] = []
-        details = []
+        details: list[SimulationDetail] = []
 
         for strategy_idx, strategy in enumerate(strategies):
             # "Born" agent with initial funding, simulate as if he was doing bets one by one.
@@ -224,36 +252,52 @@ if __name__ == "__main__":
             agent_balance = starting_balance
             simulated_outcomes: list[SimulatedOutcome] = []
 
+            # ToDo - Can we add the value of tokens that weren't redeemed yet?
+            #  Like a portfolio tracking.
             for bet_with_trace in bets_with_traces:
                 bet = bet_with_trace.bet
                 trace = bet_with_trace.trace
                 simulated_outcome = get_outcome_for_trace(
-                    strategy=strategy, trace=trace, market_outcome=bet.market_outcome
+                    strategy=strategy,
+                    trace=trace,
+                    market_outcome=bet.market_outcome,
+                    actual_placed_bet=bet,
+                    tx_block_cache=tx_block_cache,
                 )
                 if simulated_outcome is None:
                     continue
+
                 simulated_outcomes.append(simulated_outcome)
                 agent_balance += simulated_outcome.profit
 
-                details.append(
-                    {
-                        "url": trace.market.url,
-                        "market_p_yes": round(trace.market.current_p_yes, 4),
-                        "agent_p_yes": round(trace.answer.p_yes, 4),
-                        "agent_conf": round(trace.answer.confidence, 4),
-                        "org_bet": round(bet.amount.amount, 4),
-                        "sim_bet": round(simulated_outcome.size, 4),
-                        "org_dir": bet.outcome,
-                        "sim_dir": simulated_outcome.direction,
-                        "org_profit": round(bet.profit.amount, 4),
-                        "sim_profit": round(simulated_outcome.profit, 4),
-                    }
+                simulation_detail = SimulationDetail(
+                    strategy=repr(strategy),
+                    url=trace.market.url,
+                    market_p_yes=round(trace.market.current_p_yes, 4),
+                    agent_p_yes=round(trace.answer.p_yes, 4),
+                    agent_conf=round(trace.answer.confidence, 4),
+                    org_bet=round(bet.amount.amount, 4),
+                    sim_bet=round(simulated_outcome.size, 4),
+                    org_dir=bet.outcome,
+                    sim_dir=simulated_outcome.direction,
+                    org_profit=round(bet.profit.amount, 4),
+                    sim_profit=round(simulated_outcome.profit, 4),
+                    timestamp=bet_with_trace.trace.timestamp_datetime,
                 )
+                details.append(simulation_detail)
 
-            details.sort(key=lambda x: x["sim_profit"], reverse=True)
-            pd.DataFrame.from_records(details).to_csv(
+            details.sort(key=lambda x: x.sim_profit, reverse=True)
+            details_df = pd.DataFrame.from_records([d.model_dump() for d in details])
+            details_df.to_csv(
                 output_directory / f"{agent_name} - {strategy} - all bets.csv",
                 index=False,
+            )
+
+            # Financial analysis
+            calc = SharpeRatioCalculator(details=details)
+            sharpe_output_simulation = calc.calculate_annual_sharpe_ratio()
+            sharpe_output_original = calc.calculate_annual_sharpe_ratio(
+                profit_col_name="org_profit"
             )
 
             sum_squared_errors = 0.0
@@ -283,6 +327,7 @@ if __name__ == "__main__":
                         # We don't know these for the original run.
                         "start_balance": None,
                         "end_balance": None,
+                        **sharpe_output_original.model_dump(),
                     }
                 )
             else:
@@ -300,6 +345,7 @@ if __name__ == "__main__":
                     "p_yes mse": p_yes_mse,
                     "start_balance": starting_balance,
                     "end_balance": agent_balance,
+                    **sharpe_output_simulation.model_dump(),
                 }
             )
 

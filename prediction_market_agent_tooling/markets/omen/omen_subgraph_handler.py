@@ -435,10 +435,14 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
         return omen_markets
 
-    def get_omen_market_by_market_id(self, market_id: HexAddress) -> OmenMarket:
-        markets = self.trades_subgraph.Query.fixedProductMarketMaker(
-            id=market_id.lower()
-        )
+    def get_omen_market_by_market_id(
+        self, market_id: HexAddress, block_number: int | None = None
+    ) -> OmenMarket:
+        query_filters: dict[str, t.Any] = {"id": market_id.lower()}
+        if block_number:
+            query_filters["block"] = {"number": block_number}
+
+        markets = self.trades_subgraph.Query.fixedProductMarketMaker(**query_filters)
 
         fields = self._get_fields_for_markets(markets)
         omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)

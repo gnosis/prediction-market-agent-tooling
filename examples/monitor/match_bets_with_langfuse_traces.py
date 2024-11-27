@@ -332,8 +332,8 @@ def run_optuna_study(
             upper_max_price_impact=upper_max_price_impact,
             tx_block_cache=tx_block_cache,
         ),
-        # Give it 10 more seconds with each fold, because there are more samples, so more time is needed to reach something optimal.
-        timeout=60 + 10 * len(train_bets_with_traces),
+        # Multiply by number of groups, because with each fold, the optimization gets harder due to the additional metric.
+        n_trials=500 * len(train_bets_with_traces),
         n_jobs=-1,
     )
     _, testing_metrics = calc_metrics(

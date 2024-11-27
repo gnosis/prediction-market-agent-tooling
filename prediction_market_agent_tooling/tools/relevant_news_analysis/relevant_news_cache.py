@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
 from pydantic import ValidationError
-from sqlmodel import Field, Session, SQLModel, create_engine, desc, select
+from sqlmodel import Field, SQLModel, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 from prediction_market_agent_tooling.tools.relevant_news_analysis.data_models import (
     NoRelevantNews,
     RelevantNews,
@@ -23,33 +24,22 @@ class RelevantNewsCacheModel(SQLModel, table=True):
 
 
 class RelevantNewsResponseCache:
-    def __init__(self, sqlalchemy_db_url: str | None = None):
-        self.engine = create_engine(
-            (
-                sqlalchemy_db_url
-                if sqlalchemy_db_url
-                else APIKeys().sqlalchemy_db_url.get_secret_value()
-            ),
-            pool_size=1,
-        )
+    def __init__(self, api_keys: APIKeys | None = None):
+        self.db_manager = DBManager(api_keys)
         self._initialize_db()
 
     def _initialize_db(self) -> None:
         """
         Creates the tables if they don't exist
         """
-        with self.engine.connect() as conn:
-            SQLModel.metadata.create_all(
-                conn,
-                tables=[SQLModel.metadata.tables[RelevantNewsCacheModel.__tablename__]],
-            )
+        self.db_manager.create_tables([RelevantNewsCacheModel])
 
     def find(
         self,
         question: str,
         days_ago: int,
     ) -> RelevantNews | NoRelevantNews | None:
-        with Session(self.engine) as session:
+        with self.db_manager.get_session() as session:
             query = (
                 select(RelevantNewsCacheModel)
                 .where(RelevantNewsCacheModel.question == question)
@@ -82,7 +72,7 @@ class RelevantNewsResponseCache:
         days_ago: int,
         relevant_news: RelevantNews | None,
     ) -> None:
-        with Session(self.engine) as session:
+        with self.db_manager.get_session() as session:
             cached = RelevantNewsCacheModel(
                 question=question,
                 days_ago=days_ago,

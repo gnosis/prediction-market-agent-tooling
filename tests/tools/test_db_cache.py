@@ -8,11 +8,11 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
 
 def test_postgres_cache_bools(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def bools(
         a: bool,
     ) -> bool:
@@ -27,11 +27,11 @@ def test_postgres_cache_bools(
 
 
 def test_postgres_cache_integers(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def integers(a: int, b: int) -> int:
         nonlocal call_count
         call_count += 1
@@ -44,11 +44,11 @@ def test_postgres_cache_integers(
 
 
 def test_postgres_cache_none(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def integers() -> None:
         nonlocal call_count
         call_count += 1
@@ -61,11 +61,13 @@ def test_postgres_cache_none(
 
 
 def test_postgres_cache_do_not_cache_none(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url, cache_none=False)
+    @db_cache(
+        api_keys=session_keys_with_postgresql_proc_and_enabled_cache, cache_none=False
+    )
     def integers() -> None:
         nonlocal call_count
         call_count += 1
@@ -80,14 +82,16 @@ def test_postgres_cache_do_not_cache_none(
 
 
 def test_postgres_cache_disabled_cache(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
-    keys_with_sqlalchemy_db_url = keys_with_sqlalchemy_db_url.model_copy(
-        update={"ENABLE_CACHE": False}
+    session_keys_with_postgresql_proc_and_enabled_cache = (
+        session_keys_with_postgresql_proc_and_enabled_cache.model_copy(
+            update={"ENABLE_CACHE": False}
+        )
     )
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def integers() -> int:
         nonlocal call_count
         call_count += 1
@@ -102,11 +106,11 @@ def test_postgres_cache_disabled_cache(
 
 
 def test_postgres_cache_strings(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def concatenate(a: str, b: str) -> str:
         nonlocal call_count
         call_count += 1
@@ -119,11 +123,11 @@ def test_postgres_cache_strings(
 
 
 def test_postgres_cache_datetimes(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def add_timedelta(dt: DatetimeUTC, delta: timedelta) -> DatetimeUTC:
         nonlocal call_count
         call_count += 1
@@ -137,11 +141,11 @@ def test_postgres_cache_datetimes(
 
 
 def test_postgres_cache_datess(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def add_timedelta(dt: date, delta: timedelta) -> date:
         nonlocal call_count
         call_count += 1
@@ -155,11 +159,11 @@ def test_postgres_cache_datess(
 
 
 def test_postgres_cache_lists(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def merge_lists(a: list[int], b: list[int]) -> list[int]:
         nonlocal call_count
         call_count += 1
@@ -180,11 +184,11 @@ class TestOutputModel(BaseModel):
 
 
 def test_postgres_cache_pydantic_models(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def multiply_models(a: TestInputModel, b: TestInputModel) -> TestOutputModel:
         nonlocal call_count
         call_count += 1
@@ -203,11 +207,11 @@ def test_postgres_cache_pydantic_models(
 
 
 def test_postgres_cache_pydantic_models_list(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def multiply_models(a: TestInputModel, b: TestInputModel) -> list[TestOutputModel]:
         nonlocal call_count
         call_count += 1
@@ -226,11 +230,11 @@ def test_postgres_cache_pydantic_models_list(
 
 
 def test_postgres_cache_pydantic_models_dict_list(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def multiply_models(
         a: TestInputModel, b: TestInputModel
     ) -> list[dict[str, TestOutputModel]]:
@@ -251,7 +255,7 @@ def test_postgres_cache_pydantic_models_dict_list(
 
 
 def test_postgres_cache_pydantic_models_will_be_invalidated_after_change(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
@@ -259,7 +263,7 @@ def test_postgres_cache_pydantic_models_will_be_invalidated_after_change(
     class FirstOutputModel(TestOutputModel):
         pass
 
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
     def multiply_models(a: TestInputModel, b: TestInputModel) -> FirstOutputModel:
         nonlocal call_count
         call_count += 1
@@ -276,7 +280,7 @@ def test_postgres_cache_pydantic_models_will_be_invalidated_after_change(
         new_field: str
 
     # Redefine the function to return the new output model
-    @db_cache(api_keys=keys_with_sqlalchemy_db_url)  # type: ignore[no-redef] # Need to redefine the function as well, otherwise it would remember the original model.
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)  # type: ignore[no-redef] # Need to redefine the function as well, otherwise it would remember the original model.
     def multiply_models(a: TestInputModel, b: TestInputModel) -> FirstOutputModel:
         nonlocal call_count
         call_count += 1
@@ -298,12 +302,12 @@ def test_postgres_cache_pydantic_models_will_be_invalidated_after_change(
 
 
 def test_postgres_cache_ignored_arg_names_and_types(
-    keys_with_sqlalchemy_db_url: APIKeys,
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     call_count = 0
 
     @db_cache(
-        api_keys=keys_with_sqlalchemy_db_url,
+        api_keys=session_keys_with_postgresql_proc_and_enabled_cache,
         ignore_args=["a"],
         ignore_arg_types=[str],
     )

@@ -3,13 +3,13 @@ import pandas as pd
 
 from prediction_market_agent_tooling.markets.data_models import (
     SharpeOutput,
-    SimulationDetail,
+    SimulatedBetDetail,
 )
 
 
 class SharpeRatioCalculator:
     def __init__(
-        self, details: list[SimulationDetail], risk_free_rate: float = 0.0
+        self, details: list[SimulatedBetDetail], risk_free_rate: float = 0.0
     ) -> None:
         self.details = details
         self.df = pd.DataFrame([d.model_dump() for d in self.details])
@@ -19,7 +19,9 @@ class SharpeRatioCalculator:
         self, required_columns: list[str]
     ) -> None:
         if not set(required_columns).issubset(self.df.columns):
-            raise ValueError("Dataframe doesn't contain all the required columns.")
+            raise ValueError(
+                f"Dataframe doesn't contain all the required columns. {required_columns=} {self.df.columns=}"
+            )
 
     def prepare_wallet_daily_balance_df(
         self, timestamp_col_name: str, profit_col_name: str

@@ -142,7 +142,7 @@ class PlacedTrade(Trade):
         )
 
 
-class SimulationDetail(BaseModel):
+class SimulatedBetDetail(BaseModel):
     strategy: str
     url: str
     market_p_yes: float
@@ -161,3 +161,16 @@ class SharpeOutput(BaseModel):
     annualized_volatility: float
     mean_daily_return: float
     annualized_sharpe_ratio: float
+
+
+class SimulatedLifetimeDetail(BaseModel):
+    p_yes_mse: float
+    total_bet_amount: float
+    total_bet_profit: float
+    total_simulated_amount: float
+    total_simulated_profit: float
+    roi: float
+    simulated_roi: float
+    sharpe_output_original: SharpeOutput
+    sharpe_output_simulation: SharpeOutput
+    maximize: float

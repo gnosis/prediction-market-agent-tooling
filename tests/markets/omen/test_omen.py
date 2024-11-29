@@ -25,6 +25,10 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
     get_market_moving_bet,
 )
+from prediction_market_agent_tooling.tools.contract import ContractOnGnosisChain
+from prediction_market_agent_tooling.tools.transaction_cache import (
+    TransactionBlockCache,
+)
 from prediction_market_agent_tooling.tools.utils import (
     check_not_none,
     utc_datetime,
@@ -321,3 +325,45 @@ def test_get_most_recent_trade_datetime() -> None:
         market.get_most_recent_trade_datetime(user_id=user_id)
     )
     assert most_recent_trade_0.creation_datetime == most_recent_trade_datetime_1
+
+
+def test_get_outcome_tokens_in_the_past() -> None:
+    """
+    Test that `get_buy_token_amount` on market from block one before the one where bet is placed gives the same results as bet's `collateral_amount_usd`.
+    """
+    user_address = Web3.to_checksum_address(
+        "0x7d3A0DA18e14CCb63375cdC250E8A8399997816F"
+    )
+    market_id = Web3.to_checksum_address("0x07f30370e60c38d5099ef3d8fc44600de77e2104")
+    resolved_bets = OmenSubgraphHandler().get_resolved_bets_with_valid_answer(
+        market_id=market_id,
+        better_address=user_address,
+    )
+    selected_bet = [
+        bet for bet in resolved_bets if bet.outcomeTokensTraded == 6906257886585173059
+    ][0]
+    generic_bet = selected_bet.to_generic_resolved_bet()
+
+    tx_cache = TransactionBlockCache(ContractOnGnosisChain.get_web3())
+    bet_block_number = tx_cache.get_block_number(selected_bet.transactionHash.hex())
+
+    assert np.isclose(
+        generic_bet.amount.amount, 4.50548
+    ), f"{generic_bet.amount} != 4.50548"
+    assert np.isclose(
+        generic_bet.profit.amount, 2.4007766133282686
+    ), f"{generic_bet.profit.amount} != 2.4007766133282686"
+
+    # We need to substract -1 from block number, to get the market in the state before actually doing that bet --> after it's done, results are different
+    market_before_placing_bet = OmenAgentMarket.from_data_model(
+        OmenSubgraphHandler().get_omen_market_by_market_id(
+            market_id=market_id, block_number=bet_block_number - 1
+        )
+    )
+    would_get_outcome_tokens = market_before_placing_bet.get_buy_token_amount(
+        bet_amount=generic_bet.amount, direction=generic_bet.outcome
+    )
+
+    assert would_get_outcome_tokens.amount == wei_to_xdai(
+        selected_bet.outcomeTokensTraded
+    ), f"{would_get_outcome_tokens.amount} != {selected_bet.collateral_amount_usd}"

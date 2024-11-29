@@ -33,6 +33,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
 )
+from prediction_market_agent_tooling.tools.caches.inmemory_cache import (
+    persistent_inmemory_cache,
+)
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     to_int_timestamp,
@@ -112,7 +115,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             bets_field.creator.id,
             bets_field.creationTimestamp,
             bets_field.collateralAmount,
-            bets_field.collateralAmountUSD,
             bets_field.feeAmount,
             bets_field.outcomeIndex,
             bets_field.outcomeTokensTraded,
@@ -524,6 +526,8 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         filter_by_answer_finalized_not_null: bool = False,
         type_: t.Literal["Buy", "Sell"] | None = None,
         market_opening_after: DatetimeUTC | None = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
@@ -548,6 +552,15 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         if market_opening_after is not None:
             where_stms.append(
                 trade.fpmm.openingTimestamp > to_int_timestamp(market_opening_after)
+            )
+        if market_resolved_after is not None:
+            where_stms.append(
+                trade.fpmm.resolutionTimestamp > to_int_timestamp(market_resolved_after)
+            )
+        if market_resolved_before is not None:
+            where_stms.append(
+                trade.fpmm.resolutionTimestamp
+                < to_int_timestamp(market_resolved_before)
             )
         if collateral_amount_more_than is not None:
             where_stms.append(trade.collateralAmount > collateral_amount_more_than)
@@ -577,6 +590,8 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         market_opening_after: DatetimeUTC | None = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         return self.get_trades(
@@ -587,15 +602,19 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             filter_by_answer_finalized_not_null=filter_by_answer_finalized_not_null,
             type_="Buy",  # We consider `bet` to be only the `Buy` trade types.
             market_opening_after=market_opening_after,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
             collateral_amount_more_than=collateral_amount_more_than,
         )
 
     def get_resolved_bets(
         self,
         better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,
         market_id: t.Optional[ChecksumAddress] = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
     ) -> list[OmenBet]:
         omen_bets = self.get_bets(
             better_address=better_address,
@@ -603,14 +622,18 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             end_time=end_time,
             market_id=market_id,
             filter_by_answer_finalized_not_null=True,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
         )
         return [b for b in omen_bets if b.fpmm.is_resolved]
 
     def get_resolved_bets_with_valid_answer(
         self,
         better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
         market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         bets = self.get_resolved_bets(
@@ -618,6 +641,8 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             start_time=start_time,
             end_time=end_time,
             market_id=market_id,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
         )
         return [b for b in bets if b.fpmm.is_resolved_with_valid_answer]
 
@@ -926,3 +951,13 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             raise RuntimeError("Multiple results found for a single bet.")
 
         return results[0]
+
+
+@persistent_inmemory_cache
+def get_omen_market_by_market_id_cached(
+    market_id: HexAddress,
+    block_number: int,  # Force `block_number` to be provided, because `latest` block constantly updates.
+) -> OmenMarket:
+    return OmenSubgraphHandler().get_omen_market_by_market_id(
+        market_id, block_number=block_number
+    )

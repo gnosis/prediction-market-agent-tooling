@@ -214,6 +214,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         question_finalized_before: DatetimeUTC | None,
         question_finalized_after: DatetimeUTC | None,
         question_with_answers: bool | None,
+        question_pending_arbitration: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         question_current_answer_before: DatetimeUTC | None,
@@ -226,7 +227,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         category: str | None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
-            "isPendingArbitration": False,
             "outcomes": outcomes,
             "title_not": None,
             "condition_": {},
@@ -239,6 +239,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
             with_answers=question_with_answers,
+            pending_arbitration=question_pending_arbitration,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,
@@ -377,6 +378,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         question_finalized_before: DatetimeUTC | None = None,
         question_finalized_after: DatetimeUTC | None = None,
         question_with_answers: bool | None = None,
+        question_pending_arbitration: bool | None = None,
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_current_answer_before: DatetimeUTC | None = None,
@@ -406,6 +408,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             question_finalized_before=question_finalized_before,
             question_finalized_after=question_finalized_after,
             question_with_answers=question_with_answers,
+            question_pending_arbitration=question_pending_arbitration,
             question_id=question_id,
             question_id_in=question_id_in,
             question_current_answer_before=question_current_answer_before,
@@ -654,6 +657,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         finalized_before: DatetimeUTC | None,
         finalized_after: DatetimeUTC | None,
         with_answers: bool | None,
+        pending_arbitration: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         opened_before: t.Optional[DatetimeUTC],
@@ -700,9 +704,12 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         if with_answers is not None:
             if with_answers:
-                where_stms["answerFinalizedTimestamp_not"] = None
+                where_stms["currentAnswer_not"] = None
             else:
-                where_stms["answerFinalizedTimestamp"] = None
+                where_stms["currentAnswer"] = None
+
+        if pending_arbitration is not None:
+            where_stms["isPendingArbitration"] = pending_arbitration
 
         if question_id_in is not None:
             # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
@@ -720,6 +727,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         finalized_before: DatetimeUTC | None,
         finalized_after: DatetimeUTC | None,
         with_answers: bool | None,
+        pending_arbitration: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         opened_before: t.Optional[DatetimeUTC],
@@ -732,7 +740,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         where_stms: dict[str, t.Any] = {}
 
         if question_id is not None:
-            where_stms["questionId"] = question_id.hex()
+            where_stms["id"] = question_id.hex()
 
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
@@ -757,9 +765,12 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         if with_answers is not None:
             if with_answers:
-                where_stms["answerFinalizedTimestamp_not"] = None
+                where_stms["currentAnswer_not"] = None
             else:
-                where_stms["answerFinalizedTimestamp"] = None
+                where_stms["currentAnswer"] = None
+
+        if pending_arbitration is not None:
+            where_stms["isPendingArbitration"] = pending_arbitration
 
         if question_id_in is not None:
             # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
@@ -780,6 +791,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         finalized_before: DatetimeUTC | None = None,
         finalized_after: DatetimeUTC | None = None,
         with_answers: bool | None = None,
+        pending_arbitration: bool | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_id: HexBytes | None = None,
         opened_before: DatetimeUTC | None = None,
@@ -792,6 +804,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             finalized_before=finalized_before,
             finalized_after=finalized_after,
             with_answers=with_answers,
+            pending_arbitration=pending_arbitration,
             current_answer_before=current_answer_before,
             question_id_in=question_id_in,
             question_id=question_id,
@@ -834,6 +847,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         question_finalized_before: t.Optional[DatetimeUTC] = None,
         question_finalized_after: t.Optional[DatetimeUTC] = None,
         question_with_answers: bool | None = None,
+        question_pending_arbitration: bool | None = None,
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_current_answer_before: DatetimeUTC | None = None,
@@ -853,6 +867,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
             with_answers=question_with_answers,
+            pending_arbitration=question_pending_arbitration,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,

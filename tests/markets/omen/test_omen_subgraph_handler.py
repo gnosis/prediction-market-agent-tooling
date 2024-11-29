@@ -358,3 +358,28 @@ def test_get_predictions_from_market(
     assert len(predictions) >= 1
     # We can get the 0th element since we sort by block number asc.
     assert predictions[0].publisher_checksummed == first_publisher
+
+
+def test_get_arbitrated_market_with_answer(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    assert omen_subgraph_handler.get_questions(
+        limit=None,
+        question_id=HexBytes(
+            "0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b"
+        ),
+        with_answers=True,
+    ), "Should return it, because that questionId has an answer."
+
+
+def test_do_not_get_arbitrated_market_without_answer(
+    omen_subgraph_handler: OmenSubgraphHandler,
+) -> None:
+    # If this test starts to fail, check if `0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b` isn't arbitrated anymore, and if so simply delete this test.
+    assert not omen_subgraph_handler.get_questions(
+        limit=None,
+        question_id=HexBytes(
+            "0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b"
+        ),
+        with_answers=False,
+    ), "Should not return anything, because that questionId has an answer."

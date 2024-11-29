@@ -594,7 +594,7 @@ class RealityQuestion(BaseModel):
     updatedTimestamp: int
     contentHash: HexBytes
     questionId: HexBytes  # This is the `id` on question from omen subgraph.
-    answerFinalizedTimestamp: int
+    answerFinalizedTimestamp: int | None
     currentScheduledFinalizationTimestamp: int
 
     @property
@@ -602,8 +602,12 @@ class RealityQuestion(BaseModel):
         return DatetimeUTC.to_datetime_utc(self.updatedTimestamp)
 
     @property
-    def answer_finalized_datetime(self) -> DatetimeUTC:
-        return DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
+    def answer_finalized_datetime(self) -> DatetimeUTC | None:
+        return (
+            DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
+            if self.answerFinalizedTimestamp is not None
+            else None
+        )
 
     @property
     def current_scheduled_finalization_datetime(self) -> DatetimeUTC:

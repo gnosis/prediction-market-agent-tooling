@@ -565,13 +565,18 @@ class OmenAgentMarket(AgentMarket):
         omen_markets: dict[HexBytes, OmenMarket] = {
             m.condition.id: m
             for m in sgh.get_omen_binary_markets(
-                limit=sys.maxsize,
+                limit=None,
                 condition_id_in=list(omen_positions_dict.keys()),
             )
         }
+
         if len(omen_markets) != len(omen_positions_dict):
+            missing_conditions_ids = set(
+                omen_position.position.condition_id for omen_position in omen_positions
+            ) - set(market.condition.id for market in omen_markets.values())
             raise ValueError(
-                f"Number of condition ids for markets {len(omen_markets)} and positions {len(omen_positions_dict)} are not equal."
+                f"Number of condition ids for markets {len(omen_markets)} and positions {len(omen_positions_dict)} are not equal. "
+                f"Missing condition ids: {missing_conditions_ids}"
             )
 
         positions = []

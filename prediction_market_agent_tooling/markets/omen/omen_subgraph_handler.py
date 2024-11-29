@@ -226,7 +226,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         category: str | None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
-            "isPendingArbitration": False,
             "outcomes": outcomes,
             "title_not": None,
             "condition_": {},
@@ -732,7 +731,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         where_stms: dict[str, t.Any] = {}
 
         if question_id is not None:
-            where_stms["questionId"] = question_id.hex()
+            where_stms["id"] = question_id.hex()
 
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(

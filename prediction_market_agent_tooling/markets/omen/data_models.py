@@ -42,6 +42,10 @@ PRESAGIO_BASE_URL = "https://presagio.pages.dev"
 TEST_CATEGORY = "test"  # This category is hidden on Presagio for testing purposes.
 
 
+def construct_presagio_url(market_id: HexAddress) -> str:
+    return f"{PRESAGIO_BASE_URL}/markets?id={market_id}"
+
+
 def get_boolean_outcome(outcome_str: str) -> bool:
     if outcome_str == OMEN_TRUE_OUTCOME:
         return True
@@ -392,7 +396,7 @@ class OmenMarket(BaseModel):
 
     @property
     def url(self) -> str:
-        return f"{PRESAGIO_BASE_URL}/markets?id={self.id}"
+        return construct_presagio_url(self.id)
 
     @staticmethod
     def from_created_market(model: "CreatedMarket") -> "OmenMarket":
@@ -774,6 +778,12 @@ class CreatedMarket(BaseModel):
     initial_funds: Wei
     fee: Wei
     distribution_hint: list[OmenOutcomeToken] | None
+
+    @property
+    def url(self) -> str:
+        return construct_presagio_url(
+            self.market_event.fixed_product_market_maker_checksummed
+        )
 
 
 class ContractPrediction(BaseModel):

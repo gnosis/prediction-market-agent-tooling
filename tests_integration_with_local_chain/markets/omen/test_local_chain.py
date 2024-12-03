@@ -144,9 +144,9 @@ def test_send_xdai_with_data(local_web3: Web3, accounts: list[TestAccount]) -> N
     )
 
     # Check that we can get the original message
-    transaction = local_web3.eth.get_transaction(tx_receipt.transactionHash)
-    transaction_message = local_web3.to_text(transaction.input)
+    transaction = local_web3.eth.get_transaction(tx_receipt["transactionHash"])
+    transaction_message = local_web3.to_text(transaction["input"])
     assert transaction_message == message
 
     # Check that the value is correct
-    assert transaction.value == value
+    assert transaction["value"] == value

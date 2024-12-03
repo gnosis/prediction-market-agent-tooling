@@ -1,5 +1,7 @@
 import time
+import zlib
 
+import pytest
 from ape_test import TestAccount
 from eth_account import Account
 from numpy import isclose
@@ -129,8 +131,19 @@ def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
     ), f"chain_datetime and utc_datetime differ by more than {allowed_difference} seconds: {chain_datetime=} {utc_datetime=} {actual_difference=}"
 
 
-def test_send_xdai_with_data(local_web3: Web3, accounts: list[TestAccount]) -> None:
-    value = xdai_to_wei(xDai(10))
+@pytest.mark.parametrize(
+    "message, value_xdai",
+    [
+        ("Hello there!", xDai(10)),
+        (zlib.compress(b"Hello there!"), xDai(10)),
+        ("Hello there!", xDai(0)),
+        ("", xDai(0)),
+    ],
+)
+def test_send_xdai_with_data(
+    message: str, value_xdai: xDai, local_web3: Web3, accounts: list[TestAccount]
+) -> None:
+    value = xdai_to_wei(value_xdai)
     message = "Hello there!"
     from_account = accounts[0]
     to_account = accounts[1]

@@ -127,3 +127,26 @@ def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
     assert (
         actual_difference <= allowed_difference
     ), f"chain_datetime and utc_datetime differ by more than {allowed_difference} seconds: {chain_datetime=} {utc_datetime=} {actual_difference=}"
+
+
+def test_send_xdai_with_data(local_web3: Web3, accounts: list[TestAccount]) -> None:
+    value = xdai_to_wei(xDai(10))
+    message = "Hello there!"
+    from_account = accounts[0]
+    to_account = accounts[1]
+
+    tx_receipt = send_xdai_to(
+        web3=local_web3,
+        from_private_key=private_key_type(from_account.private_key),
+        to_address=to_account.address,
+        value=value,
+        data_text=message,
+    )
+
+    # Check that we can get the original message
+    transaction = local_web3.eth.get_transaction(tx_receipt.transactionHash)
+    transaction_message = local_web3.to_text(transaction.input)
+    assert transaction_message == message
+
+    # Check that the value is correct
+    assert transaction.value == value

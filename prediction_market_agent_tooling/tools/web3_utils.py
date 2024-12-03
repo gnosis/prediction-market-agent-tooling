@@ -297,12 +297,15 @@ def send_xdai_to(
     from_private_key: PrivateKey,
     to_address: ChecksumAddress,
     value: Wei,
+    data_text: Optional[str] = None,
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
 ) -> TxReceipt:
     from_address = private_key_to_public_key(from_private_key)
 
     tx_params_new: TxParams = {"value": value, "to": to_address}
+    if data_text is not None:
+        tx_params_new["data"] = Web3.to_bytes(text=data_text)
     if tx_params:
         tx_params_new.update(tx_params)
     tx_params_new = _prepare_tx_params(web3, from_address, tx_params=tx_params_new)

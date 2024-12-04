@@ -153,6 +153,9 @@ def _prepare_tx_params(
         from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
+    if not tx_params_new.get("chainId"):
+        tx_params_new["chainId"] = web3.eth.chain_id
+
     if access_list is not None:
         tx_params_new["accessList"] = access_list
 

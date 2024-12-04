@@ -382,6 +382,67 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         return self.convertToShares(amount, web3=web3)
 
 
+class ContractOwnableERC721BaseClass(ContractBaseClass):
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/ownable_erc721.abi.json",
+        )
+    )
+
+    def safeMint(
+        self,
+        api_keys: APIKeys,
+        to_address: ChecksumAddress,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="safeMint",
+            function_params=[to_address],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+    def balanceOf(self, owner: ChecksumAddress, web3: Web3 | None = None) -> int:
+        balance: int = self.call("balanceOf", [owner], web3=web3)
+        return balance
+
+    def ownerOf(self, tokenId: int, web3: Web3 | None = None) -> ChecksumAddress:
+        owner = Web3.to_checksum_address(self.call("ownerOf", [tokenId], web3=web3))
+        return owner
+
+    def name(self, web3: Web3 | None = None) -> str:
+        name: str = self.call("name", web3=web3)
+        return name
+
+    def symbol(self, web3: Web3 | None = None) -> str:
+        symbol: str = self.call("symbol", web3=web3)
+        return symbol
+
+    def tokenURI(self, tokenId: int, web3: Web3 | None = None) -> str:
+        uri: str = self.call("tokenURI", [tokenId], web3=web3)
+        return uri
+
+    def safeTransferFrom(
+        self,
+        api_keys: APIKeys,
+        from_address: ChecksumAddress,
+        to_address: ChecksumAddress,
+        tokenId: int,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="safeTransferFrom",
+            function_params=[from_address, to_address, tokenId, b""],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+
 class ContractOnGnosisChain(ContractBaseClass):
     """
     Contract base class with Gnosis Chain configuration.
@@ -400,6 +461,14 @@ class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):
 class ContractERC20OnGnosisChain(ContractERC20BaseClass, ContractOnGnosisChain):
     """
     ERC-20 standard base class with Gnosis Chain configuration.
+    """
+
+
+class ContractOwnableERC721OnGnosisChain(
+    ContractOwnableERC721BaseClass, ContractOnGnosisChain
+):
+    """
+    Ownable ERC-721 standard base class with Gnosis Chain configuration.
     """
 
 

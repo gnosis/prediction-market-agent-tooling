@@ -33,7 +33,7 @@ class DBManager:
             sqlalchemy_db_url.get_secret_value(),
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
-            pool_size=20,
+            pool_size=10,
             pool_recycle=3600,
             echo=True,
         )
@@ -52,7 +52,6 @@ class DBManager:
     def create_tables(
         self, sqlmodel_tables: Sequence[type[SQLModel]] | None = None
     ) -> None:
-        # Determine tables to create
         if sqlmodel_tables is not None:
             tables_to_create = []
             for sqlmodel_table in sqlmodel_tables:
@@ -68,7 +67,9 @@ class DBManager:
             tables_to_create = None
 
         # Create tables in the database
-        SQLModel.metadata.create_all(self._engine, tables=tables_to_create)
+        with self.get_connection() as connection:
+            SQLModel.metadata.create_all(connection, tables=tables_to_create)
+            connection.commit()
 
         # Update cache to mark tables as initialized
         if tables_to_create:

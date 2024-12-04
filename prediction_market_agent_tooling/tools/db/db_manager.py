@@ -52,7 +52,6 @@ class DBManager:
     def create_tables(
         self, sqlmodel_tables: Sequence[type[SQLModel]] | None = None
     ) -> None:
-        # Determine tables to create
         if sqlmodel_tables is not None:
             tables_to_create = []
             for sqlmodel_table in sqlmodel_tables:

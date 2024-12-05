@@ -33,9 +33,7 @@ class DBManager:
             sqlalchemy_db_url.get_secret_value(),
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
-            pool_size=1,
-            pool_recycle=3600,
-            echo=True,
+            pool_size=2,
         )
         self.cache_table_initialized: dict[str, bool] = {}
 

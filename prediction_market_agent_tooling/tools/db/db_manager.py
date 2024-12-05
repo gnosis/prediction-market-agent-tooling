@@ -28,6 +28,8 @@ class DBManager:
         return cls._instances[url_hash]
 
     def __init__(self, api_keys: APIKeys | None = None) -> None:
+        if hasattr(self, "_initialized"):
+            return
         sqlalchemy_db_url = (api_keys or APIKeys()).sqlalchemy_db_url
         self._engine = create_engine(
             sqlalchemy_db_url.get_secret_value(),
@@ -36,6 +38,7 @@ class DBManager:
             pool_size=2,
         )
         self.cache_table_initialized: dict[str, bool] = {}
+        self._initialized = True
 
     @contextmanager
     def get_session(self) -> Generator[Session, None, None]:

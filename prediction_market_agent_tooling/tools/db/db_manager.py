@@ -28,16 +28,17 @@ class DBManager:
         return cls._instances[url_hash]
 
     def __init__(self, api_keys: APIKeys | None = None) -> None:
+        if hasattr(self, "_initialized"):
+            return
         sqlalchemy_db_url = (api_keys or APIKeys()).sqlalchemy_db_url
         self._engine = create_engine(
             sqlalchemy_db_url.get_secret_value(),
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
-            pool_size=10,
-            pool_recycle=3600,
-            echo=True,
+            pool_size=2,
         )
         self.cache_table_initialized: dict[str, bool] = {}
+        self._initialized = True
 
     @contextmanager
     def get_session(self) -> Generator[Session, None, None]:
@@ -52,6 +53,7 @@ class DBManager:
     def create_tables(
         self, sqlmodel_tables: Sequence[type[SQLModel]] | None = None
     ) -> None:
+        # Determine tables to create
         if sqlmodel_tables is not None:
             tables_to_create = []
             for sqlmodel_table in sqlmodel_tables:
@@ -67,9 +69,10 @@ class DBManager:
             tables_to_create = None
 
         # Create tables in the database
-        with self.get_connection() as connection:
-            SQLModel.metadata.create_all(connection, tables=tables_to_create)
-            connection.commit()
+        if tables_to_create is None or len(tables_to_create) > 0:
+            with self.get_connection() as connection:
+                SQLModel.metadata.create_all(connection, tables=tables_to_create)
+                connection.commit()
 
         # Update cache to mark tables as initialized
         if tables_to_create:

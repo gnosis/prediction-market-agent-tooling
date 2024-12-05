@@ -33,7 +33,7 @@ class DBManager:
             sqlalchemy_db_url.get_secret_value(),
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
-            pool_size=10,
+            pool_size=1,
             pool_recycle=3600,
             echo=True,
         )
@@ -52,6 +52,7 @@ class DBManager:
     def create_tables(
         self, sqlmodel_tables: Sequence[type[SQLModel]] | None = None
     ) -> None:
+        # Determine tables to create
         if sqlmodel_tables is not None:
             tables_to_create = []
             for sqlmodel_table in sqlmodel_tables:

@@ -68,9 +68,10 @@ class DBManager:
             tables_to_create = None
 
         # Create tables in the database
-        with self.get_connection() as connection:
-            SQLModel.metadata.create_all(connection, tables=tables_to_create)
-            connection.commit()
+        if tables_to_create is None or len(tables_to_create) > 0:
+            with self.get_connection() as connection:
+                SQLModel.metadata.create_all(connection, tables=tables_to_create)
+                connection.commit()
 
         # Update cache to mark tables as initialized
         if tables_to_create:

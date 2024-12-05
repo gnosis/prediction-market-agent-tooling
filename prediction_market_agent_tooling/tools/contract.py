@@ -437,7 +437,7 @@ class ContractOwnableERC721BaseClass(ContractBaseClass):
         return self.send(
             api_keys=api_keys,
             function_name="safeTransferFrom",
-            function_params=[from_address, to_address, tokenId, b""],
+            function_params=[from_address, to_address, tokenId],
             tx_params=tx_params,
             web3=web3,
         )

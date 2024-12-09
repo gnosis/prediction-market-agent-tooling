@@ -18,7 +18,7 @@ class DBManager:
     def __new__(cls, sqlalchemy_db_url: str | None = None) -> "DBManager":
         if sqlalchemy_db_url is None:
             sqlalchemy_db_url = APIKeys().sqlalchemy_db_url.get_secret_value()
-        
+
         # Hash the secret value to not store secrets in plain text.
         url_hash = hashlib.md5(sqlalchemy_db_url.encode()).hexdigest()
         # Return singleton per database connection.
@@ -28,6 +28,8 @@ class DBManager:
         return cls._instances[url_hash]
 
     def __init__(self, sqlalchemy_db_url: str | None = None) -> None:
+        if hasattr(self, "_initialized"):
+            return
         sqlalchemy_db_url = (
             sqlalchemy_db_url or APIKeys().sqlalchemy_db_url.get_secret_value()
         )
@@ -35,11 +37,10 @@ class DBManager:
             sqlalchemy_db_url,
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
-            pool_size=10,
-            pool_recycle=3600,
-            echo=True,
+            pool_size=2,
         )
         self.cache_table_initialized: dict[str, bool] = {}
+        self._initialized = True
 
     @contextmanager
     def get_session(self) -> Generator[Session, None, None]:
@@ -69,9 +70,10 @@ class DBManager:
             tables_to_create = None
 
         # Create tables in the database
-        with self.get_connection() as connection:
-            SQLModel.metadata.create_all(connection, tables=tables_to_create)
-            connection.commit()
+        if tables_to_create is None or len(tables_to_create) > 0:
+            with self.get_connection() as connection:
+                SQLModel.metadata.create_all(connection, tables=tables_to_create)
+                connection.commit()
 
         # Update cache to mark tables as initialized
         if tables_to_create:

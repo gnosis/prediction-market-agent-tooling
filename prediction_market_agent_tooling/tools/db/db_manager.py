@@ -10,27 +10,30 @@ from prediction_market_agent_tooling.tools.caches.serializers import (
     json_deserializer,
     json_serializer,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class DBManager:
     _instances: dict[str, "DBManager"] = {}
 
-    def __new__(cls, api_keys: APIKeys | None = None) -> "DBManager":
-        sqlalchemy_db_url = (api_keys or APIKeys()).sqlalchemy_db_url
+    def __new__(cls, sqlalchemy_db_url: str | None = None) -> "DBManager":
+        sqlalchemy_db_url = (
+            sqlalchemy_db_url or APIKeys().sqlalchemy_db_url.get_secret_value()
+        )
         # Hash the secret value to not store secrets in plain text.
-        url_hash = hashlib.md5(
-            sqlalchemy_db_url.get_secret_value().encode()
-        ).hexdigest()
+        url_hash = hashlib.md5(check_not_none(sqlalchemy_db_url).encode()).hexdigest()
         # Return singleton per database connection.
         if url_hash not in cls._instances:
             instance = super(DBManager, cls).__new__(cls)
             cls._instances[url_hash] = instance
         return cls._instances[url_hash]
 
-    def __init__(self, api_keys: APIKeys | None = None) -> None:
-        sqlalchemy_db_url = (api_keys or APIKeys()).sqlalchemy_db_url
+    def __init__(self, sqlalchemy_db_url: str | None = None) -> None:
+        sqlalchemy_db_url = (
+            sqlalchemy_db_url or APIKeys().sqlalchemy_db_url.get_secret_value()
+        )
         self._engine = create_engine(
-            sqlalchemy_db_url.get_secret_value(),
+            sqlalchemy_db_url,
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
             pool_size=10,

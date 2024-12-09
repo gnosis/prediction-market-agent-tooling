@@ -10,18 +10,17 @@ from prediction_market_agent_tooling.tools.caches.serializers import (
     json_deserializer,
     json_serializer,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class DBManager:
     _instances: dict[str, "DBManager"] = {}
 
     def __new__(cls, sqlalchemy_db_url: str | None = None) -> "DBManager":
-        sqlalchemy_db_url = (
-            sqlalchemy_db_url or APIKeys().sqlalchemy_db_url.get_secret_value()
-        )
+        if sqlalchemy_db_url is None:
+            sqlalchemy_db_url = APIKeys().sqlalchemy_db_url.get_secret_value()
+        
         # Hash the secret value to not store secrets in plain text.
-        url_hash = hashlib.md5(check_not_none(sqlalchemy_db_url).encode()).hexdigest()
+        url_hash = hashlib.md5(sqlalchemy_db_url.encode()).hexdigest()
         # Return singleton per database connection.
         if url_hash not in cls._instances:
             instance = super(DBManager, cls).__new__(cls)

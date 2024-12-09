@@ -25,7 +25,9 @@ class RelevantNewsCacheModel(SQLModel, table=True):
 
 class RelevantNewsResponseCache:
     def __init__(self, api_keys: APIKeys | None = None):
-        self.db_manager = DBManager(api_keys)
+        self.db_manager = DBManager(
+            (api_keys or APIKeys()).sqlalchemy_db_url.get_secret_value()
+        )
         self._initialize_db()
 
     def _initialize_db(self) -> None:

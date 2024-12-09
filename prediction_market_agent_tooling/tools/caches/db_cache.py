@@ -98,7 +98,9 @@ def db_cache(
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        DBManager(api_keys).create_tables([FunctionCache])
+        DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
+            [FunctionCache]
+        )
 
         # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
         signature = inspect.signature(func)
@@ -143,7 +145,9 @@ def db_cache(
             return_type
         )
 
-        with DBManager(api_keys).get_session() as session:
+        with DBManager(
+            api_keys.sqlalchemy_db_url.get_secret_value()
+        ).get_session() as session:
             # Try to get cached result
             statement = (
                 select(FunctionCache)
@@ -196,7 +200,9 @@ def db_cache(
                 result=computed_result,
                 created_at=utcnow(),
             )
-            with DBManager(api_keys).get_session() as session:
+            with DBManager(
+                api_keys.sqlalchemy_db_url.get_secret_value()
+            ).get_session() as session:
                 logger.info(f"Saving {cache_entry} into database.")
                 session.add(cache_entry)
                 session.commit()

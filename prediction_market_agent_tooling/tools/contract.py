@@ -17,7 +17,6 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
-    xDai,
 )
 from prediction_market_agent_tooling.tools.data_models import (
     MessageContainer,
@@ -28,7 +27,6 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
     send_function_on_contract_tx_using_safe,
-    xdai_to_wei,
 )
 
 
@@ -557,7 +555,10 @@ class AgentCommunicationContract(ContractOnGnosisChain):
         agent_address: ChecksumAddress,
         web3: Web3 | None = None,
     ) -> int:
-        return self.call("countMessages", function_params=[agent_address], web3=web3)
+        unseen_message_count: int = self.call(
+            "countMessages", function_params=[agent_address], web3=web3
+        )
+        return unseen_message_count
 
     def pop_message(
         self,
@@ -588,14 +589,13 @@ class AgentCommunicationContract(ContractOnGnosisChain):
         message: MessageContainer,
         amount_wei: Wei,
         web3: Web3 | None = None,
-    ) -> MessageContainer:
+    ) -> TxReceipt:
         return self.send_with_value(
             api_keys=api_keys,
             function_name="sendMessage",
             amount_wei=amount_wei,
             function_params=[agent_address, message.model_dump(by_alias=True)],
             web3=web3,
-            tx_params={"value": xdai_to_wei(xDai(0.1))},
         )
 
 

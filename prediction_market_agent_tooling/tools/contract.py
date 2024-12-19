@@ -17,12 +17,18 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
+    xDai,
+)
+from prediction_market_agent_tooling.tools.data_models import (
+    MessageContainer,
+    MessagePopped,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
     send_function_on_contract_tx_using_safe,
+    xdai_to_wei,
 )
 
 
@@ -530,6 +536,66 @@ class DebuggingContract(ContractOnGnosisChain):
             api_keys=api_keys,
             function_name="inc",
             web3=web3,
+        )
+
+
+class AgentCommunicationContract(ContractOnGnosisChain):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/agentcommunication.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x68670EDDa41d26F25DAcd9fADE75ec6E6a104AC3"
+    )
+
+    def count_unseen_messages(
+        self,
+        agent_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> int:
+        return self.call("countMessages", function_params=[agent_address], web3=web3)
+
+    def pop_message(
+        self,
+        api_keys: APIKeys,
+        agent_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> MessagePopped:
+        tx_receipt = self.send(
+            api_keys=api_keys,
+            function_name="popNextMessage",
+            function_params=[agent_address],
+            web3=web3,
+        )
+        # We fetch the object from the event instead of decoding the output of the transaction
+        # since we did that before, but also possible to do decoding the tx output.
+        message_popped_event_logs = (
+            self.get_web3_contract(web3=web3)
+            .events.MessagePopped()
+            .process_receipt(tx_receipt)
+        )
+
+        return MessagePopped(**message_popped_event_logs[0]["args"])
+
+    def send_message(
+        self,
+        api_keys: APIKeys,
+        agent_address: ChecksumAddress,
+        message: MessageContainer,
+        amount_wei: Wei,
+        web3: Web3 | None = None,
+    ) -> MessageContainer:
+        return self.send_with_value(
+            api_keys=api_keys,
+            function_name="sendMessage",
+            amount_wei=amount_wei,
+            function_params=[agent_address, message.model_dump(by_alias=True)],
+            web3=web3,
+            tx_params={"value": xdai_to_wei(xDai(0.1))},
         )
 
 

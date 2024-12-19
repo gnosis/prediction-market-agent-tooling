@@ -94,7 +94,7 @@ def parse_function_params(params: Optional[list[Any] | dict[str, Any]]) -> list[
 
 @tenacity.retry(
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
-    stop=tenacity.stop_after_attempt(5),
+    stop=tenacity.stop_after_attempt(2),
     after=lambda x: logger.debug(
         f"call_function_on_contract failed, {x.attempt_number=}."
     ),
@@ -166,7 +166,7 @@ def _prepare_tx_params(
     # Don't retry on `reverted` messages, as they would always fail again.
     retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
     wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
-    stop=tenacity.stop_after_attempt(9),
+    stop=tenacity.stop_after_attempt(2),
     after=lambda x: logger.debug(
         f"send_function_on_contract_tx failed, {x.attempt_number=}."
     ),

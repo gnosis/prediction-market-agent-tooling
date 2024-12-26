@@ -3,13 +3,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from prediction_market_agent_tooling.gtypes import HexBytes
 
 
+class SeerParentMarket(BaseModel):
+    id: HexBytes
+
+
 class SeerMarket(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     id: HexBytes
     title: str = Field(alias="marketName")
     outcomes: list[str]
-    parent_market: HexBytes = Field(alias="parentMarket")
+    parent_market: SeerParentMarket | None = Field(alias="parentMarket")
     wrapped_tokens: list[HexBytes] = Field(alias="wrappedTokens")
 
 

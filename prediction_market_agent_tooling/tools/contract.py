@@ -18,6 +18,8 @@ from prediction_market_agent_tooling.gtypes import (
     TxReceipt,
     Wei,
 )
+from prediction_market_agent_tooling.tools.data_models import MessageContainer
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
@@ -529,6 +531,88 @@ class DebuggingContract(ContractOnGnosisChain):
         return self.send(
             api_keys=api_keys,
             function_name="inc",
+            web3=web3,
+        )
+
+
+class AgentCommunicationContract(ContractOnGnosisChain):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/agentcommunication.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x62872578920427ae24b2527697dAb90CD1F4CA45"
+    )
+
+    def count_unseen_messages(
+        self,
+        agent_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> int:
+        unseen_message_count: int = self.call(
+            "countMessages", function_params=[agent_address], web3=web3
+        )
+        return unseen_message_count
+
+    def get_at_index(
+        self,
+        agent_address: ChecksumAddress,
+        idx: int,
+        web3: Web3 | None = None,
+    ) -> MessageContainer:
+        message_container_raw: t.Tuple[t.Any] = self.call(
+            "getAtIndex", function_params=[agent_address, idx], web3=web3
+        )
+        return MessageContainer.from_tuple(message_container_raw)
+
+    def pop_message(
+        self,
+        api_keys: APIKeys,
+        agent_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> MessageContainer:
+        """
+        Retrieves and removes the first message from the agent's message queue.
+
+        This method first retrieves the message at the front of the queue without removing it,
+        allowing us to return the message content directly. The actual removal of the message
+        from the queue is performed by sending a transaction to the contract, which executes
+        the `popNextMessage` function. The transaction receipt is not used to obtain the message
+        content, as it only contains event data, not the returned struct.
+        """
+
+        # Peek first element before popping.
+        message_container = self.get_at_index(
+            agent_address=agent_address, idx=0, web3=web3
+        )
+
+        # Next, pop that element and discard the transaction receipt.
+        self.send(
+            api_keys=api_keys,
+            function_name="popNextMessage",
+            function_params=[agent_address],
+            web3=web3,
+        )
+
+        return message_container
+
+    def send_message(
+        self,
+        api_keys: APIKeys,
+        agent_address: ChecksumAddress,
+        message: HexBytes,
+        amount_wei: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send_with_value(
+            api_keys=api_keys,
+            function_name="sendMessage",
+            amount_wei=amount_wei,
+            function_params=[agent_address, message],
             web3=web3,
         )
 

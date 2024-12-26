@@ -47,7 +47,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.creator,
             markets_field.marketName,
             markets_field.outcomes,
-            markets_field.parentMarket,
+            markets_field.parentMarket.id,
             markets_field.finalizeTs,
             markets_field.wrappedTokens,
         ]

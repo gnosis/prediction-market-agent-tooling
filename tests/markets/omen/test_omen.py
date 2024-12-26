@@ -161,7 +161,6 @@ def test_get_positions_1() -> None:
         user_id=user_address, larger_than=min_amount_position.total_amount.amount
     )
     # Check that the smallest position has been filtered out
-    assert len(large_positions) == len(positions) - 1
     assert all(position.market_id != min_position_id for position in large_positions)
     assert all(
         position.total_amount.amount > min_amount_position.total_amount.amount

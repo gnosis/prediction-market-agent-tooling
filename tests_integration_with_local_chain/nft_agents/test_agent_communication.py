@@ -74,6 +74,14 @@ def test_pop_message() -> None:
         == 1
     )
 
+    # get at index
+    stored_message = comm_contract.get_at_index(
+        agent_address=mock_agent_address, idx=0, web3=local_web3
+    )
+    # assert message match
+    assert stored_message.recipient == mock_agent_address
+    assert stored_message.message == HexBytes(message)
+
     # fetch latest message
     stored_message = comm_contract.pop_message(
         keys, mock_agent_address, web3=local_web3

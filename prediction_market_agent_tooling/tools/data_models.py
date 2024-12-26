@@ -14,12 +14,16 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 class MessageContainer(BaseModel):
     sender: ChecksumAddress
     recipient: ChecksumAddress
-    message: bytes
+    message: HexBytes
+    value: Wei
 
     @staticmethod
     def from_tuple(values: tuple[t.Any, ...]) -> "MessageContainer":
         return MessageContainer(
-            sender=values[0], recipient=values[1], message=values[2]
+            sender=values[0],
+            recipient=values[1],
+            message=HexBytes(values[2]),
+            value=values[3],
         )
 
 

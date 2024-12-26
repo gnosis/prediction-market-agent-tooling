@@ -20,6 +20,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.tools.data_models import (
     LogMessageEvent,
+    MessageContainer,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
@@ -560,6 +561,17 @@ class AgentCommunicationContract(ContractOnGnosisChain):
             "countMessages", function_params=[agent_address], web3=web3
         )
         return unseen_message_count
+
+    def get_at_index(
+        self,
+        agent_address: ChecksumAddress,
+        idx: int,
+        web3: Web3 | None = None,
+    ) -> MessageContainer:
+        message_container_raw: MessageContainer = self.call(
+            "getAtIndex", function_params=[agent_address, idx], web3=web3
+        )
+        return MessageContainer.from_tuple(message_container_raw)
 
     def pop_message(
         self,

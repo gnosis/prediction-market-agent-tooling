@@ -1,12 +1,8 @@
 import typing as t
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from prediction_market_agent_tooling.gtypes import (
-    HexBytes,
-    Wei,
-    ChecksumAddress,
-)
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes, Wei
 
 
 # Taken from https://github.com/gnosis/labs-contracts/blob/main/src/NFT/DoubleEndedStructQueue.sol

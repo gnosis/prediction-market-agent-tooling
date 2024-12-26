@@ -9,7 +9,7 @@ class SeerMarket(BaseModel):
     id: HexBytes
     title: str = Field(alias="marketName")
     outcomes: list[str]
-    parent_market: HexBytes = Field(alias="parentMarket")
+    parent_market: HexBytes | None = Field(alias="parentMarket")
     wrapped_tokens: list[HexBytes] = Field(alias="wrappedTokens")
 
 

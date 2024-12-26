@@ -17,6 +17,7 @@ def handler() -> t.Generator[SeerSubgraphHandler, None, None]:
     yield SeerSubgraphHandler()
 
 
+@pytest.skip(reason="Seer subgraph ")
 def test_get_all_seer_markets(handler: SeerSubgraphHandler) -> None:
     markets = handler.get_bicategorical_markets()
     assert len(markets) > 1

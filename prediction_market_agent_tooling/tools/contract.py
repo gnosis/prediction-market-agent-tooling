@@ -18,9 +18,7 @@ from prediction_market_agent_tooling.gtypes import (
     TxReceipt,
     Wei,
 )
-from prediction_market_agent_tooling.tools.data_models import (
-    MessageContainer,
-)
+from prediction_market_agent_tooling.tools.data_models import MessageContainer
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
@@ -566,7 +564,7 @@ class AgentCommunicationContract(ContractOnGnosisChain):
         idx: int,
         web3: Web3 | None = None,
     ) -> MessageContainer:
-        message_container_raw: MessageContainer = self.call(
+        message_container_raw: t.Tuple[t.Any] = self.call(
             "getAtIndex", function_params=[agent_address, idx], web3=web3
         )
         return MessageContainer.from_tuple(message_container_raw)

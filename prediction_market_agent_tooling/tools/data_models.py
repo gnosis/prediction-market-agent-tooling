@@ -1,16 +1,13 @@
 import typing as t
 
 from pydantic import BaseModel, ConfigDict, Field
-from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
-    HexStr,
     HexBytes,
     Wei,
     ChecksumAddress,
     HexAddress,
 )
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 
 # Taken from https://github.com/gnosis/labs-contracts/blob/main/src/NFT/DoubleEndedStructQueue.sol
@@ -36,9 +33,3 @@ class LogMessageEvent(BaseModel):
     agent_address: HexAddress = Field(alias="agentAddress")
     message: HexBytes
     value: Wei
-
-    def __str__(self) -> str:
-        return f"""Sender: {self.sender}
-    Value: {wei_to_xdai(self.value)} xDai
-    Message: {Web3.to_text(hexstr=HexStr.from_bytes(self.message))}
-    """

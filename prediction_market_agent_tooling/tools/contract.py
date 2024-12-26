@@ -19,7 +19,6 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
 )
 from prediction_market_agent_tooling.tools.data_models import (
-    LogMessageEvent,
     MessageContainer,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -577,22 +576,31 @@ class AgentCommunicationContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         agent_address: ChecksumAddress,
         web3: Web3 | None = None,
-    ) -> LogMessageEvent:
-        tx_receipt = self.send(
+    ) -> MessageContainer:
+        """
+        Retrieves and removes the first message from the agent's message queue.
+
+        This method first retrieves the message at the front of the queue without removing it,
+        allowing us to return the message content directly. The actual removal of the message
+        from the queue is performed by sending a transaction to the contract, which executes
+        the `popNextMessage` function. The transaction receipt is not used to obtain the message
+        content, as it only contains event data, not the returned struct.
+        """
+
+        # Peek first element before popping.
+        message_container = self.get_at_index(
+            agent_address=agent_address, idx=0, web3=web3
+        )
+
+        # Next, pop that element and discard the transaction receipt.
+        self.send(
             api_keys=api_keys,
             function_name="popNextMessage",
             function_params=[agent_address],
             web3=web3,
         )
-        # We fetch the object from the event instead of decoding the output of the transaction
-        # since we did that before, but also possible to do decoding the tx output.
-        log_message_raw = (
-            self.get_web3_contract(web3=web3)
-            .events.LogMessage()
-            .process_receipt(tx_receipt)
-        )
 
-        return LogMessageEvent(**log_message_raw[0]["args"])
+        return message_container
 
     def send_message(
         self,

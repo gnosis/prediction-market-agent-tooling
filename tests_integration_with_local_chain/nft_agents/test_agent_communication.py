@@ -9,8 +9,7 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
-def test_count_unseen_messages() -> None:
-    local_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
+def test_count_unseen_messages(local_web3: Web3) -> None:
     keys = APIKeys()
     mock_agent_address = keys.bet_from_address
     comm_contract = AgentCommunicationContract()
@@ -42,9 +41,8 @@ def test_count_unseen_messages() -> None:
     )
 
 
-def test_pop_message() -> None:
+def test_pop_message(local_web3: Web3) -> None:
     keys = APIKeys()
-    local_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
     mock_agent_address = keys.bet_from_address
     comm_contract = AgentCommunicationContract()
 
@@ -87,5 +85,5 @@ def test_pop_message() -> None:
         keys, mock_agent_address, web3=local_web3
     )
     # assert message match
-    assert stored_message.agent_address == mock_agent_address
+    assert stored_message.recipient == mock_agent_address
     assert stored_message.message == message

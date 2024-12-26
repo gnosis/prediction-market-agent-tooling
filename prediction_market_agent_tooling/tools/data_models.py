@@ -1,12 +1,15 @@
 import typing as t
 
-from eth_pydantic_types import HexStr
-from eth_typing import ChecksumAddress, HexAddress
 from pydantic import BaseModel, ConfigDict, Field
 from web3 import Web3
-from web3.types import Wei
 
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.gtypes import (
+    HexStr,
+    HexBytes,
+    Wei,
+    ChecksumAddress,
+    HexAddress,
+)
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 

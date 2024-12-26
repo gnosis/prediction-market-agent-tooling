@@ -1,5 +1,6 @@
 import zlib
 
+from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -9,9 +10,9 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
-def test_count_unseen_messages(local_web3: Web3) -> None:
+def test_count_unseen_messages(local_web3: Web3, accounts: list[TestAccount]) -> None:
     keys = APIKeys()
-    mock_agent_address = keys.bet_from_address
+    mock_agent_address = Web3.to_checksum_address(accounts[2].address)
     comm_contract = AgentCommunicationContract()
 
     initial_messages = comm_contract.count_unseen_messages(
@@ -20,11 +21,6 @@ def test_count_unseen_messages(local_web3: Web3) -> None:
     assert initial_messages == 0  # no messages yet
     # add new message
     message = zlib.compress(b"Hello there!")
-    # message = MessageContainer(
-    #     sender=mock_agent_address,
-    #     recipient=mock_agent_address,
-    #     message=zlib.compress(b"Hello there!"),
-    # )
 
     comm_contract.send_message(
         api_keys=keys,
@@ -50,12 +46,7 @@ def test_pop_message(local_web3: Web3) -> None:
         agent_address=mock_agent_address, web3=local_web3
     )
     assert initial_messages == 0  # no messages yet
-    # add new message
-    # message = MessageContainer(
-    #     sender=mock_agent_address,
-    #     recipient=mock_agent_address,
-    #     message=zlib.compress(b"Hello there!"),
-    # )
+
     message = zlib.compress(b"Hello there!")
 
     comm_contract.send_message(

@@ -71,6 +71,11 @@
                             "name": "message",
                             "type": "bytes",
                             "internalType": "bytes"
+                        },
+                        {
+                            "name": "value",
+                            "type": "uint256",
+                            "internalType": "uint256"
                         }
                     ]
                 }
@@ -133,6 +138,11 @@
                             "name": "message",
                             "type": "bytes",
                             "internalType": "bytes"
+                        },
+                        {
+                            "name": "value",
+                            "type": "uint256",
+                            "internalType": "uint256"
                         }
                     ]
                 }
@@ -181,25 +191,8 @@
                 },
                 {
                     "name": "message",
-                    "type": "tuple",
-                    "internalType": "struct DoubleEndedStructQueue.MessageContainer",
-                    "components": [
-                        {
-                            "name": "sender",
-                            "type": "address",
-                            "internalType": "address"
-                        },
-                        {
-                            "name": "recipient",
-                            "type": "address",
-                            "internalType": "address"
-                        },
-                        {
-                            "name": "message",
-                            "type": "bytes",
-                            "internalType": "bytes"
-                        }
-                    ]
+                    "type": "bytes",
+                    "internalType": "bytes"
                 }
             ],
             "outputs": [],
@@ -220,26 +213,7 @@
         },
         {
             "type": "event",
-            "name": "MessagePopped",
-            "inputs": [
-                {
-                    "name": "agentAddress",
-                    "type": "address",
-                    "indexed": true,
-                    "internalType": "address"
-                },
-                {
-                    "name": "message",
-                    "type": "bytes",
-                    "indexed": false,
-                    "internalType": "bytes"
-                }
-            ],
-            "anonymous": false
-        },
-        {
-            "type": "event",
-            "name": "NewMessageSent",
+            "name": "LogMessage",
             "inputs": [
                 {
                     "name": "sender",
@@ -258,6 +232,12 @@
                     "type": "bytes",
                     "indexed": false,
                     "internalType": "bytes"
+                },
+                {
+                    "name": "value",
+                    "type": "uint256",
+                    "indexed": false,
+                    "internalType": "uint256"
                 }
             ],
             "anonymous": false

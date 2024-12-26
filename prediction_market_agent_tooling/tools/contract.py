@@ -19,9 +19,9 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
 )
 from prediction_market_agent_tooling.tools.data_models import (
-    MessageContainer,
-    MessagePopped,
+    LogMessageEvent,
 )
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
@@ -546,8 +546,9 @@ class AgentCommunicationContract(ContractOnGnosisChain):
         )
     )
 
+    # ToDo - adjust mainnet
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x68670EDDa41d26F25DAcd9fADE75ec6E6a104AC3"
+        "0x62872578920427ae24b2527697dAb90CD1F4CA45"
     )
 
     def count_unseen_messages(
@@ -565,7 +566,7 @@ class AgentCommunicationContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         agent_address: ChecksumAddress,
         web3: Web3 | None = None,
-    ) -> MessagePopped:
+    ) -> LogMessageEvent:
         tx_receipt = self.send(
             api_keys=api_keys,
             function_name="popNextMessage",
@@ -574,19 +575,19 @@ class AgentCommunicationContract(ContractOnGnosisChain):
         )
         # We fetch the object from the event instead of decoding the output of the transaction
         # since we did that before, but also possible to do decoding the tx output.
-        message_popped_event_logs = (
+        log_message_raw = (
             self.get_web3_contract(web3=web3)
-            .events.MessagePopped()
+            .events.LogMessage()
             .process_receipt(tx_receipt)
         )
 
-        return MessagePopped(**message_popped_event_logs[0]["args"])
+        return LogMessageEvent(**log_message_raw[0]["args"])
 
     def send_message(
         self,
         api_keys: APIKeys,
         agent_address: ChecksumAddress,
-        message: MessageContainer,
+        message: HexBytes,
         amount_wei: Wei,
         web3: Web3 | None = None,
     ) -> TxReceipt:
@@ -594,7 +595,7 @@ class AgentCommunicationContract(ContractOnGnosisChain):
             api_keys=api_keys,
             function_name="sendMessage",
             amount_wei=amount_wei,
-            function_params=[agent_address, message.model_dump(by_alias=True)],
+            function_params=[agent_address, message],
             web3=web3,
         )
 

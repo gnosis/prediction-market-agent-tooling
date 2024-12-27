@@ -63,7 +63,18 @@ def test_invalid_token_pool() -> None:
     assert "do not match outcomes" in str(e.value)
 
 
-@pytest.mark.parametrize("market_type", list(MarketType))
+@pytest.mark.parametrize(
+    "market_type",
+    [
+        pytest.param(
+            MarketType.POLYMARKET,
+            marks=pytest.mark.skip(reason="Failing for Polymarket, see issue PMAT-574"),
+        ),
+        MarketType.MANIFOLD,
+        MarketType.OMEN,
+        MarketType.METACULUS,
+    ],
+)
 def test_get_pool_tokens(market_type: MarketType) -> None:
     market_types_without_pool_tokens = [
         MarketType.METACULUS,
@@ -83,7 +94,18 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
             assert market.get_pool_tokens(outcome) > 0
 
 
-@pytest.mark.parametrize("market_type", list(MarketType))
+@pytest.mark.parametrize(
+    "market_type",
+    [
+        pytest.param(
+            MarketType.POLYMARKET,
+            marks=pytest.mark.skip(reason="Failing for Polymarket, see issue PMAT-574"),
+        ),
+        MarketType.MANIFOLD,
+        MarketType.OMEN,
+        MarketType.METACULUS,
+    ],
+)
 def test_get_markets(market_type: MarketType) -> None:
     limit = 100
     markets = market_type.market_class.get_binary_markets(

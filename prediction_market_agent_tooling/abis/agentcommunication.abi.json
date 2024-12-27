@@ -1,7 +1,18 @@
 [
         {
             "type": "constructor",
-            "inputs": [],
+            "inputs": [
+                {
+                    "name": "_treasury",
+                    "type": "address",
+                    "internalType": "address payable"
+                },
+                {
+                    "name": "_pctToTreasuryInBasisPoints",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
             "stateMutability": "nonpayable"
         },
         {
@@ -110,6 +121,19 @@
         },
         {
             "type": "function",
+            "name": "pctToTreasuryInBasisPoints",
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
             "name": "popNextMessage",
             "inputs": [
                 {
@@ -210,6 +234,19 @@
             ],
             "outputs": [],
             "stateMutability": "nonpayable"
+        },
+        {
+            "type": "function",
+            "name": "treasury",
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "address",
+                    "internalType": "address payable"
+                }
+            ],
+            "stateMutability": "view"
         },
         {
             "type": "event",

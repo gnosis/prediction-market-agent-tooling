@@ -545,7 +545,7 @@ class AgentCommunicationContract(ContractOnGnosisChain):
     )
 
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x62872578920427ae24b2527697dAb90CD1F4CA45"
+        "0xd422e0059ed819e8d792af936da206878188e34f"
     )
 
     def count_unseen_messages(

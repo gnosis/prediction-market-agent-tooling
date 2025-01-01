@@ -543,6 +543,7 @@ class AgentCommunicationContract(ContractOnGnosisChain):
             "../abis/agentcommunication.abi.json",
         )
     )
+    #
 
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xd422e0059ed819e8d792af936da206878188e34f"

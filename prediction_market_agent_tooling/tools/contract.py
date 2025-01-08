@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
+    xDai,
 )
 from prediction_market_agent_tooling.tools.data_models import MessageContainer
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -29,6 +30,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
     send_function_on_contract_tx_using_safe,
+    wei_to_xdai,
 )
 
 
@@ -551,6 +553,10 @@ class AgentCommunicationContract(ContractOnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xd422e0059ed819e8d792af936da206878188e34f"
     )
+
+    def minimum_message_value(self, web3: Web3 | None = None) -> xDai:
+        value: Wei = self.call("minimumValueForSendingMessageInWei", web3=web3)
+        return wei_to_xdai(value)
 
     def ratio_given_to_treasury(self, web3: Web3 | None = None) -> float:
         bps: int = self.call("pctToTreasuryInBasisPoints", web3=web3)

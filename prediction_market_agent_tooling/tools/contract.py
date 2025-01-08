@@ -20,7 +20,11 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.tools.data_models import MessageContainer
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
+from prediction_market_agent_tooling.tools.utils import (
+    BPS_CONSTANT,
+    DatetimeUTC,
+    should_not_happen,
+)
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
@@ -66,9 +70,7 @@ class ContractBaseClass(BaseModel):
     address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
-    _cache: dict[
-        str, t.Any
-    ] = (
+    _cache: dict[str, t.Any] = (
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
@@ -547,6 +549,10 @@ class AgentCommunicationContract(ContractOnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xd422e0059ed819e8d792af936da206878188e34f"
     )
+
+    def ratio_given_to_treasury(self, web3: Web3 | None = None) -> float:
+        bps: int = self.call("pctToTreasuryInBasisPoints", web3=web3)
+        return bps / BPS_CONSTANT
 
     def count_unseen_messages(
         self,

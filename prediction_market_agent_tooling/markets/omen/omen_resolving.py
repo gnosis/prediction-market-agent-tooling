@@ -25,9 +25,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.markets.polymarket.utils import (
-    find_resolution_on_polymarket,
-)
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
 
@@ -263,9 +260,10 @@ def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:
                 logger.info(f"Looking on Manifold for {market.question_title=}")
                 resolution = find_resolution_on_manifold(market.question_title)
 
-            case MarketType.POLYMARKET:
-                logger.info(f"Looking on Polymarket for {market.question_title=}")
-                resolution = find_resolution_on_polymarket(market.question_title)
+            # TODO: Uncomment after https://github.com/gnosis/prediction-market-agent-tooling/issues/459 is done.
+            # case MarketType.POLYMARKET:
+            #     logger.info(f"Looking on Polymarket for {market.question_title=}")
+            #     resolution = find_resolution_on_polymarket(market.question_title)
 
             case _:
                 logger.warning(

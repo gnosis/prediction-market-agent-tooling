@@ -874,9 +874,9 @@ web3 = "^6.15.1"
 
 [package.source]
 type = "git"
-url = "git@github.com:kongzii/cow-py.git"
+url = "https://github.com/kongzii/cow-py.git"
 reference = "main"
-resolved_reference = "ee85d089eb13c1b24c3e809cdba1c436515bd726"
+resolved_reference = "5cfded7261ebf74591c42ab5da12cc9651e6c22e"
 
 [[package]]
 name = "cron-validator"
@@ -6479,4 +6479,4 @@ optuna = ["optuna"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "125fb211a274e2fd8b9744bad21203ead32ab78a1259c0b7fb0e5509713615d9"
+content-hash = "ba824bd3273abff42f47204b691deae0d4374cfabe1a3e1719b3a713860e387c"

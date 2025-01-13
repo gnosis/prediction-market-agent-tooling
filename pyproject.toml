@@ -54,6 +54,8 @@ pinatapy-vourhey = "^0.2.0"
 hishel = "^0.0.31"
 pytest-postgresql = "^6.1.1"
 optuna = { version = "^4.1.0", optional = true}
+httpx = "^0.25.2"
+cow-py = {git = "git@github.com:kongzii/cow-py.git", branch = "main"}
 
 [tool.poetry.extras]
 openai = ["openai"]

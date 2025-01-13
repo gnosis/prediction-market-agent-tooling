@@ -7,13 +7,13 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
 )
-from prediction_market_agent_tooling.tools.cow_order import swap_tokens
+from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 
 
-def test_swap_tokens(local_web3: Web3, test_keys: APIKeys) -> None:
+def test_swap_tokens_waiting(local_web3: Web3, test_keys: APIKeys) -> None:
     with pytest.raises(Exception) as e:
-        swap_tokens(
-            amount=xdai_type(1),
+        swap_tokens_waiting(
+            amount=xdai_type(0.1),
             sell_token=WrappedxDaiContract().address,
             buy_token=sDaiContract().address,
             api_keys=test_keys,

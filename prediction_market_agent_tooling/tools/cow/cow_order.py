@@ -6,21 +6,15 @@ from cow_py import swap_tokens
 from cow_py.common.chains import Chain
 from cow_py.common.constants import CowContractAddress
 from cow_py.order_book.config import Envs
-from cow_py.order_book.generated.model import UID
-from eth_account.signers.local import LocalAccount
-from pydantic import BaseModel
-from web3 import Web3
 from cow_py.order_book.generated.model import OrderMetaData, OrderStatus
+from eth_account.signers.local import LocalAccount
+from web3 import Web3
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
-
-
-class CompletedOrder(BaseModel):
-    uid: UID
-    url: str
 
 
 def swap_tokens_waiting(

@@ -254,7 +254,7 @@ class ContractERC20BaseClass(ContractBaseClass):
 class ContractDepositableWrapperERC20BaseClass(ContractERC20BaseClass):
     """
     ERC-20 standard base class extended for wrapper tokens.
-    Altough this is not a standard, it's seems to be a common pattern for wrapped tokens (at least it checks out for wxDai and wETH).
+    Although this is not a standard, it's seems to be a common pattern for wrapped tokens (at least it checks out for wxDai and wETH).
     """
 
     abi: ABI = abi_field_validator(

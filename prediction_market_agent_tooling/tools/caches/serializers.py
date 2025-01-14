@@ -16,7 +16,7 @@ def json_serializer_default_fn(
 ) -> str | dict[str, t.Any]:
     """
     Used to serialize objects that don't support it by default into a specific string that can be deserialized out later.
-    If this function returns a dictionary, it will be called recursivelly.
+    If this function returns a dictionary, it will be called recursively.
     If you add something here, also add it to `replace_custom_stringified_objects` below.
     """
     if isinstance(y, DatetimeUTC):
@@ -28,7 +28,7 @@ def json_serializer_default_fn(
     elif isinstance(y, BaseModel):
         return y.model_dump()
     raise TypeError(
-        f"Unsuported type for the default json serialize function, value is {y}."
+        f"Unsupported type for the default json serialize function, value is {y}."
     )
 
 

@@ -59,11 +59,11 @@ from tests.utils import RUN_PAID_TESTS
         ),
         (
             "Will Travis James Mullis be executed in Texas on 1 October 2024?",
-            False,  # Considered okay, becaues execution is done legally by the state, and so this market can not motivate people to do it.
+            False,  # Considered okay, because execution is done legally by the state, and so this market can not motivate people to do it.
         ),
         (
             "Will the second nitrogen gas execution in Alabama be carried out by 5 October 2024?",
-            False,  # Considered okay, becaues execution is done legally by the state, and so this market can not motivate people to do it.
+            False,  # Considered okay, because execution is done legally by the state, and so this market can not motivate people to do it.
         ),
         (
             "Will someone beat me?",

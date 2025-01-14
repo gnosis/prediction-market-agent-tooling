@@ -63,7 +63,7 @@ class DatetimeUTC(datetime):
     @staticmethod
     def to_datetime_utc(value: datetime | int | str) -> "DatetimeUTC":
         if isinstance(value, int):
-            # Divide by 1000 if the timestamp is assumed to be in miliseconds (if not, 1e11 would be year 5138).
+            # Divide by 1000 if the timestamp is assumed to be in milliseconds (if not, 1e11 would be year 5138).
             value = int(value / 1000) if value > 1e11 else value
             # In the past, we had bugged data where timestamp was huge and Python errored out.
             max_timestamp = int((datetime.max - timedelta(days=1)).timestamp())

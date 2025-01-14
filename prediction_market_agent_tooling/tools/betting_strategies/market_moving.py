@@ -25,7 +25,7 @@ def get_market_moving_bet(
     `p_yes` to that of the target.
 
     Consider a binary fixed-product market containing `x` and `y` tokens.
-    A trader wishes to aquire `x` tokens by betting an amount `d0`.
+    A trader wishes to acquire `x` tokens by betting an amount `d0`.
 
     The calculation to determine the number of `x` tokens he acquires, denoted
     by `dx`, is:

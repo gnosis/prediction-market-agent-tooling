@@ -596,7 +596,7 @@ class SimpleTreasuryContract(ContractOnGnosisChain, OwnableContract):
         )
 
 
-class AgentCommunicationContract(ContractOnGnosisChain):
+class AgentCommunicationContract(ContractOnGnosisChain, OwnableContract):
     # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
     abi: ABI = abi_field_validator(
         os.path.join(

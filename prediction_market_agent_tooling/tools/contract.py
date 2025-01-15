@@ -606,7 +606,7 @@ class AgentCommunicationContract(ContractOnGnosisChain):
     )
 
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0xd422e0059ed819e8d792af936da206878188e34f"
+        "0xc566Cb829Ed7aC097D17a38011A40Ad2DC25Dd82"
     )
 
     def minimum_message_value(self, web3: Web3 | None = None) -> xDai:
@@ -637,6 +637,32 @@ class AgentCommunicationContract(ContractOnGnosisChain):
             "getAtIndex", function_params=[agent_address, idx], web3=web3
         )
         return MessageContainer.from_tuple(message_container_raw)
+
+    def set_treasury_address(
+        self,
+        api_keys: APIKeys,
+        new_treasury_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="setTreasuryAddress",
+            function_params=[new_treasury_address],
+            web3=web3,
+        )
+
+    def set_minimum_value_for_sending_message(
+        self,
+        api_keys: APIKeys,
+        new_minimum_value: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="adjustMinimumValueForSendingMessage",
+            function_params=[new_minimum_value],
+            web3=web3,
+        )
 
     def pop_message(
         self,

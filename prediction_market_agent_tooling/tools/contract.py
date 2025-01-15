@@ -396,7 +396,7 @@ class OwnableContract(ContractBaseClass):
         return owner
 
 
-class ContractOwnableERC721BaseClass(OwnableContract):
+class ContractERC721BaseClass(ContractBaseClass):
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -423,8 +423,8 @@ class ContractOwnableERC721BaseClass(OwnableContract):
         balance: int = self.call("balanceOf", [owner], web3=web3)
         return balance
 
-    def ownerOf(self, tokenId: int, web3: Web3 | None = None) -> ChecksumAddress:
-        owner = Web3.to_checksum_address(self.call("ownerOf", [tokenId], web3=web3))
+    def owner_of(self, token_id: int, web3: Web3 | None = None) -> ChecksumAddress:
+        owner = Web3.to_checksum_address(self.call("ownerOf", [token_id], web3=web3))
         return owner
 
     def name(self, web3: Web3 | None = None) -> str:
@@ -455,6 +455,10 @@ class ContractOwnableERC721BaseClass(OwnableContract):
             tx_params=tx_params,
             web3=web3,
         )
+
+
+class ContractOwnableERC721BaseClass(ContractERC721BaseClass, OwnableContract):
+    pass
 
 
 class ContractOnGnosisChain(ContractBaseClass):
@@ -564,7 +568,7 @@ class SimpleTreasuryContract(ContractOnGnosisChain, OwnableContract):
         min_num_of_nfts: int = self.call("requiredNFTBalance", web3=web3)
         return min_num_of_nfts
 
-    def setRequiredNFTBalance(
+    def set_required_nft_balance(
         self,
         api_keys: APIKeys,
         web3: Web3 | None = None,
@@ -574,6 +578,11 @@ class SimpleTreasuryContract(ContractOnGnosisChain, OwnableContract):
             function_name="setRequiredNFTBalance",
             web3=web3,
         )
+
+    def nft_contract(self, web3: Web3 | None = None) -> ContractERC721BaseClass:
+        nft_contract_address: ChecksumAddress = self.call("nftContract", web3=web3)
+        contract = ContractERC721BaseClass(address=nft_contract_address)
+        return contract
 
     def withdraw(
         self,

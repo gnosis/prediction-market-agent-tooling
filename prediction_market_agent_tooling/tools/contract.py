@@ -390,7 +390,13 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         return self.convertToShares(amount, web3=web3)
 
 
-class ContractOwnableERC721BaseClass(ContractBaseClass):
+class OwnableContract(ContractBaseClass):
+    def owner(self, web3: Web3 | None = None) -> ChecksumAddress:
+        owner = Web3.to_checksum_address(self.call("owner", web3=web3))
+        return owner
+
+
+class ContractOwnableERC721BaseClass(OwnableContract):
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -537,6 +543,46 @@ class DebuggingContract(ContractOnGnosisChain):
         return self.send(
             api_keys=api_keys,
             function_name="inc",
+            web3=web3,
+        )
+
+
+class SimpleTreasuryContract(ContractOnGnosisChain, OwnableContract):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/simpletreasury.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x624ad0db52e6b18afb4d36b8e79d0c2a74f3fc8a"
+    )
+
+    def required_nft_balance(self, web3: Web3 | None = None) -> int:
+        min_num_of_nfts: int = self.call("requiredNFTBalance", web3=web3)
+        return min_num_of_nfts
+
+    def setRequiredNFTBalance(
+        self,
+        api_keys: APIKeys,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="setRequiredNFTBalance",
+            web3=web3,
+        )
+
+    def withdraw(
+        self,
+        api_keys: APIKeys,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="withdraw",
             web3=web3,
         )
 

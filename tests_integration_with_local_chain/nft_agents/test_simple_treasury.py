@@ -45,14 +45,6 @@ def test_owner(
     assert owner == labs_deployer
 
 
-def test_set_required_nft_balance(
-    local_web3: Web3,
-    labs_deployer: ChecksumAddress,
-    simple_treasury_contract: SimpleTreasuryContract,
-) -> None:
-    pass
-
-
 def test_withdraw(
     local_web3: Web3,
     accounts: list[TestAccount],

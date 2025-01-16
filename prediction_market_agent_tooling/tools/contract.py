@@ -400,7 +400,7 @@ class ContractERC721BaseClass(ContractBaseClass):
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../abis/ownable_erc721.abi.json",
+            "../abis/erc721.abi.json",
         )
     )
 

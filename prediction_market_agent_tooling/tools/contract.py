@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from pydantic import BaseModel, field_validator
 from web3 import Web3
+from web3.constants import CHECKSUM_ADDRESSS_ZERO
 from web3.contract.contract import Contract as Web3Contract
 
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -80,7 +81,9 @@ class ContractBaseClass(BaseModel):
 
     @classmethod
     def merge_contract_abis(cls, contracts: list["ContractBaseClass"]) -> ABI:
-        merged_abi = sum((json.loads(contract.abi) for contract in contracts), [])
+        merged_abi: list[dict[t.Any, t.Any]] = sum(
+            (json.loads(contract.abi) for contract in contracts), []
+        )
         return abi_field_validator(json.dumps(merged_abi))
 
     def get_web3_contract(self, web3: Web3 | None = None) -> Web3Contract:
@@ -470,8 +473,12 @@ class ContractERC721BaseClass(ContractBaseClass):
 
 
 class ContractOwnableERC721BaseClass(ContractERC721BaseClass, OwnableContract):
+    # We add dummy addresses below so that we can reference .abi later.
     abi: ABI = ContractBaseClass.merge_contract_abis(
-        [ContractERC721BaseClass(address=""), OwnableContract(address="")]
+        [
+            ContractERC721BaseClass(address=ChecksumAddress(CHECKSUM_ADDRESSS_ZERO)),
+            OwnableContract(address=ChecksumAddress(CHECKSUM_ADDRESSS_ZERO)),
+        ]
     )
 
 

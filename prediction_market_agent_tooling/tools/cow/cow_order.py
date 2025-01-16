@@ -10,6 +10,7 @@ from cow_py.order_book.generated.model import OrderMetaData, OrderStatus
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
@@ -62,6 +63,7 @@ async def swap_tokens_waiting_async(
         chain=chain,
         env=env,
     )
+    logger.info(f"Order created: {order}")
     start_time = utcnow()
 
     while True:

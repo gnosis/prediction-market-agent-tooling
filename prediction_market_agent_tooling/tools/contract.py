@@ -78,6 +78,11 @@ class ContractBaseClass(BaseModel):
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
+    @classmethod
+    def merge_contract_abis(cls, contracts: list["ContractBaseClass"]) -> ABI:
+        merged_abi = sum((json.loads(contract.abi) for contract in contracts), [])
+        return abi_field_validator(json.dumps(merged_abi))
+
     def get_web3_contract(self, web3: Web3 | None = None) -> Web3Contract:
         web3 = web3 or self.get_web3()
         return web3.eth.contract(address=self.address, abi=self.abi)
@@ -391,6 +396,13 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
 
 
 class OwnableContract(ContractBaseClass):
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/ownable.abi.json",
+        )
+    )
+
     def owner(self, web3: Web3 | None = None) -> ChecksumAddress:
         owner = Web3.to_checksum_address(self.call("owner", web3=web3))
         return owner
@@ -458,7 +470,9 @@ class ContractERC721BaseClass(ContractBaseClass):
 
 
 class ContractOwnableERC721BaseClass(ContractERC721BaseClass, OwnableContract):
-    pass
+    abi: ABI = ContractBaseClass.merge_contract_abis(
+        [ContractERC721BaseClass(address=""), OwnableContract(address="")]
+    )
 
 
 class ContractOnGnosisChain(ContractBaseClass):
@@ -571,11 +585,13 @@ class SimpleTreasuryContract(ContractOnGnosisChain, OwnableContract):
     def set_required_nft_balance(
         self,
         api_keys: APIKeys,
+        new_required_balance: int,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             api_keys=api_keys,
             function_name="setRequiredNFTBalance",
+            function_params=[new_required_balance],
             web3=web3,
         )
 

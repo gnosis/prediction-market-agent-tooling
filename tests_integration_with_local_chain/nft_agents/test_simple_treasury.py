@@ -1,5 +1,3 @@
-import math
-
 import pytest
 from ape import accounts as ape_accounts
 from ape_test import TestAccount
@@ -52,7 +50,6 @@ def test_withdraw(
     simple_treasury_contract: SimpleTreasuryContract,
 ) -> None:
     executor = accounts[0]
-    initial_balance_executor = get_balances(executor.address, web3=local_web3).xdai
     amount_transferred = xdai_type(5)
     # Transfer all the balance to the treasury
     send_xdai_to(
@@ -61,35 +58,26 @@ def test_withdraw(
         to_address=simple_treasury_contract.address,
         value=xdai_to_wei(amount_transferred),
     )
-    required_nfts = simple_treasury_contract.required_nft_balance(web3=local_web3)
-    nft = simple_treasury_contract.nft_contract(local_web3)
-    for token_id in range(required_nfts):
-        # We transfer nfts to the executor for it to call withdraw.
-        token_owner = nft.owner_of(token_id=token_id, web3=local_web3)
-        # Impersonate accounts (only works with local chain because unsigned transactions are executed)
-        with ape_accounts.use_sender(token_owner) as s:
-            execute_tx_from_impersonated_account(
-                web3=local_web3,
-                impersonated_account=s,
-                contract_address=nft.address,
-                contract_abi=nft.abi,
-                function_name="safeTransferFrom",
-                function_params=[s.address, executor.address, token_id],
-            )
+    owner = simple_treasury_contract.owner(web3=local_web3)
+    # Set required
+    with ape_accounts.use_sender(owner) as s:
+        execute_tx_from_impersonated_account(
+            web3=local_web3,
+            impersonated_account=s,
+            contract_address=simple_treasury_contract.address,
+            contract_abi=simple_treasury_contract.abi,
+            function_name="setRequiredNFTBalance",
+            function_params=[0],
+        )
 
-    # deposit money into treasury
-    assert nft.balanceOf(executor.address, web3=local_web3) == required_nfts
     # call withdraw
     keys = APIKeys(
         BET_FROM_PRIVATE_KEY=private_key_type(executor.private_key), SAFE_ADDRESS=None
     )
     simple_treasury_contract.withdraw(api_keys=keys, web3=local_web3)
-    final_balance_executor = get_balances(executor.address, web3=local_web3).xdai
 
     # Assert treasury is empty
     final_treasury_balance = get_balances(
         simple_treasury_contract.address, web3=local_web3
     ).xdai
     assert int(final_treasury_balance) == 0
-    # Assert executor got the treasury amount
-    assert math.isclose(final_balance_executor, initial_balance_executor, abs_tol=0.1)

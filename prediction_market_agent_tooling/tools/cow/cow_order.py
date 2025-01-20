@@ -2,24 +2,65 @@ import asyncio
 from datetime import timedelta
 
 import httpx
-from cow_py import swap_tokens
-from cow_py.common.chains import Chain
-from cow_py.common.constants import CowContractAddress
-from cow_py.order_book.config import Envs
-from cow_py.order_book.generated.model import OrderMetaData, OrderStatus
+from cowdao_cowpy import swap_tokens
+from cowdao_cowpy.common.chains import Chain
+from cowdao_cowpy.common.config import SupportedChainId
+from cowdao_cowpy.common.constants import CowContractAddress
+from cowdao_cowpy.order_book.api import OrderBookApi
+from cowdao_cowpy.order_book.config import Envs, OrderBookAPIConfigFactory
+from cowdao_cowpy.order_book.generated.model import (
+    Address,
+    OrderMetaData,
+    OrderQuoteRequest,
+    OrderQuoteSide1,
+    OrderQuoteSideKindSell,
+    OrderStatus,
+    TokenAmount,
+)
 from eth_account.signers.local import LocalAccount
+from eth_typing.evm import ChecksumAddress
 from web3 import Web3
+from web3.types import Wei
 
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, wei_type
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+
+
+def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
+    chain_id = SupportedChainId(chain.value[0])
+    return OrderBookApi(OrderBookAPIConfigFactory.get_config(env, chain_id))
+
+
+def get_buy_token_amount(
+    amount_wei: Wei,
+    sell_token: ChecksumAddress,
+    buy_token: ChecksumAddress,
+    chain: Chain = Chain.GNOSIS,
+    env: Envs = "prod",
+) -> Wei:
+    order_book_api = get_order_book_api(env, chain)
+    order_quote_request = OrderQuoteRequest(
+        sellToken=Address(sell_token),
+        buyToken=Address(buy_token),
+        from_=Address(
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ),  # Just random address, doesn't matter.
+    )
+    order_side = OrderQuoteSide1(
+        kind=OrderQuoteSideKindSell.sell,
+        sellAmountBeforeFee=TokenAmount(str(amount_wei)),
+    )
+    order_quote = asyncio.run(
+        order_book_api.post_quote(order_quote_request, order_side)
+    )
+    return wei_type(order_quote.quote.buyAmount.root)
 
 
 def swap_tokens_waiting(
-    amount: xDai,
+    amount_wei: Wei,
     sell_token: ChecksumAddress,
     buy_token: ChecksumAddress,
     api_keys: APIKeys,
@@ -27,7 +68,6 @@ def swap_tokens_waiting(
     env: Envs = "prod",
     web3: Web3 | None = None,
 ) -> OrderMetaData:
-    amount_wei = xdai_to_wei(amount)
     account = api_keys.get_account()
 
     # Approve the CoW Swap Vault Relayer to get the sell token.

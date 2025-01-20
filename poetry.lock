@@ -854,8 +854,8 @@ colorama = {version = "*", markers = "sys_platform == \"win32\""}
 development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 
 [[package]]
-name = "cow-py"
-version = "0.1.0"
+name = "cowdao-cowpy"
+version = "1.0.0pre"
 description = ""
 optional = false
 python-versions = ">=3.10,<4.0"
@@ -875,8 +875,8 @@ web3 = "^6.15.1"
 [package.source]
 type = "git"
 url = "https://github.com/kongzii/cow-py.git"
-reference = "peter/slippage_tolerance"
-resolved_reference = "b58ace9c5a15361fb2a9914981f9320375dbb75c"
+reference = "peter/byna,me"
+resolved_reference = "43ec8c56d46876499a269704e580e666bc7957e6"
 
 [[package]]
 name = "cron-validator"
@@ -6486,4 +6486,4 @@ optuna = ["optuna"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "6708be59efdd58ab097fe55c8856e763edce672c46a4ae692e90b31a178e38a1"
+content-hash = "a3726928616042db7acbe41f8f29ed7365b6674e973f7ac6ded52979ebab8b0f"

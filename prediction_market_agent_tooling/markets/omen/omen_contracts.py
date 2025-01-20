@@ -31,6 +31,10 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealitioLogNewQuestionEvent,
     format_realitio_question,
 )
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    SDAI_CONTRACT_ADDRESS,
+    WRAPPED_XDAI_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC20OnGnosisChain,
@@ -419,16 +423,18 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         )
 
 
-class WrappedxDaiContract(ContractDepositableWrapperERC20OnGnosisChain):
+class GNOContract(ContractERC20OnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
+        "0x9c58bacc331c9aa871afd802db6379a98e80cedb"
     )
+
+
+class WrappedxDaiContract(ContractDepositableWrapperERC20OnGnosisChain):
+    address: ChecksumAddress = WRAPPED_XDAI_CONTRACT_ADDRESS
 
 
 class sDaiContract(ContractERC4626OnGnosisChain):
-    address: ChecksumAddress = Web3.to_checksum_address(
-        "0xaf204776c7245bF4147c2612BF6e5972Ee483701"
-    )
+    address: ChecksumAddress = SDAI_CONTRACT_ADDRESS
 
 
 OMEN_DEFAULT_MARKET_FEE_PERC = 0.02  # 2% fee from the buying shares amount.

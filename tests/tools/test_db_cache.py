@@ -275,7 +275,7 @@ def test_postgres_cache_pydantic_models_will_be_invalidated_after_change(
 
     # Define a new output model to invalidate the cache
     class FirstOutputModel(TestOutputModel):  # type: ignore[no-redef] # Mypy complains, because `FirstOutputModel` was defined two times, but that's the point of this test.
-        # If you would remove this field here, and just do `pass`, this test would fail, because cache wasn't invalidated (the model has same name and requried arguments).
+        # If you would remove this field here, and just do `pass`, this test would fail, because cache wasn't invalidated (the model has same name and required arguments).
         # In reality, we won't define two classes with the same name in a single file, but what could happen is adding a new required field to the model, making it incompatible with the previously stored cached data.
         new_field: str
 

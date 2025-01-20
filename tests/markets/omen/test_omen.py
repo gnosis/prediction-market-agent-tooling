@@ -353,7 +353,7 @@ def test_get_outcome_tokens_in_the_past() -> None:
         generic_bet.profit.amount, 2.4007766133282686
     ), f"{generic_bet.profit.amount} != 2.4007766133282686"
 
-    # We need to substract -1 from block number, to get the market in the state before actually doing that bet --> after it's done, results are different
+    # We need to subtract -1 from block number, to get the market in the state before actually doing that bet --> after it's done, results are different
     market_before_placing_bet = OmenAgentMarket.from_data_model(
         OmenSubgraphHandler().get_omen_market_by_market_id(
             market_id=market_id, block_number=bet_block_number - 1

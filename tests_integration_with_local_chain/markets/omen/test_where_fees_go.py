@@ -175,7 +175,7 @@ def test_where_fees_go(
     omen_remove_fund_market_tx(api_keys_B, agent_market, shares=None, web3=local_web3)
 
     # Redeem positions from all accounts.
-    # Note: Usually we just take all positions from subgraph and redeem them, here we manualy redeem the ones we should have now.
+    # Note: Usually we just take all positions from subgraph and redeem them, here we manually redeem the ones we should have now.
     conditional_token_contract = OmenConditionalTokenContract()
     condition_event = check_not_none(
         created_market.condition_event,

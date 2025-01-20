@@ -22,15 +22,14 @@ def auto_deposit_collateral_token(
     api_keys: APIKeys,
     web3: Web3 | None = None,
 ) -> None:
-    if isinstance(collateral_token_contract, ContractERC4626BaseClass):
-        auto_deposit_erc4626(collateral_token_contract, amount_wei, api_keys, web3)
-
-    elif isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20BaseClass
-    ):
+    if isinstance(collateral_token_contract, ContractDepositableWrapperERC20BaseClass):
+        # In this case, we can use deposit function directly, no need to go through DEX.
         auto_deposit_depositable_wrapper_erc20(
             collateral_token_contract, amount_wei, api_keys, web3
         )
+
+    elif isinstance(collateral_token_contract, ContractERC4626BaseClass):
+        auto_deposit_erc4626(collateral_token_contract, amount_wei, api_keys, web3)
 
     elif isinstance(collateral_token_contract, ContractERC20BaseClass):
         auto_deposit_erc20(collateral_token_contract, amount_wei, api_keys, web3)
@@ -79,28 +78,26 @@ def auto_deposit_erc4626(
     # If we need to deposit into erc4626, we first need to have enough of the asset token.
     asset_token_contract = collateral_token_contract.get_asset_token_contract(web3=web3)
 
-    # If the asset token is Depositable Wrapper ERC-20, we can deposit it, in case we don't have enough.
-    if (
-        collateral_token_contract.get_asset_token_balance(for_address, web3)
-        < asset_amount_wei
-    ):
-        if isinstance(asset_token_contract, ContractDepositableWrapperERC20BaseClass):
+    # If the asset token is Depositable Wrapper ERC-20, we don't need to go through DEX.
+    if isinstance(asset_token_contract, ContractDepositableWrapperERC20BaseClass):
+        if (
+            collateral_token_contract.get_asset_token_balance(for_address, web3)
+            < asset_amount_wei
+        ):
+            # Because we can use deposit function directly if needed.
             auto_deposit_depositable_wrapper_erc20(
                 asset_token_contract, asset_amount_wei, api_keys, web3
             )
-        elif isinstance(collateral_token_contract, ContractERC20BaseClass):
-            auto_deposit_erc20(asset_token_contract, asset_amount_wei, api_keys, web3)
-        else:
-            raise ValueError(
-                "Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
-            )
+        # And finally, we can deposit the asset token into the erc4626 vault directly as well, without DEX.
+        collateral_token_balance_in_assets = collateral_token_contract.convertToAssets(
+            collateral_token_balance_in_shares, web3
+        )
+        left_to_deposit = Wei(asset_amount_wei - collateral_token_balance_in_assets)
+        collateral_token_contract.deposit_asset_token(left_to_deposit, api_keys, web3)
 
-    # Finally, we can deposit the asset token into the erc4626 vault.
-    collateral_token_balance_in_assets = collateral_token_contract.convertToAssets(
-        collateral_token_balance_in_shares, web3
-    )
-    left_to_deposit = Wei(asset_amount_wei - collateral_token_balance_in_assets)
-    collateral_token_contract.deposit_asset_token(left_to_deposit, api_keys, web3)
+    else:
+        # Otherwise, we need to go through DEX.
+        auto_deposit_erc20(collateral_token_contract, asset_amount_wei, api_keys, web3)
 
 
 def auto_deposit_erc20(

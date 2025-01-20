@@ -46,13 +46,13 @@ def claim_bonds_on_realitio_questions(
             claim_bonds_on_realitio_question(
                 api_keys, question, auto_withdraw=auto_withdraw, web3=web3
             )
+            claimed_questions.append(question.questionId)
         except Exception as e:
             if not skip_failed:
                 raise e
             logger.error(
                 f"Failed to claim bond for {question.url=}, {question.questionId=}: {e}"
             )
-        claimed_questions.append(question.questionId)
 
     return claimed_questions
 

@@ -320,7 +320,7 @@ class OmenAgentMarket(AgentMarket):
     def market_redeemable_by(self, user: ChecksumAddress) -> bool:
         """
         Will return true if given user placed a bet on this market and that bet has a balance.
-        If the user never placed a bet on this market, this corretly return False.
+        If the user never placed a bet on this market, this correctly return False.
         """
         positions = OmenSubgraphHandler().get_positions(condition_id=self.condition.id)
         user_positions = OmenSubgraphHandler().get_user_positions(

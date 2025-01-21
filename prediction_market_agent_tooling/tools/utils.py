@@ -37,7 +37,7 @@ def check_not_none(
     ```
     keys = pma.utils.get_keys()
     pma.omen.omen_buy_outcome_tx(
-        from_addres=check_not_none(keys.bet_from_address),  # <-- No more Optional[HexAddress], so type checker will be happy.
+        from_address=check_not_none(keys.bet_from_address),  # <-- No more Optional[HexAddress], so type checker will be happy.
         ...,
     )
     ```
@@ -60,7 +60,7 @@ def should_not_happen(
         1 if variable == X
         else 2 if variable == Y
         else 3 if variable == Z
-        else should_not_happen(f"Variable {variable} is uknown.")
+        else should_not_happen(f"Variable {variable} is unknown.")
     )
     ```
 

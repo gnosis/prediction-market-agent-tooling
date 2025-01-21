@@ -96,7 +96,7 @@ def test_stealing_on_markets(
         balance_after_market_creation_A < starting_balance_A
     ), "Starting balance of A should have been lowered"
 
-    # Buy YES tokens from accout B (attacker) -- removing profit from any real agent that'd like to complete the job.
+    # Buy YES tokens from account B (attacker) -- removing profit from any real agent that'd like to complete the job.
     buy_yes_for_b = xdai_type(5)
     binary_omen_buy_outcome_tx(
         api_keys_B,
@@ -172,7 +172,7 @@ def test_stealing_on_markets(
     omen_resolve_market_tx(api_keys_A, omen_market, local_web3)
 
     # Redeem positions from both accounts.
-    # Note: Usually we just take all positions from subgraph and redeem them, here we manualy redeem the ones we should have now.
+    # Note: Usually we just take all positions from subgraph and redeem them, here we manually redeem the ones we should have now.
     conditional_token_contract = OmenConditionalTokenContract()
     condition_event = check_not_none(
         created_market.condition_event,

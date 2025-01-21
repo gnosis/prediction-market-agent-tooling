@@ -22,7 +22,7 @@ QUESTION_IS_PREDICTABLE_BINARY_PROMPT = """Main signs about a fully qualified qu
 - If the market's question contains year, but without an exact date, it's okay.
 - The market's question can not be about itself or refer to itself.
 - The answer is probably Google-able, after the event happened.
-- The potential asnwer can be only "Yes" or "No".
+- The potential answer can be only "Yes" or "No".
 
 Follow a chain of thought to evaluate if the question is fully qualified:
 

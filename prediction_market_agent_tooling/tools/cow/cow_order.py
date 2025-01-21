@@ -10,9 +10,9 @@ from cow_py.order_book.generated.model import OrderMetaData, OrderStatus
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei

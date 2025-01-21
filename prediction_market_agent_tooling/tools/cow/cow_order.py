@@ -111,14 +111,22 @@ async def swap_tokens_waiting_async(
             response = await client.get(order.url)
             order_metadata = OrderMetaData.model_validate(response.json())
 
-        if order_metadata.status in (
-            OrderStatus.fulfilled,
+        if order_metadata.status == OrderStatus.fulfilled:
+            logger.info(f"Order {order.uid} ({order.url}) completed.")
+            return order_metadata
+
+        elif order_metadata.status in (
             OrderStatus.cancelled,
             OrderStatus.expired,
         ):
-            return order_metadata
+            raise ValueError(f"Order {order.uid} failed. {order.url}")
 
         if utcnow() - start_time > timeout:
-            raise TimeoutError("Timeout waiting for order to be completed.")
+            raise TimeoutError(
+                f"Timeout waiting for order {order.uid} to be completed. {order.url}"
+            )
 
+        logger.info(
+            f"Order status of {order.uid} ({order.url}): {order_metadata.status}, waiting..."
+        )
         await asyncio.sleep(3.14)

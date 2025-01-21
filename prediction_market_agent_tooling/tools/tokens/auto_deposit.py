@@ -2,6 +2,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Wei, wei_type
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20BaseClass,
     ContractERC20BaseClass,
@@ -14,6 +15,7 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
 )
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
 from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 
 def auto_deposit_collateral_token(
@@ -54,6 +56,9 @@ def auto_deposit_depositable_wrapper_erc20(
 
     # If we don't have enough, we need to deposit the difference.
     left_to_deposit = Wei(amount_wei - collateral_token_balance)
+    logger.info(
+        f"Depositing {wei_to_xdai(left_to_deposit)} {collateral_token_contract.symbol()}."
+    )
     collateral_token_contract.deposit(api_keys, left_to_deposit, web3=web3)
 
 
@@ -78,21 +83,22 @@ def auto_deposit_erc4626(
     # If we need to deposit into erc4626, we first need to have enough of the asset token.
     asset_token_contract = collateral_token_contract.get_asset_token_contract(web3=web3)
 
-    # If the asset token is Depositable Wrapper ERC-20, we don't need to go through DEX.
     if isinstance(asset_token_contract, ContractDepositableWrapperERC20BaseClass):
-        if (
-            collateral_token_contract.get_asset_token_balance(for_address, web3)
-            < asset_amount_wei
-        ):
-            # Because we can use deposit function directly if needed.
-            auto_deposit_depositable_wrapper_erc20(
-                asset_token_contract, asset_amount_wei, api_keys, web3
-            )
-        # And finally, we can deposit the asset token into the erc4626 vault directly as well, without DEX.
+        # If the asset token is Depositable Wrapper ERC-20, we don't need to go through DEX.
+        # First, calculate how much of asset token we need to deposit into the vault.
         collateral_token_balance_in_assets = collateral_token_contract.convertToAssets(
             collateral_token_balance_in_shares, web3
         )
         left_to_deposit = Wei(asset_amount_wei - collateral_token_balance_in_assets)
+        if (
+            collateral_token_contract.get_asset_token_balance(for_address, web3)
+            < left_to_deposit
+        ):
+            # If we don't have enough of asset token to deposit into the vault, deposit that one first.
+            auto_deposit_depositable_wrapper_erc20(
+                asset_token_contract, left_to_deposit, api_keys, web3
+            )
+        # And finally, we can deposit the asset token into the erc4626 vault directly as well, without DEX.
         collateral_token_contract.deposit_asset_token(left_to_deposit, api_keys, web3)
 
     else:
@@ -128,12 +134,19 @@ def auto_deposit_erc20(
         / collateral_amount_wei
         * 1.01
     )
+    # If we don't have enough of the source token.
     if amount_to_sell_wei > ContractERC20OnGnosisChain(
         address=KEEPING_ERC20_TOKEN.address
     ).balanceOf(api_keys.bet_from_address):
-        raise ValueError(
-            "Not enough of the source token to sell to get the desired amount of the collateral token."
-        )
+        # Try to deposit it, if it's depositable token (like Wrapped xDai, agent could have xDai).
+        if isinstance(KEEPING_ERC20_TOKEN, ContractDepositableWrapperERC20BaseClass):
+            auto_deposit_depositable_wrapper_erc20(
+                KEEPING_ERC20_TOKEN, amount_to_sell_wei, api_keys, web3
+            )
+        else:
+            raise ValueError(
+                "Not enough of the source token to sell to get the desired amount of the collateral token."
+            )
     swap_tokens_waiting(
         amount_wei=amount_to_sell_wei,
         sell_token=KEEPING_ERC20_TOKEN.address,

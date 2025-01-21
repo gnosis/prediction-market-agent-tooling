@@ -429,6 +429,12 @@ class GNOContract(ContractERC20OnGnosisChain):
     )
 
 
+class WETHContract(ContractERC20OnGnosisChain):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x6a023ccd1ff6f2045c3309768ead9e68f978f6e1"
+    )
+
+
 class WrappedxDaiContract(ContractDepositableWrapperERC20OnGnosisChain):
     address: ChecksumAddress = WRAPPED_XDAI_CONTRACT_ADDRESS
 

@@ -115,7 +115,7 @@ def have_bet_on_market_since(
                 )
             )
             if isinstance(market, OmenAgentMarket)
-            else should_not_happen(f"Uknown market: {market}")
+            else should_not_happen(f"Unknown market: {market}")
         )
     )
     return market.question in recently_betted_questions

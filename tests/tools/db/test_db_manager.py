@@ -16,4 +16,4 @@ def test_DBManager_creates_only_one_instance() -> None:
     assert are_same_instance, "DBManager created more than one instance!"
     assert (
         are_not_same_instance
-    ), "DBManager returned isntance with a different SQLALCHEMY_DB_URL!"
+    ), "DBManager returned instance with a different SQLALCHEMY_DB_URL!"

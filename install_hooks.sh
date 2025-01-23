@@ -10,7 +10,4 @@ fi
 # Install the hooks
 pre-commit install
 
-# Create a symlink for the hooks
-ln -sfn .githooks .git/hooks
-
 echo "Pre-commit hooks installed successfully."

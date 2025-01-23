@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Update pre-commit hooks if config file has changed
+if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD | grep -q ".pre-commit-config.yaml"; then
+    echo "Pre-commit config changed, updating hooks..."
+    pre-commit autoupdate
+    pre-commit install
+fi

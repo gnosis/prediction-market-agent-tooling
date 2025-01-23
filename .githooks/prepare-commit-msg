@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ ! -f .git/hooks/pre-commit ]; then
+    echo "Error: Pre-commit hooks are not installed."
+    echo "Please run 'pre-commit install' before committing."
+    exit 1
+fi

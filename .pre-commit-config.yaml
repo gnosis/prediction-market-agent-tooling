@@ -5,3 +5,12 @@
       - id: detect-private-key
       - id: check-added-large-files
         args: ['--maxkb=5000']
+  - repo: local
+    hooks:
+      - id: detect-web3-private-key
+        name: Detect Web3 Private Key
+        entry: python scripts/detect_web3_private_keys.py
+        language: python
+        stages: [pre-commit]
+        additional_dependencies: ['eth-account']
+        exclude: 'poetry.lock'

@@ -110,6 +110,17 @@ yarl = ">=1.17.0,<2.0"
 speedups = ["Brotli", "aiodns (>=3.2.0)", "brotlicffi"]
 
 [[package]]
+name = "aiolimiter"
+version = "1.2.1"
+description = "asyncio rate limiter, a leaky bucket implementation"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "aiolimiter-1.2.1-py3-none-any.whl", hash = "sha256:d3f249e9059a20badcb56b61601a83556133655c11d1eb3dd3e04ff069e5f3c7"},
+    {file = "aiolimiter-1.2.1.tar.gz", hash = "sha256:e02a37ea1a855d9e832252a105420ad4d15011505512a1a1d814647451b5cca9"},
+]
+
+[[package]]
 name = "aiosignal"
 version = "1.3.2"
 description = "aiosignal: a list of registered asynchronous callbacks"
@@ -322,6 +333,24 @@ files = [
     {file = "base58-1.0.3-py3-none-any.whl", hash = "sha256:6aa0553e477478993588303c54659d15e3c17ae062508c854a8b752d07c716bd"},
     {file = "base58-1.0.3.tar.gz", hash = "sha256:9a793c599979c497800eb414c852b80866f28daaed5494703fc129592cc83e60"},
 ]
+
+[[package]]
+name = "bases"
+version = "0.3.0"
+description = "Python library for general Base-N encodings."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "bases-0.3.0-py3-none-any.whl", hash = "sha256:a2fef3366f3e522ff473d2e95c21523fe8e44251038d5c6150c01481585ebf5b"},
+    {file = "bases-0.3.0.tar.gz", hash = "sha256:70f04a4a45d63245787f9e89095ca11042685b6b64b542ad916575ba3ccd1570"},
+]
+
+[package.dependencies]
+typing-extensions = ">=4.6.0"
+typing-validation = ">=1.1.0"
+
+[package.extras]
+dev = ["base58", "mypy", "pylint", "pytest", "pytest-cov"]
 
 [[package]]
 name = "bitarray"
@@ -823,6 +852,31 @@ colorama = {version = "*", markers = "sys_platform == \"win32\""}
 
 [package.extras]
 development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
+
+[[package]]
+name = "cow-py"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = ">=3.10,<4.0"
+files = []
+develop = false
+
+[package.dependencies]
+aiolimiter = "^1.1.0"
+backoff = "^2.2.1"
+httpx = ">=0.25.0,<1.0.0"
+multiformats = "^0.3.1.post4"
+pybars3 = "^0.9.7"
+pydantic = "^2.7.0"
+pytest-mock = "^3.14.0"
+web3 = "^6.15.1"
+
+[package.source]
+type = "git"
+url = "https://github.com/kongzii/cow-py.git"
+reference = "peter/slippage_tolerance"
+resolved_reference = "b58ace9c5a15361fb2a9914981f9320375dbb75c"
 
 [[package]]
 name = "cron-validator"
@@ -3174,6 +3228,44 @@ files = [
 typing-extensions = {version = ">=4.1.0", markers = "python_version < \"3.11\""}
 
 [[package]]
+name = "multiformats"
+version = "0.3.1.post4"
+description = "Python implementation of multiformats protocols."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "multiformats-0.3.1.post4-py3-none-any.whl", hash = "sha256:5b1d61bd8275c9e817bdbee38dbd501b26629011962ee3c86c46e7ccd0b14129"},
+    {file = "multiformats-0.3.1.post4.tar.gz", hash = "sha256:d00074fdbc7d603c2084b4c38fa17bbc28173cf2750f51f46fbbc5c4d5605fbb"},
+]
+
+[package.dependencies]
+bases = ">=0.3.0"
+multiformats-config = ">=0.3.0"
+typing-extensions = ">=4.6.0"
+typing-validation = ">=1.1.0"
+
+[package.extras]
+dev = ["blake3", "mmh3", "mypy", "pycryptodomex", "pylint", "pyskein", "pytest", "pytest-cov", "rich"]
+full = ["blake3", "mmh3", "pycryptodomex", "pyskein", "rich"]
+
+[[package]]
+name = "multiformats-config"
+version = "0.3.1"
+description = "Pre-loading configuration module for the 'multiformats' package."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "multiformats-config-0.3.1.tar.gz", hash = "sha256:7eaa80ef5d9c5ee9b86612d21f93a087c4a655cbcb68960457e61adbc62b47a7"},
+    {file = "multiformats_config-0.3.1-py3-none-any.whl", hash = "sha256:dec4c9d42ed0d9305889b67440f72e8e8d74b82b80abd7219667764b5b0a8e1d"},
+]
+
+[package.dependencies]
+multiformats = "*"
+
+[package.extras]
+dev = ["mypy", "pylint", "pytest", "pytest-cov"]
+
+[[package]]
 name = "mypy"
 version = "1.14.1"
 description = "Optional static typing for Python"
@@ -4272,6 +4364,19 @@ files = [
 pyasn1 = ">=0.4.6,<0.7.0"
 
 [[package]]
+name = "pybars3"
+version = "0.9.7"
+description = "Handlebars.js templating for Python 3 and 2"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pybars3-0.9.7.tar.gz", hash = "sha256:6ac847e905e53b9c5b936af112c910475e27bf767f79f4528c16f9af1ec0e252"},
+]
+
+[package.dependencies]
+PyMeta3 = ">=0.5.1"
+
+[[package]]
 name = "pycryptodome"
 version = "3.21.0"
 description = "Cryptographic library for Python"
@@ -4509,6 +4614,16 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pymeta3"
+version = "0.5.1"
+description = "Pattern-matching language based on OMeta for Python 3 and 2"
+optional = false
+python-versions = "*"
+files = [
+    {file = "PyMeta3-0.5.1.tar.gz", hash = "sha256:18bda326d9a9bbf587bfc0ee0bc96864964d78b067288bcf55d4d98681d05bcb"},
+]
+
+[[package]]
 name = "pymongo"
 version = "4.10.1"
 description = "Python driver for MongoDB <http://www.mongodb.org>"
@@ -4642,6 +4757,23 @@ pytest = ">=8.2,<9"
 [package.extras]
 docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1)"]
 testing = ["coverage (>=6.2)", "hypothesis (>=5.7.1)"]
+
+[[package]]
+name = "pytest-mock"
+version = "3.14.0"
+description = "Thin-wrapper around the mock package for easier use with pytest"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pytest-mock-3.14.0.tar.gz", hash = "sha256:2719255a1efeceadbc056d6bf3df3d1c5015530fb40cf347c0f9afac88410bd0"},
+    {file = "pytest_mock-3.14.0-py3-none-any.whl", hash = "sha256:0b72c38033392a5f4621342fe11e9219ac11ec9d375f8e2a0c164539e0d70f6f"},
+]
+
+[package.dependencies]
+pytest = ">=6.2.5"
+
+[package.extras]
+dev = ["pre-commit", "pytest-asyncio", "tox"]
 
 [[package]]
 name = "pytest-postgresql"
@@ -5899,6 +6031,23 @@ mypy-extensions = ">=0.3.0"
 typing-extensions = ">=3.7.4"
 
 [[package]]
+name = "typing-validation"
+version = "1.2.11.post4"
+description = "A simple library for runtime type-checking."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "typing_validation-1.2.11.post4-py3-none-any.whl", hash = "sha256:73dd504ddebf5210e80d5f65ba9b30efbd0fa42f266728fda7c4f0ba335c699c"},
+    {file = "typing_validation-1.2.11.post4.tar.gz", hash = "sha256:7aed04ecfbda07e63b7266f90e5d096f96344f7facfe04bb081b21e4a9781670"},
+]
+
+[package.dependencies]
+typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.11\""}
+
+[package.extras]
+dev = ["mypy", "pylint", "pytest", "pytest-cov", "rich"]
+
+[[package]]
 name = "tzdata"
 version = "2024.2"
 description = "Provider of IANA time zone data"
@@ -6335,4 +6484,4 @@ optuna = ["optuna"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "248ddd11705c3552209c98fe50f18c91f3aeec9173c169421a83ac5da63e69d7"
+content-hash = "6708be59efdd58ab097fe55c8856e763edce672c46a4ae692e90b31a178e38a1"

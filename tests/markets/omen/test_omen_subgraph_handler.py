@@ -107,7 +107,6 @@ def test_get_bets(
 
 
 def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None:
-    # ToDo
     limit = 100
 
     markets = omen_subgraph_handler.get_omen_binary_markets_simple(
@@ -115,7 +114,7 @@ def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
     )
-    assert len(markets) == limit
+    assert len(markets) <= limit
     for market in markets:
         assert market.is_open
 

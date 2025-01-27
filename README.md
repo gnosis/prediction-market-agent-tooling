@@ -133,4 +133,4 @@ This API can be built on top of to create your application. See [here](https://g
 
 See the [Issues](https://github.com/gnosis/prediction-market-agent-tooling/issues) for ideas of things that need fixing or implementing. The team is also receptive to new issues and PRs.
 
-We use `mypy` for static type checking, and `isort`, `black` and `autoflake` for linting. These all run as steps in CI.
+We use `mypy` for static type checking, and `isort`, `black` and `autoflake` for linting, and `pre-commit` to minimise unwanted pushes to the public repositories. These all run as steps in CI, but `pre-commit` also needs to be installed locally using the provided `install_hooks.sh` script.

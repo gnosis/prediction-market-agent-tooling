@@ -23,7 +23,7 @@ class BaseHex:
         "0xd4e56740",
         "0xd4e56740f876aef8",
         "0xd4e56740f876aef8c010b86a40d5f567",
-        "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
+        "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",  # web3-private-key-ok
     )
 
     @classmethod

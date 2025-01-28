@@ -2,10 +2,10 @@ site_name: Prediction Market Agent Tooling
 nav:
   - Home: index.md
   - Prediction Markets: predictionmarkets.md
-  - Getting Started
-    - Dependencies: getting_started/dependencies.md
-    - Quickstart: getting_started/quistart.md
+  - Dependencies: dependencies.md
+  - Quickstart: quistart.md
   - Contributing: contributing.md
 
 theme:
   name: material
+

@@ -2,9 +2,9 @@ site_name: Prediction Market Agent Tooling
 nav:
   - Home: index.md
   - Prediction Markets: predictionmarkets.md
-  - Quickstart
-    - Dependencies: dependencies.md
-    - Install and Configure: install.md
+  - Getting Started
+    - Dependencies: getting_started/dependencies.md
+    - Quickstart: getting_started/quistart.md
   - Contributing: contributing.md
 
 theme:

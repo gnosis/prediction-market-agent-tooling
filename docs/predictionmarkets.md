@@ -2,7 +2,7 @@
 
 Prediction markets are decentralized platforms that allow participants to speculate on the outcomes of future events by trading tokens or assets tied to specific events. It leverages blockchain technology and smart contracts to create transparent, trustless, and immutable environments for this type of speculation.
 
-![](/docs/images/predictionmarket.png)
+![predictionmarket](/docs/images/predictionmarket.png)
 ## Key Components of Prediction Markets in Web3
 
 - Event-Based Contracts:
@@ -38,4 +38,5 @@ Anyone with internet access and a Web3 wallet can participate, removing geograph
 
 - Accurate Market Sentiment:
 Prediction markets often provide a more accurate reflection of the probability of events because participants have financial incentives to base their trades on real information or beliefs.
+
 

@@ -3,7 +3,9 @@ nav:
   - Home: index.md
   - Prediction Markets: predictionmarkets.md
   - Dependencies: dependencies.md
-  - Quickstart: quistart.md
+  - Quickstart: quickstart.md
+  - DeployableTraderAgent: deployabletraderagent.md
+  - ExampleAgent: exampleagent.md
   - Contributing: contributing.md
 
 theme:

@@ -3,7 +3,7 @@ from pydantic import SecretStr
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
-from web3.constants import HASH_ZERO, ADDRESS_ZERO
+from web3.constants import ADDRESS_ZERO, HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
@@ -132,9 +132,7 @@ def test_add_prediction_with_safe(
         prediction=p,
         web3=local_web3,
     )
-    local_web3.eth.wait_for_transaction_receipt(
-        transaction_hash=tx_receipt.transactionHash
-    )
+
     # We expect a new prediction to exist under the Safe address key.
     predictions = contract.get_predictions(
         market_address=dummy_market_address, web3=local_web3

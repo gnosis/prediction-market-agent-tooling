@@ -31,9 +31,7 @@ def main(
         SAFE_ADDRESS=None,
     )
     market_address = Web3.to_checksum_address(api_keys.public_key)
-    dummy_transaction_hash = (
-        "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"
-    )
+    dummy_transaction_hash = "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"  # web3-private-key-ok
     contract_prediction = ContractPrediction(
         tx_hashes=[HexBytes(dummy_transaction_hash)],
         estimated_probability_bps=5454,

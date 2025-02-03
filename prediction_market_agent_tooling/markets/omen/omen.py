@@ -42,7 +42,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     PRESAGIO_BASE_URL,
     Condition,
     ConditionPreparationEvent,
-    ContractPrediction,
     CreatedMarket,
     IPFSAgentResult,
     OmenBet,
@@ -50,6 +49,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenUserPosition,
     get_bet_outcome,
     get_boolean_outcome,
+    ContractPrediction,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
@@ -79,10 +79,10 @@ from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsEr
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import (
-    BPS_CONSTANT,
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
     check_not_none,
+    BPS_CONSTANT,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
@@ -451,7 +451,7 @@ class OmenAgentMarket(AgentMarket):
             HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
         ]
         prediction = ContractPrediction(
-            publisher=keys.public_key,
+            publisher=keys.bet_from_address,
             ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
             estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),

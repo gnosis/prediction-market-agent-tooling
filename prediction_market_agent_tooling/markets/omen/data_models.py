@@ -246,7 +246,7 @@ class OmenMarket(BaseModel):
 
     @property
     def is_open(self) -> bool:
-        return self.close_time < utcnow()
+        return self.close_time > utcnow()
 
     @property
     def is_resolved(self) -> bool:

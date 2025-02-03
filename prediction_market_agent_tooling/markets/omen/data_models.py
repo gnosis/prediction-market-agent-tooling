@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
     should_not_happen,
+    utcnow,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
@@ -245,7 +246,7 @@ class OmenMarket(BaseModel):
 
     @property
     def is_open(self) -> bool:
-        return self.currentAnswer is None
+        return self.close_time < utcnow()
 
     @property
     def is_resolved(self) -> bool:

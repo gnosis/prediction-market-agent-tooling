@@ -451,7 +451,7 @@ class OmenAgentMarket(AgentMarket):
             HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
         ]
         prediction = ContractPrediction(
-            publisher=keys.public_key,
+            publisher=keys.bet_from_address,
             ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
             estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),

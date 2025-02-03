@@ -462,7 +462,7 @@ def get_position_balance_by_position_id(
 )
 def test_add_predictions(local_web3: Web3, test_keys: APIKeys, ipfs_hash: str) -> None:
     agent_result_mapping = OmenAgentResultMappingContract()
-    market_address = test_keys.public_key
+    market_address = test_keys.bet_from_address
     dummy_transaction_hash = "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"  # web3-private-key-ok
     stored_predictions = agent_result_mapping.get_predictions(
         market_address, web3=local_web3
@@ -471,7 +471,7 @@ def test_add_predictions(local_web3: Web3, test_keys: APIKeys, ipfs_hash: str) -
         tx_hashes=[HexBytes(dummy_transaction_hash)],
         estimated_probability_bps=5454,
         ipfs_hash=HexBytes(ipfs_hash),
-        publisher=test_keys.public_key,
+        publisher=test_keys.bet_from_address,
     )
 
     agent_result_mapping.add_prediction(test_keys, market_address, p, web3=local_web3)

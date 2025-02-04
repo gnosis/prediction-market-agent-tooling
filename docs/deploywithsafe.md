@@ -36,9 +36,9 @@ poetry run python scripts/create_safe_for_agent.py  --from-private-key <YOUR_AGE
 | `--fund-safe`       | Flag    | Optional  | Whether to fund the Safe upon creation |
 | `--fund-amount-xdai` | Integer | Optional (Default: 1)        | Amount of xDAI to fund the Safe with (if `--fund-safe` is enabled) |
 
-3. The abover step will print our the Safe wallet address. Put that address in the **SAFE_ADDRESS** env variable. Also make sure to put the Safe's owners private key in the **BET_FROM_PRIVATE_KEY** env variable.
+3. The abover step will print the Safe wallet address. Put that address in the **SAFE_ADDRESS** env variable. Also make sure to put the Safe's owners private key in the **BET_FROM_PRIVATE_KEY** env variable.
 
 
- If the above two env varibles are configured correctly, all agents by default will start using the Safe address to transact and place bets on the prediction markets. 
+ If the above two *env* varibles are configured correctly, all agents by default will start using the Safe address to transact and place bets on the prediction markets. 
  
  Always make sure to have enough balace in your safe wallet for your agent to transact seamlessly.

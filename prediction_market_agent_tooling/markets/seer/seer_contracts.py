@@ -7,9 +7,8 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
-)
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    OmenRealitioContract,
+    xDai,
+    xdai_type,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
     CreateCategoricalMarketsParams,
@@ -18,39 +17,11 @@ from prediction_market_agent_tooling.tools.contract import (
     abi_field_validator,
     ContractOnGnosisChain,
 )
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
-class SeerRealitioContract(OmenRealitioContract):
-    # ToDo - Write tests to make sure that same functionality is supported.
-    # askNewQuestion is the same
-    # Contract ABI taken from https://gnosisscan.io/address/0xe78996a233895be74a66f451f1019ca9734205cc#code.
-    abi: ABI = abi_field_validator(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../../abis/seer_realitio_3_0.abi.json",
-        )
-    )
-    address: ChecksumAddress = Web3.to_checksum_address(
-        "0xe78996a233895be74a66f451f1019ca9734205cc"
-    )
-
-
-class Wrapped1155Factory(ContractOnGnosisChain):
-    # ToDo - new functions
-    # Contract ABI taken from https://gnosisscan.io/address/0xd194319d1804c1051dd21ba1dc931ca72410b79f#code.
-    abi: ABI = abi_field_validator(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../../abis/seer_wrapper_1155_factory.abi.json",
-        )
-    )
-    address: ChecksumAddress = Web3.to_checksum_address(
-        "0xd194319d1804c1051dd21ba1dc931ca72410b79f"
-    )
-
-
-class MarketFactory(ContractOnGnosisChain):
-    # ToDo - new functions
+class SeerMarketFactory(ContractOnGnosisChain):
     # https://gnosisscan.io/address/0x83183da839ce8228e31ae41222ead9edbb5cdcf1#code.
     abi: ABI = abi_field_validator(
         os.path.join(
@@ -62,9 +33,38 @@ class MarketFactory(ContractOnGnosisChain):
         "0x83183da839ce8228e31ae41222ead9edbb5cdcf1"
     )
 
+    @staticmethod
+    def build_market_params(
+        market_question: str,
+        outcomes: list[str],
+        opening_time: DatetimeUTC,
+        min_bond_xdai: xDai = xdai_type(10),
+        language: str = "en_US",
+        category: str = "misc",
+    ) -> CreateCategoricalMarketsParams:
+        return CreateCategoricalMarketsParams(
+            market_name=market_question,
+            token_names=[
+                o.upper() for o in outcomes
+            ],  # Following usual token names on Seer (YES,NO).
+            min_bond=xdai_to_wei(min_bond_xdai),
+            opening_time=int(opening_time.timestamp()),
+            outcomes=outcomes,
+            lang=language,
+            category=category,
+        )
+
     def market_count(self, web3: Web3 | None = None) -> int:
         count: int = self.call("marketCount", web3=web3)
         return count
+
+    def market_at_index(self, index: int, web3: Web3 | None = None) -> ChecksumAddress:
+        market_address: str = self.call("markets", function_params=[index], web3=web3)
+        return Web3.to_checksum_address(market_address)
+
+    def collateral_token(self, web3: Web3 | None = None) -> ChecksumAddress:
+        collateral_token_address: str = self.call("collateralToken", web3=web3)
+        return Web3.to_checksum_address(collateral_token_address)
 
     def create_categorical_market(
         self,

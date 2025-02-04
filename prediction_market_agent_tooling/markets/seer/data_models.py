@@ -4,7 +4,7 @@ from eth_typing import HexAddress
 from pydantic import BaseModel, ConfigDict, Field
 from web3.constants import ADDRESS_ZERO
 
-from prediction_market_agent_tooling.gtypes import HexBytes
+from prediction_market_agent_tooling.gtypes import HexBytes, Wei
 
 
 class CreateCategoricalMarketsParams(BaseModel):
@@ -17,17 +17,17 @@ class CreateCategoricalMarketsParams(BaseModel):
     question_end: t.Optional[str] = Field(alias="questionEnd", default="")
     outcome_type: t.Optional[str] = Field(alias="outcomeType", default="")
 
+    # Not needed for non-conditional markets.
     parent_outcome: t.Optional[int] = Field(alias="parentOutcome", default=0)
     parent_market: t.Optional[HexAddress] = Field(
         alias="parentMarket", default=ADDRESS_ZERO
     )
 
-    category: t.Optional[str] = Field(default="misc")
-    lang: t.Optional[str] = Field(default="en_US")
-
+    category: str
+    lang: str
     lower_bound: t.Optional[int] = Field(alias="lowerBound", default=0)
     upper_bound: t.Optional[int] = Field(alias="upperBound", default=0)
-    min_bond: int = Field(..., alias="minBond")
+    min_bond: Wei = Field(..., alias="minBond")
     opening_time: int = Field(..., alias="openingTime")
     token_names: list[str] = Field(..., alias="tokenNames")
 

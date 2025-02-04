@@ -1,29 +1,27 @@
-import datetime
-
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.seer.data_models import (
     CreateCategoricalMarketsParams,
 )
-from prediction_market_agent_tooling.markets.seer.seer_contracts import MarketFactory
+from prediction_market_agent_tooling.markets.seer.seer_contracts import (
+    SeerMarketFactory,
+)
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
 
 def build_params() -> CreateCategoricalMarketsParams:
-    opening_time = int(
-        (datetime.datetime.utcnow() + datetime.timedelta(days=1)).timestamp()
-    )
-    return CreateCategoricalMarketsParams(
-        token_names=["YES", "NO"],
-        min_bond=str(int(1e18)),
-        openingTime=opening_time,
+    return SeerMarketFactory.build_market_params(
+        market_question="test test test",
         outcomes=["Yes", "No"],
-        market_name="test test test",
+        opening_time=DatetimeUTC.now(),
+        language="en_US",
+        category="misc",
     )
 
 
 def test_create_market(local_web3: Web3, test_keys: APIKeys) -> None:
-    factory = MarketFactory()
+    factory = SeerMarketFactory()
     num_initial_markets = factory.market_count(web3=local_web3)
     params = build_params()
     tx_receipt = factory.create_categorical_market(

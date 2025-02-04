@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.55.2"
+version = "0.57.15"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -10,7 +10,7 @@ buy_omen = "scripts.bet_omen:buy"
 sell_omen = "scripts.bet_omen:sell"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<3.13"
 typer = ">=0.9.0,<1.0.0"
 types-requests = "^2.31.0.0"
 google-cloud-functions = "^1.16.0"
@@ -52,11 +52,15 @@ python-dateutil = "^2.9.0.post0"
 types-python-dateutil = "^2.9.0.20240906"
 pinatapy-vourhey = "^0.2.0"
 hishel = "^0.0.31"
+pytest-postgresql = "^6.1.1"
+optuna = { version = "^4.1.0", optional = true}
+eth-keys = "^0.6.1"
 
 [tool.poetry.extras]
 openai = ["openai"]
 langchain = ["langchain", "langchain-openai"]
 google = ["google-api-python-client"]
+optuna = ["optuna"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -64,6 +68,7 @@ mypy = "^1.11.1"
 black = "^23.12.1"
 ape-foundry = "^0.8.2"
 eth-ape = "^0.8.10,<0.8.17"  # 0.8.17 doesn't work with the current configuration and needs a fix, see https://github.com/gnosis/prediction-market-agent-tooling/issues/518.
+diskcache = "^5.6.3"
 
 [build-system]
 requires = ["poetry-core"]

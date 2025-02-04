@@ -12,5 +12,5 @@ def test_local_deployment(local_web3: Web3) -> None:
         DeployableCoinFlipAgent(enable_langfuse=False).deploy_local(
             sleep_time=0.001,
             market_type=MarketType.OMEN,
-            timeout=0.01,
+            run_time=0.01,
         )

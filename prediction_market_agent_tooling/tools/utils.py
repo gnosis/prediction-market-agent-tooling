@@ -1,4 +1,3 @@
-import json
 import os
 import subprocess
 from datetime import datetime
@@ -6,17 +5,11 @@ from typing import Any, NoReturn, Optional, Type, TypeVar
 
 import pytz
 import requests
-from google.cloud import secretmanager
 from pydantic import BaseModel, ValidationError
 from scipy.optimize import newton
 from scipy.stats import entropy
 
-from prediction_market_agent_tooling.gtypes import (
-    DatetimeUTC,
-    PrivateKey,
-    Probability,
-    SecretStr,
-)
+from prediction_market_agent_tooling.gtypes import DatetimeUTC, Probability, SecretStr
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 
@@ -27,6 +20,8 @@ T = TypeVar("T")
 LLM_SUPER_LOW_TEMPERATURE = 0.00000001
 # For consistent results, also include seed for models that supports it.
 LLM_SEED = 0
+
+BPS_CONSTANT = 10000
 
 
 def check_not_none(
@@ -42,7 +37,7 @@ def check_not_none(
     ```
     keys = pma.utils.get_keys()
     pma.omen.omen_buy_outcome_tx(
-        from_addres=check_not_none(keys.bet_from_address),  # <-- No more Optional[HexAddress], so type checker will be happy.
+        from_address=check_not_none(keys.bet_from_address),  # <-- No more Optional[HexAddress], so type checker will be happy.
         ...,
     )
     ```
@@ -65,7 +60,7 @@ def should_not_happen(
         1 if variable == X
         else 2 if variable == Y
         else 3 if variable == Z
-        else should_not_happen(f"Variable {variable} is uknown.")
+        else should_not_happen(f"Variable {variable} is unknown.")
     )
     ```
 
@@ -212,18 +207,3 @@ def calculate_sell_amount_in_collateral(
 
     amount_to_sell = newton(f, 0)
     return float(amount_to_sell) * 0.999999  # Avoid rounding errors
-
-
-def get_private_key_from_gcp_secret(
-    secret_id: str,
-    project_id: str = "582587111398",  # Gnosis AI default project_id
-    version_id: str = "latest",
-) -> PrivateKey:
-    client = secretmanager.SecretManagerServiceClient()
-    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-    response = client.access_secret_version(request={"name": name})
-    secret_payload = response.payload.data.decode("UTF-8")
-    secret_json = json.loads(secret_payload)
-    if "private_key" not in secret_json:
-        raise ValueError(f"Private key not found in gcp secret {secret_id}")
-    return PrivateKey(SecretStr(secret_json["private_key"]))

@@ -59,11 +59,11 @@ from tests.utils import RUN_PAID_TESTS
         ),
         (
             "Will Travis James Mullis be executed in Texas on 1 October 2024?",
-            False,  # Considered okay, becaues execution is done legally by the state, and so this market can not motivate people to do it.
+            False,  # Considered okay, because execution is done legally by the state, and so this market can not motivate people to do it.
         ),
         (
             "Will the second nitrogen gas execution in Alabama be carried out by 5 October 2024?",
-            False,  # Considered okay, becaues execution is done legally by the state, and so this market can not motivate people to do it.
+            False,  # Considered okay, because execution is done legally by the state, and so this market can not motivate people to do it.
         ),
         (
             "Will someone beat me?",
@@ -80,6 +80,10 @@ from tests.utils import RUN_PAID_TESTS
         (
             "In the next 12 months will an AI-generated song break into the Billboard Hot 100 top 10 or the Spotify Top Hits?",
             True,  # Invalid because it's relative timing that depends on "now".
+        ),
+        (
+            "Will Trump’s polling averages go down by 1% two weeks after The Apprentice is released?",
+            False,  # Valid, because absolute time can be determined based on The Apprentice release.
         ),
     ],
 )

@@ -2,12 +2,10 @@ import sys
 import typing as t
 
 import requests
-import tenacity
 from PIL import Image
 from PIL.Image import Image as ImageType
-from subgrounds import FieldPath, Subgrounds
+from subgrounds import FieldPath
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
@@ -15,8 +13,10 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     wei_type,
 )
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.base_subgraph_handler import (
+    BaseSubgraphHandler,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
     ContractPrediction,
@@ -33,7 +33,9 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
 )
-from prediction_market_agent_tooling.tools.singleton import SingletonMeta
+from prediction_market_agent_tooling.tools.caches.inmemory_cache import (
+    persistent_inmemory_cache,
+)
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     to_int_timestamp,
@@ -51,7 +53,7 @@ SAFE_COLLATERAL_TOKEN_MARKETS = (
 )
 
 
-class OmenSubgraphHandler(metaclass=SingletonMeta):
+class OmenSubgraphHandler(BaseSubgraphHandler):
     """
     Class responsible for handling interactions with Omen subgraphs (trades, conditionalTokens).
     """
@@ -64,52 +66,38 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
     OMEN_IMAGE_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/EWN14ciGK53PpUiKSm7kMWQ6G4iz3tDrRLyZ1iXMQEdu"
 
-    OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/GoE3UFyc8Gg9xzv92oinonyhRCphpGu62qB2Eh2XvJ8F"
+    OMEN_AGENT_RESULT_MAPPING_GRAPH_URL = "https://gateway-arbitrum.network.thegraph.com/api/{graph_api_key}/subgraphs/id/J6bJEnbqJpAvNyQE8i58M9mKF4zqo33BEJRdnXmqa6Kn"
 
     INVALID_ANSWER = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
     def __init__(self) -> None:
-        self.sg = Subgrounds()
-
-        # Patch methods to retry on failure.
-        self.sg.query_json = tenacity.retry(
-            stop=tenacity.stop_after_attempt(3),
-            wait=tenacity.wait_fixed(1),
-            after=lambda x: logger.debug(f"query_json failed, {x.attempt_number=}."),
-        )(self.sg.query_json)
-        self.sg.load_subgraph = tenacity.retry(
-            stop=tenacity.stop_after_attempt(3),
-            wait=tenacity.wait_fixed(1),
-            after=lambda x: logger.debug(f"load_subgraph failed, {x.attempt_number=}."),
-        )(self.sg.load_subgraph)
-
-        keys = APIKeys()
+        super().__init__()
 
         # Load the subgraph
         self.trades_subgraph = self.sg.load_subgraph(
             self.OMEN_TRADES_SUBGRAPH.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
         self.conditional_tokens_subgraph = self.sg.load_subgraph(
             self.CONDITIONAL_TOKENS_SUBGRAPH.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
         self.realityeth_subgraph = self.sg.load_subgraph(
             self.REALITYETH_GRAPH_URL.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
         self.omen_image_mapping_subgraph = self.sg.load_subgraph(
             self.OMEN_IMAGE_MAPPING_GRAPH_URL.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
 
         self.omen_agent_result_mapping_subgraph = self.sg.load_subgraph(
             self.OMEN_AGENT_RESULT_MAPPING_GRAPH_URL.format(
-                graph_api_key=keys.graph_api_key.get_secret_value()
+                graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
 
@@ -127,7 +115,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             bets_field.creator.id,
             bets_field.creationTimestamp,
             bets_field.collateralAmount,
-            bets_field.collateralAmountUSD,
             bets_field.feeAmount,
             bets_field.outcomeIndex,
             bets_field.outcomeTokensTraded,
@@ -227,6 +214,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_finalized_before: DatetimeUTC | None,
         question_finalized_after: DatetimeUTC | None,
         question_with_answers: bool | None,
+        question_pending_arbitration: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         question_current_answer_before: DatetimeUTC | None,
@@ -239,7 +227,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         category: str | None,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
-            "isPendingArbitration": False,
             "outcomes": outcomes,
             "title_not": None,
             "condition_": {},
@@ -252,6 +239,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
             with_answers=question_with_answers,
+            pending_arbitration=question_pending_arbitration,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,
@@ -390,6 +378,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_finalized_before: DatetimeUTC | None = None,
         question_finalized_after: DatetimeUTC | None = None,
         question_with_answers: bool | None = None,
+        question_pending_arbitration: bool | None = None,
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_current_answer_before: DatetimeUTC | None = None,
@@ -419,6 +408,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             question_finalized_before=question_finalized_before,
             question_finalized_after=question_finalized_after,
             question_with_answers=question_with_answers,
+            question_pending_arbitration=question_pending_arbitration,
             question_id=question_id,
             question_id_in=question_id_in,
             question_current_answer_before=question_current_answer_before,
@@ -446,22 +436,21 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             **optional_params,
         )
 
-        omen_markets = self.do_markets_query(markets)
-        return omen_markets
-
-    def do_markets_query(self, markets: FieldPath) -> list[OmenMarket]:
         fields = self._get_fields_for_markets(markets)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        omen_markets = [OmenMarket.model_validate(i) for i in items]
+        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
         return omen_markets
 
-    def get_omen_market_by_market_id(self, market_id: HexAddress) -> OmenMarket:
-        markets = self.trades_subgraph.Query.fixedProductMarketMaker(
-            id=market_id.lower()
-        )
+    def get_omen_market_by_market_id(
+        self, market_id: HexAddress, block_number: int | None = None
+    ) -> OmenMarket:
+        query_filters: dict[str, t.Any] = {"id": market_id.lower()}
+        if block_number:
+            query_filters["block"] = {"number": block_number}
 
-        omen_markets = self.do_markets_query(markets)
+        markets = self.trades_subgraph.Query.fixedProductMarketMaker(**query_filters)
+
+        fields = self._get_fields_for_markets(markets)
+        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
 
         if len(omen_markets) != 1:
             raise ValueError(
@@ -469,22 +458,6 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             )
 
         return omen_markets[0]
-
-    def _parse_items_from_json(
-        self, result: list[dict[str, t.Any]]
-    ) -> list[dict[str, t.Any]]:
-        """subgrounds return a weird key as a dict key"""
-        items = []
-        for result_chunk in result:
-            for k, v in result_chunk.items():
-                # subgrounds might pack all items as a list, indexed by a key, or pack it as a dictionary (if one single element)
-                if v is None:
-                    continue
-                elif isinstance(v, dict):
-                    items.extend([v])
-                else:
-                    items.extend(v)
-        return items
 
     def _get_fields_for_user_positions(
         self, user_positions: FieldPath
@@ -556,6 +529,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         filter_by_answer_finalized_not_null: bool = False,
         type_: t.Literal["Buy", "Sell"] | None = None,
         market_opening_after: DatetimeUTC | None = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
@@ -580,6 +555,15 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if market_opening_after is not None:
             where_stms.append(
                 trade.fpmm.openingTimestamp > to_int_timestamp(market_opening_after)
+            )
+        if market_resolved_after is not None:
+            where_stms.append(
+                trade.fpmm.resolutionTimestamp > to_int_timestamp(market_resolved_after)
+            )
+        if market_resolved_before is not None:
+            where_stms.append(
+                trade.fpmm.resolutionTimestamp
+                < to_int_timestamp(market_resolved_before)
             )
         if collateral_amount_more_than is not None:
             where_stms.append(trade.collateralAmount > collateral_amount_more_than)
@@ -609,6 +593,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         market_id: t.Optional[ChecksumAddress] = None,
         filter_by_answer_finalized_not_null: bool = False,
         market_opening_after: DatetimeUTC | None = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
     ) -> list[OmenBet]:
         return self.get_trades(
@@ -619,15 +605,19 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             filter_by_answer_finalized_not_null=filter_by_answer_finalized_not_null,
             type_="Buy",  # We consider `bet` to be only the `Buy` trade types.
             market_opening_after=market_opening_after,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
             collateral_amount_more_than=collateral_amount_more_than,
         )
 
     def get_resolved_bets(
         self,
         better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,
         market_id: t.Optional[ChecksumAddress] = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
     ) -> list[OmenBet]:
         omen_bets = self.get_bets(
             better_address=better_address,
@@ -635,14 +625,18 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             end_time=end_time,
             market_id=market_id,
             filter_by_answer_finalized_not_null=True,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
         )
         return [b for b in omen_bets if b.fpmm.is_resolved]
 
     def get_resolved_bets_with_valid_answer(
         self,
         better_address: ChecksumAddress,
-        start_time: DatetimeUTC,
+        start_time: DatetimeUTC | None = None,
         end_time: t.Optional[DatetimeUTC] = None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
         market_id: t.Optional[ChecksumAddress] = None,
     ) -> list[OmenBet]:
         bets = self.get_resolved_bets(
@@ -650,6 +644,8 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             start_time=start_time,
             end_time=end_time,
             market_id=market_id,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
         )
         return [b for b in bets if b.fpmm.is_resolved_with_valid_answer]
 
@@ -661,6 +657,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         finalized_before: DatetimeUTC | None,
         finalized_after: DatetimeUTC | None,
         with_answers: bool | None,
+        pending_arbitration: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         opened_before: t.Optional[DatetimeUTC],
@@ -707,9 +704,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         if with_answers is not None:
             if with_answers:
-                where_stms["answerFinalizedTimestamp_not"] = None
+                where_stms["currentAnswer_not"] = None
             else:
-                where_stms["answerFinalizedTimestamp"] = None
+                where_stms["currentAnswer"] = None
+
+        if pending_arbitration is not None:
+            where_stms["isPendingArbitration"] = pending_arbitration
 
         if question_id_in is not None:
             # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
@@ -727,6 +727,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         finalized_before: DatetimeUTC | None,
         finalized_after: DatetimeUTC | None,
         with_answers: bool | None,
+        pending_arbitration: bool | None,
         question_id: HexBytes | None,
         question_id_in: list[HexBytes] | None,
         opened_before: t.Optional[DatetimeUTC],
@@ -739,7 +740,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         where_stms: dict[str, t.Any] = {}
 
         if question_id is not None:
-            where_stms["questionId"] = question_id.hex()
+            where_stms["id"] = question_id.hex()
 
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
@@ -764,9 +765,12 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
 
         if with_answers is not None:
             if with_answers:
-                where_stms["answerFinalizedTimestamp_not"] = None
+                where_stms["currentAnswer_not"] = None
             else:
-                where_stms["answerFinalizedTimestamp"] = None
+                where_stms["currentAnswer"] = None
+
+        if pending_arbitration is not None:
+            where_stms["isPendingArbitration"] = pending_arbitration
 
         if question_id_in is not None:
             # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
@@ -787,6 +791,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         finalized_before: DatetimeUTC | None = None,
         finalized_after: DatetimeUTC | None = None,
         with_answers: bool | None = None,
+        pending_arbitration: bool | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_id: HexBytes | None = None,
         opened_before: DatetimeUTC | None = None,
@@ -799,6 +804,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             finalized_before=finalized_before,
             finalized_after=finalized_after,
             with_answers=with_answers,
+            pending_arbitration=pending_arbitration,
             current_answer_before=current_answer_before,
             question_id_in=question_id_in,
             question_id=question_id,
@@ -841,6 +847,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         question_finalized_before: t.Optional[DatetimeUTC] = None,
         question_finalized_after: t.Optional[DatetimeUTC] = None,
         question_with_answers: bool | None = None,
+        question_pending_arbitration: bool | None = None,
         question_id: HexBytes | None = None,
         question_id_in: list[HexBytes] | None = None,
         question_current_answer_before: DatetimeUTC | None = None,
@@ -860,6 +867,7 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
             finalized_before=question_finalized_before,
             finalized_after=question_finalized_after,
             with_answers=question_with_answers,
+            pending_arbitration=question_pending_arbitration,
             current_answer_before=question_current_answer_before,
             question_id_in=question_id_in,
             excluded_titles=question_excluded_titles,
@@ -944,3 +952,27 @@ class OmenSubgraphHandler(metaclass=SingletonMeta):
         if not items:
             return []
         return [ContractPrediction.model_validate(i) for i in items]
+
+    def get_agent_results_for_bet(self, bet: OmenBet) -> ContractPrediction | None:
+        results = [
+            result
+            for result in self.get_agent_results_for_market(bet.fpmm.id)
+            if bet.transactionHash in result.tx_hashes
+        ]
+
+        if not results:
+            return None
+        elif len(results) > 1:
+            raise RuntimeError("Multiple results found for a single bet.")
+
+        return results[0]
+
+
+@persistent_inmemory_cache
+def get_omen_market_by_market_id_cached(
+    market_id: HexAddress,
+    block_number: int,  # Force `block_number` to be provided, because `latest` block constantly updates.
+) -> OmenMarket:
+    return OmenSubgraphHandler().get_omen_market_by_market_id(
+        market_id, block_number=block_number
+    )

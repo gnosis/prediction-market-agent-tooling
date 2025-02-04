@@ -8,7 +8,6 @@ on:
 
 env:
   MANIFOLD_API_KEY: ${{ secrets.MANIFOLD_API_KEY }}
-  SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   BET_FROM_ADDRESS: ${{ secrets.BET_FROM_ADDRESS }}
   BET_FROM_PRIVATE_KEY: ${{ secrets.BET_FROM_PRIVATE_KEY }}
@@ -81,3 +80,15 @@ jobs:
         run: |
           poetry run isort --profile black .
           git diff --exit-code || exit 1
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/python_prepare
+      - name: Install Dependencies
+        run: |
+          pip install pre-commit
+      - name: Run Pre-Commit
+        run: |
+          pre-commit run --all-files

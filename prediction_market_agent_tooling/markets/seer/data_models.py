@@ -2,8 +2,7 @@ import typing as t
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-
+from prediction_market_agent_tooling.gtypes import HexBytes
 
 class CreateCategoricalMarketsParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -27,3 +26,39 @@ class CreateCategoricalMarketsParams(BaseModel):
     min_bond: int = Field(..., alias="minBond")
     opening_time: int = Field(..., alias="openingTime")
     token_names: list[str] = Field(..., alias="tokenNames")
+
+
+class SeerParentMarket(BaseModel):
+    id: HexBytes
+
+
+class SeerMarket(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    publisher: str = Field(..., alias="publisherAddress")
+
+    id: HexBytes
+    title: str = Field(alias="marketName")
+    outcomes: list[str]
+    parent_market: SeerParentMarket | None = Field(alias="parentMarket")
+    wrapped_tokens: list[HexBytes] = Field(alias="wrappedTokens")
+
+    parent_outcome: t.Optional[str] = Field(..., alias="parentOutcome")
+    parent_market: t.Optional[HexBytes] = Field(..., alias="parentMarket")
+
+class SeerToken(BaseModel):
+    id: HexBytes
+    name: str
+    symbol: str
+
+    lower_bound: t.Optional[int] = Field(..., alias="lowerBound")
+    upper_bound: t.Optional[int] = Field(..., alias="upperBound")
+    min_bond: int = Field(..., alias="minBond")
+    opening_time: int = Field(..., alias="openingTime")
+    token_names: list[str] = Field(..., alias="tokenNames")
+
+class SeerPool(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    id: HexBytes
+    liquidity: int
+    token0: SeerToken
+    token1: SeerToken

@@ -3,6 +3,7 @@ from pydantic import SecretStr
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
+from web3.constants import ADDRESS_ZERO, HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
@@ -10,17 +11,22 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Currency, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
-    OmenMarket,
+    ContractPrediction,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
+    FilterBy,
     OmenAgentMarket,
+    SortBy,
     binary_omen_buy_outcome_tx,
+)
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenAgentResultMappingContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.web3_utils import (
-    Wei,
     send_xdai_to,
     xdai_to_wei,
     xdai_type,
@@ -69,8 +75,11 @@ def test_send_function_on_contract_tx_using_safe(
     safe_balance = local_ethereum_client.get_balance(test_safe.address)
     logger.debug(f"safe balance {safe_balance} xDai")
     # Fetch existing market with enough liquidity
-    min_liquidity_wei = xdai_to_wei(xdai_type(5))
-    markets = fetch_omen_open_binary_market_with_enough_liquidity(1, min_liquidity_wei)
+    markets = OmenSubgraphHandler().get_omen_binary_markets_simple(
+        limit=1,
+        filter_by=FilterBy.OPEN,
+        sort_by=SortBy.NONE,
+    )
     # Check that there is a market with enough liquidity
     assert len(markets) == 1
     omen_market = markets[0]
@@ -99,9 +108,38 @@ def test_send_function_on_contract_tx_using_safe(
     assert initial_yes_token_balance.amount < final_yes_token_balance.amount
 
 
-def fetch_omen_open_binary_market_with_enough_liquidity(
-    limit: int = 1, liquidity_bigger_than: Wei = xdai_to_wei(xdai_type(5))
-) -> list[OmenMarket]:
-    return OmenSubgraphHandler().get_omen_binary_markets(
-        limit=limit, resolved=False, liquidity_bigger_than=liquidity_bigger_than
+def test_add_prediction_with_safe(
+    local_ethereum_client: EthereumClient,
+    local_web3: Web3,
+    test_keys: APIKeys,
+    test_safe: SafeV141,
+) -> None:
+    test_keys.SAFE_ADDRESS = test_safe.address
+    dummy_transaction_hash = "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"  # web3-private-key-ok
+    dummy_market_address = Web3.to_checksum_address(ADDRESS_ZERO)
+    p = ContractPrediction(
+        tx_hashes=[HexBytes(dummy_transaction_hash)],
+        estimated_probability_bps=5454,
+        ipfs_hash=HexBytes(HASH_ZERO),
+        publisher=test_keys.bet_from_address,
     )
+
+    contract = OmenAgentResultMappingContract()
+
+    tx_receipt = contract.add_prediction(
+        api_keys=test_keys,
+        market_address=dummy_market_address,
+        prediction=p,
+        web3=local_web3,
+    )
+
+    # We expect a new prediction to exist under the Safe address key.
+    predictions = contract.get_predictions(
+        market_address=dummy_market_address, web3=local_web3
+    )
+    predictions_from_safe_address = [
+        i for i in predictions if i.publisher_checksummed == test_keys.bet_from_address
+    ]
+    assert len(predictions_from_safe_address) == 1
+    actual_prediction = predictions_from_safe_address[0]
+    assert actual_prediction == p

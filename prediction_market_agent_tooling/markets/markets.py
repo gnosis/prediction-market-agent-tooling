@@ -3,6 +3,8 @@ from datetime import timedelta
 from enum import Enum
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
+from prediction_market_agent_tooling.jobs.omen.omen_jobs import OmenJobAgentMarket
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -47,6 +49,12 @@ class MarketType(str, Enum):
         return MARKET_TYPE_TO_AGENT_MARKET[self]
 
     @property
+    def job_class(self) -> type[JobAgentMarket]:
+        if self not in JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET:
+            raise ValueError(f"Unknown market type: {self}")
+        return JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET[self]
+
+    @property
     def is_blockchain_market(self) -> bool:
         return self in [MarketType.OMEN, MarketType.POLYMARKET]
 
@@ -56,6 +64,10 @@ MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.OMEN: OmenAgentMarket,
     MarketType.POLYMARKET: PolymarketAgentMarket,
     MarketType.METACULUS: MetaculusAgentMarket,
+}
+
+JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {
+    MarketType.OMEN: OmenJobAgentMarket,
 }
 
 
@@ -103,7 +115,7 @@ def have_bet_on_market_since(
                 )
             )
             if isinstance(market, OmenAgentMarket)
-            else should_not_happen(f"Uknown market: {market}")
+            else should_not_happen(f"Unknown market: {market}")
         )
     )
     return market.question in recently_betted_questions

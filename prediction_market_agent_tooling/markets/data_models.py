@@ -140,3 +140,37 @@ class PlacedTrade(Trade):
             amount=trade.amount,
             id=id,
         )
+
+
+class SimulatedBetDetail(BaseModel):
+    strategy: str
+    url: str
+    market_p_yes: float
+    agent_p_yes: float
+    agent_conf: float
+    org_bet: float
+    sim_bet: float
+    org_dir: bool
+    sim_dir: bool
+    org_profit: float
+    sim_profit: float
+    timestamp: DatetimeUTC
+
+
+class SharpeOutput(BaseModel):
+    annualized_volatility: float
+    mean_daily_return: float
+    annualized_sharpe_ratio: float
+
+
+class SimulatedLifetimeDetail(BaseModel):
+    p_yes_mse: float
+    total_bet_amount: float
+    total_bet_profit: float
+    total_simulated_amount: float
+    total_simulated_profit: float
+    roi: float
+    simulated_roi: float
+    sharpe_output_original: SharpeOutput
+    sharpe_output_simulation: SharpeOutput
+    maximize: float

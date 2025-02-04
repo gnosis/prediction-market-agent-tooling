@@ -5,6 +5,7 @@ from web3.types import Wei
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xDai
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
+    sDaiContract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
@@ -12,10 +13,11 @@ from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 class Balances(BaseModel):
     xdai: xDai
     wxdai: xDai
+    sdai: xDai
 
     @property
     def total(self) -> xDai:
-        return xDai(self.xdai + self.wxdai)
+        return xDai(self.xdai + self.wxdai + self.sdai)
 
 
 def get_balances(address: ChecksumAddress, web3: Web3 | None = None) -> Balances:
@@ -24,4 +26,5 @@ def get_balances(address: ChecksumAddress, web3: Web3 | None = None) -> Balances
     xdai_balance = Wei(web3.eth.get_balance(address))
     xdai = wei_to_xdai(xdai_balance)
     wxdai = wei_to_xdai(WrappedxDaiContract().balanceOf(address, web3=web3))
-    return Balances(xdai=xdai, wxdai=wxdai)
+    sdai = wei_to_xdai(sDaiContract().balanceOf(address, web3=web3))
+    return Balances(xdai=xdai, wxdai=wxdai, sdai=sdai)

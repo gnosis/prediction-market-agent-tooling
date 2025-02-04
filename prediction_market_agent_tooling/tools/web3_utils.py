@@ -153,6 +153,9 @@ def _prepare_tx_params(
         from_checksummed = Web3.to_checksum_address(tx_params_new["from"])
         tx_params_new["nonce"] = web3.eth.get_transaction_count(from_checksummed)
 
+    if not tx_params_new.get("chainId"):
+        tx_params_new["chainId"] = web3.eth.chain_id
+
     if access_list is not None:
         tx_params_new["accessList"] = access_list
 
@@ -263,7 +266,11 @@ def send_function_on_contract_tx_using_safe(
     )
     safe_tx.sign(from_private_key.get_secret_value())
     safe_tx.call()  # simulate call
-    tx_hash, tx = safe_tx.execute(from_private_key.get_secret_value())
+    eoa_nonce = web3.eth.get_transaction_count(eoa_public_key)
+    tx_hash, tx = safe_tx.execute(
+        from_private_key.get_secret_value(),
+        tx_nonce=eoa_nonce,
+    )
     receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
     check_tx_receipt(receipt_tx)
     return receipt_tx
@@ -293,12 +300,19 @@ def send_xdai_to(
     from_private_key: PrivateKey,
     to_address: ChecksumAddress,
     value: Wei,
+    data_text: Optional[str | bytes] = None,
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
 ) -> TxReceipt:
     from_address = private_key_to_public_key(from_private_key)
 
     tx_params_new: TxParams = {"value": value, "to": to_address}
+    if data_text is not None:
+        tx_params_new["data"] = (
+            Web3.to_bytes(text=data_text)
+            if not isinstance(data_text, bytes)
+            else data_text
+        )
     if tx_params:
         tx_params_new.update(tx_params)
     tx_params_new = _prepare_tx_params(web3, from_address, tx_params=tx_params_new)

@@ -2,12 +2,15 @@ import tenacity
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.tools.cache import persistent_inmemory_cache
+from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.langfuse_ import (
     get_langfuse_langchain_config,
     observe,
 )
-from prediction_market_agent_tooling.tools.utils import LLM_SUPER_LOW_TEMPERATURE
+from prediction_market_agent_tooling.tools.utils import (
+    LLM_SEED,
+    LLM_SUPER_LOW_TEMPERATURE,
+)
 
 # I tried to make it return a JSON, but it didn't work well in combo with asking it to do chain of thought.
 QUESTION_IS_PREDICTABLE_BINARY_PROMPT = """Main signs about a fully qualified question (sometimes referred to as a "market"):
@@ -19,7 +22,7 @@ QUESTION_IS_PREDICTABLE_BINARY_PROMPT = """Main signs about a fully qualified qu
 - If the market's question contains year, but without an exact date, it's okay.
 - The market's question can not be about itself or refer to itself.
 - The answer is probably Google-able, after the event happened.
-- The potential asnwer can be only "Yes" or "No".
+- The potential answer can be only "Yes" or "No".
 
 Follow a chain of thought to evaluate if the question is fully qualified:
 
@@ -76,12 +79,12 @@ Finally, write your final decision, write `decision: ` followed by either "yes i
 """
 
 
-@persistent_inmemory_cache
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @observe()
+@db_cache
 def is_predictable_binary(
     question: str,
-    engine: str = "gpt-4-1106-preview",
+    engine: str = "gpt-4o-2024-08-06",
     prompt_template: str = QUESTION_IS_PREDICTABLE_BINARY_PROMPT,
     max_tokens: int = 1024,
 ) -> bool:
@@ -98,6 +101,7 @@ def is_predictable_binary(
     llm = ChatOpenAI(
         model=engine,
         temperature=LLM_SUPER_LOW_TEMPERATURE,
+        seed=LLM_SEED,
         api_key=APIKeys().openai_api_key_secretstr_v1,
     )
 
@@ -112,13 +116,13 @@ def is_predictable_binary(
     return parse_decision_yes_no_completion(question, completion)
 
 
-@persistent_inmemory_cache
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @observe()
+@db_cache
 def is_predictable_without_description(
     question: str,
     description: str,
-    engine: str = "gpt-4-1106-preview",
+    engine: str = "gpt-4o-2024-08-06",
     prompt_template: str = QUESTION_IS_PREDICTABLE_WITHOUT_DESCRIPTION_PROMPT,
     max_tokens: int = 1024,
 ) -> bool:
@@ -137,6 +141,7 @@ def is_predictable_without_description(
     llm = ChatOpenAI(
         model=engine,
         temperature=LLM_SUPER_LOW_TEMPERATURE,
+        seed=LLM_SEED,
         api_key=APIKeys().openai_api_key_secretstr_v1,
     )
 

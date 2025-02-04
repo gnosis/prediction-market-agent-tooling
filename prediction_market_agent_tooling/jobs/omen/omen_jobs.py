@@ -1,15 +1,14 @@
 import typing as t
 
-from web3 import Web3
-
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     Currency,
     KellyBettingStrategy,
-    ProbabilisticAnswer,
     TradeType,
 )
-from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
+from prediction_market_agent_tooling.markets.agent_market import ProcessedTradedMarket
+from prediction_market_agent_tooling.markets.data_models import PlacedTrade, Trade
 from prediction_market_agent_tooling.markets.omen.omen import (
     BetAmount,
     OmenAgentMarket,
@@ -36,11 +35,27 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         return self.close_time
 
     def get_reward(self, max_bond: float) -> float:
-        return compute_job_reward(self, max_bond)
+        trade = self.get_job_trade(
+            max_bond,
+            result="",  # Pass empty result, as we are computing only potential reward at this point.
+        )
+        reward = (
+            self.get_buy_token_amount(
+                bet_amount=BetAmount(
+                    amount=trade.amount.amount, currency=trade.amount.currency
+                ),
+                direction=trade.outcome,
+            ).amount
+            - trade.amount.amount
+        )
+        return reward
 
     @classmethod
     def get_jobs(
-        cls, limit: int | None, filter_by: FilterBy, sort_by: SortBy
+        cls,
+        limit: int | None,
+        filter_by: FilterBy = FilterBy.OPEN,
+        sort_by: SortBy = SortBy.CLOSING_SOONEST,
     ) -> t.Sequence["OmenJobAgentMarket"]:
         markets = OmenSubgraphHandler().get_omen_binary_markets_simple(
             limit=limit,
@@ -49,6 +64,52 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             category=cls.CATEGORY,
         )
         return [OmenJobAgentMarket.from_omen_market(market) for market in markets]
+
+    @staticmethod
+    def get_job(id: str) -> "OmenJobAgentMarket":
+        return OmenJobAgentMarket.from_omen_agent_market(
+            OmenJobAgentMarket.get_binary_market(id=id)
+        )
+
+    def submit_job_result(
+        self, agent_name: str, max_bond: float, result: str
+    ) -> ProcessedTradedMarket:
+        if not APIKeys().enable_ipfs_upload:
+            raise RuntimeError(
+                f"ENABLE_IPFS_UPLOAD must be set to True to upload job results."
+            )
+
+        trade = self.get_job_trade(max_bond, result)
+        buy_id = self.buy_tokens(outcome=trade.outcome, amount=trade.amount)
+
+        processed_traded_market = ProcessedTradedMarket(
+            answer=self.get_job_answer(result),
+            trades=[PlacedTrade.from_trade(trade, id=buy_id)],
+        )
+
+        keys = APIKeys()
+        self.store_trades(processed_traded_market, keys, agent_name)
+
+        return processed_traded_market
+
+    def get_job_trade(self, max_bond: float, result: str) -> Trade:
+        # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
+        strategy = KellyBettingStrategy(max_bet_amount=max_bond)
+        required_trades = strategy.calculate_trades(
+            existing_position=None,
+            answer=self.get_job_answer(result),
+            market=self,
+        )
+        assert (
+            len(required_trades) == 1
+        ), f"Shouldn't process same job twice: {required_trades}"
+        trade = required_trades[0]
+        assert trade.trade_type == TradeType.BUY, "Should only buy on job markets."
+        assert trade.outcome, "Should buy only YES on job markets."
+        assert (
+            trade.amount.currency == Currency.xDai
+        ), "Should work only on real-money markets."
+        return required_trades[0]
 
     @staticmethod
     def from_omen_market(market: OmenMarket) -> "OmenJobAgentMarket":
@@ -77,38 +138,3 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             finalized_time=market.finalized_time,
             fees=market.fees,
         )
-
-
-def compute_job_reward(
-    market: OmenAgentMarket, max_bond: float, web3: Web3 | None = None
-) -> float:
-    # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
-    strategy = KellyBettingStrategy(max_bet_amount=max_bond)
-    required_trades = strategy.calculate_trades(
-        existing_position=None,
-        # We assume that we finish the job and so the probability of the market happening will be 100%.
-        answer=ProbabilisticAnswer(p_yes=Probability(1.0), confidence=1.0),
-        market=market,
-    )
-
-    assert (
-        len(required_trades) == 1
-    ), f"Shouldn't process same job twice: {required_trades}"
-    trade = required_trades[0]
-    assert trade.trade_type == TradeType.BUY, "Should only buy on job markets."
-    assert trade.outcome, "Should buy only YES on job markets."
-    assert (
-        trade.amount.currency == Currency.xDai
-    ), "Should work only on real-money markets."
-
-    reward = (
-        market.get_buy_token_amount(
-            bet_amount=BetAmount(
-                amount=trade.amount.amount, currency=trade.amount.currency
-            ),
-            direction=trade.outcome,
-        ).amount
-        - trade.amount.amount
-    )
-
-    return reward

@@ -6,9 +6,10 @@ from contextlib import contextmanager
 
 from pydantic import BaseModel, field_validator
 from web3 import Web3
+from web3.constants import CHECKSUM_ADDRESSS_ZERO
 from web3.contract.contract import Contract as Web3Contract
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
@@ -17,16 +18,20 @@ from prediction_market_agent_tooling.gtypes import (
     TxParams,
     TxReceipt,
     Wei,
+    xDai,
 )
-from prediction_market_agent_tooling.tools.gnosis_rpc import (
-    GNOSIS_NETWORK_ID,
-    GNOSIS_RPC_URL,
+from prediction_market_agent_tooling.tools.data_models import MessageContainer
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.utils import (
+    BPS_CONSTANT,
+    DatetimeUTC,
+    should_not_happen,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
     send_function_on_contract_tx_using_safe,
+    wei_to_xdai,
 )
 
 
@@ -73,6 +78,13 @@ class ContractBaseClass(BaseModel):
     ] = (
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
+
+    @classmethod
+    def merge_contract_abis(cls, contracts: list["ContractBaseClass"]) -> ABI:
+        merged_abi: list[dict[t.Any, t.Any]] = sum(
+            (json.loads(contract.abi) for contract in contracts), []
+        )
+        return abi_field_validator(json.dumps(merged_abi))
 
     def get_web3_contract(self, web3: Web3 | None = None) -> Web3Contract:
         web3 = web3 or self.get_web3()
@@ -250,7 +262,7 @@ class ContractERC20BaseClass(ContractBaseClass):
 class ContractDepositableWrapperERC20BaseClass(ContractERC20BaseClass):
     """
     ERC-20 standard base class extended for wrapper tokens.
-    Altough this is not a standard, it's seems to be a common pattern for wrapped tokens (at least it checks out for wxDai and wETH).
+    Although this is not a standard, it's seems to be a common pattern for wrapped tokens (at least it checks out for wxDai and wETH).
     """
 
     abi: ABI = abi_field_validator(
@@ -386,13 +398,97 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         return self.convertToShares(amount, web3=web3)
 
 
+class OwnableContract(ContractBaseClass):
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/ownable.abi.json",
+        )
+    )
+
+    def owner(self, web3: Web3 | None = None) -> ChecksumAddress:
+        owner = Web3.to_checksum_address(self.call("owner", web3=web3))
+        return owner
+
+
+class ContractERC721BaseClass(ContractBaseClass):
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/erc721.abi.json",
+        )
+    )
+
+    def safeMint(
+        self,
+        api_keys: APIKeys,
+        to_address: ChecksumAddress,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="safeMint",
+            function_params=[to_address],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+    def balanceOf(self, owner: ChecksumAddress, web3: Web3 | None = None) -> int:
+        balance: int = self.call("balanceOf", [owner], web3=web3)
+        return balance
+
+    def owner_of(self, token_id: int, web3: Web3 | None = None) -> ChecksumAddress:
+        owner = Web3.to_checksum_address(self.call("ownerOf", [token_id], web3=web3))
+        return owner
+
+    def name(self, web3: Web3 | None = None) -> str:
+        name: str = self.call("name", web3=web3)
+        return name
+
+    def symbol(self, web3: Web3 | None = None) -> str:
+        symbol: str = self.call("symbol", web3=web3)
+        return symbol
+
+    def tokenURI(self, tokenId: int, web3: Web3 | None = None) -> str:
+        uri: str = self.call("tokenURI", [tokenId], web3=web3)
+        return uri
+
+    def safeTransferFrom(
+        self,
+        api_keys: APIKeys,
+        from_address: ChecksumAddress,
+        to_address: ChecksumAddress,
+        tokenId: int,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="safeTransferFrom",
+            function_params=[from_address, to_address, tokenId],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
+
+class ContractOwnableERC721BaseClass(ContractERC721BaseClass, OwnableContract):
+    # We add dummy addresses below so that we can reference .abi later.
+    abi: ABI = ContractBaseClass.merge_contract_abis(
+        [
+            ContractERC721BaseClass(address=ChecksumAddress(CHECKSUM_ADDRESSS_ZERO)),
+            OwnableContract(address=ChecksumAddress(CHECKSUM_ADDRESSS_ZERO)),
+        ]
+    )
+
+
 class ContractOnGnosisChain(ContractBaseClass):
     """
     Contract base class with Gnosis Chain configuration.
     """
 
-    CHAIN_ID = GNOSIS_NETWORK_ID
-    CHAIN_RPC_URL = GNOSIS_RPC_URL
+    CHAIN_ID = RPCConfig().chain_id
+    CHAIN_RPC_URL = RPCConfig().gnosis_rpc_url
 
 
 class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):
@@ -404,6 +500,14 @@ class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):
 class ContractERC20OnGnosisChain(ContractERC20BaseClass, ContractOnGnosisChain):
     """
     ERC-20 standard base class with Gnosis Chain configuration.
+    """
+
+
+class ContractOwnableERC721OnGnosisChain(
+    ContractOwnableERC721BaseClass, ContractOnGnosisChain
+):
+    """
+    Ownable ERC-721 standard base class with Gnosis Chain configuration.
     """
 
 
@@ -464,6 +568,170 @@ class DebuggingContract(ContractOnGnosisChain):
         return self.send(
             api_keys=api_keys,
             function_name="inc",
+            web3=web3,
+        )
+
+
+class SimpleTreasuryContract(ContractOnGnosisChain, OwnableContract):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/simpletreasury.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x624ad0db52e6b18afb4d36b8e79d0c2a74f3fc8a"
+    )
+
+    def required_nft_balance(self, web3: Web3 | None = None) -> int:
+        min_num_of_nfts: int = self.call("requiredNFTBalance", web3=web3)
+        return min_num_of_nfts
+
+    def set_required_nft_balance(
+        self,
+        api_keys: APIKeys,
+        new_required_balance: int,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="setRequiredNFTBalance",
+            function_params=[new_required_balance],
+            web3=web3,
+        )
+
+    def nft_contract(self, web3: Web3 | None = None) -> ContractERC721BaseClass:
+        nft_contract_address: ChecksumAddress = self.call("nftContract", web3=web3)
+        contract = ContractERC721BaseClass(address=nft_contract_address)
+        return contract
+
+    def withdraw(
+        self,
+        api_keys: APIKeys,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="withdraw",
+            web3=web3,
+        )
+
+
+class AgentCommunicationContract(ContractOnGnosisChain, OwnableContract):
+    # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../abis/agentcommunication.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0xe9dd78FF297DbaAbe5D0E45aE554a4B561935DE9"
+    )
+
+    def minimum_message_value(self, web3: Web3 | None = None) -> xDai:
+        value: Wei = self.call("minimumValueForSendingMessageInWei", web3=web3)
+        return wei_to_xdai(value)
+
+    def ratio_given_to_treasury(self, web3: Web3 | None = None) -> float:
+        bps: int = self.call("pctToTreasuryInBasisPoints", web3=web3)
+        return bps / BPS_CONSTANT
+
+    def count_unseen_messages(
+        self,
+        agent_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> int:
+        unseen_message_count: int = self.call(
+            "countMessages", function_params=[agent_address], web3=web3
+        )
+        return unseen_message_count
+
+    def get_at_index(
+        self,
+        agent_address: ChecksumAddress,
+        idx: int,
+        web3: Web3 | None = None,
+    ) -> MessageContainer:
+        message_container_raw: t.Tuple[t.Any] = self.call(
+            "getAtIndex", function_params=[agent_address, idx], web3=web3
+        )
+        return MessageContainer.from_tuple(message_container_raw)
+
+    def set_treasury_address(
+        self,
+        api_keys: APIKeys,
+        new_treasury_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="setTreasuryAddress",
+            function_params=[new_treasury_address],
+            web3=web3,
+        )
+
+    def set_minimum_value_for_sending_message(
+        self,
+        api_keys: APIKeys,
+        new_minimum_value: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="adjustMinimumValueForSendingMessage",
+            function_params=[new_minimum_value],
+            web3=web3,
+        )
+
+    def pop_message(
+        self,
+        api_keys: APIKeys,
+        agent_address: ChecksumAddress,
+        index: int = 0,
+        web3: Web3 | None = None,
+    ) -> MessageContainer:
+        """
+        Retrieves and removes message at specified index from the agent's message queue.
+
+        This method first retrieves the message at the front of the queue without removing it,
+        allowing us to return the message content directly. The actual removal of the message
+        from the queue is performed by sending a transaction to the contract, which executes
+        the `popMessageAtIndex` function. The transaction receipt is not used to obtain the message
+        content, as it only contains event data, not the returned struct.
+        """
+
+        # Peek the element before popping.
+        message_container = self.get_at_index(
+            agent_address=agent_address, idx=index, web3=web3
+        )
+
+        # Next, pop that element and discard the transaction receipt.
+        self.send(
+            api_keys=api_keys,
+            function_name="popMessageAtIndex",
+            function_params=[agent_address, index],
+            web3=web3,
+        )
+
+        return message_container
+
+    def send_message(
+        self,
+        api_keys: APIKeys,
+        agent_address: ChecksumAddress,
+        message: HexBytes,
+        amount_wei: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send_with_value(
+            api_keys=api_keys,
+            function_name="sendMessage",
+            amount_wei=amount_wei,
+            function_params=[agent_address, message],
             web3=web3,
         )
 

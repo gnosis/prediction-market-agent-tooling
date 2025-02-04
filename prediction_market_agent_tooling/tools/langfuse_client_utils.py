@@ -63,6 +63,7 @@ def get_traces_for_agent(
     from_timestamp: DatetimeUTC,
     has_output: bool,
     client: Langfuse,
+    to_timestamp: DatetimeUTC | None = None,
 ) -> list[TraceWithDetails]:
     """
     Fetch agent traces using pagination
@@ -70,11 +71,13 @@ def get_traces_for_agent(
     page = 1  # index starts from 1
     all_agent_traces = []
     while True:
+        logger.debug(f"fetching page {page}")
         traces = client.fetch_traces(
             name=trace_name,
             limit=100,
             page=page,
             from_timestamp=from_timestamp,
+            to_timestamp=to_timestamp,
         )
         if not traces.data:
             break

@@ -75,9 +75,11 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
+from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import (
+    BPS_CONSTANT,
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
     check_not_none,
@@ -315,7 +317,7 @@ class OmenAgentMarket(AgentMarket):
     def market_redeemable_by(self, user: ChecksumAddress) -> bool:
         """
         Will return true if given user placed a bet on this market and that bet has a balance.
-        If the user never placed a bet on this market, this corretly return False.
+        If the user never placed a bet on this market, this correctly return False.
         """
         positions = OmenSubgraphHandler().get_positions(condition_id=self.condition.id)
         user_positions = OmenSubgraphHandler().get_user_positions(
@@ -413,17 +415,21 @@ class OmenAgentMarket(AgentMarket):
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
         return get_total_balance(
-            api_keys.public_key,  # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
+            api_keys.public_key,
+            # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
             sum_wxdai=False,
         ) > xdai_type(0.001)
 
     def store_prediction(
-        self, processed_market: ProcessedMarket | None, keys: APIKeys
+        self, processed_market: ProcessedMarket | None, keys: APIKeys, agent_name: str
     ) -> None:
         """On Omen, we have to store predictions along with trades, see `store_trades`."""
 
     def store_trades(
-        self, traded_market: ProcessedTradedMarket | None, keys: APIKeys
+        self,
+        traded_market: ProcessedTradedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
     ) -> None:
         if traded_market is None:
             logger.warning(f"No prediction for market {self.id}, not storing anything.")
@@ -437,7 +443,7 @@ class OmenAgentMarket(AgentMarket):
         if keys.enable_ipfs_upload:
             logger.info("Storing prediction on IPFS.")
             ipfs_hash = IPFSHandler(keys).store_agent_result(
-                IPFSAgentResult(reasoning=reasoning)
+                IPFSAgentResult(reasoning=reasoning, agent_name=agent_name)
             )
             ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
@@ -445,10 +451,10 @@ class OmenAgentMarket(AgentMarket):
             HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
         ]
         prediction = ContractPrediction(
-            publisher=keys.public_key,
+            publisher=keys.bet_from_address,
             ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
-            estimated_probability_bps=int(traded_market.answer.p_yes * 10000),
+            estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
         )
         tx_receipt = OmenAgentResultMappingContract().add_prediction(
             api_keys=keys,
@@ -474,6 +480,8 @@ class OmenAgentMarket(AgentMarket):
         better_address: ChecksumAddress,
         start_time: DatetimeUTC,
         end_time: DatetimeUTC | None,
+        market_resolved_before: DatetimeUTC | None = None,
+        market_resolved_after: DatetimeUTC | None = None,
     ) -> list[ResolvedBet]:
         subgraph_handler = OmenSubgraphHandler()
         bets = subgraph_handler.get_resolved_bets_with_valid_answer(
@@ -481,6 +489,8 @@ class OmenAgentMarket(AgentMarket):
             start_time=start_time,
             end_time=end_time,
             market_id=None,
+            market_resolved_before=market_resolved_before,
+            market_resolved_after=market_resolved_after,
         )
         generic_bets = [b.to_generic_resolved_bet() for b in bets]
         return generic_bets
@@ -555,13 +565,18 @@ class OmenAgentMarket(AgentMarket):
         omen_markets: dict[HexBytes, OmenMarket] = {
             m.condition.id: m
             for m in sgh.get_omen_binary_markets(
-                limit=sys.maxsize,
+                limit=None,
                 condition_id_in=list(omen_positions_dict.keys()),
             )
         }
+
         if len(omen_markets) != len(omen_positions_dict):
+            missing_conditions_ids = set(
+                omen_position.position.condition_id for omen_position in omen_positions
+            ) - set(market.condition.id for market in omen_markets.values())
             raise ValueError(
-                f"Number of condition ids for markets {len(omen_markets)} and positions {len(omen_positions_dict)} are not equal."
+                f"Number of condition ids for markets {len(omen_markets)} and positions {len(omen_positions_dict)} are not equal. "
+                f"Missing condition ids: {missing_conditions_ids}"
             )
 
         positions = []
@@ -1194,7 +1209,7 @@ def omen_remove_fund_market_tx(
     amount_per_index_set = get_conditional_tokens_balance_for_market(
         market, from_address, web3
     )
-    # We fetch the minimum balance of outcome token - for ex, in this tx (https://gnosisscan.io/tx/0xc31c4e9bc6a60cf7db9991a40ec2f2a06e3539f8cb8dd81b6af893cef6f40cd7#eventlog) - event #460, this should yield 9804940144070370149. This amount matches what is displayed in the Omen UI.
+    # We fetch the minimum balance of outcome token - for ex, in this tx (https://gnosisscan.io/tx/0xc31c4e9bc6a60cf7db9991a40ec2f2a06e3539f8cb8dd81b6af893cef6f40cd7#eventlog) - event #460, this should yield 9804940144070370149. This amount matches what is displayed in the Omen UI. # web3-private-key-ok
     # See similar logic from Olas
     # https://github.com/valory-xyz/market-creator/blob/4bc47f696fb5ecb61c3b7ec8c001ff2ab6c60fcf/packages/valory/skills/market_creation_manager_abci/behaviours.py#L1308
     amount_to_merge = min(amount_per_index_set.values())
@@ -1237,12 +1252,12 @@ def redeem_from_all_user_positions(
 
         if not conditional_token_contract.is_condition_resolved(condition_id):
             logger.info(
-                f"[{index+1} / {len(user_positions)}] Skipping redeem, {user_position.id=} isn't resolved yet."
+                f"[{index + 1} / {len(user_positions)}] Skipping redeem, {user_position.id=} isn't resolved yet."
             )
             continue
 
         logger.info(
-            f"[{index+1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
+            f"[{index + 1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
         )
 
         original_balances = get_balances(public_key, web3)
@@ -1263,9 +1278,11 @@ def redeem_from_all_user_positions(
 def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability]:
     history: list[Probability] = []
     trades = sorted(
-        OmenSubgraphHandler().get_trades(  # We need to look at price both after buying or selling, so get trades, not bets.
+        OmenSubgraphHandler().get_trades(
+            # We need to look at price both after buying or selling, so get trades, not bets.
             market_id=market.market_maker_contract_address_checksummed,
-            end_time=market.close_time,  # Even after market is closed, there can be many `Sell` trades which will converge the probability to the true one.
+            end_time=market.close_time,
+            # Even after market is closed, there can be many `Sell` trades which will converge the probability to the true one.
         ),
         key=lambda x: x.creation_datetime,
     )
@@ -1332,7 +1349,7 @@ def withdraw_wxdai_to_xdai_to_keep_balance(
     )
 
     if current_balances.wxdai < need_to_withdraw:
-        raise ValueError(
+        raise OutOfFundsError(
             f"Current wxDai balance {current_balances.wxdai} is less than the required minimum wxDai to withdraw {need_to_withdraw}."
         )
 

@@ -24,9 +24,11 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
 )
 from prediction_market_agent_tooling.tools.utils import (
+    BPS_CONSTANT,
     DatetimeUTC,
     check_not_none,
     should_not_happen,
+    utcnow,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
@@ -39,6 +41,10 @@ INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.hex())
 OMEN_BASE_URL = "https://aiomen.eth.limo"
 PRESAGIO_BASE_URL = "https://presagio.pages.dev"
 TEST_CATEGORY = "test"  # This category is hidden on Presagio for testing purposes.
+
+
+def construct_presagio_url(market_id: HexAddress) -> str:
+    return f"{PRESAGIO_BASE_URL}/markets?id={market_id}"
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
@@ -240,7 +246,7 @@ class OmenMarket(BaseModel):
 
     @property
     def is_open(self) -> bool:
-        return self.currentAnswer is None
+        return self.close_time > utcnow()
 
     @property
     def is_resolved(self) -> bool:
@@ -391,7 +397,7 @@ class OmenMarket(BaseModel):
 
     @property
     def url(self) -> str:
-        return f"{PRESAGIO_BASE_URL}/markets?id={self.id}"
+        return construct_presagio_url(self.id)
 
     @staticmethod
     def from_created_market(model: "CreatedMarket") -> "OmenMarket":
@@ -498,12 +504,16 @@ class OmenBet(BaseModel):
     creator: OmenBetCreator
     creationTimestamp: int
     collateralAmount: Wei
-    collateralAmountUSD: USD
     feeAmount: Wei
     outcomeIndex: int
     outcomeTokensTraded: Wei
-    transactionHash: HexAddress
+    transactionHash: HexBytes
     fpmm: OmenMarket
+
+    @property
+    def collateral_amount_usd(self) -> USD:
+        # Convert manually instad of using the field `collateralAmountUSD` available on the graph, because it's bugged, it's 0 for non-xDai markets.
+        return USD(wei_to_xdai(self.collateralAmount))
 
     @property
     def creation_datetime(self) -> DatetimeUTC:
@@ -530,7 +540,6 @@ class OmenBet(BaseModel):
             if self.boolean_outcome == self.fpmm.boolean_outcome
             else -bet_amount_xdai
         )
-        profit -= wei_to_xdai(self.feeAmount)
         return ProfitAmount(
             amount=profit,
             currency=Currency.xDai,
@@ -538,10 +547,9 @@ class OmenBet(BaseModel):
 
     def to_bet(self) -> Bet:
         return Bet(
-            id=str(
-                self.transactionHash
-            ),  # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
-            amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
+            id=str(self.transactionHash),
+            # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
+            amount=BetAmount(amount=self.collateral_amount_usd, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
             market_question=self.title,
@@ -555,10 +563,9 @@ class OmenBet(BaseModel):
             )
 
         return ResolvedBet(
-            id=str(
-                self.transactionHash
-            ),  # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
-            amount=BetAmount(amount=self.collateralAmountUSD, currency=Currency.xDai),
+            id=self.transactionHash.hex(),
+            # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
+            amount=BetAmount(amount=self.collateral_amount_usd, currency=Currency.xDai),
             outcome=self.boolean_outcome,
             created_time=self.creation_datetime,
             market_question=self.title,
@@ -578,7 +585,7 @@ class FixedProductMarketMakersResponse(BaseModel):
 
 
 class RealityQuestion(BaseModel):
-    # This `id` is in form of `0x79e32ae03fb27b07c89c0c568f80287c01ca2e57-0x2d362f435e7b5159794ff0b5457a900283fca41fe6301dc855a647595903db13`,
+    # This `id` is in form of `0x79e32ae03fb27b07c89c0c568f80287c01ca2e57-0x2d362f435e7b5159794ff0b5457a900283fca41fe6301dc855a647595903db13`, # web3-private-key-ok
     # which I couldn't find how it is created, but based on how it looks like I assume it's composed of `answerId-questionId`.
     # (Why is answer id as part of the question object? Because this question object is actually received from the answer object below).
     # And because all the contract methods so far needed bytes32 input, when asked for question id, `questionId` field was the correct one to use so far.
@@ -588,7 +595,7 @@ class RealityQuestion(BaseModel):
     updatedTimestamp: int
     contentHash: HexBytes
     questionId: HexBytes  # This is the `id` on question from omen subgraph.
-    answerFinalizedTimestamp: int
+    answerFinalizedTimestamp: int | None
     currentScheduledFinalizationTimestamp: int
 
     @property
@@ -596,8 +603,12 @@ class RealityQuestion(BaseModel):
         return DatetimeUTC.to_datetime_utc(self.updatedTimestamp)
 
     @property
-    def answer_finalized_datetime(self) -> DatetimeUTC:
-        return DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
+    def answer_finalized_datetime(self) -> DatetimeUTC | None:
+        return (
+            DatetimeUTC.to_datetime_utc(self.answerFinalizedTimestamp)
+            if self.answerFinalizedTimestamp is not None
+            else None
+        )
 
     @property
     def current_scheduled_finalization_datetime(self) -> DatetimeUTC:
@@ -777,6 +788,12 @@ class CreatedMarket(BaseModel):
     fee: Wei
     distribution_hint: list[OmenOutcomeToken] | None
 
+    @property
+    def url(self) -> str:
+        return construct_presagio_url(
+            self.market_event.fixed_product_market_maker_checksummed
+        )
+
 
 class ContractPrediction(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -785,20 +802,32 @@ class ContractPrediction(BaseModel):
     tx_hashes: list[HexBytes] = Field(..., alias="txHashes")
     estimated_probability_bps: int = Field(..., alias="estimatedProbabilityBps")
 
+    @property
+    def estimated_probability(self) -> Probability:
+        return Probability(self.estimated_probability_bps / BPS_CONSTANT)
+
+    @property
+    def boolean_outcome(self) -> bool:
+        return self.estimated_probability > 0.5
+
     @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
     @property
     def publisher_checksummed(self) -> ChecksumAddress:
         return Web3.to_checksum_address(self.publisher)
 
     @staticmethod
-    def from_tuple(values: tuple[t.Any]) -> "ContractPrediction":
-        data = {k: v for k, v in zip(ContractPrediction.model_fields.keys(), values)}
-        return ContractPrediction.model_validate(data)
+    def from_tuple(values: tuple[t.Any, ...]) -> "ContractPrediction":
+        return ContractPrediction(
+            publisher=values[0],
+            ipfs_hash=values[1],
+            tx_hashes=values[2],
+            estimated_probability_bps=values[3],
+        )
 
 
 class IPFSAgentResult(BaseModel):
     reasoning: str
-
+    agent_name: str
     model_config = ConfigDict(
         extra="forbid",
     )

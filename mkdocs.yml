@@ -1,15 +1,18 @@
 site_name: Prediction Market Agent Tooling
 nav:
   - Home: index.md
-  - Prediction Market Agnets:
+  - Prediction Market Agents:
       - Overview: predictionmarkets.md
       - Dependencies: dependencies.md
       - Quickstart: quickstart.md
   - Agent Development:
       - Deployable Trader Agent: deployabletraderagent.md
+      - Benchmarker: benchmarker.md
       - Example Agent: exampleagent.md
       - Deploy with Safe: deploywithsafe.md
   - Contributing: contributing.md
 
 theme:
   name: material
+  features:
+    - navigation.expand

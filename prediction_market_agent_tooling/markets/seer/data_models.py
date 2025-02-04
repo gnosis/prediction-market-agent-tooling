@@ -38,28 +38,21 @@ class SeerParentMarket(BaseModel):
 
 class SeerMarket(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    publisher: str = Field(..., alias="publisherAddress")
 
     id: HexBytes
     title: str = Field(alias="marketName")
     outcomes: list[str]
-    parent_market: SeerParentMarket | None = Field(alias="parentMarket")
     wrapped_tokens: list[HexBytes] = Field(alias="wrappedTokens")
-
-    parent_outcome: t.Optional[str] = Field(..., alias="parentOutcome")
-    parent_market: t.Optional[HexBytes] = Field(..., alias="parentMarket")
+    parent_outcome: int = Field(alias="parentOutcome")
+    parent_market: t.Optional[SeerParentMarket] = Field(
+        alias="parentMarket", default=None
+    )
 
 
 class SeerToken(BaseModel):
     id: HexBytes
     name: str
     symbol: str
-
-    lower_bound: t.Optional[int] = Field(..., alias="lowerBound")
-    upper_bound: t.Optional[int] = Field(..., alias="upperBound")
-    min_bond: int = Field(..., alias="minBond")
-    opening_time: int = Field(..., alias="openingTime")
-    token_names: list[str] = Field(..., alias="tokenNames")
 
 
 class SeerPool(BaseModel):

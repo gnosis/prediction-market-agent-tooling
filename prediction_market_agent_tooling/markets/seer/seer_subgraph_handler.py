@@ -46,6 +46,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.factory,
             markets_field.creator,
             markets_field.marketName,
+            markets_field.parentOutcome,
             markets_field.outcomes,
             markets_field.parentMarket.id,
             markets_field.finalizeTs,
@@ -87,7 +88,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             include_conditional_markets
         )
         query_filter["outcomes_contains"] = [INVALID_OUTCOME]
-        markets_field = self.seer_subgraph.Query.all_markets(where=query_filter)
+        markets_field = self.seer_subgraph.Query.markets(where=query_filter)
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         two_category_markets = self.filter_bicategorical_markets(markets)
@@ -126,7 +127,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         ]
         return fields
 
-    def get_pools_for_market(self, market: SeerMarket) -> list[SeerPool]:
+    def get_swapr_pools_for_market(self, market: SeerMarket) -> list[SeerPool]:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
         wheres = []
         for wrapped_token in market.wrapped_tokens:

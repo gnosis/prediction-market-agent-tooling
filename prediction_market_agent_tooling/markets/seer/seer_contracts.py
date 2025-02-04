@@ -62,13 +62,21 @@ class MarketFactory(ContractOnGnosisChain):
         "0x83183da839ce8228e31ae41222ead9edbb5cdcf1"
     )
 
+    def market_count(self, web3: Web3 | None = None) -> int:
+        count: int = self.call("marketCount", web3=web3)
+        return count
+
     def create_categorical_market(
-        self, api_keys: APIKeys, params: CreateCategoricalMarketsParams
+        self,
+        api_keys: APIKeys,
+        params: CreateCategoricalMarketsParams,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         receipt_tx = self.send(
             api_keys=api_keys,
             function_name="createCategoricalMarket",
-            function_params=[params.model_dump(by_alias=True, exclude_none=True)],
+            function_params=[params.model_dump(by_alias=True)],
+            web3=web3,
         )
         return receipt_tx
 

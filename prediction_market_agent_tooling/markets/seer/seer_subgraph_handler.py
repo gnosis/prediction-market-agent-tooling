@@ -87,7 +87,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             include_conditional_markets
         )
         query_filter["outcomes_contains"] = [INVALID_OUTCOME]
-        markets_field = self.seer_subgraph.Query.markets(where=query_filter)
+        markets_field = self.seer_subgraph.Query.all_markets(where=query_filter)
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         two_category_markets = self.filter_bicategorical_markets(markets)

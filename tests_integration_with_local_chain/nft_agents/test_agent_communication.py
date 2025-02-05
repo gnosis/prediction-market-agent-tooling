@@ -48,6 +48,7 @@ def test_pop_message(local_web3: Web3) -> None:
     )
 
     message = zlib.compress(b"Hello there!")
+    print(f"initial messages {initial_messages}")
 
     comm_contract.send_message(
         api_keys=keys,
@@ -67,6 +68,7 @@ def test_pop_message(local_web3: Web3) -> None:
     stored_message = comm_contract.get_at_index(
         agent_address=mock_agent_address, idx=0, web3=local_web3
     )
+    print(f"stored message {stored_message}")
     # assert message match
     assert stored_message.recipient == mock_agent_address
     assert stored_message.message == HexBytes(message)

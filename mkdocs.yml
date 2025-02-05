@@ -11,7 +11,16 @@ nav:
       - Benchmarker: benchmarker.md
       - Example Agent: exampleagent.md
       - Deploy with Safe: deploywithsafe.md
-  - API Reference: api.md
+  - Reference:
+      - Overview: api/index.md
+      - Core Modules:
+          - Benchmark: api/benchmark.md
+          - Deploy: api/deploy.md
+          - Markets: api/markets.md
+          - Monitor: api/monitor.md
+          - Tools: api/tools.md
+          - Configuration: api/config.md
+          - Global Types: api/gtypes.md
   - Contributing: contributing.md
 
 theme:
@@ -35,14 +44,13 @@ plugins:
             docstring_section_style: table
             show_signature_annotations: true
             show_bases: true
+            show_inheritance: true
             show_submodules: true
             merge_init_into_class: true
             show_if_no_docstring: true
             inherited_members: true
             members: true
             filters: ["!^_"]
-            extra:
-              show_inheritance: true
 
 markdown_extensions:
   - pymdownx.highlight

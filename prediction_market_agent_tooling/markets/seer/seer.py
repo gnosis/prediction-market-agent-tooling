@@ -7,9 +7,9 @@ from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )
 from prediction_market_agent_tooling.tools.contract import (
-    to_gnosis_chain_contract,
-    init_collateral_token_contract,
     auto_deposit_collateral_token,
+    init_collateral_token_contract,
+    to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei

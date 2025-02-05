@@ -4,18 +4,13 @@ from web3 import Web3
 from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import (
-    ABI,
-    ChecksumAddress,
-    xDai,
-    xdai_type,
-)
+from prediction_market_agent_tooling.gtypes import ABI, ChecksumAddress, xDai, xdai_type
 from prediction_market_agent_tooling.markets.seer.data_models import (
     CreateCategoricalMarketsParams,
 )
 from prediction_market_agent_tooling.tools.contract import (
-    abi_field_validator,
     ContractOnGnosisChain,
+    abi_field_validator,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei

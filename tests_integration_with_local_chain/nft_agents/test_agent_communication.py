@@ -15,10 +15,11 @@ def test_count_unseen_messages(local_web3: Web3, accounts: list[TestAccount]) ->
     mock_agent_address = Web3.to_checksum_address(accounts[2].address)
     comm_contract = AgentCommunicationContract()
 
+    # It might be the case that initial_messages > 0 (due to ape's tests not being isolated).
     initial_messages = comm_contract.count_unseen_messages(
         agent_address=mock_agent_address, web3=local_web3
     )
-    assert initial_messages == 0  # no messages yet
+
     # add new message
     message = zlib.compress(b"Hello there!")
 
@@ -33,7 +34,7 @@ def test_count_unseen_messages(local_web3: Web3, accounts: list[TestAccount]) ->
         comm_contract.count_unseen_messages(
             agent_address=mock_agent_address, web3=local_web3
         )
-        == 1
+        == initial_messages + 1
     )
 
 
@@ -45,7 +46,6 @@ def test_pop_message(local_web3: Web3) -> None:
     initial_messages = comm_contract.count_unseen_messages(
         agent_address=mock_agent_address, web3=local_web3
     )
-    assert initial_messages == 0  # no messages yet
 
     message = zlib.compress(b"Hello there!")
 
@@ -60,7 +60,7 @@ def test_pop_message(local_web3: Web3) -> None:
         comm_contract.count_unseen_messages(
             agent_address=mock_agent_address, web3=local_web3
         )
-        == 1
+        == initial_messages + 1
     )
 
     # get at index

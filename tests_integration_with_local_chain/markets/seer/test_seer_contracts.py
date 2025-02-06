@@ -1,6 +1,7 @@
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.markets.seer.data_models import (
     CreateCategoricalMarketsParams,
 )
@@ -17,6 +18,7 @@ def build_params() -> CreateCategoricalMarketsParams:
         opening_time=DatetimeUTC.now(),
         language="en_US",
         category="misc",
+        min_bond_xdai=xdai_type(xDai(0.01)),
     )
 
 
@@ -24,7 +26,7 @@ def test_create_market(local_web3: Web3, test_keys: APIKeys) -> None:
     factory = SeerMarketFactory()
     num_initial_markets = factory.market_count(web3=local_web3)
     params = build_params()
-    tx_receipt = factory.create_categorical_market(
+    factory.create_categorical_market(
         api_keys=test_keys, params=params, web3=local_web3
     )
 

@@ -38,7 +38,7 @@ def test_count_unseen_messages(local_web3: Web3, accounts: list[TestAccount]) ->
     )
 
 
-def test_pop_message(local_web3: Web3) -> None:
+def test_pop_message(local_web3: Web3, accounts: list[TestAccount]) -> None:
     #### Delete me after test passes
     keys = APIKeys()
     mock_agent_address = Web3.to_checksum_address(accounts[2].address)

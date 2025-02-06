@@ -61,3 +61,12 @@ class SeerPool(BaseModel):
     liquidity: int
     token0: SeerToken
     token1: SeerToken
+
+
+class NewMarketEvent(BaseModel):
+    market: HexAddress
+    marketName: str
+    parentMarket: HexAddress
+    conditionId: HexBytes
+    questionId: HexBytes
+    questionsIds: list[HexBytes]

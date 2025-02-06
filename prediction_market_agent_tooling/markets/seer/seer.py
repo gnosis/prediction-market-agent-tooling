@@ -1,8 +1,10 @@
 from eth_typing import ChecksumAddress
 from web3 import Web3
+from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai
+from prediction_market_agent_tooling.markets.seer.data_models import NewMarketEvent
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )
@@ -66,12 +68,25 @@ def seer_create_market_tx(
         category=category,
         min_bond_xdai=min_bond_xdai,
     )
-    factory_contract.create_categorical_market(
+    tx_receipt = factory_contract.create_categorical_market(
         api_keys=api_keys, params=params, web3=web3
     )
-    # ToDo - Add liquidity to market on Swapr (https://github.com/gnosis/prediction-market-agent-tooling/issues/497)
 
-    # Fetch newly created market
-    count_markets = factory_contract.market_count(web3=web3)
-    new_market_address = factory_contract.market_at_index(count_markets - 1, web3=web3)
-    return new_market_address
+    # ToDo - Add liquidity to market on Swapr (https://github.com/gnosis/prediction-market-agent-tooling/issues/497)
+    market_address = extract_market_address_from_tx(
+        factory_contract=factory_contract, tx_receipt=tx_receipt, web3=web3
+    )
+    return market_address
+
+
+def extract_market_address_from_tx(
+    factory_contract: SeerMarketFactory, tx_receipt: TxReceipt, web3: Web3
+) -> ChecksumAddress:
+    """We extract the newly created market from the NewMarket event emitted in the transaction."""
+    event_logs = (
+        factory_contract.get_web3_contract(web3=web3)
+        .events.NewMarket()
+        .process_receipt(tx_receipt)
+    )
+    new_market_event = NewMarketEvent(**event_logs[0]["args"])
+    return Web3.to_checksum_address(new_market_event.market)

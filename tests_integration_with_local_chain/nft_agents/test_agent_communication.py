@@ -1,6 +1,8 @@
 import zlib
 
+import tenacity
 from ape_test import TestAccount
+from tenacity import stop_after_attempt, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -50,13 +52,20 @@ def test_pop_message(local_web3: Web3) -> None:
     message = zlib.compress(b"Hello there!")
     print(f"initial messages {initial_messages}")
 
-    comm_contract.send_message(
-        api_keys=keys,
-        agent_address=mock_agent_address,
-        message=HexBytes(message),
-        amount_wei=xdai_to_wei(xDai(0.1)),
-        web3=local_web3,
-    )
+    def dummy() -> None:
+        comm_contract.send_message(
+            api_keys=keys,
+            agent_address=mock_agent_address,
+            message=HexBytes(message),
+            amount_wei=xdai_to_wei(xDai(0.1)),
+            web3=local_web3,
+        )
+
+    send_message_with_retry = tenacity.retry(
+        stop=stop_after_attempt(3), wait=wait_fixed(1)
+    )(dummy)
+    send_message_with_retry()
+
     assert (
         comm_contract.count_unseen_messages(
             agent_address=mock_agent_address, web3=local_web3

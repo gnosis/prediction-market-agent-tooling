@@ -1,92 +1,95 @@
-# Gnosis Agent Quickstart Guide
+# Quickstart Guide
 
-## Overview
-Gnosis Agent is a library for exploring AI Agent frameworks using a prediction market betting agent as an example. These agents interact with markets from **Manifold, Presagio, and Polymarket**.
+This is a quickstart guide to help you get started with your first prediction market agent using the PMAT library on Gnosis Chain.
 
-This is built on top of the prediction market APIs from the [Gnosis Prediction Market Agent Tooling](https://github.com/gnosis/prediction-market-agent-tooling).
+### 1. Dependencies
+Install all the necessary dependencies mentioned in the [Dependencies](dependencies.md) page.
 
-## Setup
+### 2. Create your project
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/gnosis/prediction-market-agent.git
-   cd prediction-market-agent
-   ```
-2. **Install dependencies using poetry:**
-   ```bash
-   python3.10 -m pip install poetry
-   python3.10 -m poetry install
-   ```
-3. **Activate the virtual environment:**
-   ```bash
-   python3.10 -m poetry shell
-   ```
+Create a new project directory
 
-### Environment Variables
-Create a `.env` file in the root of the repository and add the following variables:
+```
+mkdir basic-prediction-market-agent
+cd basic-prediction-market-agent
+```
+Set up a virtual environment
 
+```
+python -m venv venv
+source venv/bin/activate  
+# On Windows use `venv\Scripts\activate`
+```
+Create a requirements.txt file yet and add the following dependencies:
 
-    Please Note: Requirements for env variables may differ based upon which agent you want to run. Always check the agent file to verify the variables required.
-
-```ini
-MANIFOLD_API_KEY=your_manifold_api_key
-BET_FROM_PRIVATE_KEY=your_private_key
-OPENAI_API_KEY=your_openai_api_key
+```
+prediction-market-agent-tooling[langchain]
+python-dotenv
+pydantic
 ```
 
-For additional variables, check `.env.example` in the repository.
+Install the libraries
 
-## Running the Agents
-To execute an agent, run the following command:
+```
+python -m pip install -r requirements.txt
+```
+### 3. Configure Environment Variables
 
-```bash
-python prediction_market_agent/run_agent.py <AGENT> <MARKET_TYPE>
+Create .env and fill in the required API keys:
+
+```
+GRAPH_API_KEY=
+
+OPENAI_API_KEY=
+
+BET_FROM_PRIVATE_KEY= 
+
+# Make sure you have enough xDAI in the wallet you use here.
+
 ```
 
-### Available Agents
-Replace `<AGENT>` with one of the following:
-- `coinflip`
-- `replicate_to_omen`
-- `think_thoroughly`
-- `think_thoroughly_prophet`
-- `knownoutcome`
-- `microchain`
-- `metaculus_bot_tournament_agent`
-- `prophet_gpt4o`
-- `social_media`
-- `omen_cleaner`
+### 4. Create a Basic Prediction Market Agent
 
-For a full list, run:
-```bash
-python prediction_market_agent/run_agent.py --help
+Create a new file named **basic_agent.py**
+
+Create a class BasicAgent which inherits from **DeployableTraderAgent** class, meaning it extends the base class for a trading agent in the prediction market framework.
+
+```
+import random
+
+from prediction_market_agent_tooling.deploy.agent import DeployableTraderAgent
+from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.data_models import ProbabilisticAnswer
+from prediction_market_agent_tooling.markets.markets import MarketType
+
+
+class BasicAgent(DeployableTraderAgent):
+    bet_on_n_markets_per_run = 1
+
+    def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
+        decision = random.choice([True, False])
+        return ProbabilisticAnswer(
+            confidence=0.5,
+            p_yes=Probability(float(decision)),
+            reasoning="I flipped a coin to decide.",
+        )
+
+
+if __name__ == "__main__":
+    agent = BasicAgent()
+    agent.run(market_type=MarketType.OMEN)
+
 ```
 
-### Available Market Types
-Replace `<MARKET_TYPE>` with one of:
-- `omen`
-- `manifold`
-- `polymarket`
-- `metaculus`
+### 5. Run the agent
 
-## Interactive Streamlit Apps
-The project includes **Streamlit apps** for interactive agent interactions:
+```
+python basic_agent.py
+```
 
-1. **Autonomous agent with function calling:**
-   ```bash
-   streamlit run prediction_market_agent/agents/microchain_agent/app.py
-   ```
+Now, you can see the output on your terminal that the agent automatically pulls in a prediction amrket question and bets randomly based upon the probabilistic answer as inpmemented on the above code.
 
-2. **Prediction market research and betting:**
-   ```bash
-   streamlit run scripts/agent_app.py
-   ```
+Voilaa!!! You have sucessfully built and deployed a new prediction market agent on Gnosis Mainnet.
 
-
-
-## Deploying Your Own Agent
-1. Subclass the `DeployableTraderAgent`.
-2. Check `DeployableCoinFlipAgent` for a minimal example.
-3. Add your agent to the `RUNNABLE_AGENTS` dictionary in `prediction_market_agent/run_agent.py`.
-4. Use it as an entry point for cloud deployment.
-
-
+From here you can go ahead and customize the script any way you would like, add new functions, more complexity and nuanced decison making, etc.

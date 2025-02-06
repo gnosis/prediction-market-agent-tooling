@@ -41,7 +41,7 @@ def test_count_unseen_messages(local_web3: Web3, accounts: list[TestAccount]) ->
 def test_pop_message(local_web3: Web3, accounts: list[TestAccount]) -> None:
     #### Delete me after test passes
     keys = APIKeys()
-    mock_agent_address = Web3.to_checksum_address(accounts[2].address)
+    mock_agent_address = Web3.to_checksum_address(accounts[3].address)
     comm_contract = AgentCommunicationContract()
 
     # It might be the case that initial_messages > 0 (due to ape's tests not being isolated).

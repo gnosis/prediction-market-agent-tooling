@@ -20,22 +20,28 @@ def main(
     initial_funds: str = typer.Option(),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(None),
-    min_bond_xdai: int = typer.Option(10),
-    language: str = typer.Option("en"),
+    min_bond_xdai: int = typer.Option(0.01),
+    language: str = typer.Option("en_US"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
     auto_deposit: bool = typer.Option(False),
 ) -> None:
     """
-    Helper script to create a market on Omen, usage:
+    Creates a market on Seer.
 
-    ```bash
-    python scripts/create_market_seer.py \
-        --question "Will GNO reach $500 by the end of the 2024?" \
-        --opening-time "2024-12-31T23:59:59" \
-        --category cryptocurrency \
-        --initial-funds 0.01 \
-        --from-private-key your-private-key
-    ```
+    Args:
+        question (str): The question for the market.
+        opening_time (datetime): The opening time for the market.
+        category (str): The category of the market.
+        initial_funds (str): The initial funds for the market.
+        from_private_key (str): The private key to use for transactions.
+        safe_address (str, optional): The safe address for transactions. Defaults to None.
+        min_bond_xdai (int, optional): The minimum bond in xDai. Defaults to 0.01 xDai.
+        language (str, optional): The language of the market. Defaults to "en".
+        outcomes (list[str], optional): The outcomes for the market. Defaults to OMEN_BINARY_MARKET_OUTCOMES.
+        auto_deposit (bool, optional): Whether to automatically deposit funds. Defaults to False.
+
+    Returns:
+        None
     """
     safe_address_checksum = (
         Web3.to_checksum_address(safe_address) if safe_address else None

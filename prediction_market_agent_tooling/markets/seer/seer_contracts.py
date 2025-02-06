@@ -4,7 +4,7 @@ from web3 import Web3
 from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ABI, ChecksumAddress, xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import ABI, ChecksumAddress, xDai
 from prediction_market_agent_tooling.markets.seer.data_models import (
     CreateCategoricalMarketsParams,
 )
@@ -33,7 +33,7 @@ class SeerMarketFactory(ContractOnGnosisChain):
         market_question: str,
         outcomes: list[str],
         opening_time: DatetimeUTC,
-        min_bond_xdai: xDai = xdai_type(10),
+        min_bond_xdai: xDai,
         language: str = "en_US",
         category: str = "misc",
     ) -> CreateCategoricalMarketsParams:
@@ -74,5 +74,3 @@ class SeerMarketFactory(ContractOnGnosisChain):
             web3=web3,
         )
         return receipt_tx
-
-        # ToDo - Also return event NewMarket, emitted by this contract

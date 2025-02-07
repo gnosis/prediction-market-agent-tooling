@@ -105,13 +105,9 @@ def monitor_app(
     start_time: DatetimeUTC | None = (
         DatetimeUTC.from_datetime(
             datetime.combine(
-                t.cast(
-                    # This will be always a date for us, so casting.
-                    date,
-                    st.date_input(
-                        "Start time",
-                        value=utcnow() - timedelta(weeks=settings.PAST_N_WEEKS),
-                    ),
+                st.date_input(
+                    "Start time",
+                    value=utcnow() - timedelta(weeks=settings.PAST_N_WEEKS),
                 ),
                 datetime.min.time(),
             )

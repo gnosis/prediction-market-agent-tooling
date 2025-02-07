@@ -1,5 +1,5 @@
 import typing as t
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import streamlit as st
 

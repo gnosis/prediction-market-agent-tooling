@@ -53,7 +53,7 @@ class PolymarketAgentMarket(AgentMarket):
     def get_tiny_bet_amount(cls) -> BetAmount:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
-    def place_bet(self, outcome: bool, amount: BetAmount, **kwargs: t.Any) -> str:
+    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     @staticmethod

@@ -206,7 +206,6 @@ class OmenAgentMarket(AgentMarket):
         auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-        **kwargs: t.Any,
     ) -> str:
         if not self.can_be_traded():
             raise ValueError(

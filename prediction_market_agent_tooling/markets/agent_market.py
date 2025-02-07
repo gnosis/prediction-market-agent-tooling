@@ -1,5 +1,4 @@
 import typing as t
-from abc import ABC, abstractmethod
 from enum import Enum
 
 from eth_typing import ChecksumAddress
@@ -50,7 +49,7 @@ class FilterBy(str, Enum):
     NONE = "none"
 
 
-class AgentMarket(BaseModel, ABC):
+class AgentMarket(BaseModel):
     """
     Common market class that can be created from vendor specific markets.
     Contains everything that is needed for an agent to make a prediction.
@@ -181,9 +180,8 @@ class AgentMarket(BaseModel, ABC):
     def liquidate_existing_positions(self, outcome: bool) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    @abstractmethod
-    def place_bet(self, outcome: bool, amount: BetAmount, **kwargs: t.Any) -> str:
-        pass
+    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
+        raise NotImplementedError("Subclasses must implement this method")
 
     def buy_tokens(self, outcome: bool, amount: TokenAmount) -> str:
         return self.place_bet(outcome=outcome, amount=amount)

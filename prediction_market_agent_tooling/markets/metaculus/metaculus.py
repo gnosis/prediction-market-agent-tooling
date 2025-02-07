@@ -8,7 +8,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     ProcessedMarket,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.metaculus.api import (
     METACULUS_API_BASE_URL,
     get_questions,
@@ -25,9 +24,6 @@ class MetaculusAgentMarket(AgentMarket):
     """
     Metaculus' market class that can be used by agents to make predictions.
     """
-
-    def place_bet(self, outcome: bool, amount: BetAmount, **kwargs: t.Any) -> str:
-        return ""
 
     have_predicted: bool
     base_url: t.ClassVar[str] = METACULUS_API_BASE_URL

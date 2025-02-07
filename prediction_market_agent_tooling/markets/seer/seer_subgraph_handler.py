@@ -1,8 +1,11 @@
+import sys
+import typing as t
 from typing import Any
 
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
+from prediction_market_agent_tooling.markets.agent_market import SortBy, FilterBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
@@ -10,7 +13,9 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     SeerPool,
 )
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.utils import utcnow, to_int_timestamp
 
 INVALID_OUTCOME = "Invalid result"
 
@@ -70,35 +75,102 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         ]
 
     @staticmethod
-    def build_filter_for_conditional_markets(
-        include_conditional_markets: bool = True,
+    def _build_where_statements(
+        filter_by: FilterBy,
+        include_conditional_markets: bool = False,
     ) -> dict[Any, Any]:
-        return (
-            {}
-            if include_conditional_markets
-            else {"parentMarket": ADDRESS_ZERO.lower()}
-        )
+        now = to_int_timestamp(utcnow())
+
+        where_stms: dict[str, t.Any] = {}
+
+        match filter_by:
+            case FilterBy.OPEN:
+                where_stms["openingTs_lt"] = now
+                where_stms["hasAnswers"] = False
+            case FilterBy.RESOLVED:
+                # We consider RESOLVED == CLOSED (on Seer)
+                where_stms["payoutReported"] = True
+            case FilterBy.NONE:
+                pass
+            case _:
+                raise ValueError(f"Unknown filter {filter_by}")
+
+        if not include_conditional_markets:
+            where_stms["parentMarket"] = ADDRESS_ZERO.lower()
+
+        where_stms["outcomes_contains"] = [INVALID_OUTCOME]
+        return where_stms
+
+    def _build_sort_params(
+        self, sort_by: SortBy
+    ) -> tuple[str | None, FieldPath | None]:
+        sort_direction: str | None
+        sort_by_field: FieldPath | None
+
+        match sort_by:
+            case SortBy.NEWEST:
+                sort_direction = "desc"
+                sort_by_field = self.seer_subgraph.Market.blockTimestamp
+            case SortBy.CLOSING_SOONEST:
+                sort_direction = "asc"
+                sort_by_field = self.seer_subgraph.Market.openingTs
+            # ToDo - Implement liquidity conditions by looking up Swapr subgraph.
+            case SortBy.NONE | SortBy.HIGHEST_LIQUIDITY | SortBy.LOWEST_LIQUIDITY:
+                sort_direction = None
+                sort_by_field = None
+            case _:
+                raise ValueError(f"Unknown sort_by: {sort_by}")
+
+        return sort_direction, sort_by_field
 
     def get_bicategorical_markets(
-        self, include_conditional_markets: bool = True
+        self,
+        filter_by: FilterBy,
+        limit: int | None = None,
+        sort_by_field: FieldPath | None = None,
+        sort_direction: str | None = None,
+        include_conditional_markets: bool = True,
     ) -> list[SeerMarket]:
         """Returns markets that contain 2 categories plus an invalid outcome."""
         # Binary markets on Seer contain 3 outcomes: OutcomeA, outcomeB and an Invalid option.
-        query_filter = self.build_filter_for_conditional_markets(
-            include_conditional_markets
+        where_stms = self._build_where_statements(
+            filter_by=filter_by, include_conditional_markets=include_conditional_markets
         )
-        query_filter["outcomes_contains"] = [INVALID_OUTCOME]
-        markets_field = self.seer_subgraph.Query.markets(where=query_filter)
+
+        # These values can not be set to `None`, but they can be omitted.
+        optional_params = {}
+        if sort_by_field is not None:
+            optional_params["orderBy"] = sort_by_field
+        if sort_direction is not None:
+            optional_params["orderDirection"] = sort_direction
+
+        markets_field = self.seer_subgraph.Query.markets(
+            first=(
+                limit if limit else sys.maxsize
+            ),  # if not limit, we fetch all possible markets,
+            where=where_stms,
+            **optional_params,
+        )
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         two_category_markets = self.filter_bicategorical_markets(markets)
         return two_category_markets
 
     def get_binary_markets(
-        self, include_conditional_markets: bool = True
+        self,
+        limit: t.Optional[int],
+        filter_by: FilterBy,
+        sort_by: SortBy,
+        created_after: DatetimeUTC | None = None,
+        include_conditional_markets: bool = True,
     ) -> list[SeerMarket]:
+        sort_direction, sort_by_field = self._build_sort_params(sort_by)
+
         two_category_markets = self.get_bicategorical_markets(
-            include_conditional_markets=include_conditional_markets
+            limit=limit,
+            include_conditional_markets=include_conditional_markets,
+            sort_direction=sort_direction,
+            sort_by_field=sort_by_field,
         )
         # Now we additionally filter markets based on YES/NO being the only outcomes.
         binary_markets = self.filter_binary_markets(two_category_markets)

@@ -6,6 +6,13 @@ from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.gtypes import HexBytes, Wei
 
+SEER_TRUE_OUTCOME = "Yes"
+SEER_FALSE_OUTCOME = "No"
+
+
+def get_bet_outcome(binary_outcome: bool) -> str:
+    return SEER_TRUE_OUTCOME if binary_outcome else SEER_FALSE_OUTCOME
+
 
 class CreateCategoricalMarketsParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

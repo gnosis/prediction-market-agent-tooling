@@ -36,6 +36,27 @@ from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 class SeerAgentMarket(AgentMarket):
+    currency = Currency.sDai
+    wrapped_tokens: list[ChecksumAddress]
+
+    @staticmethod
+    def get_binary_markets(
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[DatetimeUTC] = None,
+        excluded_questions: set[str] | None = None,
+    ) -> t.Sequence["SeerAgentMarket"]:
+        return [
+            SeerAgentMarket.from_data_model(m)
+            for m in SeerSubgraphHandler().get_binary_markets(
+                limit=limit,
+                sort_by=sort_by,
+                filter_by=filter_by,
+                created_after=created_after,
+            )
+        ]
+
     def place_bet(
         self,
         outcome: bool,
@@ -45,28 +66,49 @@ class SeerAgentMarket(AgentMarket):
         api_keys: APIKeys | None = None,
         **kwargs: t.Any,
     ) -> str:
-        return ""
-        # if not self.can_be_traded():
-        #     raise ValueError(
-        #         f"Market {self.id} is not open for trading. Cannot place bet."
-        #     )
-        # if amount.currency != self.currency:
-        #     raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
-        # amount_xdai = xDai(amount.amount)
-        #
-        # if auto_deposit:
-        #     auto_deposit_collateral_token(
-        #         collateral_token_contract, amount_wei, api_keys, web3
-        #     )
-        #
-        # return binary_omen_buy_outcome_tx(
-        #     api_keys=api_keys if api_keys is not None else APIKeys(),
-        #     amount=amount_xdai,
-        #     market=self,
-        #     binary_outcome=outcome,
-        #     auto_deposit=auto_deposit,
-        #     web3=web3,
-        # )
+        if not self.can_be_traded():
+            raise ValueError(
+                f"Market {self.id} is not open for trading. Cannot place bet."
+            )
+
+        if amount.currency != self.currency:
+            raise ValueError(f"Seer bets are made in xDai. Got {amount.currency}.")
+
+        # We require that amount is given in sDAI.
+        collateral_balance = get_balances(address=api_keys.bet_from_address, web3=web3)
+        if collateral_balance.sdai < amount.amount:
+            raise ValueError(
+                f"Balance {collateral_balance.sdai} not enough for bet size {amount.amount}"
+            )
+
+        collateral_contract = sDaiContract()
+
+        if auto_deposit:
+            # We convert the deposit amount (in sDai) to assets in order to convert.
+            asset_amount = collateral_contract.convertToAssets(
+                xdai_to_wei(xdai_type(amount.amount))
+            )
+            auto_deposit_collateral_token(
+                collateral_contract, asset_amount, api_keys, web3
+            )
+
+        # ToDo
+        #  Match outcome index with outcomes
+        # Get the index of the outcome we want to buy.
+        outcome_index: int = self.get_outcome_index(get_bet_outcome(outcome))
+        #  From wrapped tokens, get token address
+        outcome_token = self.wrapped_tokens[outcome_index]
+        #  Sell sDAI using token address
+        swap_result = swap_tokens_waiting(
+            amount=xdai_type(amount.amount),
+            sell_token=collateral_contract.address,
+            buy_token=Web3.to_checksum_address(outcome_token),
+            api_keys=api_keys,
+            web3=web3,
+        )
+        logger.info(
+            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Swap result {swap_result}"
+        )
 
 
 def seer_create_market_tx(

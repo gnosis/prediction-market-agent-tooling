@@ -203,9 +203,10 @@ class OmenAgentMarket(AgentMarket):
         self,
         outcome: bool,
         amount: BetAmount,
-        omen_auto_deposit: bool = True,
+        auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
+        **kwargs: t.Any,
     ) -> str:
         if not self.can_be_traded():
             raise ValueError(
@@ -219,7 +220,7 @@ class OmenAgentMarket(AgentMarket):
             amount=amount_xdai,
             market=self,
             binary_outcome=outcome,
-            auto_deposit=omen_auto_deposit,
+            auto_deposit=auto_deposit,
             web3=web3,
         )
 

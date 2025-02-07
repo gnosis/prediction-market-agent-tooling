@@ -436,7 +436,7 @@ def test_place_bet_with_autodeposit(
     market.place_bet(
         outcome=True,
         amount=bet_amount,
-        omen_auto_deposit=True,
+        auto_deposit=True,
         web3=local_web3,
         api_keys=test_keys,
     )

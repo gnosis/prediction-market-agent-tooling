@@ -1,3 +1,5 @@
+import typing as t
+
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.types import TxReceipt
@@ -27,28 +29,30 @@ class SeerAgentMarket(AgentMarket):
         auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
+        **kwargs: t.Any,
     ) -> str:
-        if not self.can_be_traded():
-            raise ValueError(
-                f"Market {self.id} is not open for trading. Cannot place bet."
-            )
-        if amount.currency != self.currency:
-            raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
-        amount_xdai = xDai(amount.amount)
-
-        if auto_deposit:
-            auto_deposit_collateral_token(
-                collateral_token_contract, amount_wei, api_keys, web3
-            )
-
-        return binary_omen_buy_outcome_tx(
-            api_keys=api_keys if api_keys is not None else APIKeys(),
-            amount=amount_xdai,
-            market=self,
-            binary_outcome=outcome,
-            auto_deposit=omen_auto_deposit,
-            web3=web3,
-        )
+        return ""
+        # if not self.can_be_traded():
+        #     raise ValueError(
+        #         f"Market {self.id} is not open for trading. Cannot place bet."
+        #     )
+        # if amount.currency != self.currency:
+        #     raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
+        # amount_xdai = xDai(amount.amount)
+        #
+        # if auto_deposit:
+        #     auto_deposit_collateral_token(
+        #         collateral_token_contract, amount_wei, api_keys, web3
+        #     )
+        #
+        # return binary_omen_buy_outcome_tx(
+        #     api_keys=api_keys if api_keys is not None else APIKeys(),
+        #     amount=amount_xdai,
+        #     market=self,
+        #     binary_outcome=outcome,
+        #     auto_deposit=auto_deposit,
+        #     web3=web3,
+        # )
 
 
 def binary_seer_buy_outcome_tx(

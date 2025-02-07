@@ -50,7 +50,13 @@ class FilterBy(str, Enum):
     NONE = "none"
 
 
-class AgentMarket(BaseModel, ABC):
+class AgentMarketAbstract(BaseModel, ABC):
+    @abstractmethod
+    def place_bet(self, outcome: bool, amount: BetAmount, **kwargs: t.Any) -> str:
+        pass
+
+
+class AgentMarket(AgentMarketAbstract):
     """
     Common market class that can be created from vendor specific markets.
     Contains everything that is needed for an agent to make a prediction.
@@ -73,10 +79,6 @@ class AgentMarket(BaseModel, ABC):
     url: str
     volume: float | None  # Should be in currency of `currency` above.
     fees: MarketFees
-
-    @abstractmethod
-    def place_bet(self):
-        pass
 
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(
@@ -185,7 +187,7 @@ class AgentMarket(BaseModel, ABC):
     def liquidate_existing_positions(self, outcome: bool) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
+    def place_bet(self, outcome: bool, amount: BetAmount, **kwargs: t.Any) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
     def buy_tokens(self, outcome: bool, amount: TokenAmount) -> str:

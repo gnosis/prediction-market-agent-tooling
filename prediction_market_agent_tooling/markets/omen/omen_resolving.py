@@ -50,7 +50,7 @@ def claim_bonds_on_realitio_questions(
         except Exception as e:
             if not skip_failed:
                 raise e
-            logger.error(
+            logger.warning(
                 f"Failed to claim bond for {question.url=}, {question.questionId=}: {e}"
             )
 
@@ -203,7 +203,7 @@ def omen_submit_answer_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     """
-    After the answer is submitted, there is 24h waiting period where the answer can be challenged by others.
+    After the answer is submitted, there is waiting period where the answer can be challenged by others.
     And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
     """
     realitio_contract = OmenRealitioContract()
@@ -224,7 +224,7 @@ def omen_submit_invalid_answer_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     """
-    After the answer is submitted, there is 24h waiting period where the answer can be challenged by others.
+    After the answer is submitted, there is waiting period where the answer can be challenged by others.
     And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
     """
     realitio_contract = OmenRealitioContract()

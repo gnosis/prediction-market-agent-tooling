@@ -52,7 +52,7 @@ def test_get_pools_for_market(handler: SeerSubgraphHandler) -> None:
     us_election_market_id = HexBytes("0x43d881f5920ed29fc5cd4917d6817496abbba6d9")
     market = handler.get_market_by_id(us_election_market_id)
 
-    pools = handler.get_pools_for_market(market)
+    pools = handler.get_swapr_pools_for_market(market)
     assert len(pools) > 1
     for pool in pools:
         # one of the tokens must be a wrapped token

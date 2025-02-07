@@ -378,7 +378,7 @@ def monitor_market_outcome_bias(
 
     if len(df) > 0:
         st.altair_chart(
-            alt.layer(open_chart, resolved_chart).interactive(),  # type: ignore # Doesn't expect `LayerChart`, but `Chart`, yet it works.
+            alt.layer(open_chart, resolved_chart).interactive(),
             use_container_width=True,
         )
 

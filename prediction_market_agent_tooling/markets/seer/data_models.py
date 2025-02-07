@@ -13,20 +13,18 @@ class CreateCategoricalMarketsParams(BaseModel):
     market_name: str = Field(..., alias="marketName")
     outcomes: list[str]
     # Only relevant for scalar markets
-    question_start: t.Optional[str] = Field(alias="questionStart", default="")
-    question_end: t.Optional[str] = Field(alias="questionEnd", default="")
-    outcome_type: t.Optional[str] = Field(alias="outcomeType", default="")
+    question_start: str = Field(alias="questionStart", default="")
+    question_end: str = Field(alias="questionEnd", default="")
+    outcome_type: str = Field(alias="outcomeType", default="")
 
     # Not needed for non-conditional markets.
-    parent_outcome: t.Optional[int] = Field(alias="parentOutcome", default=0)
-    parent_market: t.Optional[HexAddress] = Field(
-        alias="parentMarket", default=ADDRESS_ZERO
-    )
+    parent_outcome: int = Field(alias="parentOutcome", default=0)
+    parent_market: HexAddress = Field(alias="parentMarket", default=ADDRESS_ZERO)
 
     category: str
     lang: str
-    lower_bound: t.Optional[int] = Field(alias="lowerBound", default=0)
-    upper_bound: t.Optional[int] = Field(alias="upperBound", default=0)
+    lower_bound: int = Field(alias="lowerBound", default=0)
+    upper_bound: int = Field(alias="upperBound", default=0)
     min_bond: Wei = Field(..., alias="minBond")
     opening_time: int = Field(..., alias="openingTime")
     token_names: list[str] = Field(..., alias="tokenNames")

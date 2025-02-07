@@ -4,6 +4,8 @@ from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.data_models import BetAmount
 from prediction_market_agent_tooling.markets.seer.data_models import NewMarketEvent
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
@@ -15,6 +17,51 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+
+
+class SeerAgentMarket(AgentMarket):
+    def place_bet(
+        self,
+        outcome: bool,
+        amount: BetAmount,
+        auto_deposit: bool = True,
+        web3: Web3 | None = None,
+        api_keys: APIKeys | None = None,
+    ) -> str:
+        if not self.can_be_traded():
+            raise ValueError(
+                f"Market {self.id} is not open for trading. Cannot place bet."
+            )
+        if amount.currency != self.currency:
+            raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
+        amount_xdai = xDai(amount.amount)
+
+        if auto_deposit:
+            auto_deposit_collateral_token(
+                collateral_token_contract, amount_wei, api_keys, web3
+            )
+
+        return binary_omen_buy_outcome_tx(
+            api_keys=api_keys if api_keys is not None else APIKeys(),
+            amount=amount_xdai,
+            market=self,
+            binary_outcome=outcome,
+            auto_deposit=omen_auto_deposit,
+            web3=web3,
+        )
+
+
+def binary_seer_buy_outcome_tx(
+    api_keys: APIKeys,
+    amount: xDai,
+    market: SeerAgentMarket,
+    binary_outcome: bool,
+    auto_deposit: bool,
+    web3: Web3 | None = None,
+) -> str:
+    """We place a trade via CowSwap to buy tokens corresponding to the selected outcome."""
+    # ToDo implement me
+    raise NotImplementedError()
 
 
 def seer_create_market_tx(

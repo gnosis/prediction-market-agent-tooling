@@ -1,4 +1,5 @@
 import typing as t
+from abc import ABC, abstractmethod
 from enum import Enum
 
 from eth_typing import ChecksumAddress
@@ -49,7 +50,7 @@ class FilterBy(str, Enum):
     NONE = "none"
 
 
-class AgentMarket(BaseModel):
+class AgentMarket(BaseModel, ABC):
     """
     Common market class that can be created from vendor specific markets.
     Contains everything that is needed for an agent to make a prediction.
@@ -72,6 +73,10 @@ class AgentMarket(BaseModel):
     url: str
     volume: float | None  # Should be in currency of `currency` above.
     fees: MarketFees
+
+    @abstractmethod
+    def place_bet(self):
+        pass
 
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(

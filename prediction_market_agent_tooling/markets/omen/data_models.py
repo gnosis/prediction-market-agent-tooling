@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
     should_not_happen,
+    utcnow,
 )
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
@@ -245,7 +246,7 @@ class OmenMarket(BaseModel):
 
     @property
     def is_open(self) -> bool:
-        return self.currentAnswer is None
+        return self.close_time > utcnow()
 
     @property
     def is_resolved(self) -> bool:
@@ -584,7 +585,7 @@ class FixedProductMarketMakersResponse(BaseModel):
 
 
 class RealityQuestion(BaseModel):
-    # This `id` is in form of `0x79e32ae03fb27b07c89c0c568f80287c01ca2e57-0x2d362f435e7b5159794ff0b5457a900283fca41fe6301dc855a647595903db13`,
+    # This `id` is in form of `0x79e32ae03fb27b07c89c0c568f80287c01ca2e57-0x2d362f435e7b5159794ff0b5457a900283fca41fe6301dc855a647595903db13`, # web3-private-key-ok
     # which I couldn't find how it is created, but based on how it looks like I assume it's composed of `answerId-questionId`.
     # (Why is answer id as part of the question object? Because this question object is actually received from the answer object below).
     # And because all the contract methods so far needed bytes32 input, when asked for question id, `questionId` field was the correct one to use so far.

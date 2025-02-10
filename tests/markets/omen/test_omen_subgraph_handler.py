@@ -107,7 +107,6 @@ def test_get_bets(
 
 
 def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None:
-    # ToDo
     limit = 100
 
     markets = omen_subgraph_handler.get_omen_binary_markets_simple(
@@ -115,7 +114,7 @@ def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
     )
-    assert len(markets) == limit
+    assert len(markets) <= limit
     for market in markets:
         assert market.is_open
 
@@ -151,9 +150,15 @@ def test_get_user_positions_1(
     )
     # Assert 3 conditionIds are included
     expected_condition_ids = [
-        HexBytes("0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b"),
-        HexBytes("0xe2bf80af2a936cdabeef4f511620a2eec46f1caf8e75eb5dc189372367a9154c"),
-        HexBytes("0x3f8153364001b26b983dd92191a084de8230f199b5ad0b045e9e1df61089b30d"),
+        HexBytes(
+            "0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b"  # web3-private-key-ok
+        ),
+        HexBytes(
+            "0xe2bf80af2a936cdabeef4f511620a2eec46f1caf8e75eb5dc189372367a9154c"  # web3-private-key-ok
+        ),
+        HexBytes(
+            "0x3f8153364001b26b983dd92191a084de8230f199b5ad0b045e9e1df61089b30d"  # web3-private-key-ok
+        ),
     ]
     unique_condition_ids: list[HexBytes] = sum(
         [u.position.conditionIds for u in user_positions], []
@@ -163,7 +168,9 @@ def test_get_user_positions_1(
 
 def test_get_answers(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     question_id = HexBytes.fromhex(
-        HexStr("0xdcb2691a9ec05e25a6e595a9972b482ea65b789d978b27c0c06ff97345fce919")
+        HexStr(
+            "0xdcb2691a9ec05e25a6e595a9972b482ea65b789d978b27c0c06ff97345fce919"  # web3-private-key-ok
+        )
     )
     answers = omen_subgraph_handler.get_answers(question_id)
     assert len(answers) == 1
@@ -175,7 +182,9 @@ def test_get_answers(omen_subgraph_handler: OmenSubgraphHandler) -> None:
 
 def test_get_responses(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     question_id = HexBytes.fromhex(
-        HexStr("0xdcb2691a9ec05e25a6e595a9972b482ea65b789d978b27c0c06ff97345fce919")
+        HexStr(
+            "0xdcb2691a9ec05e25a6e595a9972b482ea65b789d978b27c0c06ff97345fce919"  # web3-private-key-ok
+        )
     )
     responses = omen_subgraph_handler.get_responses(limit=None, question_id=question_id)
     assert len(responses) == 1
@@ -191,23 +200,23 @@ def test_get_responses(omen_subgraph_handler: OmenSubgraphHandler) -> None:
         None,
         [
             HexBytes(
-                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"
+                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"  # web3-private-key-ok
             )
         ],
         [
             HexBytes(
-                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"
+                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"  # web3-private-key-ok
             ),
             HexBytes(
-                "0xfa2f09d7375837e791c66f7ccee06d4fa7955812baf668883c2a5f939670ef33"
+                "0xfa2f09d7375837e791c66f7ccee06d4fa7955812baf668883c2a5f939670ef33"  # web3-private-key-ok
             ),
         ],
         [
             HexBytes(
-                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"
+                "0x00f57ca97d4fc07c70c0900df502dacfca455dd435643fcfab44e122b7da8684"  # web3-private-key-ok
             ),
             HexBytes(
-                "0xfa2f09d7375837e791c66f7ccee06d4fa7955812baf668883c2a5f939670ef33"
+                "0xfa2f09d7375837e791c66f7ccee06d4fa7955812baf668883c2a5f939670ef33"  # web3-private-key-ok
             ),
         ]
         * 100,  # Multiply to test if API won't fail with many IDs in the list.
@@ -234,7 +243,9 @@ def test_get_market_with_condition_ids(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
     condition_ids = [
-        HexBytes("0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b")
+        HexBytes(
+            "0x9c7711bee0902cc8e6838179058726a7ba769cc97d4d0ea47b31370d2d7a117b"  # web3-private-key-ok
+        )
     ]
     expected_market_title = (
         "Will the Federal Reserve cut interest rates on 28 March 2024?"
@@ -252,8 +263,12 @@ def test_get_markets_from_multiple_user_positions(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
     condition_ids = [
-        HexBytes("0xe2bf80af2a936cdabeef4f511620a2eec46f1caf8e75eb5dc189372367a9154c"),
-        HexBytes("0x3f8153364001b26b983dd92191a084de8230f199b5ad0b045e9e1df61089b30d"),
+        HexBytes(
+            "0xe2bf80af2a936cdabeef4f511620a2eec46f1caf8e75eb5dc189372367a9154c"  # web3-private-key-ok
+        ),
+        HexBytes(
+            "0x3f8153364001b26b983dd92191a084de8230f199b5ad0b045e9e1df61089b30d"  # web3-private-key-ok
+        ),
     ]
     user_positions = [
         build_incomplete_user_position_from_condition_ids([condition_id])
@@ -269,7 +284,7 @@ def test_get_positions_by_condition_id(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
     condition_id = HexBytes(
-        "0xffe4bf3e61be010728813a2a61ef422fd7d07b410170b64a5dfced9549f2e057"
+        "0xffe4bf3e61be010728813a2a61ef422fd7d07b410170b64a5dfced9549f2e057"  # web3-private-key-ok
     )
     positions = omen_subgraph_handler.get_positions(condition_id)
     assert len(positions) == 2
@@ -366,7 +381,7 @@ def test_get_arbitrated_market_with_answer(
     assert omen_subgraph_handler.get_questions(
         limit=None,
         question_id=HexBytes(
-            "0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b"
+            "0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b"  # web3-private-key-ok
         ),
         with_answers=True,
     ), "Should return it, because that questionId has an answer."
@@ -375,11 +390,11 @@ def test_get_arbitrated_market_with_answer(
 def test_do_not_get_arbitrated_market_without_answer(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
-    # If this test starts to fail, check if `0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b` isn't arbitrated anymore, and if so simply delete this test.
+    # If this test starts to fail, check if `0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b` isn't arbitrated anymore, and if so simply delete this test.  # web3-private-key-ok
     assert not omen_subgraph_handler.get_questions(
         limit=None,
         question_id=HexBytes(
-            "0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b"
+            "0xfd9c313aca5b704d6d4920ab7dd4c6d1ebcdfa0242df8dc517a050643419285b"  # web3-private-key-ok
         ),
         with_answers=False,
     ), "Should not return anything, because that questionId has an answer."

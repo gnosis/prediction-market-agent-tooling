@@ -61,7 +61,7 @@ def patch_logger() -> None:
         format_logging = GCP_LOG_LOGGING_FORMAT
         datefmt_logging = GCP_LOG_FORMAT_LOGGING_DATEFMT
         print_logging = print_using_loguru_info
-        handlers = [NoNewLineStreamHandler()]
+        handlers: list[logging.Handler] | None = [NoNewLineStreamHandler()]
 
     elif config.LOG_FORMAT == LogFormat.DEFAULT:
         format_loguru, format_logging, datefmt_logging = None, None, None
@@ -79,6 +79,14 @@ def patch_logger() -> None:
             datefmt=datefmt_logging,
             handlers=handlers,
         )
+
+        # Configure all existing loggers
+        for logger_name in logging.root.manager.loggerDict:
+            existing_logger = logging.getLogger(logger_name)
+            existing_logger.setLevel(config.LOG_LEVEL.value)
+            if handlers is not None:
+                existing_logger.handlers = handlers
+            existing_logger.propagate = False
 
     # Change loguru.
     if format_loguru is not None:

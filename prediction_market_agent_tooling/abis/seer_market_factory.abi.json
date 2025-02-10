@@ -1,0 +1,609 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_market",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_arbitrator",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IRealityETH_v3_0",
+        "name": "_realitio",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IWrapped1155Factory",
+        "name": "_wrapped1155Factory",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IConditionalTokens",
+        "name": "_conditionalTokens",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_collateralToken",
+        "type": "address"
+      },
+      {
+        "internalType": "contract RealityProxy",
+        "name": "_realityProxy",
+        "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_questionTimeout",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "ERC1167FailedCreateClone",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "marketName",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "parentMarket",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "conditionId",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "questionId",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32[]",
+        "name": "questionsIds",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "NewMarket",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "allMarkets",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "arbitrator",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "collateralToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "conditionalTokens",
+    "outputs": [
+      {
+        "internalType": "contract IConditionalTokens",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "marketName",
+            "type": "string"
+          },
+          {
+            "internalType": "string[]",
+            "name": "outcomes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string",
+            "name": "questionStart",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "questionEnd",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "outcomeType",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "parentOutcome",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "parentMarket",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "category",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "lang",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lowerBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "upperBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minBond",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint32",
+            "name": "openingTime",
+            "type": "uint32"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenNames",
+            "type": "string[]"
+          }
+        ],
+        "internalType": "struct MarketFactory.CreateMarketParams",
+        "name": "params",
+        "type": "tuple"
+      }
+    ],
+    "name": "createCategoricalMarket",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "marketName",
+            "type": "string"
+          },
+          {
+            "internalType": "string[]",
+            "name": "outcomes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string",
+            "name": "questionStart",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "questionEnd",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "outcomeType",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "parentOutcome",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "parentMarket",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "category",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "lang",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lowerBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "upperBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minBond",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint32",
+            "name": "openingTime",
+            "type": "uint32"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenNames",
+            "type": "string[]"
+          }
+        ],
+        "internalType": "struct MarketFactory.CreateMarketParams",
+        "name": "params",
+        "type": "tuple"
+      }
+    ],
+    "name": "createMultiCategoricalMarket",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "marketName",
+            "type": "string"
+          },
+          {
+            "internalType": "string[]",
+            "name": "outcomes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string",
+            "name": "questionStart",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "questionEnd",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "outcomeType",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "parentOutcome",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "parentMarket",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "category",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "lang",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lowerBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "upperBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minBond",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint32",
+            "name": "openingTime",
+            "type": "uint32"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenNames",
+            "type": "string[]"
+          }
+        ],
+        "internalType": "struct MarketFactory.CreateMarketParams",
+        "name": "params",
+        "type": "tuple"
+      }
+    ],
+    "name": "createMultiScalarMarket",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "marketName",
+            "type": "string"
+          },
+          {
+            "internalType": "string[]",
+            "name": "outcomes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string",
+            "name": "questionStart",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "questionEnd",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "outcomeType",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "parentOutcome",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "parentMarket",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "category",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "lang",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lowerBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "upperBound",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minBond",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint32",
+            "name": "openingTime",
+            "type": "uint32"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenNames",
+            "type": "string[]"
+          }
+        ],
+        "internalType": "struct MarketFactory.CreateMarketParams",
+        "name": "params",
+        "type": "tuple"
+      }
+    ],
+    "name": "createScalarMarket",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "market",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "marketCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "markets",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "questionTimeout",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "realitio",
+    "outputs": [
+      {
+        "internalType": "contract IRealityETH_v3_0",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "realityProxy",
+    "outputs": [
+      {
+        "internalType": "contract RealityProxy",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "wrapped1155Factory",
+    "outputs": [
+      {
+        "internalType": "contract IWrapped1155Factory",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

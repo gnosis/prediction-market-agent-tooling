@@ -1,0 +1,7 @@
+site_name: Prediction Market Agent Tooling
+nav:
+  - Home: index.md
+  - Contributing: contributing.md
+theme:
+  name: material
+

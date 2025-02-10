@@ -1,11 +1,13 @@
 import typing as t
 
+from eth_account.signers.local import LocalAccount
 from pydantic import Field
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
+from web3 import Account
 
 from prediction_market_agent_tooling.gtypes import (
     ChainID,
@@ -183,6 +185,12 @@ class APIKeys(BaseSettings):
         return check_not_none(
             self.SQLALCHEMY_DB_URL, "SQLALCHEMY_DB_URL missing in the environment."
         )
+
+    def get_account(self) -> LocalAccount:
+        acc: LocalAccount = Account.from_key(
+            self.bet_from_private_key.get_secret_value()
+        )
+        return acc
 
     def model_dump_public(self) -> dict[str, t.Any]:
         return {

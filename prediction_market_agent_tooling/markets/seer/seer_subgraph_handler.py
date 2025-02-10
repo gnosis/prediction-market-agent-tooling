@@ -46,6 +46,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.factory,
             markets_field.creator,
             markets_field.marketName,
+            markets_field.parentOutcome,
             markets_field.outcomes,
             markets_field.parentMarket.id,
             markets_field.finalizeTs,
@@ -126,7 +127,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         ]
         return fields
 
-    def get_pools_for_market(self, market: SeerMarket) -> list[SeerPool]:
+    def get_swapr_pools_for_market(self, market: SeerMarket) -> list[SeerPool]:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
         wheres = []
         for wrapped_token in market.wrapped_tokens:

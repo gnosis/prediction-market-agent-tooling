@@ -27,7 +27,18 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, wei_typ
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
+from cowdao_cowpy.common.constants import CowContractAddress
+from cowdao_cowpy.order_book.config import Envs
+from cowdao_cowpy.order_book.generated.model import OrderMetaData, OrderStatus
+from eth_account.signers.local import LocalAccount
+from web3 import Web3
 
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
+from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
+from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
     chain_id = SupportedChainId(chain.value[0])
@@ -129,4 +140,5 @@ async def swap_tokens_waiting_async(
         logger.info(
             f"Order status of {order.uid} ({order.url}): {order_metadata.status}, waiting..."
         )
+
         await asyncio.sleep(3.14)

@@ -625,7 +625,7 @@ class AgentCommunicationContract(ContractOnGnosisChain, OwnableContract):
     )
 
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0xc566Cb829Ed7aC097D17a38011A40Ad2DC25Dd82"
+        "0xe9dd78FF297DbaAbe5D0E45aE554a4B561935DE9"
     )
 
     def minimum_message_value(self, web3: Web3 | None = None) -> xDai:
@@ -687,28 +687,29 @@ class AgentCommunicationContract(ContractOnGnosisChain, OwnableContract):
         self,
         api_keys: APIKeys,
         agent_address: ChecksumAddress,
+        index: int = 0,
         web3: Web3 | None = None,
     ) -> MessageContainer:
         """
-        Retrieves and removes the first message from the agent's message queue.
+        Retrieves and removes message at specified index from the agent's message queue.
 
         This method first retrieves the message at the front of the queue without removing it,
         allowing us to return the message content directly. The actual removal of the message
         from the queue is performed by sending a transaction to the contract, which executes
-        the `popNextMessage` function. The transaction receipt is not used to obtain the message
+        the `popMessageAtIndex` function. The transaction receipt is not used to obtain the message
         content, as it only contains event data, not the returned struct.
         """
 
-        # Peek first element before popping.
+        # Peek the element before popping.
         message_container = self.get_at_index(
-            agent_address=agent_address, idx=0, web3=web3
+            agent_address=agent_address, idx=index, web3=web3
         )
 
         # Next, pop that element and discard the transaction receipt.
         self.send(
             api_keys=api_keys,
-            function_name="popNextMessage",
-            function_params=[agent_address],
+            function_name="popMessageAtIndex",
+            function_params=[agent_address, index],
             web3=web3,
         )
 

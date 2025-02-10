@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 
 
 def test_get_buy_token_amount() -> None:

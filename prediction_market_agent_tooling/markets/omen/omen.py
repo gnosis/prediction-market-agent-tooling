@@ -454,7 +454,7 @@ class OmenAgentMarket(AgentMarket):
             HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
         ]
         prediction = ContractPrediction(
-            publisher=keys.public_key,
+            publisher=keys.bet_from_address,
             ipfs_hash=ipfs_hash_decoded,
             tx_hashes=tx_hashes,
             estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
@@ -1205,7 +1205,7 @@ def omen_remove_fund_market_tx(
     amount_per_index_set = get_conditional_tokens_balance_for_market(
         market, from_address, web3
     )
-    # We fetch the minimum balance of outcome token - for ex, in this tx (https://gnosisscan.io/tx/0xc31c4e9bc6a60cf7db9991a40ec2f2a06e3539f8cb8dd81b6af893cef6f40cd7#eventlog) - event #460, this should yield 9804940144070370149. This amount matches what is displayed in the Omen UI.
+    # We fetch the minimum balance of outcome token - for ex, in this tx (https://gnosisscan.io/tx/0xc31c4e9bc6a60cf7db9991a40ec2f2a06e3539f8cb8dd81b6af893cef6f40cd7#eventlog) - event #460, this should yield 9804940144070370149. This amount matches what is displayed in the Omen UI. # web3-private-key-ok
     # See similar logic from Olas
     # https://github.com/valory-xyz/market-creator/blob/4bc47f696fb5ecb61c3b7ec8c001ff2ab6c60fcf/packages/valory/skills/market_creation_manager_abci/behaviours.py#L1308
     amount_to_merge = min(amount_per_index_set.values())

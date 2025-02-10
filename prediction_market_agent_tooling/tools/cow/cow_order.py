@@ -7,6 +7,11 @@ from cow_py.common.chains import Chain
 from cow_py.common.constants import CowContractAddress
 from cow_py.order_book.config import Envs
 from cow_py.order_book.generated.model import OrderMetaData, OrderStatus
+from cowdao_cowpy import swap_tokens
+from cowdao_cowpy.common.chains import Chain
+from cowdao_cowpy.common.constants import CowContractAddress
+from cowdao_cowpy.order_book.config import Envs
+from cowdao_cowpy.order_book.generated.model import OrderMetaData, OrderStatus
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 

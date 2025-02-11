@@ -11,19 +11,31 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     Probability,
+    OutcomeStr,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
+    ProcessedTradedMarket,
+    ProcessedMarket,
 )
-from prediction_market_agent_tooling.markets.blockchain_utils import get_total_balance
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.markets.blockchain_utils import (
+    get_total_balance,
+    store_trades,
+)
+from prediction_market_agent_tooling.markets.data_models import (
+    BetAmount,
+    Currency,
+    Position,
+    TokenAmount,
+)
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
+from prediction_market_agent_tooling.markets.omen.data_models import get_bet_outcome
+from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract
 from prediction_market_agent_tooling.markets.seer.data_models import (
-    get_bet_outcome,
     SeerMarket,
     NewMarketEvent,
 )
@@ -53,8 +65,56 @@ class SeerAgentMarket(AgentMarket):
     collateral_token_contract_address_checksummed: ChecksumAddress
     condition_id: HexBytes
     # No pools upon market creation
-    volume: float | None = None
-    outcome_token_pool = None
+    # volume: float | None = None
+    # outcome_token_pool = None
+
+    def store_prediction(
+        self,
+        processed_market: ProcessedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
+    ) -> None:
+        pass
+
+    def store_trades(
+        self,
+        traded_market: ProcessedTradedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
+    ) -> None:
+        return store_trades(
+            market_id=self.id,
+            traded_market=traded_market,
+            keys=keys,
+            agent_name=agent_name,
+        )
+
+    def get_buy_token_amount(
+        self, bet_amount: BetAmount, direction: bool
+    ) -> TokenAmount:
+        # ToDo - Calculate this from the pools associated to this market.
+        # Below we simply return the same amount for simplicity, until the solution is properly implemented.
+        return TokenAmount(amount=bet_amount.amount, currency=bet_amount.currency)
+
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
+        return OmenAgentMarket.get_outcome_str_from_bool(outcome=outcome)
+
+    @staticmethod
+    def get_trade_balance(api_keys: APIKeys) -> float:
+        return OmenAgentMarket.get_trade_balance(api_keys=api_keys)
+
+    @classmethod
+    def get_tiny_bet_amount(cls) -> BetAmount:
+        return OmenAgentMarket.get_tiny_bet_amount()
+
+    def get_position(self, user_id: str) -> Position | None:
+        # ToDo - Fetch from Swapr pools, Swapr v3 pools, or Uni v3 pools
+        return None
+
+    @staticmethod
+    def get_user_id(api_keys: APIKeys) -> str:
+        return OmenAgentMarket.get_user_id(api_keys)
 
     @staticmethod
     def redeem_winnings(api_keys: APIKeys) -> None:
@@ -72,18 +132,21 @@ class SeerAgentMarket(AgentMarket):
     @staticmethod
     def from_data_model(model: SeerMarket) -> "SeerAgentMarket":
         return SeerAgentMarket(
-            id=model.id,
+            id=model.id.hex(),
+            description=None,
             question=model.title,
             creator=model.creator,
             created_time=model.created_time,
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
-            condition_id=model.condition_id,
+            condition_id=model.conditionId,
             url=model.url,
             close_time=model.close_time,
             wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=None,
+            resolution=model.get_resolution_enum(),
+            volume=None,
             # ToDo - Get from cow
             current_p_yes=Probability(0.123),
         )

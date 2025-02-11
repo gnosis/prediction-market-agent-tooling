@@ -3,5 +3,6 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 
 if __name__ == "__main__":
     agent = DeployableCoinFlipAgent()
+    agent.place_trades = False
     agent.run(market_type=MarketType.SEER)
     print("done")

@@ -13,8 +13,8 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class CreateCategoricalMarketsParams(BaseModel):
@@ -73,7 +73,7 @@ class SeerMarket(BaseModel):
         # 1. 3 outcomes (Yes, No, Invalid), 2. Invalid is the last one and 3. Invalid numerator is 1.
         if len(self.outcomes) != 3:
             raise ValueError(
-                f"Market {self.id} must have 3 outcomes. Actual outcomes - {self.outcomes}"
+                f"Market {self.id.hex()} must have 3 outcomes. Actual outcomes - {self.outcomes}"
             )
         return self.payoutReported and self.payoutNumerators[-1] != 1
 
@@ -88,11 +88,32 @@ class SeerMarket(BaseModel):
     def get_resolution_enum(self) -> t.Optional[Resolution]:
         if not self.is_resolved_with_valid_answer:
             return None
-        return self.get_resolution_enum_from_answer(
-            check_not_none(
-                self.currentAnswer, "Can not be None if `is_resolved_with_valid_answer`"
+
+        # ToDo - Test in a resolved market to see if calculation below is correct.
+        max_idx = self.payoutNumerators.index(1)
+
+        bool_outcome = get_boolean_outcome(self.outcomes[max_idx])
+        if bool_outcome:
+            return Resolution.YES
+        return Resolution.NO
+
+    @property
+    def is_binary(self) -> bool:
+        return len(self.outcomes) == 3
+
+    def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
+        if not self.is_binary:
+            raise ValueError(
+                f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
             )
-        )
+        outcome: str = self.outcomes[answer.as_int()]
+        return get_boolean_outcome(outcome)
+
+    def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
+        if self.boolean_outcome_from_answer(answer):
+            return Resolution.YES
+        else:
+            return Resolution.NO
 
     @property
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:

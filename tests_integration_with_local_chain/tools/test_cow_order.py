@@ -7,13 +7,29 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_buy_token_amount,
+    swap_tokens_waiting,
+)
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+
+
+def test_get_buy_token_amount() -> None:
+    sell_amount = xdai_to_wei(xdai_type(0.1))
+    buy_amount = get_buy_token_amount(
+        amount_wei=sell_amount,
+        sell_token=WrappedxDaiContract().address,
+        buy_token=sDaiContract().address,
+    )
+    assert (
+        buy_amount < sell_amount
+    ), f"sDai should be more expensive than wxDai, but {buy_amount} >= {sell_amount}"
 
 
 def test_swap_tokens_waiting(local_web3: Web3, test_keys: APIKeys) -> None:
     with pytest.raises(Exception) as e:
         swap_tokens_waiting(
-            amount=xdai_type(0.1),
+            amount_wei=xdai_to_wei(xdai_type(0.1)),
             sell_token=WrappedxDaiContract().address,
             buy_token=sDaiContract().address,
             api_keys=test_keys,

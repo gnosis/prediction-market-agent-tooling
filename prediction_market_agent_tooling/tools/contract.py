@@ -22,11 +22,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.tools.data_models import MessageContainer
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import (
-    BPS_CONSTANT,
-    DatetimeUTC,
-    should_not_happen,
-)
+from prediction_market_agent_tooling.tools.utils import BPS_CONSTANT, DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
     send_function_on_contract_tx,
@@ -796,99 +792,6 @@ def init_collateral_token_contract(
         raise ValueError(
             f"Contract at {address} is neither Depositable ERC-20, ERC-20 nor ERC-4626."
         )
-
-
-def auto_deposit_collateral_token(
-    collateral_token_contract: ContractERC20BaseClass,
-    amount_wei: Wei,
-    api_keys: APIKeys,
-    web3: Web3 | None,
-) -> None:
-    if isinstance(collateral_token_contract, ContractERC4626BaseClass):
-        auto_deposit_erc4626(collateral_token_contract, amount_wei, api_keys, web3)
-
-    elif isinstance(
-        collateral_token_contract, ContractDepositableWrapperERC20BaseClass
-    ):
-        auto_deposit_depositable_wrapper_erc20(
-            collateral_token_contract, amount_wei, api_keys, web3
-        )
-
-    elif isinstance(collateral_token_contract, ContractERC20BaseClass):
-        if (
-            collateral_token_contract.balanceOf(
-                for_address=api_keys.bet_from_address, web3=web3
-            )
-            < amount_wei
-        ):
-            raise ValueError(
-                f"Not enough of the collateral token, but it's not a wrapper token that we can deposit automatically."
-            )
-
-    else:
-        should_not_happen("Unsupported ERC20 contract type.")
-
-
-def auto_deposit_depositable_wrapper_erc20(
-    collateral_token_contract: ContractDepositableWrapperERC20BaseClass,
-    amount_wei: Wei,
-    api_keys: APIKeys,
-    web3: Web3 | None,
-) -> None:
-    collateral_token_balance = collateral_token_contract.balanceOf(
-        for_address=api_keys.bet_from_address, web3=web3
-    )
-
-    # If we have enough of the collateral token, we don't need to deposit.
-    if collateral_token_balance >= amount_wei:
-        return
-
-    # If we don't have enough, we need to deposit the difference.
-    left_to_deposit = Wei(amount_wei - collateral_token_balance)
-    collateral_token_contract.deposit(api_keys, left_to_deposit, web3=web3)
-
-
-def auto_deposit_erc4626(
-    collateral_token_contract: ContractERC4626BaseClass,
-    asset_amount_wei: Wei,
-    api_keys: APIKeys,
-    web3: Web3 | None,
-) -> None:
-    for_address = api_keys.bet_from_address
-    collateral_token_balance_in_shares = collateral_token_contract.balanceOf(
-        for_address=for_address, web3=web3
-    )
-    asset_amount_wei_in_shares = collateral_token_contract.convertToShares(
-        asset_amount_wei, web3
-    )
-
-    # If we have enough shares, we don't need to deposit.
-    if collateral_token_balance_in_shares >= asset_amount_wei_in_shares:
-        return
-
-    # If we need to deposit into erc4626, we first need to have enough of the asset token.
-    asset_token_contract = collateral_token_contract.get_asset_token_contract(web3=web3)
-
-    # If the asset token is Depositable Wrapper ERC-20, we can deposit it, in case we don't have enough.
-    if (
-        collateral_token_contract.get_asset_token_balance(for_address, web3)
-        < asset_amount_wei
-    ):
-        if isinstance(asset_token_contract, ContractDepositableWrapperERC20BaseClass):
-            auto_deposit_depositable_wrapper_erc20(
-                asset_token_contract, asset_amount_wei, api_keys, web3
-            )
-        else:
-            raise ValueError(
-                "Not enough of the asset token, but it's not a depositable wrapper token that we can deposit automatically."
-            )
-
-    # Finally, we can deposit the asset token into the erc4626 vault.
-    collateral_token_balance_in_assets = collateral_token_contract.convertToAssets(
-        collateral_token_balance_in_shares, web3
-    )
-    left_to_deposit = Wei(asset_amount_wei - collateral_token_balance_in_assets)
-    collateral_token_contract.deposit_asset_token(left_to_deposit, api_keys, web3)
 
 
 def to_gnosis_chain_contract(

@@ -13,7 +13,6 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     SeerPool,
 )
-from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow, to_int_timestamp
 
@@ -50,12 +49,19 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.id,
             markets_field.factory,
             markets_field.creator,
+            markets_field.conditionId,
             markets_field.marketName,
             markets_field.parentOutcome,
             markets_field.outcomes,
+            markets_field.payoutReported,
+            markets_field.payoutNumerators,
+            markets_field.hasAnswers,
+            markets_field.blockTimestamp,
             markets_field.parentMarket.id,
+            markets_field.openingTs,
             markets_field.finalizeTs,
             markets_field.wrappedTokens,
+            markets_field.collateralToken,
         ]
         return fields
 
@@ -158,10 +164,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
     def get_binary_markets(
         self,
-        limit: t.Optional[int],
         filter_by: FilterBy,
-        sort_by: SortBy,
-        created_after: DatetimeUTC | None = None,
+        sort_by: SortBy = SortBy.NONE,
+        limit: int | None = None,
         include_conditional_markets: bool = True,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
@@ -171,6 +176,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             include_conditional_markets=include_conditional_markets,
             sort_direction=sort_direction,
             sort_by_field=sort_by_field,
+            filter_by=filter_by,
         )
         # Now we additionally filter markets based on YES/NO being the only outcomes.
         binary_markets = self.filter_binary_markets(two_category_markets)
@@ -205,8 +211,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         for wrapped_token in market.wrapped_tokens:
             wheres.extend(
                 [
-                    {"token0": wrapped_token.hex().lower()},
-                    {"token1": wrapped_token.hex().lower()},
+                    {"token0": wrapped_token.lower()},
+                    {"token1": wrapped_token.lower()},
                 ]
             )
         pools_field = self.swapr_algebra_subgraph.Query.pools(where={"or": wheres})

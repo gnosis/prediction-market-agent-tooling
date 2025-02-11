@@ -5,18 +5,27 @@ from web3 import Web3
 from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import (
+    xDai,
+    xdai_type,
+    HexAddress,
+    HexBytes,
+    Probability,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.blockchain_utils import get_total_balance
 from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract
 from prediction_market_agent_tooling.markets.seer.data_models import (
-    NewMarketEvent,
     get_bet_outcome,
+    SeerMarket,
+    NewMarketEvent,
 )
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
@@ -36,8 +45,48 @@ from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 class SeerAgentMarket(AgentMarket):
+    # ToDo - Turn into HexAddress
+    id: str
     currency = Currency.sDai
     wrapped_tokens: list[ChecksumAddress]
+    creator: HexAddress
+    collateral_token_contract_address_checksummed: ChecksumAddress
+    condition_id: HexBytes
+    # No pools upon market creation
+    volume: float | None = None
+    outcome_token_pool = None
+
+    @staticmethod
+    def redeem_winnings(api_keys: APIKeys) -> None:
+        # ToDo - implement me (https://github.com/gnosis/prediction-market-agent-tooling/issues/499)
+        pass
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        return get_total_balance(
+            api_keys.public_key,
+            # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
+            sum_wxdai=False,
+        ) > xdai_type(0.001)
+
+    @staticmethod
+    def from_data_model(model: SeerMarket) -> "SeerAgentMarket":
+        return SeerAgentMarket(
+            id=model.id,
+            question=model.title,
+            creator=model.creator,
+            created_time=model.created_time,
+            outcomes=model.outcomes,
+            collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
+            condition_id=model.condition_id,
+            url=model.url,
+            close_time=model.close_time,
+            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
+            fees=MarketFees.get_zero_fees(),
+            outcome_token_pool=None,
+            # ToDo - Get from cow
+            current_p_yes=Probability(0.123),
+        )
 
     @staticmethod
     def get_binary_markets(
@@ -53,7 +102,6 @@ class SeerAgentMarket(AgentMarket):
                 limit=limit,
                 sort_by=sort_by,
                 filter_by=filter_by,
-                created_after=created_after,
             )
         ]
 
@@ -64,8 +112,8 @@ class SeerAgentMarket(AgentMarket):
         auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
-        **kwargs: t.Any,
     ) -> str:
+        api_keys = api_keys if api_keys is not None else APIKeys()
         if not self.can_be_traded():
             raise ValueError(
                 f"Market {self.id} is not open for trading. Cannot place bet."
@@ -92,14 +140,12 @@ class SeerAgentMarket(AgentMarket):
                 collateral_contract, asset_amount, api_keys, web3
             )
 
-        # ToDo
-        #  Match outcome index with outcomes
         # Get the index of the outcome we want to buy.
         outcome_index: int = self.get_outcome_index(get_bet_outcome(outcome))
         #  From wrapped tokens, get token address
         outcome_token = self.wrapped_tokens[outcome_index]
         #  Sell sDAI using token address
-        swap_result = swap_tokens_waiting(
+        order_metadata = swap_tokens_waiting(
             amount=xdai_type(amount.amount),
             sell_token=collateral_contract.address,
             buy_token=Web3.to_checksum_address(outcome_token),
@@ -107,8 +153,9 @@ class SeerAgentMarket(AgentMarket):
             web3=web3,
         )
         logger.info(
-            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Swap result {swap_result}"
+            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Order details {order_metadata}"
         )
+        return order_metadata.uid.root
 
 
 def seer_create_market_tx(

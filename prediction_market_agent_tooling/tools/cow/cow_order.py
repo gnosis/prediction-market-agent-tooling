@@ -2,11 +2,6 @@ import asyncio
 from datetime import timedelta
 
 import httpx
-from cow_py import swap_tokens
-from cow_py.common.chains import Chain
-from cow_py.common.constants import CowContractAddress
-from cow_py.order_book.config import Envs
-from cow_py.order_book.generated.model import OrderMetaData, OrderStatus
 from cowdao_cowpy import swap_tokens
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.constants import CowContractAddress

@@ -57,9 +57,6 @@ optuna = { version = "^4.1.0", optional = true}
 httpx = "^0.25.2"
 cowdao-cowpy = "^1.0.0rc1"
 eth-keys = "^0.6.1"
-httpx = "^0.25.2"
-#cow-py = {git = "https://github.com/kongzii/cow-py.git", branch = "peter/slippage_tolerance"}
-cowdao-cowpy = "1.0.0rc1"
 
 [tool.poetry.extras]
 openai = ["openai"]

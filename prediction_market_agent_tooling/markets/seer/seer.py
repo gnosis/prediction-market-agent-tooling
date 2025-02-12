@@ -7,11 +7,12 @@ from web3.types import TxReceipt
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     xDai,
+    Wei,
     xdai_type,
     HexAddress,
     HexBytes,
-    Probability,
     OutcomeStr,
+    wei_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -51,14 +52,16 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
+from prediction_market_agent_tooling.tools.cow.cow_manager import (
+    CowManager,
+    NoLiquidityAvailableOnCowException,
+)
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, wei_to_xdai
 
 
 class SeerAgentMarket(AgentMarket):
-    # ToDo - Turn into HexAddress
-    id: str
     currency = Currency.sDai
     wrapped_tokens: list[ChecksumAddress]
     creator: HexAddress
@@ -89,16 +92,44 @@ class SeerAgentMarket(AgentMarket):
             agent_name=agent_name,
         )
 
+    def _convert_bet_amount_into_wei(self, bet_amount: BetAmount) -> Wei:
+        if bet_amount.currency == self.currency:
+            return xdai_to_wei(xdai_type(bet_amount.amount))
+        raise ValueError(
+            f"Currencies don't match. Currency bet amount {bet_amount.currency} currency market: {self.currency}"
+        )
+
     def get_buy_token_amount(
         self, bet_amount: BetAmount, direction: bool
     ) -> TokenAmount:
-        # ToDo - Calculate this from the pools associated to this market.
-        # Below we simply return the same amount for simplicity, until the solution is properly implemented.
-        return TokenAmount(amount=bet_amount.amount, currency=bet_amount.currency)
+        """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
-    @staticmethod
-    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
-        return OmenAgentMarket.get_outcome_str_from_bool(outcome=outcome)
+        outcome = self.get_outcome_str_from_bool(direction)
+        outcome_idx = self.outcomes.index(outcome)
+        outcome_token = self.wrapped_tokens[outcome_idx]
+
+        bet_amount_in_wei = self._convert_bet_amount_into_wei(bet_amount=bet_amount)
+
+        quote = CowManager().get_quote(
+            buy_token=outcome_token,
+            sell_amount=bet_amount_in_wei,
+            collateral_token=self.collateral_token_contract_address_checksummed,
+        )
+        sell_amount = wei_to_xdai(wei_type(quote.quote.buyAmount.root))
+        return TokenAmount(amount=sell_amount, currency=bet_amount.currency)
+
+    def get_binary_outcomes_map(self) -> dict[bool, OutcomeStr]:
+        outcome_dict: dict[bool, OutcomeStr] = {}
+        for outcome in self.outcomes:
+            if outcome.lower() == "yes":
+                outcome_dict[True] = OutcomeStr(outcome)
+            elif outcome.lower() == "no":
+                outcome_dict[False] = OutcomeStr(outcome)
+        return outcome_dict
+
+    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+        outcome_dict = self.get_binary_outcomes_map()
+        return outcome_dict[outcome]
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys) -> float:
@@ -147,8 +178,7 @@ class SeerAgentMarket(AgentMarket):
             outcome_token_pool=None,
             resolution=model.get_resolution_enum(),
             volume=None,
-            # ToDo - Get from cow
-            current_p_yes=Probability(0.123),
+            current_p_yes=model.current_p_yes,
         )
 
     @staticmethod
@@ -168,6 +198,34 @@ class SeerAgentMarket(AgentMarket):
             )
         ]
 
+    def has_liquidity_for_outcome(self, outcome: bool) -> bool:
+        outcome_token = self.get_wrapped_token_for_outcome(outcome)
+        try:
+            CowManager().get_quote(
+                collateral_token=self.collateral_token_contract_address_checksummed,
+                buy_token=outcome_token,
+                sell_amount=xdai_to_wei(
+                    xdai_type(1)
+                ),  # we take 1 xDai as a baseline value for common trades the agents take.
+            )
+            return True
+        except NoLiquidityAvailableOnCowException:
+            logger.info(
+                f"Could not get a quote for {outcome_token=} {outcome=}, returning no liquidity"
+            )
+            return False
+
+    def has_liquidity(self) -> bool:
+        # We conservatively define a market as having liquidity if it has liquidity for the `True` outcome token AND the `False` outcome token.
+        return self.has_liquidity_for_outcome(True) and self.has_liquidity_for_outcome(
+            False
+        )
+
+    def get_wrapped_token_for_outcome(self, outcome: bool) -> ChecksumAddress:
+        outcome_index: int = self.get_outcome_index(get_bet_outcome(outcome))
+        outcome_token = self.wrapped_tokens[outcome_index]
+        return outcome_token
+
     def place_bet(
         self,
         outcome: bool,
@@ -182,6 +240,12 @@ class SeerAgentMarket(AgentMarket):
                 f"Market {self.id} is not open for trading. Cannot place bet."
             )
 
+        # We add an additional check below since we want to be certain that liquidity exists for the outcome token
+        # being traded.
+        if not self.has_liquidity_for_outcome(outcome):
+            raise ValueError(
+                f"Market {self.id} does not have liquidity for this {outcome=}"
+            )
         if amount.currency != self.currency:
             raise ValueError(f"Seer bets are made in xDai. Got {amount.currency}.")
 
@@ -203,10 +267,7 @@ class SeerAgentMarket(AgentMarket):
                 collateral_contract, asset_amount, api_keys, web3
             )
 
-        # Get the index of the outcome we want to buy.
-        outcome_index: int = self.get_outcome_index(get_bet_outcome(outcome))
-        #  From wrapped tokens, get token address
-        outcome_token = self.wrapped_tokens[outcome_index]
+        outcome_token = self.get_wrapped_token_for_outcome(outcome)
         #  Sell sDAI using token address
         order_metadata = swap_tokens_waiting(
             amount=xdai_type(amount.amount),

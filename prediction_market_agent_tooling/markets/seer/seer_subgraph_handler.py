@@ -91,7 +91,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         match filter_by:
             case FilterBy.OPEN:
-                where_stms["openingTs_lt"] = now
+                where_stms["openingTs_gt"] = now
                 where_stms["hasAnswers"] = False
             case FilterBy.RESOLVED:
                 # We consider RESOLVED == CLOSED (on Seer)

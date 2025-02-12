@@ -44,7 +44,7 @@ class SeerParentMarket(BaseModel):
     id: HexBytes
 
 
-SEER_BASE_URL = "https://presagio.pages.dev"
+SEER_BASE_URL = "https://app.seer.pm/"
 
 
 class SeerMarket(BaseModel):

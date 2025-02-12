@@ -297,10 +297,13 @@ class AgentMarket(BaseModel):
             )
 
     def get_outcome_index(self, outcome: str) -> int:
-        try:
-            return self.outcomes.index(outcome)
-        except ValueError:
-            raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
+        outcome_lower = outcome.lower()
+        for idx, o in enumerate(self.outcomes):
+            if o.lower() == outcome_lower:
+                return idx
+        raise ValueError(
+            f"Outcome `{outcome}` not found in `{', '.join(self.outcomes)}`."
+        )
 
     def get_token_balance(self, user_id: str, outcome: str) -> TokenAmount:
         raise NotImplementedError("Subclasses must implement this method")

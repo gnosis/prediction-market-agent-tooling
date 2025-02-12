@@ -47,6 +47,9 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
+from prediction_market_agent_tooling.tools.caches.inmemory_cache import (
+    persistent_inmemory_cache,
+)
 from prediction_market_agent_tooling.tools.contract import (
     auto_deposit_collateral_token,
     init_collateral_token_contract,
@@ -59,6 +62,9 @@ from prediction_market_agent_tooling.tools.cow.cow_manager import (
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, wei_to_xdai
+
+# We place a larger bet amount by default than Omen so that cow presents valid quotes.
+SEER_TINY_BET_AMOUNT = xdai_type(0.1)
 
 
 class SeerAgentMarket(AgentMarket):
@@ -137,7 +143,7 @@ class SeerAgentMarket(AgentMarket):
 
     @classmethod
     def get_tiny_bet_amount(cls) -> BetAmount:
-        return OmenAgentMarket.get_tiny_bet_amount()
+        return BetAmount(amount=SEER_TINY_BET_AMOUNT, currency=cls.currency)
 
     def get_position(self, user_id: str) -> Position | None:
         # ToDo - Fetch from Swapr pools, Swapr v3 pools, or Uni v3 pools
@@ -198,6 +204,7 @@ class SeerAgentMarket(AgentMarket):
             )
         ]
 
+    @persistent_inmemory_cache
     def has_liquidity_for_outcome(self, outcome: bool) -> bool:
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         try:

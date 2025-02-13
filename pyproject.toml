@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.57.18"
+version = "0.57.19"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -34,7 +34,7 @@ google-cloud-secret-manager = "^2.18.2"
 langchain = { version = "^0.2.6", optional = true}
 langchain-openai = { version = "^0.1.0", optional = true}
 google-api-python-client = { version = "2.95.0", optional = true}
-subgrounds = "^1.9.1"
+subgrounds-gnosis = "^1.9.2"
 loguru = "^0.7.2"
 safe-eth-py = "^6.0.0b41"
 eth-account = ">=0.8.0,<0.12.0"
@@ -54,7 +54,7 @@ pinatapy-vourhey = "^0.2.0"
 hishel = "^0.0.31"
 pytest-postgresql = "^6.1.1"
 optuna = { version = "^4.1.0", optional = true}
-httpx = "^0.25.2"
+httpx = ">=0.25.2,<1.0.0"
 cowdao-cowpy = "^1.0.0rc1"
 eth-keys = "^0.6.1"
 

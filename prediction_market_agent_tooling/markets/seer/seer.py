@@ -33,7 +33,6 @@ from prediction_market_agent_tooling.markets.data_models import (
     TokenAmount,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.markets.omen.data_models import get_bet_outcome
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -234,8 +233,9 @@ class SeerAgentMarket(AgentMarket):
         )
 
     def get_wrapped_token_for_outcome(self, outcome: bool) -> ChecksumAddress:
-        outcome_index: int = self.get_outcome_index(get_bet_outcome(outcome))
-        outcome_token = self.wrapped_tokens[outcome_index]
+        outcome_from_enum = SeerOutcomeEnum.from_bool(outcome)
+        outcome_idx = self.seer_outcomes[outcome_from_enum]
+        outcome_token = self.wrapped_tokens[outcome_idx]
         return outcome_token
 
     def place_bet(

@@ -9,11 +9,11 @@ from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import (
-    HexBytes,
-    Wei,
-    Probability,
-    HexAddress,
     ChecksumAddress,
+    HexAddress,
+    HexBytes,
+    Probability,
+    Wei,
     xdai_type,
 )
 from prediction_market_agent_tooling.loggers import logger
@@ -118,7 +118,7 @@ class SeerMarket(BaseModel):
             self.outcome_as_enums[SeerOutcomeEnum.NEUTRAL]
         except KeyError:
             raise ValueError(
-                f"Market {self.id} has no invalid outcome. {self.outcomes}"
+                f"Market {self.id.hex()} has no invalid outcome. {self.outcomes}"
             )
 
         return self.payoutReported and self.payoutNumerators[-1] != 1

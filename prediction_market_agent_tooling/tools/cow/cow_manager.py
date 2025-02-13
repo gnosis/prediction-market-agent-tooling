@@ -4,17 +4,17 @@ from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.config import SupportedChainId
 from cowdao_cowpy.cow.swap import get_order_quote
 from cowdao_cowpy.order_book.api import OrderBookApi
-from cowdao_cowpy.order_book.config import OrderBookAPIConfigFactory, Envs
+from cowdao_cowpy.order_book.config import Envs, OrderBookAPIConfigFactory
 from cowdao_cowpy.order_book.generated.model import (
-    OrderQuoteResponse,
+    Address,
+    OrderMetaData,
     OrderQuoteRequest,
+    OrderQuoteResponse,
     OrderQuoteSide1,
     OrderQuoteSideKindSell,
-    OrderMetaData,
-    Address,
-    TokenAmount as TokenAmountCow,
 )
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_not_exception_type
+from cowdao_cowpy.order_book.generated.model import TokenAmount as TokenAmountCow
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_fixed
 from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 COW_ENV: Envs = "prod"
 
@@ -99,7 +100,7 @@ class CowManager:
         web3: Web3 | None = None,
     ) -> OrderMetaData:
         order_metadata = swap_tokens_waiting(
-            amount=amount,
+            amount_wei=xdai_to_wei(amount),
             sell_token=sell_token,
             buy_token=buy_token,
             api_keys=api_keys,

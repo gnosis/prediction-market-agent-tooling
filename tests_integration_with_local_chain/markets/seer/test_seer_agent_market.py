@@ -1,13 +1,13 @@
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 from cowdao_cowpy.order_book.generated.model import (
-    OrderQuoteResponse,
-    OrderParameters,
-    OrderKind,
-    TokenAmount as TokenAmountCow,
-    AppDataHash,
     Address,
+    AppDataHash,
+    OrderKind,
+    OrderParameters,
+    OrderQuoteResponse,
 )
+from cowdao_cowpy.order_book.generated.model import TokenAmount as TokenAmountCow
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys

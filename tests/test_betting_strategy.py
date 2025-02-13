@@ -12,8 +12,8 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     HexStr,
-    Probability,
     OutcomeStr,
+    Probability,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
@@ -24,8 +24,8 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
-    OMEN_TRUE_OUTCOME,
     OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     Condition,

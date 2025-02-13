@@ -6,21 +6,21 @@ from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
-    xDai,
-    Wei,
-    xdai_type,
     HexAddress,
     HexBytes,
     OutcomeStr,
+    Wei,
     wei_type,
+    xDai,
+    xdai_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    SortBy,
-    ProcessedTradedMarket,
     ProcessedMarket,
+    ProcessedTradedMarket,
+    SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import (
     get_total_balance,
@@ -37,8 +37,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import get_bet_out
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract
 from prediction_market_agent_tooling.markets.seer.data_models import (
-    SeerMarket,
     NewMarketEvent,
+    SeerMarket,
     SeerOutcomeEnum,
 )
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
@@ -49,9 +49,9 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
+    ContractERC20OnGnosisChain,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
-    ContractERC20OnGnosisChain,
 )
 from prediction_market_agent_tooling.tools.cow.cow_manager import (
     CowManager,
@@ -61,7 +61,7 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, wei_to_xdai
+from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
 SEER_TINY_BET_AMOUNT = xdai_type(0.1)

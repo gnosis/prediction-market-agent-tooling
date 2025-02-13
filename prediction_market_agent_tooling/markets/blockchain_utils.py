@@ -3,17 +3,17 @@ from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
-    xdai_type,
-    xDai,
     ChecksumAddress,
     HexBytes,
     HexStr,
+    xDai,
+    xdai_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import ProcessedTradedMarket
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    IPFSAgentResult,
     ContractPrediction,
+    IPFSAgentResult,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenAgentResultMappingContract,

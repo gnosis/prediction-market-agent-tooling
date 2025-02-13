@@ -5,7 +5,7 @@ from typing import Any
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
-from prediction_market_agent_tooling.markets.agent_market import SortBy, FilterBy
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerPool,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import utcnow, to_int_timestamp
+from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 
 INVALID_OUTCOME = "Invalid result"
 

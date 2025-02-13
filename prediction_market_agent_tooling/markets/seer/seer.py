@@ -47,13 +47,11 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
-from prediction_market_agent_tooling.tools.caches.inmemory_cache import (
-    persistent_inmemory_cache,
-)
 from prediction_market_agent_tooling.tools.contract import (
     auto_deposit_collateral_token,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
+    ContractERC20OnGnosisChain,
 )
 from prediction_market_agent_tooling.tools.cow.cow_manager import (
     CowManager,
@@ -145,9 +143,25 @@ class SeerAgentMarket(AgentMarket):
     def get_tiny_bet_amount(cls) -> BetAmount:
         return BetAmount(amount=SEER_TINY_BET_AMOUNT, currency=cls.currency)
 
-    def get_position(self, user_id: str) -> Position | None:
-        # ToDo - Fetch from Swapr pools, Swapr v3 pools, or Uni v3 pools
-        return None
+    def get_position(self, user_id: str, web3: Web3 | None = None) -> Position | None:
+        """
+        Fetches position from the user in a given market.
+        We ignore the INVALID balances since we are only interested in binary outcomes.
+        """
+
+        amounts = {}
+        outcomes_map = self.get_binary_outcomes_map()
+        for outcome in outcomes_map.values():
+            outcome_idx = self.outcomes.index(outcome)
+            wrapped_token = self.wrapped_tokens[outcome_idx]
+            outcome_token_balance = ContractERC20OnGnosisChain(
+                address=wrapped_token
+            ).balanceOf(for_address=Web3.to_checksum_address(user_id), web3=web3)
+            amounts[outcome] = TokenAmount(
+                amount=wei_to_xdai(outcome_token_balance), currency=self.currency
+            )
+
+        return Position(market=self.id, amounts=amounts)
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
@@ -204,7 +218,6 @@ class SeerAgentMarket(AgentMarket):
             )
         ]
 
-    @persistent_inmemory_cache
     def has_liquidity_for_outcome(self, outcome: bool) -> bool:
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         try:

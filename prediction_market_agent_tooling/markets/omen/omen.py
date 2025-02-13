@@ -69,14 +69,18 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
-    ContractDepositableWrapperERC20BaseClass,
-    ContractERC4626BaseClass,
-    auto_deposit_collateral_token,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
+from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
+    auto_deposit_collateral_token,
+)
+from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
+    auto_withdraw_collateral_token,
+)
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
@@ -870,19 +874,12 @@ def omen_sell_outcome_tx(
         max_outcome_tokens_to_sell,
         web3=web3,
     )
-    if auto_withdraw and (
-        isinstance(collateral_token_contract, ContractERC4626BaseClass)
-        or isinstance(
-            collateral_token_contract, ContractDepositableWrapperERC20BaseClass
-        )
-    ):
-        collateral_token_contract.withdraw(
-            api_keys,
-            remove_fraction(
-                amount_wei,
-                0.001,  # Allow 0.1% slippage.
-            ),
-            web3,
+    if auto_withdraw:
+        auto_withdraw_collateral_token(
+            collateral_token_contract=collateral_token_contract,
+            amount_wei=amount_wei,
+            api_keys=api_keys,
+            web3=web3,
         )
 
     return tx_receipt["transactionHash"].hex()

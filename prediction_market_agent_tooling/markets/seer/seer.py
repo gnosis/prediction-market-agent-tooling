@@ -49,7 +49,6 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
-    auto_deposit_collateral_token,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
     ContractERC20OnGnosisChain,
@@ -59,6 +58,9 @@ from prediction_market_agent_tooling.tools.cow.cow_manager import (
     NoLiquidityAvailableOnCowException,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
+    auto_deposit_collateral_token,
+)
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, wei_to_xdai
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.

@@ -110,12 +110,17 @@ class SeerMarket(BaseModel):
 
     @property
     def has_valid_answer(self) -> bool:
-        # We assume that, for the market to be resolved as invalid, it must have
-        # 1. 3 outcomes (Yes, No, Invalid), 2. Invalid is the last one and 3. Invalid numerator is 1.
-        if len(self.outcomes) != 3:
+        # We assume that, for the market to be resolved as invalid, it must have both:
+        # 1. An invalid outcome AND
+        # 2. Invalid payoutNumerator is 1.
+
+        try:
+            self.outcome_as_enums[SeerOutcomeEnum.NEUTRAL]
+        except KeyError:
             raise ValueError(
-                f"Market {self.id.hex()} must have 3 outcomes. Actual outcomes - {self.outcomes}"
+                f"Market {self.id} has no invalid outcome. {self.outcomes}"
             )
+
         return self.payoutReported and self.payoutNumerators[-1] != 1
 
     @property

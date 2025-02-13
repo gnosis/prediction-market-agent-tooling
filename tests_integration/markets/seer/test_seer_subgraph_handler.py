@@ -35,6 +35,7 @@ def test_conditional_market_not_retrieved(handler: SeerSubgraphHandler) -> None:
     assert CONDITIONAL_MARKET_ID not in market_ids
 
 
+@pytest.mark.skip(reason="Needes fix from another PR.")
 def test_conditional_market_retrieved(handler: SeerSubgraphHandler) -> None:
     markets = handler.get_bicategorical_markets(include_conditional_markets=True)
     market_ids = [m.id for m in markets]

@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     HexStr,
     Probability,
+    OutcomeStr,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     Currency,
@@ -23,6 +24,8 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_TRUE_OUTCOME,
+    OMEN_FALSE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     Condition,
@@ -57,8 +60,8 @@ def test_rebalance() -> None:
     mock_existing_position = Position(
         market_id="0x123",
         amounts={
-            OmenAgentMarket.get_outcome_str_from_bool(True): mock_amount,
-            OmenAgentMarket.get_outcome_str_from_bool(False): mock_amount,
+            OutcomeStr(OMEN_TRUE_OUTCOME): mock_amount,
+            OutcomeStr(OMEN_FALSE_OUTCOME): mock_amount,
         },
     )
     bet_amount = tiny_amount.amount + mock_existing_position.total_amount.amount

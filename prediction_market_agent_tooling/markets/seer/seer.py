@@ -150,7 +150,7 @@ class SeerAgentMarket(AgentMarket):
                 amount=wei_to_xdai(outcome_token_balance), currency=self.currency
             )
 
-        return Position(market=self.id, amounts=amounts)
+        return Position(market_id=self.id, amounts=amounts)
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:

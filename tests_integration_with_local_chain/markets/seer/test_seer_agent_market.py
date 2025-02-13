@@ -3,7 +3,10 @@ from unittest.mock import patch, Mock
 from cowdao_cowpy.order_book.generated.model import (
     OrderQuoteResponse,
     OrderParameters,
+    OrderKind,
     TokenAmount as TokenAmountCow,
+    AppDataHash,
+    Address,
 )
 from web3 import Web3
 
@@ -19,14 +22,16 @@ from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 MOCK_QUOTE = OrderQuoteResponse(
     quote=OrderParameters(
-        buyAmount=TokenAmountCow(root=str(xdai_to_wei(xdai_type(2)))),  # 0.5 odds
-        sellToken="0xabc",
-        buyToken="0xdef",
-        sellAmount=TokenAmountCow(root="0.5"),
-        validTo=" 1739474477",
-        appData="0x0000000000000000000000000000000000000000000000000000000000000000",
-        feeAmount=TokenAmountCow(root="0.5"),
-        kind="buy",
+        buyAmount=TokenAmountCow(str(xdai_to_wei(xdai_type(2)))),  # 0.5 odds
+        sellToken=Address("0xabc"),
+        buyToken=Address("0xdef"),
+        sellAmount=TokenAmountCow("0.5"),
+        validTo=1739474477,
+        appData=AppDataHash(
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        ),
+        feeAmount=TokenAmountCow("0.5"),
+        kind=OrderKind.buy,
         partiallyFillable=False,
     ),
     expiration="1985-03-10T18:35:18.814523Z",

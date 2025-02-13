@@ -11,6 +11,8 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderQuoteSide1,
     OrderQuoteSideKindSell,
     OrderMetaData,
+    Address,
+    TokenAmount as TokenAmountCow,
 )
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_not_exception_type
 from web3 import Web3
@@ -64,13 +66,14 @@ class CowManager:
         """
 
         order_quote_request = OrderQuoteRequest(
-            buyToken=buy_token,
-            sellToken=collateral_token,
-            from_=ADDRESS_ZERO,
+            buyToken=Address(buy_token),
+            sellToken=Address(collateral_token),
+            from_=Address(ADDRESS_ZERO),
         )
 
         order_side = OrderQuoteSide1(
-            kind=OrderQuoteSideKindSell.sell, sellAmountBeforeFee=str(sell_amount)
+            kind=OrderQuoteSideKindSell.sell,
+            sellAmountBeforeFee=TokenAmountCow(str(sell_amount)),
         )
         try:
             return asyncio.run(

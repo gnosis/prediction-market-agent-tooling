@@ -57,7 +57,7 @@ class SeerOutcomeEnum(str, Enum):
         return cls.POSITIVE if value else cls.NEGATIVE
 
     @classmethod
-    def from_string(cls, value: str):
+    def from_string(cls, value: str) -> "SeerOutcomeEnum":
         """Convert a string (case-insensitive) to an Outcome enum."""
         normalized = value.strip().lower()
         # mapping = {

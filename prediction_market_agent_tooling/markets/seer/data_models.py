@@ -60,12 +60,6 @@ class SeerOutcomeEnum(str, Enum):
     def from_string(cls, value: str) -> "SeerOutcomeEnum":
         """Convert a string (case-insensitive) to an Outcome enum."""
         normalized = value.strip().lower()
-        # mapping = {
-        #     "yes": cls.POSITIVE,
-        #     "no": cls.NEGATIVE,
-        #     "invalid": cls.NEUTRAL,
-        # }
-        # Define regex patterns for matching
         patterns = {
             r"^yes$": cls.POSITIVE,
             r"^no$": cls.NEGATIVE,
@@ -77,7 +71,6 @@ class SeerOutcomeEnum(str, Enum):
             if re.search(pattern, normalized):
                 return outcome
 
-        # Explicitly fail for non-binary markets by returning None if no match is found
         raise ValueError(f"Could not map {value=} to an outcome.")
 
 
@@ -100,13 +93,13 @@ class SeerMarket(BaseModel):
     parent_market: t.Optional[SeerParentMarket] = Field(
         alias="parentMarket", default=None
     )
-    collateralToken: HexAddress
-    conditionId: HexBytes
-    openingTs: int
-    blockTimestamp: int
-    hasAnswers: bool | None
-    payoutReported: bool
-    payoutNumerators: list[int]
+    collateral_token: HexAddress = Field(alias="collateralToken")
+    condition_id: HexBytes = Field(alias="conditionId")
+    opening_ts: int = Field(alias="openingTs")
+    block_timestamp: int = Field(alias="blockTimestamp")
+    has_answers: bool | None = Field(alias="hasAnswers")
+    payout_reported: bool = Field(alias="payoutReported")
+    payout_numerators: list[int] = Field(alias="payoutNumerators")
 
     @property
     def has_valid_answer(self) -> bool:
@@ -121,7 +114,7 @@ class SeerMarket(BaseModel):
                 f"Market {self.id.hex()} has no invalid outcome. {self.outcomes}"
             )
 
-        return self.payoutReported and self.payoutNumerators[-1] != 1
+        return self.payout_reported and self.payout_numerators[-1] != 1
 
     @property
     def outcome_as_enums(self) -> dict[SeerOutcomeEnum, int]:
@@ -132,7 +125,7 @@ class SeerMarket(BaseModel):
 
     @property
     def is_resolved(self) -> bool:
-        return self.payoutReported
+        return self.payout_reported
 
     @property
     def is_resolved_with_valid_answer(self) -> bool:
@@ -142,8 +135,7 @@ class SeerMarket(BaseModel):
         if not self.is_resolved_with_valid_answer:
             return None
 
-        # ToDo - Test in a resolved market to see if calculation below is correct.
-        max_idx = self.payoutNumerators.index(1)
+        max_idx = self.payout_numerators.index(1)
 
         bool_outcome = get_boolean_outcome(self.outcomes[max_idx])
         if bool_outcome:
@@ -171,15 +163,15 @@ class SeerMarket(BaseModel):
 
     @property
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:
-        return Web3.to_checksum_address(self.collateralToken)
+        return Web3.to_checksum_address(self.collateral_token)
 
     @property
     def close_time(self) -> DatetimeUTC:
-        return DatetimeUTC.to_datetime_utc(self.openingTs)
+        return DatetimeUTC.to_datetime_utc(self.opening_ts)
 
     @property
     def created_time(self) -> DatetimeUTC:
-        return DatetimeUTC.to_datetime_utc(self.blockTimestamp)
+        return DatetimeUTC.to_datetime_utc(self.block_timestamp)
 
     @property
     def current_p_yes(self) -> Probability:

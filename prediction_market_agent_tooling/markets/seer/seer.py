@@ -180,7 +180,7 @@ class SeerAgentMarket(AgentMarket):
             created_time=model.created_time,
             outcomes=model.outcomes,
             collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
-            condition_id=model.conditionId,
+            condition_id=model.condition_id,
             url=model.url,
             close_time=model.close_time,
             wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],

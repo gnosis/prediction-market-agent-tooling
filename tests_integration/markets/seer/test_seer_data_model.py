@@ -1,7 +1,9 @@
 import numpy as np
 from web3 import Web3
 
+from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.data_models import SeerOutcomeEnum
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -31,3 +33,10 @@ def test_current_p_yes(
     current_p_yes = market.current_p_yes
     expected_p_yes = yes_price / (yes_price + no_price + invalid_price)
     assert np.isclose(current_p_yes, expected_p_yes, atol=0.01)
+
+
+def test_resolution() -> None:
+    resolved_market_id = HexBytes("0xd32068304199c1885b02d3ac91e0da06b9568409")
+    market = SeerSubgraphHandler().get_market_by_id(market_id=resolved_market_id)
+    resolution = market.get_resolution_enum()
+    assert resolution == Resolution.YES

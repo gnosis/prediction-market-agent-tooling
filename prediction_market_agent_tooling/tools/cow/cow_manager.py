@@ -10,12 +10,16 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderQuoteRequest,
     OrderQuoteSide1,
     OrderQuoteSideKindSell,
+    OrderMetaData,
 )
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_not_exception_type
+from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
+from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 
 COW_ENV: Envs = "prod"
 
@@ -82,3 +86,23 @@ class CowManager:
             if "NoLiquidity" in e1.message:
                 raise NoLiquidityAvailableOnCowException(e1.message)
             raise e1
+
+    @staticmethod
+    def swap(
+        amount: xDai,
+        sell_token: ChecksumAddress,
+        buy_token: ChecksumAddress,
+        api_keys: APIKeys,
+        web3: Web3 | None = None,
+    ) -> OrderMetaData:
+        order_metadata = swap_tokens_waiting(
+            amount=amount,
+            sell_token=sell_token,
+            buy_token=buy_token,
+            api_keys=api_keys,
+            web3=web3,
+        )
+        logger.debug(
+            f"Purchased {buy_token} in exchange for {sell_token}. Order details {order_metadata}"
+        )
+        return order_metadata

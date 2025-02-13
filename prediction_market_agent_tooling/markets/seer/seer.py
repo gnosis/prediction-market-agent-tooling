@@ -58,7 +58,6 @@ from prediction_market_agent_tooling.tools.cow.cow_manager import (
     CowManager,
     NoLiquidityAvailableOnCowException,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei, wei_to_xdai
 
@@ -260,15 +259,7 @@ class SeerAgentMarket(AgentMarket):
         if amount.currency != self.currency:
             raise ValueError(f"Seer bets are made in xDai. Got {amount.currency}.")
 
-        # We require that amount is given in sDAI.
-        collateral_balance = get_balances(address=api_keys.bet_from_address, web3=web3)
-        if collateral_balance.sdai < amount.amount:
-            raise ValueError(
-                f"Balance {collateral_balance.sdai} not enough for bet size {amount.amount}"
-            )
-
         collateral_contract = sDaiContract()
-
         if auto_deposit:
             # We convert the deposit amount (in sDai) to assets in order to convert.
             asset_amount = collateral_contract.convertToAssets(
@@ -278,18 +269,23 @@ class SeerAgentMarket(AgentMarket):
                 collateral_contract, asset_amount, api_keys, web3
             )
 
+        # We require that amount is given in sDAI.
+        collateral_balance = get_balances(address=api_keys.bet_from_address, web3=web3)
+        if collateral_balance.sdai < amount.amount:
+            raise ValueError(
+                f"Balance {collateral_balance.sdai} not enough for bet size {amount.amount}"
+            )
+
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         #  Sell sDAI using token address
-        order_metadata = swap_tokens_waiting(
+        order_metadata = CowManager().swap(
             amount=xdai_type(amount.amount),
             sell_token=collateral_contract.address,
             buy_token=Web3.to_checksum_address(outcome_token),
             api_keys=api_keys,
             web3=web3,
         )
-        logger.info(
-            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Order details {order_metadata}"
-        )
+
         return order_metadata.uid.root
 
 

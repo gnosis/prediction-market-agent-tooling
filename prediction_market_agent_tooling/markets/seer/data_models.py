@@ -187,12 +187,7 @@ class SeerMarket(BaseModel):
             )
             price_data[idx] = price
 
-        yes_idx = 0
-        for idx, outcome in enumerate(self.outcomes):
-            if outcome.lower() == "YES".lower():
-                yes_idx = idx
-                break
-
+        yes_idx = self.outcome_as_enums[SeerOutcomeEnum.POSITIVE]
         price_yes = price_data[yes_idx] / sum(price_data.values())
         return Probability(price_yes)
 

@@ -1,4 +1,7 @@
+import re
 import typing as t
+from enum import Enum
+from urllib.parse import urljoin
 
 from pydantic import BaseModel, ConfigDict, Field
 from web3 import Web3
@@ -11,10 +14,14 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
     HexAddress,
     ChecksumAddress,
+    xdai_type,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
+from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 class CreateCategoricalMarketsParams(BaseModel):
@@ -40,11 +47,45 @@ class CreateCategoricalMarketsParams(BaseModel):
     token_names: list[str] = Field(..., alias="tokenNames")
 
 
+class SeerOutcomeEnum(str, Enum):
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+    NEUTRAL = "neutral"
+
+    @classmethod
+    def from_bool(cls, value: bool) -> "SeerOutcomeEnum":
+        return cls.POSITIVE if value else cls.NEGATIVE
+
+    @classmethod
+    def from_string(cls, value: str):
+        """Convert a string (case-insensitive) to an Outcome enum."""
+        normalized = value.strip().lower()
+        # mapping = {
+        #     "yes": cls.POSITIVE,
+        #     "no": cls.NEGATIVE,
+        #     "invalid": cls.NEUTRAL,
+        # }
+        # Define regex patterns for matching
+        patterns = {
+            r"^yes$": cls.POSITIVE,
+            r"^no$": cls.NEGATIVE,
+            r"^(invalid|invalid result)$": cls.NEUTRAL,
+        }
+
+        # Search through patterns and return the first match
+        for pattern, outcome in patterns.items():
+            if re.search(pattern, normalized):
+                return outcome
+
+        # Explicitly fail for non-binary markets by returning None if no match is found
+        raise ValueError(f"Could not map {value=} to an outcome.")
+
+
 class SeerParentMarket(BaseModel):
     id: HexBytes
 
 
-SEER_BASE_URL = "https://app.seer.pm/"
+SEER_BASE_URL = "https://app.seer.pm"
 
 
 class SeerMarket(BaseModel):
@@ -76,6 +117,13 @@ class SeerMarket(BaseModel):
                 f"Market {self.id.hex()} must have 3 outcomes. Actual outcomes - {self.outcomes}"
             )
         return self.payoutReported and self.payoutNumerators[-1] != 1
+
+    @property
+    def outcome_as_enums(self) -> dict[SeerOutcomeEnum, int]:
+        return {
+            SeerOutcomeEnum.from_string(outcome): idx
+            for idx, outcome in enumerate(self.outcomes)
+        }
 
     @property
     def is_resolved(self) -> bool:
@@ -129,13 +177,43 @@ class SeerMarket(BaseModel):
 
     @property
     def current_p_yes(self) -> Probability:
-        # ToDo - Fetch from pools (see useMarketOdds.ts from seer-demo)
-        return Probability(0.123)
+        # ToDo - Write test
+        # build a dict [OutcomeStr(), price]
+        price_data = {}
+        for idx in range(len(self.outcomes)):
+            wrapped_token = self.wrapped_tokens[idx]
+            price = self._get_price_for_token(
+                token=Web3.to_checksum_address(wrapped_token)
+            )
+            price_data[idx] = price
+
+        yes_idx = 0
+        for idx, outcome in enumerate(self.outcomes):
+            if outcome.lower() == "YES".lower():
+                yes_idx = idx
+                break
+
+        price_yes = price_data[yes_idx] / sum(price_data.values())
+        return Probability(price_yes)
+
+    def _get_price_for_token(self, token: ChecksumAddress) -> float:
+        collateral_exchange_amount = xdai_to_wei(xdai_type(1))
+        try:
+            quote = CowManager().get_quote(
+                collateral_token=self.collateral_token_contract_address_checksummed,
+                buy_token=token,
+                sell_amount=collateral_exchange_amount,
+            )
+        except Exception as e:
+            logger.warning(f"Could not get quote for {token=}, returning price 0. {e=}")
+            return 0
+
+        return collateral_exchange_amount / (float(quote.quote.buyAmount.root))
 
     @property
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
-        return f"{SEER_BASE_URL}/markets/{chain_id}/{self.id.hex()}"
+        return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
 
 
 class SeerToken(BaseModel):

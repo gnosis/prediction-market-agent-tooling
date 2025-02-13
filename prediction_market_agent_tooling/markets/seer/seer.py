@@ -39,6 +39,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiCont
 from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     NewMarketEvent,
+    SeerOutcomeEnum,
 )
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
@@ -71,9 +72,7 @@ class SeerAgentMarket(AgentMarket):
     creator: HexAddress
     collateral_token_contract_address_checksummed: ChecksumAddress
     condition_id: HexBytes
-    # No pools upon market creation
-    # volume: float | None = None
-    # outcome_token_pool = None
+    seer_outcomes: dict[SeerOutcomeEnum, int]
 
     def store_prediction(
         self,
@@ -108,9 +107,7 @@ class SeerAgentMarket(AgentMarket):
     ) -> TokenAmount:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
-        outcome = self.get_outcome_str_from_bool(direction)
-        outcome_idx = self.outcomes.index(outcome)
-        outcome_token = self.wrapped_tokens[outcome_idx]
+        outcome_token = self.get_wrapped_token_for_outcome(direction)
 
         bet_amount_in_wei = self._convert_bet_amount_into_wei(bet_amount=bet_amount)
 
@@ -122,18 +119,10 @@ class SeerAgentMarket(AgentMarket):
         sell_amount = wei_to_xdai(wei_type(quote.quote.buyAmount.root))
         return TokenAmount(amount=sell_amount, currency=bet_amount.currency)
 
-    def get_binary_outcomes_map(self) -> dict[bool, OutcomeStr]:
-        outcome_dict: dict[bool, OutcomeStr] = {}
-        for outcome in self.outcomes:
-            if outcome.lower() == "yes":
-                outcome_dict[True] = OutcomeStr(outcome)
-            elif outcome.lower() == "no":
-                outcome_dict[False] = OutcomeStr(outcome)
-        return outcome_dict
-
     def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
-        outcome_dict = self.get_binary_outcomes_map()
-        return outcome_dict[outcome]
+        outcome_translated = SeerOutcomeEnum.from_bool(outcome)
+        idx = self.seer_outcomes[outcome_translated]
+        return OutcomeStr(self.outcomes[idx])
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys) -> float:
@@ -150,14 +139,15 @@ class SeerAgentMarket(AgentMarket):
         """
 
         amounts = {}
-        outcomes_map = self.get_binary_outcomes_map()
-        for outcome in outcomes_map.values():
-            outcome_idx = self.outcomes.index(outcome)
-            wrapped_token = self.wrapped_tokens[outcome_idx]
+
+        for outcome in [True, False]:
+            wrapped_token = self.get_wrapped_token_for_outcome(outcome)
+
             outcome_token_balance = ContractERC20OnGnosisChain(
                 address=wrapped_token
             ).balanceOf(for_address=Web3.to_checksum_address(user_id), web3=web3)
-            amounts[outcome] = TokenAmount(
+            outcome_str = self.get_outcome_str_from_bool(outcome=outcome)
+            amounts[outcome_str] = TokenAmount(
                 amount=wei_to_xdai(outcome_token_balance), currency=self.currency
             )
 
@@ -199,6 +189,7 @@ class SeerAgentMarket(AgentMarket):
             resolution=model.get_resolution_enum(),
             volume=None,
             current_p_yes=model.current_p_yes,
+            seer_outcomes=model.outcome_as_enums,
         )
 
     @staticmethod

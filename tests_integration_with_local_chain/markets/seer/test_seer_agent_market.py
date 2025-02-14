@@ -28,7 +28,7 @@ MOCK_QUOTE = OrderQuoteResponse(
         validTo=1739474477,
         appData=AppDataHash(
             "0x0000000000000000000000000000000000000000000000000000000000000000"
-        ),
+        ),  # web3-private-key-ok
         feeAmount=TokenAmountCow("0.5"),
         kind=OrderKind.buy,
         partiallyFillable=False,

@@ -74,7 +74,6 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )

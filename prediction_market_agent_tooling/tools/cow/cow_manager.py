@@ -31,8 +31,6 @@ COW_ENV: Envs = "prod"
 class NoLiquidityAvailableOnCowException(Exception):
     """Custom exception for handling case where no liquidity available."""
 
-    pass
-
 
 class CowManager:
     def __init__(self) -> None:

@@ -175,8 +175,6 @@ class SeerMarket(BaseModel):
 
     @property
     def current_p_yes(self) -> Probability:
-        # ToDo - Write test
-        # build a dict [OutcomeStr(), price]
         price_data = {}
         for idx in range(len(self.outcomes)):
             wrapped_token = self.wrapped_tokens[idx]
@@ -201,7 +199,7 @@ class SeerMarket(BaseModel):
             logger.warning(f"Could not get quote for {token=}, returning price 0. {e=}")
             return 0
 
-        return collateral_exchange_amount / (float(quote.quote.buyAmount.root))
+        return collateral_exchange_amount / float(quote.quote.buyAmount.root)
 
     @property
     def url(self) -> str:

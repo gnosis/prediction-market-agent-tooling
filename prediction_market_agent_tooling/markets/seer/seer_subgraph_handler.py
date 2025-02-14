@@ -16,8 +16,6 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 
-INVALID_OUTCOME = "Invalid result"
-
 
 class SeerSubgraphHandler(BaseSubgraphHandler):
     """
@@ -68,9 +66,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     @staticmethod
     def filter_bicategorical_markets(markets: list[SeerMarket]) -> list[SeerMarket]:
         # We do an extra check for the invalid outcome for safety.
-        return [
-            m for m in markets if len(m.outcomes) == 3 and INVALID_OUTCOME in m.outcomes
-        ]
+        return [m for m in markets if len(m.outcomes) == 3]
 
     @staticmethod
     def filter_binary_markets(markets: list[SeerMarket]) -> list[SeerMarket]:
@@ -94,7 +90,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 where_stms["openingTs_gt"] = now
                 where_stms["hasAnswers"] = False
             case FilterBy.RESOLVED:
-                # We consider RESOLVED == CLOSED (on Seer)
+                # We consider RESOLVED == CLOSED (on Seer UI)
                 where_stms["payoutReported"] = True
             case FilterBy.NONE:
                 pass
@@ -104,7 +100,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if not include_conditional_markets:
             where_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
-        where_stms["outcomes_contains"] = [INVALID_OUTCOME]
         return where_stms
 
     def _build_sort_params(

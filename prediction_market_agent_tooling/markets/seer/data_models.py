@@ -73,6 +73,17 @@ class SeerOutcomeEnum(str, Enum):
 
         raise ValueError(f"Could not map {value=} to an outcome.")
 
+    def to_bool(self) -> bool:
+        """Convert a SeerOutcomeEnum to a boolean value."""
+        if self == self.YES:
+            return True
+        elif self == self.NO:
+            return False
+        elif self == self.INVALID:
+            raise ValueError("Cannot convert INVALID outcome to boolean.")
+        else:
+            raise ValueError(f"Unknown outcome: {self}")
+
 
 class SeerParentMarket(BaseModel):
     id: HexBytes
@@ -152,8 +163,10 @@ class SeerMarket(BaseModel):
             raise ValueError(
                 f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
             )
+
         outcome: str = self.outcomes[answer.as_int()]
-        return get_boolean_outcome(outcome)
+        outcome_enum = SeerOutcomeEnum.from_string(outcome)
+        return outcome_enum.to_bool()
 
     def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
         if self.boolean_outcome_from_answer(answer):

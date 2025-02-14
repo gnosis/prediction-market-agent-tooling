@@ -83,23 +83,32 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
-        where_stms: dict[str, t.Any] = {}
+        and_stms: dict[str, t.Any] = {}
 
         match filter_by:
             case FilterBy.OPEN:
-                where_stms["openingTs_gt"] = now
-                where_stms["hasAnswers"] = False
+                and_stms["openingTs_gt"] = now
+                and_stms["hasAnswers"] = False
             case FilterBy.RESOLVED:
                 # We consider RESOLVED == CLOSED (on Seer UI)
-                where_stms["payoutReported"] = True
+                and_stms["payoutReported"] = True
             case FilterBy.NONE:
                 pass
             case _:
                 raise ValueError(f"Unknown filter {filter_by}")
 
         if not include_conditional_markets:
-            where_stms["parentMarket"] = ADDRESS_ZERO.lower()
+            and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
+        # We are only interested in binary markets of type YES/NO/Invalid.
+        or_stms = {}
+        or_stms["or"] = [
+            {"outcomes_contains": ["YES"]},
+            {"outcomes_contains": ["Yes"]},
+            {"outcomes_contains": ["yes"]},
+        ]
+
+        where_stms: dict[str, t.Any] = {"and": [and_stms, or_stms]}
         return where_stms
 
     def _build_sort_params(

@@ -9,7 +9,6 @@ nav:
   - Agent Development:
       - Deployable Trader Agent: deployabletraderagent.md
       - Benchmarker: benchmarker.md
-      - Example Agent: exampleagent.md
       - Deploy with Safe: deploywithsafe.md
   - Reference:
       - Overview: api/index.md
@@ -27,6 +26,25 @@ theme:
   name: material
   features:
     - navigation.expand
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/gnosis/prediction-market-agent-tooling
+repo_name: prediction-market-agent-tooling
+
 
 plugins:
   - search

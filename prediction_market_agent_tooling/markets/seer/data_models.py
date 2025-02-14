@@ -48,22 +48,22 @@ class CreateCategoricalMarketsParams(BaseModel):
 
 
 class SeerOutcomeEnum(str, Enum):
-    POSITIVE = "positive"
-    NEGATIVE = "negative"
-    NEUTRAL = "neutral"
+    YES = "yes"
+    NO = "no"
+    INVALID = "invalid"
 
     @classmethod
     def from_bool(cls, value: bool) -> "SeerOutcomeEnum":
-        return cls.POSITIVE if value else cls.NEGATIVE
+        return cls.YES if value else cls.NO
 
     @classmethod
     def from_string(cls, value: str) -> "SeerOutcomeEnum":
         """Convert a string (case-insensitive) to an Outcome enum."""
         normalized = value.strip().lower()
         patterns = {
-            r"^yes$": cls.POSITIVE,
-            r"^no$": cls.NEGATIVE,
-            r"^(invalid|invalid result)$": cls.NEUTRAL,
+            r"^yes$": cls.YES,
+            r"^no$": cls.NO,
+            r"^(invalid|invalid result)$": cls.INVALID,
         }
 
         # Search through patterns and return the first match
@@ -108,7 +108,7 @@ class SeerMarket(BaseModel):
         # 2. Invalid payoutNumerator is 1.
 
         try:
-            self.outcome_as_enums[SeerOutcomeEnum.NEUTRAL]
+            self.outcome_as_enums[SeerOutcomeEnum.INVALID]
         except KeyError:
             raise ValueError(
                 f"Market {self.id.hex()} has no invalid outcome. {self.outcomes}"
@@ -183,7 +183,7 @@ class SeerMarket(BaseModel):
             )
             price_data[idx] = price
 
-        yes_idx = self.outcome_as_enums[SeerOutcomeEnum.POSITIVE]
+        yes_idx = self.outcome_as_enums[SeerOutcomeEnum.YES]
         price_yes = price_data[yes_idx] / sum(price_data.values())
         return Probability(price_yes)
 

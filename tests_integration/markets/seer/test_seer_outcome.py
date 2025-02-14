@@ -14,4 +14,4 @@ def test_seer_outcome(outcome: str) -> None:
 
 
 def test_seer_outcome_invalid() -> None:
-    assert SeerOutcomeEnum.from_string("Invalid result") == SeerOutcomeEnum.NEUTRAL
+    assert SeerOutcomeEnum.from_string("Invalid result") == SeerOutcomeEnum.INVALID

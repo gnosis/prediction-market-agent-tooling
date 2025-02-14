@@ -80,7 +80,7 @@ class SeerAgentMarket(AgentMarket):
         keys: APIKeys,
         agent_name: str,
     ) -> None:
-        pass
+        """On Seer, we have to store predictions along with trades, see `store_trades`."""
 
     def store_trades(
         self,

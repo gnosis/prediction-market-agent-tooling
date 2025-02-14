@@ -18,7 +18,6 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
 from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
@@ -148,8 +147,9 @@ class SeerMarket(BaseModel):
 
         max_idx = self.payout_numerators.index(1)
 
-        bool_outcome = get_boolean_outcome(self.outcomes[max_idx])
-        if bool_outcome:
+        outcome: str = self.outcomes[max_idx]
+        outcome_enum = SeerOutcomeEnum.from_string(outcome)
+        if outcome_enum.to_bool():
             return Resolution.YES
         return Resolution.NO
 

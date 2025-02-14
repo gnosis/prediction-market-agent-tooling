@@ -48,9 +48,9 @@ def construct_presagio_url(market_id: HexAddress) -> str:
 
 
 def get_boolean_outcome(outcome_str: str) -> bool:
-    if outcome_str.lower() == OMEN_TRUE_OUTCOME.lower():
+    if outcome_str == OMEN_TRUE_OUTCOME:
         return True
-    if outcome_str.lower() == OMEN_FALSE_OUTCOME.lower():
+    if outcome_str == OMEN_FALSE_OUTCOME:
         return False
     raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
 

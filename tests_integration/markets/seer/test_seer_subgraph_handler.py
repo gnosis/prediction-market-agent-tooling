@@ -4,7 +4,7 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 
-CONDITIONAL_MARKET_ID = HexBytes("0xe12f48ecdd6e64d95d1d8f1d5d7aa37e14f2888b")
+CONDITIONAL_MARKET_ID = HexBytes("0xfe2cc518b4d8c1d5db682db553c3de750d901ce0")
 BINARY_MARKET_ID = HexBytes("0x7d72aa56ecdda207005fd7a02dbfd33f92d0def7")
 BINARY_CONDITIONAL_MARKET_ID = HexBytes("0xbc82402814f7db8736980c0debb01df6aad8846e")
 

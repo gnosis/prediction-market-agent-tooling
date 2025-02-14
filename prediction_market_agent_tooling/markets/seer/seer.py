@@ -73,6 +73,9 @@ class SeerAgentMarket(AgentMarket):
     collateral_token_contract_address_checksummed: ChecksumAddress
     condition_id: HexBytes
     seer_outcomes: dict[SeerOutcomeEnum, int]
+    description: str | None = (
+        None  # Seer markets don't have a description, so just default to None.
+    )
 
     def store_prediction(
         self,
@@ -174,7 +177,6 @@ class SeerAgentMarket(AgentMarket):
     def from_data_model(model: SeerMarket) -> "SeerAgentMarket":
         return SeerAgentMarket(
             id=model.id.hex(),
-            description=None,
             question=model.title,
             creator=model.creator,
             created_time=model.created_time,

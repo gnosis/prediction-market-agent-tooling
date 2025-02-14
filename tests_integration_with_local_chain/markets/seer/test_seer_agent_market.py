@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
+MOCK_APP_DATA = "0x0000000000000000000000000000000000000000000000000000000000000000"  # web3-private-key-ok
 MOCK_QUOTE = OrderQuoteResponse(
     quote=OrderParameters(
         buyAmount=TokenAmountCow(str(xdai_to_wei(xdai_type(2)))),  # 0.5 odds
@@ -26,9 +27,7 @@ MOCK_QUOTE = OrderQuoteResponse(
         buyToken=Address("0xdef"),
         sellAmount=TokenAmountCow("0.5"),
         validTo=1739474477,
-        appData=AppDataHash(
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        ),  # web3-private-key-ok
+        appData=AppDataHash(MOCK_APP_DATA),
         feeAmount=TokenAmountCow("0.5"),
         kind=OrderKind.buy,
         partiallyFillable=False,

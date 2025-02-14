@@ -183,6 +183,12 @@ class SeerMarket(BaseModel):
             )
             price_data[idx] = price
 
+        if sum(price_data.values()) == 0:
+            logger.warning(
+                f"Could not get p_yes for market {self.id.hex()}, all price quotes are 0."
+            )
+            return Probability(0)
+
         yes_idx = self.outcome_as_enums[SeerOutcomeEnum.YES]
         price_yes = price_data[yes_idx] / sum(price_data.values())
         return Probability(price_yes)

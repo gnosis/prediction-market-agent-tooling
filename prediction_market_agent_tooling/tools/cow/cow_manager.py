@@ -1,4 +1,5 @@
 import asyncio
+from typing import NoReturn
 
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.config import SupportedChainId
@@ -39,6 +40,13 @@ class CowManager:
             OrderBookAPIConfigFactory.get_config(COW_ENV, SupportedChainId.GNOSIS_CHAIN)
         )
         self.precision = 18  # number of token decimals from ERC1155 wrapped tokens.
+
+    @staticmethod
+    def _log_and_raise_exception(e: Exception) -> NoReturn:
+        # mypy magic required for try-except constructs,
+        # see https://github.com/python/mypy/issues/8964#issuecomment-640295130.
+        logger.debug(f"Found Cow response error: {e}")
+        raise e
 
     @retry(
         stop=stop_after_attempt(2),
@@ -88,9 +96,9 @@ class CowManager:
         except UnexpectedResponseError as e1:
             if "NoLiquidity" in e1.message:
                 raise NoLiquidityAvailableOnCowException(e1.message)
+            return self._log_and_raise_exception(e1)
         except Exception as e:
-            logger.debug(f"Found response error: {e}")
-            raise e
+            return self._log_and_raise_exception(e)
 
     @staticmethod
     def swap(

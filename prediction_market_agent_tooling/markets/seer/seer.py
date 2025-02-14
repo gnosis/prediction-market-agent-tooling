@@ -254,12 +254,6 @@ class SeerAgentMarket(AgentMarket):
                 f"Market {self.id} is not open for trading. Cannot place bet."
             )
 
-        # We add an additional check below since we want to be certain that liquidity exists for the outcome token
-        # being traded.
-        if not self.has_liquidity_for_outcome(outcome):
-            raise ValueError(
-                f"Market {self.id} does not have liquidity for this {outcome=}"
-            )
         if amount.currency != self.currency:
             raise ValueError(f"Seer bets are made in xDai. Got {amount.currency}.")
 

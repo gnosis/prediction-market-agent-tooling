@@ -86,10 +86,11 @@ class CowManager:
             )
 
         except UnexpectedResponseError as e1:
-            logger.error(f"Unexpected response error: {e1.message}")
             if "NoLiquidity" in e1.message:
                 raise NoLiquidityAvailableOnCowException(e1.message)
-            raise e1
+        except Exception as e:
+            logger.debug(f"Found response error: {e}")
+            raise e
 
     @staticmethod
     def swap(

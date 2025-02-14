@@ -13,7 +13,6 @@ from prediction_market_agent_tooling.markets.data_models import (
     Trade,
     TradeType,
 )
-from prediction_market_agent_tooling.markets.omen.data_models import get_boolean_outcome
 from prediction_market_agent_tooling.markets.omen.omen import (
     get_buy_outcome_token_amount,
 )
@@ -94,11 +93,8 @@ class BettingStrategy(ABC):
         sell price is higher.
         """
         trades = []
-        for outcome in [
-            market.get_outcome_str_from_bool(True),
-            market.get_outcome_str_from_bool(False),
-        ]:
-            outcome_bool = get_boolean_outcome(outcome)
+        for outcome_bool in [True, False]:
+            outcome = market.get_outcome_str_from_bool(outcome_bool)
             prev_amount: TokenAmount = (
                 existing_position.amounts[outcome]
                 if existing_position and outcome in existing_position.amounts

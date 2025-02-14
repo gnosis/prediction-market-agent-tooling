@@ -525,6 +525,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         MarketType.OMEN,
         MarketType.MANIFOLD,
         MarketType.POLYMARKET,
+        MarketType.SEER,
     ]
 
     def __init__(

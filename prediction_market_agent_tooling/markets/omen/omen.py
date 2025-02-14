@@ -4,7 +4,6 @@ from datetime import timedelta
 
 import tenacity
 from web3 import Web3
-from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -28,6 +27,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     ProcessedTradedMarket,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.blockchain_utils import (
+    get_total_balance,
+    store_trades,
+)
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     BetAmount,
@@ -42,9 +45,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     PRESAGIO_BASE_URL,
     Condition,
     ConditionPreparationEvent,
-    ContractPrediction,
     CreatedMarket,
-    IPFSAgentResult,
     OmenBet,
     OmenMarket,
     OmenUserPosition,
@@ -55,7 +56,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
     REALITY_DEFAULT_FINALIZATION_TIMEOUT,
     Arbitrator,
-    OmenAgentResultMappingContract,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -74,7 +74,6 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
@@ -82,7 +81,6 @@ from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
     auto_withdraw_collateral_token,
 )
 from prediction_market_agent_tooling.tools.utils import (
-    BPS_CONSTANT,
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
     check_not_none,
@@ -90,7 +88,6 @@ from prediction_market_agent_tooling.tools.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import (
     add_fraction,
     get_receipt_block_timestamp,
-    ipfscidv0_to_byte32,
     remove_fraction,
     wei_to_xdai,
     xdai_to_wei,
@@ -206,7 +203,7 @@ class OmenAgentMarket(AgentMarket):
         self,
         outcome: bool,
         amount: BetAmount,
-        omen_auto_deposit: bool = True,
+        auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
     ) -> str:
@@ -222,7 +219,7 @@ class OmenAgentMarket(AgentMarket):
             amount=amount_xdai,
             market=self,
             binary_outcome=outcome,
-            auto_deposit=omen_auto_deposit,
+            auto_deposit=auto_deposit,
             web3=web3,
         )
 
@@ -434,38 +431,11 @@ class OmenAgentMarket(AgentMarket):
         keys: APIKeys,
         agent_name: str,
     ) -> None:
-        if traded_market is None:
-            logger.warning(f"No prediction for market {self.id}, not storing anything.")
-            return
-
-        reasoning = (
-            traded_market.answer.reasoning if traded_market.answer.reasoning else ""
-        )
-
-        ipfs_hash_decoded = HexBytes(HASH_ZERO)
-        if keys.enable_ipfs_upload:
-            logger.info("Storing prediction on IPFS.")
-            ipfs_hash = IPFSHandler(keys).store_agent_result(
-                IPFSAgentResult(reasoning=reasoning, agent_name=agent_name)
-            )
-            ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
-
-        tx_hashes = [
-            HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
-        ]
-        prediction = ContractPrediction(
-            publisher=keys.bet_from_address,
-            ipfs_hash=ipfs_hash_decoded,
-            tx_hashes=tx_hashes,
-            estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
-        )
-        tx_receipt = OmenAgentResultMappingContract().add_prediction(
-            api_keys=keys,
-            market_address=Web3.to_checksum_address(self.id),
-            prediction=prediction,
-        )
-        logger.info(
-            f"Added prediction to market {self.id}. - receipt {tx_receipt['transactionHash'].hex()}."
+        return store_trades(
+            market_id=self.id,
+            traded_market=traded_market,
+            keys=keys,
+            agent_name=agent_name,
         )
 
     @staticmethod
@@ -516,8 +486,7 @@ class OmenAgentMarket(AgentMarket):
             cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
         )
 
-    @staticmethod
-    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
+    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
         return (
             OutcomeStr(OMEN_TRUE_OUTCOME) if outcome else OutcomeStr(OMEN_FALSE_OUTCOME)
         )
@@ -1300,25 +1269,6 @@ def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability
             )
 
     return history
-
-
-def get_total_balance(
-    address: ChecksumAddress,
-    web3: Web3 | None = None,
-    sum_xdai: bool = True,
-    sum_wxdai: bool = True,
-) -> xDai:
-    """
-    Checks if the total balance of xDai and wxDai in the wallet is above the minimum required balance.
-    """
-    current_balances = get_balances(address, web3)
-    # xDai and wxDai have equal value and can be exchanged for almost no cost, so we can sum them up.
-    total_balance = 0.0
-    if sum_xdai:
-        total_balance += current_balances.xdai
-    if sum_wxdai:
-        total_balance += current_balances.wxdai
-    return xdai_type(total_balance)
 
 
 def withdraw_wxdai_to_xdai_to_keep_balance(

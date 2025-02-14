@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     HexStr,
+    OutcomeStr,
     Probability,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -23,6 +24,8 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     Condition,
@@ -50,6 +53,10 @@ def test_answer_decision(
     assert direction == expected_direction
 
 
+def mock_outcome_str(x: bool) -> OutcomeStr:
+    return OutcomeStr(OMEN_TRUE_OUTCOME) if x else OutcomeStr(OMEN_FALSE_OUTCOME)
+
+
 def test_rebalance() -> None:
     tiny_amount = TokenAmount(amount=0.0001, currency=Currency.xDai)
     mock_amount = TokenAmount(amount=5, currency=Currency.xDai)
@@ -57,8 +64,8 @@ def test_rebalance() -> None:
     mock_existing_position = Position(
         market_id="0x123",
         amounts={
-            OmenAgentMarket.get_outcome_str_from_bool(True): mock_amount,
-            OmenAgentMarket.get_outcome_str_from_bool(False): mock_amount,
+            OutcomeStr(OMEN_TRUE_OUTCOME): mock_amount,
+            OutcomeStr(OMEN_FALSE_OUTCOME): mock_amount,
         },
     )
     bet_amount = tiny_amount.amount + mock_existing_position.total_amount.amount
@@ -69,6 +76,7 @@ def test_rebalance() -> None:
     mock_market.get_liquidity.return_value = liquidity_amount
     mock_market.get_tiny_bet_amount.return_value = tiny_amount
     mock_market.get_buy_token_amount.return_value = buy_token_amount
+    mock_market.get_outcome_str_from_bool.side_effect = mock_outcome_str
     mock_market.current_p_yes = 0.5
     mock_market.currency = Currency.xDai
     mock_market.id = "0x123"

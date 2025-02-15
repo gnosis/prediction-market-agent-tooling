@@ -7,21 +7,19 @@ from prediction_market_agent_tooling.gtypes import PrivateKey
 
 
 def test_gcp_secrets_empty() -> None:
-    with patch.dict("os.environ", {}, clear=True):
+    with patch.dict("os.environ", {}):
         api_keys = APIKeys()
         assert api_keys
 
 
 def test_gcp_secrets_from_env_plain() -> None:
-    with patch.dict("os.environ", {"BET_FROM_PRIVATE_KEY": "secret"}, clear=True):
+    with patch.dict("os.environ", {"BET_FROM_PRIVATE_KEY": "secret"}):
         api_keys = APIKeys()
         assert api_keys.bet_from_private_key.get_secret_value() == "secret"
 
 
 def test_gcp_secrets_from_env_gcp() -> None:
-    with patch.dict(
-        "os.environ", {"BET_FROM_PRIVATE_KEY": "gcps:test:key"}, clear=True
-    ), patch(
+    with patch.dict("os.environ", {"BET_FROM_PRIVATE_KEY": "gcps:test:key"}), patch(
         "prediction_market_agent_tooling.config.gcp_get_secret_value",
         return_value='{"key": "test_secret"}',
     ):

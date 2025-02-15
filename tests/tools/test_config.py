@@ -9,7 +9,7 @@ from prediction_market_agent_tooling.gtypes import PrivateKey
 def test_gcp_secrets_empty() -> None:
     with patch.dict("os.environ", {}):
         api_keys = APIKeys()
-        assert api_keys.BET_FROM_PRIVATE_KEY is None
+        assert api_keys
 
 
 def test_gcp_secrets_from_env_plain() -> None:

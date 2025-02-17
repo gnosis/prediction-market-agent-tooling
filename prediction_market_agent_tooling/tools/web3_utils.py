@@ -294,7 +294,6 @@ def sign_send_and_get_receipt_tx(
     check_tx_receipt(receipt_tx)
     return receipt_tx
 
-
 def send_xdai_to(
     web3: Web3,
     from_private_key: PrivateKey,
@@ -307,24 +306,25 @@ def send_xdai_to(
     from_address = private_key_to_public_key(from_private_key)
 
     tx_params_new: TxParams = {"value": value, "to": to_address}
+
     if data_text is not None:
         tx_params_new["data"] = (
             Web3.to_bytes(text=data_text)
             if not isinstance(data_text, bytes)
             else data_text
         )
+
     if tx_params:
         tx_params_new.update(tx_params)
-    tx_params_new = _prepare_tx_params(web3, from_address, tx_params=tx_params_new)
 
-    # We need gas and gasPrice here (and not elsewhere) because we are not calling
-    # contract.functions.myFunction().build_transaction, which autofills some params
-    # with defaults, incl. gas and gasPrice.
-    gas = web3.eth.estimate_gas(tx_params_new)
-    tx_params_new["gas"] = int(
-        gas * 1.5
-    )  # We conservatively overestimate gas here, knowing it will be returned if unused
-    tx_params_new["gasPrice"] = web3.eth.gas_price
+    latest_nonce = web3.eth.get_transaction_count(from_address, "pending")
+    tx_params_new["nonce"] = latest_nonce
+
+    current_gas_price = web3.eth.gas_price
+    tx_params_new["gasPrice"] = int(current_gas_price * 1.2)  # Increase gas by 20%
+
+    gas_estimate = web3.eth.estimate_gas(tx_params_new)
+    tx_params_new["gas"] = int(gas_estimate * 1.5)
 
     receipt_tx = sign_send_and_get_receipt_tx(
         web3, tx_params_new, from_private_key, timeout

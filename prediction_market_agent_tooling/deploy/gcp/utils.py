@@ -8,7 +8,6 @@ from google.cloud.functions_v2.services.function_service.client import (
 from google.cloud.functions_v2.types.functions import Function
 from google.cloud.secretmanager import SecretManagerServiceClient
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.gcp.kubernetes_models import (
     KubernetesCronJobsModel,
 )
@@ -203,16 +202,3 @@ def gcp_get_secret_value(name: str, version: str = "latest") -> str:
     return client.access_secret_version(
         name=f"projects/{get_gcloud_project_id()}/secrets/{name}/versions/{version}"
     ).payload.data.decode("utf-8")
-
-
-def gcp_resolve_api_keys_secrets(api_keys: APIKeys) -> APIKeys:
-    return APIKeys.model_validate(
-        api_keys.model_dump_public()
-        | {
-            k: gcp_get_secret_value(
-                name=v.rsplit(":", 1)[0],
-                version=v.rsplit(":", 1)[1],
-            )
-            for k, v in api_keys.model_dump_secrets().items()
-        }
-    )

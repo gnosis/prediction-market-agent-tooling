@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.58.2"
+version = "0.58.3"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -58,7 +58,7 @@ httpx = ">=0.25.2,<1.0.0"
 cowdao-cowpy = "^1.0.0rc1"
 eth-keys = "^0.6.1"
 proto-plus = "^1.0.0"
-protobuf = "^4.0.0"
+protobuf = "^5.0.0"
 
 [tool.poetry.extras]
 openai = ["openai"]

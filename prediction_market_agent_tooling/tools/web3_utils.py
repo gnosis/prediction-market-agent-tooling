@@ -351,6 +351,13 @@ def byte32_to_ipfscidv0(hex: HexBytes) -> IPFSCIDVersion0:
     return IPFSCIDVersion0(base58.b58encode(completed_binary_str).decode("utf-8"))
 
 
+@tenacity.retry(
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
+    stop=tenacity.stop_after_attempt(5),
+    after=lambda x: logger.debug(
+        f"get_receipt_block_timestamp failed, {x.attempt_number=}."
+    ),
+)
 def get_receipt_block_timestamp(receipt_tx: TxReceipt, web3: Web3) -> int:
     block_number = receipt_tx["blockNumber"]
     block = web3.eth.get_block(block_number)

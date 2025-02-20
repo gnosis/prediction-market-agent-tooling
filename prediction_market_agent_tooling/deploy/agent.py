@@ -64,7 +64,7 @@ from prediction_market_agent_tooling.tools.is_predictable import is_predictable_
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
-MAX_AVAILABLE_MARKETS = 20
+MAX_AVAILABLE_MARKETS = 1000
 
 
 def initialize_langfuse(enable_langfuse: bool) -> None:
@@ -430,6 +430,7 @@ class DeployablePredictionAgent(DeployableAgent):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
             answer = None
         else:
+            logger.info(f"Answering market '{market.question}'.")
             answer = self.answer_binary_market(market)
 
         processed_market = (

@@ -1,5 +1,4 @@
 import asyncio
-from typing import NoReturn
 
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.config import SupportedChainId

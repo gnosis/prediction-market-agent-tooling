@@ -39,13 +39,6 @@ class CowManager:
         )
         self.precision = 18  # number of token decimals from ERC1155 wrapped tokens.
 
-    @staticmethod
-    def _log_and_raise_exception(e: Exception) -> NoReturn:
-        # mypy magic required for try-except constructs,
-        # see https://github.com/python/mypy/issues/8964#issuecomment-640295130.
-        logger.debug(f"Found Cow response error: {e}")
-        raise e
-
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_fixed(2),
@@ -94,9 +87,11 @@ class CowManager:
         except UnexpectedResponseError as e1:
             if "NoLiquidity" in e1.message:
                 raise NoLiquidityAvailableOnCowException(e1.message)
-            return self._log_and_raise_exception(e1)
+            logger.warning(f"Found unexpected Cow response error: {e1}")
+            raise
         except Exception as e:
-            return self._log_and_raise_exception(e)
+            logger.warning(f"Found unhandled Cow response error: {e}")
+            raise
 
     @staticmethod
     def swap(

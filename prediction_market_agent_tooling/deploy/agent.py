@@ -25,10 +25,7 @@ from prediction_market_agent_tooling.deploy.gcp.deploy import (
     run_deployed_gcp_function,
     schedule_deployed_gcp_function,
 )
-from prediction_market_agent_tooling.deploy.gcp.utils import (
-    gcp_function_is_active,
-    gcp_resolve_api_keys_secrets,
-)
+from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
@@ -228,7 +225,7 @@ def {entrypoint_function_name}(request) -> str:
         monitor_agent = MARKET_TYPE_TO_DEPLOYED_AGENT[market_type].from_api_keys(
             name=gcp_fname,
             start_time=start_time or utcnow(),
-            api_keys=gcp_resolve_api_keys_secrets(api_keys),
+            api_keys=api_keys,
         )
         env_vars |= monitor_agent.model_dump_prefixed()
 

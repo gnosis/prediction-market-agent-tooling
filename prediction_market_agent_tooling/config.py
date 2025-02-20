@@ -1,7 +1,9 @@
+import json
 import typing as t
+from copy import deepcopy
 
 from eth_account.signers.local import LocalAccount
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,6 +11,7 @@ from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Account
 
+from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
 from prediction_market_agent_tooling.gtypes import (
     ChainID,
     ChecksumAddress,
@@ -59,6 +62,34 @@ class APIKeys(BaseSettings):
 
     ENABLE_CACHE: bool = False
     CACHE_DIR: str = "./.cache"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _model_validator(cls, data: t.Any) -> t.Any:
+        data = deepcopy(data)
+        data = cls._replace_gcp_secrets(data)
+        return data
+
+    @staticmethod
+    def _replace_gcp_secrets(data: t.Any) -> t.Any:
+        if isinstance(data, dict):
+            for k, v in data.items():
+                # Check if the value is meant to be fetched from GCP Secret Manager, if so, replace it with it.
+                if isinstance(v, (str, SecretStr)):
+                    secret_value = (
+                        v.get_secret_value() if isinstance(v, SecretStr) else v
+                    )
+                    if secret_value.startswith("gcps:"):
+                        # We assume that secrets are dictionaries and the value is a key in the dictionary,
+                        # example usage: `BET_FROM_PRIVATE_KEY=gcps:my-agent:private_key`
+                        _, secret_name, key_name = secret_value.split(":")
+                        secret_data = json.loads(gcp_get_secret_value(secret_name))[
+                            key_name
+                        ]
+                        data[k] = secret_data
+        else:
+            raise ValueError("Data must be a dictionary.")
+        return data
 
     @property
     def manifold_user_id(self) -> str:

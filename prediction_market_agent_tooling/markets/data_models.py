@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 class Currency(str, Enum):
     xDai = "xDai"
+    sDai = "sDai"
     Mana = "Mana"
     USDC = "USDC"
 

@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
+from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     should_not_happen,
@@ -41,6 +42,7 @@ class MarketType(str, Enum):
     MANIFOLD = "manifold"
     POLYMARKET = "polymarket"
     METACULUS = "metaculus"
+    SEER = "seer"
 
     @property
     def market_class(self) -> type[AgentMarket]:
@@ -56,7 +58,7 @@ class MarketType(str, Enum):
 
     @property
     def is_blockchain_market(self) -> bool:
-        return self in [MarketType.OMEN, MarketType.POLYMARKET]
+        return self in [MarketType.OMEN, MarketType.POLYMARKET, MarketType.SEER]
 
 
 MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
@@ -64,6 +66,7 @@ MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.OMEN: OmenAgentMarket,
     MarketType.POLYMARKET: PolymarketAgentMarket,
     MarketType.METACULUS: MetaculusAgentMarket,
+    MarketType.SEER: SeerAgentMarket,
 }
 
 JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {

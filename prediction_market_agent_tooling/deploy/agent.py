@@ -430,6 +430,7 @@ class DeployablePredictionAgent(DeployableAgent):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
             answer = None
         else:
+            logger.info(f"Answering market '{market.question}'.")
             answer = self.answer_binary_market(market)
 
         processed_market = (

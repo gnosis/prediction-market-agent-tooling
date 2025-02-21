@@ -361,17 +361,23 @@ class DeployablePredictionAgent(DeployableAgent):
         if self.have_bet_on_market_since(
             market, since=self.same_market_trade_interval.get(market=market)
         ):
+            logger.info(
+                f"Market already bet on within {self.same_market_trade_interval}."
+            )
             return False
 
         # Manifold allows to bet only on markets with probability between 1 and 99.
         if market_type == MarketType.MANIFOLD and not (1 < market.current_p_yes < 99):
+            logger.info("Manifold's market probability not in the range 1-99.")
             return False
 
         # Do as a last check, as it uses paid OpenAI API.
         if not is_predictable_binary(market.question):
+            logger.info("Market question is not predictable.")
             return False
 
         if not self.allow_invalid_questions and is_invalid(market.question):
+            logger.info("Market question is invalid.")
             return False
 
         return True

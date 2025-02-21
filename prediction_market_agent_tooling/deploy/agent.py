@@ -487,7 +487,8 @@ class DeployablePredictionAgent(DeployableAgent):
         )
         processed = 0
 
-        for market in available_markets:
+        for market_idx, market in enumerate(available_markets):
+            logger.info(f"Going to process market {market_idx+1} / {len(available_markets)}.")
             self.before_process_market(market_type, market)
             processed_market = self.process_market(market_type, market)
             self.after_process_market(market_type, market, processed_market)
@@ -498,7 +499,7 @@ class DeployablePredictionAgent(DeployableAgent):
             if processed == self.bet_on_n_markets_per_run:
                 break
 
-        logger.info("All markets processed.")
+        logger.info(f"All markets processed. Successfully processed {processed}/{len(available_markets)}.")
 
     def after_process_markets(self, market_type: MarketType) -> None:
         """

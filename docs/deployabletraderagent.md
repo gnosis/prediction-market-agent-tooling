@@ -1,5 +1,6 @@
 # DeployableTraderAgent Class
 
+![Image](./deploytrader.png)
 
 The `DeployableTraderAgent` class provides a standardized framework for creating trading agents that interact with prediction markets. It extends the `DeployablePredictionAgent`, adding functionality for placing trades based on market predictions. This allows developers to subclass it to create customized trading strategies.
 

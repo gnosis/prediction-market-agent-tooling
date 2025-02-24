@@ -2,6 +2,7 @@ import asyncio
 from datetime import timedelta
 
 import httpx
+import tenacity
 from cowdao_cowpy import swap_tokens
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
@@ -34,6 +35,11 @@ def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
     return OrderBookApi(OrderBookAPIConfigFactory.get_config(env, chain_id))
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_buy_token_amount failed, {x.attempt_number=}."),
+)
 def get_buy_token_amount(
     amount_wei: Wei,
     sell_token: ChecksumAddress,

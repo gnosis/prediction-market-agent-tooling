@@ -106,6 +106,9 @@ def test_contract_implements_function(
     )
 
 
+@pytest.mark.skip(
+    reason="See https://github.com/gnosis/prediction-market-agent-tooling/issues/625"
+)
 def test_wont_retry(local_web3: Web3, accounts: list[TestAccount]) -> None:
     value = xdai_to_wei(xDai(10))
     from_account = accounts[0]

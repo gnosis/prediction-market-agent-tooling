@@ -8,6 +8,7 @@ from prediction_market_agent_tooling.tools.contract import (
 # This is the token where agents will hold their funds,
 # except for a small portion that will be kept in the native token of the network to pay for the fees.
 # If changed, then keep in mind that we assume this token is equal to 1 USD.
+# Also if changed, `withdraw_wxdai_to_xdai_to_keep_balance` will require update.
 KEEPING_ERC20_TOKEN = ContractDepositableWrapperERC20OnGnosisChain(
     address=WRAPPED_XDAI_CONTRACT_ADDRESS
 )

@@ -80,6 +80,7 @@ from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
 from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
     auto_withdraw_collateral_token,
 )
+from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
@@ -190,11 +191,10 @@ class OmenAgentMarket(AgentMarket):
             for position_outcome, token_amount in prev_position.amounts.items():
                 position_outcome_bool = get_boolean_outcome(position_outcome)
                 if position_outcome_bool != bet_outcome:
-                    # We keep it as collateral since we want to place a bet immediately after this function.
                     self.sell_tokens(
                         outcome=position_outcome_bool,
                         amount=token_amount,
-                        auto_withdraw=False,
+                        auto_withdraw=True,
                         web3=web3,
                         api_keys=api_keys,
                     )
@@ -259,7 +259,7 @@ class OmenAgentMarket(AgentMarket):
         self,
         outcome: bool,
         amount: TokenAmount,
-        auto_withdraw: bool = False,
+        auto_withdraw: bool = True,
         api_keys: APIKeys | None = None,
         web3: Web3 | None = None,
     ) -> str:
@@ -408,8 +408,8 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> xDai:
-        return get_total_balance(
-            address=api_keys.bet_from_address, web3=web3, sum_xdai=True, sum_wxdai=True
+        return wei_to_xdai(
+            KEEPING_ERC20_TOKEN.balanceOf(api_keys.bet_from_address, web3=web3)
         )
 
     @staticmethod
@@ -1060,6 +1060,7 @@ def omen_fund_market_tx(
 def omen_redeem_full_position_tx(
     api_keys: APIKeys,
     market: OmenAgentMarket,
+    auto_withdraw: bool = True,
     web3: Web3 | None = None,
 ) -> None:
     """
@@ -1071,6 +1072,7 @@ def omen_redeem_full_position_tx(
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
+    collateral_token_contract = market_contract.get_collateral_token_contract(web3)
 
     # Verify, that markets uses conditional tokens that we expect.
     if market_contract.conditionalTokens() != conditional_token_contract.address:
@@ -1094,6 +1096,7 @@ def omen_redeem_full_position_tx(
         logger.debug("Market not yet resolved, not possible to claim")
         return
 
+    original_balance = collateral_token_contract.balanceOf(from_address, web3=web3)
     conditional_token_contract.redeemPositions(
         api_keys=api_keys,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
@@ -1101,6 +1104,20 @@ def omen_redeem_full_position_tx(
         index_sets=market.condition.index_sets,
         web3=web3,
     )
+    new_balance = collateral_token_contract.balanceOf(from_address, web3=web3)
+    balance_diff = wei_type(new_balance - original_balance)
+
+    logger.info(
+        f"Redeemed {wei_to_xdai(balance_diff)} {collateral_token_contract.symbol_cached(web3=web3)} from market {market.question=} ({market.url})."
+    )
+
+    if auto_withdraw:
+        auto_withdraw_collateral_token(
+            collateral_token_contract=collateral_token_contract,
+            amount_wei=balance_diff,
+            api_keys=api_keys,
+            web3=web3,
+        )
 
 
 def get_conditional_tokens_balance_for_market(
@@ -1139,13 +1156,14 @@ def omen_remove_fund_market_tx(
     market: OmenAgentMarket,
     shares: Wei | None,
     web3: Web3 | None = None,
+    auto_withdraw: bool = True,
 ) -> None:
     """
     Removes funding from a given OmenMarket (moving the funds from the OmenMarket to the
     ConditionalTokens contract), and finally calls the `mergePositions` method which transfers collateralToken from the ConditionalTokens contract to the address corresponding to `from_private_key`.
 
     Warning: Liquidity removal works on the principle of getting market's shares, not the collateral token itself.
-    After we remove funding, using the `mergePositions` we get `min(shares per index)` of wxDai back, but the remaining shares can be converted back only after the market is resolved.
+    After we remove funding, using the `mergePositions` we get `min(shares per index)` of collateral token back, but the remaining shares can be converted back only after the market is resolved.
     That can be done using the `redeem_from_all_user_positions` function below.
     """
     from_address = api_keys.bet_from_address
@@ -1189,16 +1207,26 @@ def omen_remove_fund_market_tx(
     )
 
     new_balance = market_collateral_token_contract.balanceOf(from_address, web3=web3)
+    balance_diff = wei_type(new_balance - original_balance)
 
     logger.debug(f"Result from merge positions {result}")
     logger.info(
-        f"Withdrawn {new_balance - original_balance} {market_collateral_token_contract.symbol_cached(web3=web3)} from liquidity at {market.url=}."
+        f"Withdrawn {wei_to_xdai(balance_diff)} {market_collateral_token_contract.symbol_cached(web3=web3)} from liquidity at {market.url=}."
     )
+
+    if auto_withdraw:
+        auto_withdraw_collateral_token(
+            collateral_token_contract=market_collateral_token_contract,
+            amount_wei=balance_diff,
+            api_keys=api_keys,
+            web3=web3,
+        )
 
 
 def redeem_from_all_user_positions(
     api_keys: APIKeys,
     web3: Web3 | None = None,
+    auto_withdraw: bool = True,
 ) -> None:
     """
     Redeems from all user positions where the user didn't redeem yet.
@@ -1224,8 +1252,11 @@ def redeem_from_all_user_positions(
         logger.info(
             f"[{index + 1} / {len(user_positions)}] Processing redeem from {user_position.id=}."
         )
+        collateral_token_contract = (
+            user_position.position.get_collateral_token_contract(web3=web3)
+        )
 
-        original_balances = get_balances(public_key, web3)
+        original_balance = collateral_token_contract.balanceOf(public_key, web3=web3)
         conditional_token_contract.redeemPositions(
             api_keys=api_keys,
             collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
@@ -1233,11 +1264,20 @@ def redeem_from_all_user_positions(
             index_sets=user_position.position.indexSets,
             web3=web3,
         )
-        new_balances = get_balances(public_key, web3)
+        new_balance = collateral_token_contract.balanceOf(public_key, web3=web3)
+        balance_diff = wei_type(new_balance - original_balance)
 
         logger.info(
-            f"Redeemed {new_balances.wxdai - original_balances.wxdai} wxDai from position {user_position.id=}."
+            f"Redeemed {wei_to_xdai(balance_diff)} {collateral_token_contract.symbol_cached(web3=web3)} from position {user_position.id=}."
         )
+
+        if auto_withdraw:
+            auto_withdraw_collateral_token(
+                collateral_token_contract=collateral_token_contract,
+                amount_wei=balance_diff,
+                api_keys=api_keys,
+                web3=web3,
+            )
 
 
 def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability]:

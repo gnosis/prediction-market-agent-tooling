@@ -23,7 +23,7 @@ def main(
     min_bond_xdai: int = typer.Option(0.01),
     language: str = typer.Option("en_US"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
-    auto_deposit: bool = typer.Option(False),
+    auto_deposit: bool = typer.Option(True),
 ) -> None:
     """
     Creates a market on Seer.

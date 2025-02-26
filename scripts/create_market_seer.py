@@ -24,11 +24,6 @@ def main(
     language: str = typer.Option("en_US"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
     auto_deposit: bool = typer.Option(True),
-    
-    """
-    Parameters:
-        auto_deposit (bool, optional): Whether to automatically deposit funds. Defaults to True.
-    """
 ) -> None:
     """
     Creates a market on Seer.
@@ -43,7 +38,7 @@ def main(
         min_bond_xdai (int, optional): The minimum bond in xDai. Defaults to 0.01 xDai.
         language (str, optional): The language of the market. Defaults to "en".
         outcomes (list[str], optional): The outcomes for the market. Defaults to OMEN_BINARY_MARKET_OUTCOMES.
-        auto_deposit (bool, optional): Whether to automatically deposit funds. Defaults to False.
+        auto_deposit (bool, optional): Whether to automatically deposit funds. Defaults to True.
 
     Returns:
         None

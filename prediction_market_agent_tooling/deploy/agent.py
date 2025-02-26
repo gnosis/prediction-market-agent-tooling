@@ -619,11 +619,19 @@ class DeployableTraderAgent(DeployablePredictionAgent):
             existing_position=existing_position,
         )
 
+        # It can take quite some time before agent processes all the markets, recheck here if the market didn't get closed in the meantime, to not error out completely.
+        # Unfortunately, we can not just add some room into closing time of the market while fetching them, because liquidity can be removed at any time by the liquidity providers.
+        still_tradeable = market.can_be_traded()
+        if not still_tradeable:
+            logger.warning(
+                f"Market {market.question=} ({market.url}) was selected to processing, but is not tradeable anymore."
+            )
+
         placed_trades = []
         for trade in trades:
             logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
 
-            if self.place_trades:
+            if self.place_trades and still_tradeable:
                 match trade.trade_type:
                     case TradeType.BUY:
                         id = market.buy_tokens(
@@ -637,7 +645,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")
                 placed_trades.append(PlacedTrade.from_trade(trade, id))
             else:
-                logger.info(f"Trade execution skipped because {self.place_trades=}.")
+                logger.info(
+                    f"Trade execution skipped because, {self.place_trades=} or {still_tradeable=}."
+                )
 
         traded_market = ProcessedTradedMarket(
             answer=processed_market.answer, trades=placed_trades

@@ -24,6 +24,11 @@ def main(
     language: str = typer.Option("en_US"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
     auto_deposit: bool = typer.Option(True),
+    
+    """
+    Parameters:
+        auto_deposit (bool, optional): Whether to automatically deposit funds. Defaults to True.
+    """
 ) -> None:
     """
     Creates a market on Seer.

@@ -408,8 +408,12 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> xDai:
-        return wei_to_xdai(
-            KEEPING_ERC20_TOKEN.balanceOf(api_keys.bet_from_address, web3=web3)
+        native_token_balance = get_balances(api_keys.public_key, web3=web3).xdai
+        return xdai_type(
+            wei_to_xdai(
+                KEEPING_ERC20_TOKEN.balanceOf(api_keys.bet_from_address, web3=web3)
+            )
+            + native_token_balance
         )
 
     @staticmethod

@@ -52,6 +52,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
+    log_error_on_unsavable_data: bool = True,
 ) -> Callable[[FunctionT], FunctionT]:
     ...
 
@@ -65,6 +66,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
+    log_error_on_unsavable_data: bool = True,
 ) -> FunctionT:
     ...
 

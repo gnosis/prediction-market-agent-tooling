@@ -200,12 +200,18 @@ def db_cache(
                 result=computed_result,
                 created_at=utcnow(),
             )
-            with DBManager(
-                api_keys.sqlalchemy_db_url.get_secret_value()
-            ).get_session() as session:
-                logger.info(f"Saving {cache_entry} into database.")
-                session.add(cache_entry)
-                session.commit()
+            # Do not raise an exception if saving to the database fails, just log it and let the agent continue the work.
+            try:
+                with DBManager(
+                    api_keys.sqlalchemy_db_url.get_secret_value()
+                ).get_session() as session:
+                    logger.info(f"Saving {cache_entry} into database.")
+                    session.add(cache_entry)
+                    session.commit()
+            except Exception:
+                logger.exception(
+                    f"Failed to save {cache_entry} into database, ignoring."
+                )
 
         return computed_result
 

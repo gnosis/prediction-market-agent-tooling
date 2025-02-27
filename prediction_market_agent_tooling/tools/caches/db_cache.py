@@ -77,6 +77,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
+    log_error_on_unsavable_data: bool = True,
 ) -> FunctionT | Callable[[FunctionT], FunctionT]:
     if func is None:
         # Ugly Pythonic way to support this decorator as `@postgres_cache` but also `@postgres_cache(max_age=timedelta(days=3))`
@@ -210,11 +211,8 @@ def db_cache(
                     logger.info(f"Saving {cache_entry} into database.")
                     session.add(cache_entry)
                     session.commit()
-            except (
-                DataError,
-                psycopg2.errors.UntranslatableCharacter,
-            ) as e:
-                logger.warning(
+            except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
+                (logger.error if log_error_on_unsavable_data else logger.warning)(
                     f"Failed to save {cache_entry} into database, ignoring, because: {e}"
                 )
             except Exception:

@@ -14,7 +14,11 @@ from prediction_market_agent_tooling.tools.tavily.tavily_models import (
 DEFAULT_SCORE_THRESHOLD = 0.75  # Based on some empirical testing, anything lower wasn't very relevant to the question being asked
 
 
-@db_cache(max_age=timedelta(days=1), ignore_args=["api_keys"])
+@db_cache(
+    max_age=timedelta(days=1),
+    ignore_args=["api_keys"],
+    log_error_on_unsavable_data=False,
+)
 def tavily_search(
     query: str,
     search_depth: t.Literal["basic", "advanced"] = "advanced",

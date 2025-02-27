@@ -336,6 +336,7 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
+        # assets_wei is the amount of assets (underlying erc20 token amount) we want to withdraw.
         receiver = receiver or api_keys.bet_from_address
         owner = owner or api_keys.bet_from_address
         return self.send(
@@ -345,6 +346,13 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
             tx_params=tx_params,
             web3=web3,
         )
+
+    def withdraw_in_shares(
+        self, api_keys: APIKeys, shares_wei: Wei, web3: Web3 | None = None
+    ) -> TxReceipt:
+        # shares is the amount of shares we want to withdraw.
+        assets = self.convertToAssets(shares_wei, web3=web3)
+        return self.withdraw(api_keys=api_keys, assets_wei=assets, web3=web3)
 
     def convertToShares(self, assets: Wei, web3: Web3 | None = None) -> Wei:
         shares: Wei = self.call("convertToShares", [assets], web3=web3)

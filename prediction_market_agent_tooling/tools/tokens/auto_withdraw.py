@@ -53,7 +53,7 @@ def auto_withdraw_collateral_token(
         logger.info(
             f"Withdrawing {wei_to_xdai(amount_wei)} from {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
         )
-        collateral_token_contract.withdraw(
+        collateral_token_contract.withdraw_in_shares(
             api_keys,
             amount_wei,
             web3=web3,

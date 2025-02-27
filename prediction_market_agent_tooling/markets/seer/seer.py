@@ -22,10 +22,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     ProcessedTradedMarket,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.blockchain_utils import (
-    get_total_balance,
-    store_trades,
-)
+from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
@@ -167,11 +164,7 @@ class SeerAgentMarket(AgentMarket):
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
-        return get_total_balance(
-            api_keys.public_key,
-            # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
-            sum_wxdai=False,
-        ) > xdai_type(0.001)
+        return OmenAgentMarket.verify_operational_balance(api_keys=api_keys)
 
     @staticmethod
     def from_data_model(model: SeerMarket) -> "SeerAgentMarket":

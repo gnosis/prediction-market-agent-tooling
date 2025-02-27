@@ -91,6 +91,14 @@ class APIKeys(BaseSettings):
             raise ValueError("Data must be a dictionary.")
         return data
 
+    def copy_without_safe_address(self) -> "APIKeys":
+        """
+        This is handy when you operate in environment with SAFE_ADDRESS, but need to execute transaction using EOA.
+        """
+        data = self.model_copy(deep=True)
+        data.SAFE_ADDRESS = None
+        return data
+
     @property
     def manifold_user_id(self) -> str:
         return get_authenticated_user(

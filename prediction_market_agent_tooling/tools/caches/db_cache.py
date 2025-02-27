@@ -14,6 +14,7 @@ from typing import (
     overload,
 )
 
+import psycopg2
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -208,6 +209,10 @@ def db_cache(
                     logger.info(f"Saving {cache_entry} into database.")
                     session.add(cache_entry)
                     session.commit()
+            except psycopg2.errors.UntranslatableCharacter as e:
+                logger.warning(
+                    f"Failed to save {cache_entry} into database, ignoring, because: {e}"
+                )
             except Exception:
                 logger.exception(
                     f"Failed to save {cache_entry} into database, ignoring."

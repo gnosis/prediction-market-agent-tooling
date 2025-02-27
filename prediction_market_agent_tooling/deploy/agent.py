@@ -30,7 +30,7 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
 )
-from prediction_market_agent_tooling.gtypes import xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -62,6 +62,9 @@ from prediction_market_agent_tooling.tools.custom_exceptions import (
 from prediction_market_agent_tooling.tools.is_invalid import is_invalid
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
+from prediction_market_agent_tooling.tools.tokens.main_token import (
+    MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
+)
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 MAX_AVAILABLE_MARKETS = 1000
@@ -289,7 +292,9 @@ class DeployablePredictionAgent(DeployableAgent):
     allow_invalid_questions: bool = False
     same_market_trade_interval: TradeInterval = FixedInterval(timedelta(hours=24))
 
-    min_balance_to_keep_in_native_currency: xDai | None = xdai_type(0.1)
+    min_balance_to_keep_in_native_currency: xDai | None = (
+        MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES
+    )
 
     # Only Metaculus allows to post predictions without trading (buying/selling of outcome tokens).
     supported_markets: t.Sequence[MarketType] = [MarketType.METACULUS]

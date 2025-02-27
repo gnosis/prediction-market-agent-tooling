@@ -26,7 +26,11 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import (
+    ZERO_BYTES,
+    wei_to_xdai,
+    xdai_to_wei,
+)
 
 
 def claim_bonds_on_realitio_questions(
@@ -116,7 +120,9 @@ def claim_bonds_on_realitio_question(
     current_balance = realitio_contract.balanceOf(public_key, web3=web3)
     # Keeping balance on Realitio is not useful, so it's recommended to just withdraw it.
     if current_balance > 0 and auto_withdraw:
-        logger.info(f"Withdrawing remaining balance {current_balance=}")
+        logger.info(
+            f"Withdrawing remaining balance {wei_to_xdai(current_balance)} xDai from Realitio."
+        )
         realitio_contract.withdraw(api_keys, web3=web3)
 
 

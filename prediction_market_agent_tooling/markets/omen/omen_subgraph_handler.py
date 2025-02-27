@@ -46,10 +46,12 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     byte32_to_ipfscidv0,
 )
 
-# TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
-SAFE_COLLATERAL_TOKEN_MARKETS = (
-    WrappedxDaiContract().address,
-    sDaiContract().address,
+SAFE_COLLATERAL_TOKENS = (
+    WrappedxDaiContract(),
+    sDaiContract(),
+)
+SAFE_COLLATERAL_TOKENS_ADDRESSES = tuple(
+    contract.address for contract in SAFE_COLLATERAL_TOKENS
 )
 
 
@@ -326,7 +328,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         excluded_questions: set[str] | None = None,  # question titles
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
-        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+        ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
         creator_in: t.Sequence[HexAddress] | None = None,
     ) -> t.List[OmenMarket]:
@@ -392,7 +394,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
-        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+        ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
     ) -> t.List[OmenMarket]:
         """

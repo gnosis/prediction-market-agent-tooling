@@ -50,7 +50,7 @@ from prediction_market_agent_tooling.markets.markets import (
     have_bet_on_market_since,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
-    withdraw_wxdai_to_xdai_to_keep_balance,
+    send_keeping_token_to_eoa_xdai,
 )
 from prediction_market_agent_tooling.monitor.monitor_app import (
     MARKET_TYPE_TO_DEPLOYED_AGENT,
@@ -416,10 +416,10 @@ class DeployablePredictionAgent(DeployableAgent):
         if market_type.is_blockchain_market:
             # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
             if self.min_balance_to_keep_in_native_currency is not None:
-                withdraw_wxdai_to_xdai_to_keep_balance(
+                send_keeping_token_to_eoa_xdai(
                     api_keys,
                     min_required_balance=self.min_balance_to_keep_in_native_currency,
-                    withdraw_multiplier=2,
+                    multiplier=2,
                 )
 
     def process_market(

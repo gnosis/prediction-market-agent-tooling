@@ -1315,41 +1315,77 @@ def get_binary_market_p_yes_history(market: OmenAgentMarket) -> list[Probability
     return history
 
 
-def withdraw_wxdai_to_xdai_to_keep_balance(
+def send_keeping_token_to_eoa_xdai(
     api_keys: APIKeys,
     min_required_balance: xDai,
-    withdraw_multiplier: float = 1.0,
+    multiplier: float = 1.0,
     web3: Web3 | None = None,
 ) -> None:
     """
-    Keeps xDai balance above the minimum required balance by withdrawing wxDai to xDai.
-    Optionally, the amount to withdraw can be multiplied by the `withdraw_multiplier`, which can be useful to keep a buffer.
+    Keeps xDai balance above the minimum required balance by transfering keeping token to xDai.
+    Optionally, the amount to transfer can be multiplied by the `multiplier`, which can be useful to keep a buffer.
     """
-    # xDai needs to be in our wallet where we pay transaction fees, so do not check for Safe's balance.
-    current_balances = get_balances(api_keys.public_key, web3)
+    # Only wxDai can be withdrawn to xDai. Anything else needs to be swapped to wxDai first.
+    wxdai_contract = WrappedxDaiContract()
 
-    if current_balances.xdai >= min_required_balance:
+    if KEEPING_ERC20_TOKEN.address != wxdai_contract.address:
+        raise RuntimeError(
+            "Only wxDai can be withdrawn to xDai. Rest is not implemented for simplicity for now. It would require trading using CoW, or double withdrawing from sDai"
+        )
+
+    current_balances_eoa = get_balances(api_keys.public_key, web3)
+    current_balances_betting = get_balances(api_keys.bet_from_address, web3)
+
+    # xDai needs to be in our wallet where we pay transaction fees, so do not check for Safe's balance here, but for EOA.
+    if current_balances_eoa.xdai >= min_required_balance:
         logger.info(
-            f"Current xDai balance {current_balances.xdai} is more or equal than the required minimum balance {min_required_balance}."
+            f"Current xDai balance {current_balances_eoa.xdai} is more or equal than the required minimum balance {min_required_balance}."
         )
         return
 
     need_to_withdraw = xDai(
-        (min_required_balance - current_balances.xdai) * withdraw_multiplier
+        (min_required_balance - current_balances_eoa.xdai) * multiplier
     )
+    need_to_withdraw_wei = xdai_to_wei(need_to_withdraw)
 
-    if current_balances.wxdai < need_to_withdraw:
-        raise OutOfFundsError(
-            f"Current wxDai balance {current_balances.wxdai} is less than the required minimum wxDai to withdraw {need_to_withdraw}."
+    if current_balances_eoa.wxdai >= need_to_withdraw:
+        # If EOA has enough of wxDai, simply withdraw it.
+        logger.info(
+            f"Withdrawing {need_to_withdraw} wxDai from EOA to keep the EOA's xDai balance above the minimum required balance {min_required_balance}."
+        )
+        wxdai_contract.withdraw(
+            api_keys=api_keys.copy_without_safe_address(),
+            amount_wei=need_to_withdraw_wei,
+            web3=web3,
         )
 
-    wxdai_contract = WrappedxDaiContract()
-    wxdai_contract.withdraw(
-        api_keys=api_keys, amount_wei=xdai_to_wei(need_to_withdraw), web3=web3
-    )
-    logger.info(
-        f"Withdrew {need_to_withdraw} wxDai to keep the balance above the minimum required balance {min_required_balance}."
-    )
+    elif current_balances_betting.wxdai >= need_to_withdraw:
+        # If Safe has enough of wxDai:
+        # First send them to EOA's address.
+        logger.info(
+            f"Transfering {need_to_withdraw} wxDai from betting address to EOA's address."
+        )
+        wxdai_contract.transferFrom(
+            api_keys=api_keys,
+            sender=api_keys.bet_from_address,
+            recipient=api_keys.public_key,
+            amount_wei=need_to_withdraw_wei,
+            web3=web3,
+        )
+        # And then simply withdraw it.
+        logger.info(
+            f"Withdrawing {need_to_withdraw} wxDai from EOA to keep the EOA's xDai balance above the minimum required balance {min_required_balance}."
+        )
+        wxdai_contract.withdraw(
+            api_keys=api_keys.copy_without_safe_address(),
+            amount_wei=need_to_withdraw_wei,
+            web3=web3,
+        )
+
+    else:
+        raise OutOfFundsError(
+            f"Current wxDai balance ({current_balances_eoa=}, {current_balances_betting=}) is less than the required minimum wxDai to withdraw {need_to_withdraw}."
+        )
 
 
 def get_buy_outcome_token_amount(

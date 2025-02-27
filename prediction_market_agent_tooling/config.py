@@ -95,9 +95,9 @@ class APIKeys(BaseSettings):
         """
         This is handy when you operate in environment with SAFE_ADDRESS, but need to execute transaction using EOA.
         """
-        data = self.model_dump()
-        data["SAFE_ADDRESS"] = None
-        return APIKeys(**data)
+        data = self.model_copy(deep=True)
+        data.SAFE_ADDRESS = None
+        return data
 
     @property
     def manifold_user_id(self) -> str:

@@ -18,6 +18,9 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     RealityQuestion,
 )
+from prediction_market_agent_tooling.markets.omen.omen import (
+    send_keeping_token_to_eoa_xdai,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
@@ -25,11 +28,15 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.tokens.main_token import (
+    MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     wei_to_xdai,
     xdai_to_wei,
+    xdai_type,
 )
 
 
@@ -139,6 +146,16 @@ def finalize_markets(
         logger.info(
             f"[{idx+1} / {len(markets_with_resolutions)}] Looking into {market.url=} {market.question_title=}"
         )
+
+        # If we don't have enough of xDai for bond, try to get it from the keeping token.
+        send_keeping_token_to_eoa_xdai(
+            api_keys=api_keys,
+            min_required_balance=xdai_type(
+                realitio_bond + MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES
+            ),
+            web3=web3,
+        )
+
         closed_before_days = (utcnow() - market.close_time).days
 
         if resolution is None:

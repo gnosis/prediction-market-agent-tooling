@@ -350,7 +350,7 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
     def withdraw_in_shares(
         self, api_keys: APIKeys, shares_wei: Wei, web3: Web3 | None = None
     ) -> TxReceipt:
-        # shares is the amount of shares we want to withdraw.
+        # shares_wei is the amount of shares we want to withdraw.
         assets = self.convertToAssets(shares_wei, web3=web3)
         return self.withdraw(api_keys=api_keys, assets_wei=assets, web3=web3)
 

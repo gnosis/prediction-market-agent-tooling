@@ -23,7 +23,7 @@ def buy(
     safe_address: str = typer.Option(default=None),
     market_id: str = typer.Option(),
     outcome: str = typer.Option(),
-    auto_deposit: bool = typer.Option(False),
+    auto_deposit: bool = typer.Option(True),
 ) -> None:
     """
     Helper script to place a bet on Omen, usage:
@@ -61,7 +61,7 @@ def sell(
     safe_address: str = typer.Option(default=None),
     market_id: str = typer.Option(),
     outcome: str = typer.Option(),
-    auto_withdraw: bool = typer.Option(False),
+    auto_withdraw: bool = typer.Option(True),
 ) -> None:
     """
     Helper script to sell outcome of an existing bet on Omen, usage:

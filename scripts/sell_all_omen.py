@@ -10,7 +10,7 @@ def main(
     from_private_key: str,
     closing_later_than_days: int = 7,
     safe_address: str | None = None,
-    auto_withdraw: bool = False,
+    auto_withdraw: bool = True,
 ) -> None:
     """
     Helper script to sell all existing outcomes on Omen that would resolve later than in X days.

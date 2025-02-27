@@ -13,7 +13,7 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 def sell_all(
     api_keys: APIKeys,
     closing_later_than_days: int,
-    auto_withdraw: bool = False,
+    auto_withdraw: bool = True,
 ) -> None:
     """
     Helper function to sell all existing outcomes on Omen that would resolve later than in X days.

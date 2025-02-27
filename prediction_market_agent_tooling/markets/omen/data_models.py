@@ -23,6 +23,11 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
     ResolvedBet,
 )
+from prediction_market_agent_tooling.tools.contract import (
+    ContractERC20OnGnosisChain,
+    init_collateral_token_contract,
+    to_gnosis_chain_contract,
+)
 from prediction_market_agent_tooling.tools.utils import (
     BPS_CONSTANT,
     DatetimeUTC,
@@ -167,6 +172,16 @@ class OmenPosition(BaseModel):
     @property
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:
         return Web3.to_checksum_address(self.collateralTokenAddress)
+
+    def get_collateral_token_contract(
+        self, web3: Web3 | None
+    ) -> ContractERC20OnGnosisChain:
+        web3 = web3 or ContractERC20OnGnosisChain.get_web3()
+        return to_gnosis_chain_contract(
+            init_collateral_token_contract(
+                self.collateral_token_contract_address_checksummed, web3
+            )
+        )
 
 
 class OmenUserPosition(BaseModel):

@@ -31,7 +31,7 @@ def main(
     fee_perc: float = typer.Option(OMEN_DEFAULT_MARKET_FEE_PERC),
     language: str = typer.Option("en"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
-    auto_deposit: bool = typer.Option(False),
+    auto_deposit: bool = typer.Option(True),
 ) -> None:
     """
     Helper script to create markets on Omen, usage:

@@ -18,6 +18,7 @@ import psycopg2
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.exc import DataError
 from sqlmodel import Field, SQLModel, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -209,7 +210,10 @@ def db_cache(
                     logger.info(f"Saving {cache_entry} into database.")
                     session.add(cache_entry)
                     session.commit()
-            except psycopg2.errors.UntranslatableCharacter as e:
+            except (
+                DataError,
+                psycopg2.errors.UntranslatableCharacter,
+            ) as e:
                 logger.warning(
                     f"Failed to save {cache_entry} into database, ignoring, because: {e}"
                 )

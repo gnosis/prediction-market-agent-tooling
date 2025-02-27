@@ -419,7 +419,7 @@ class DeployablePredictionAgent(DeployableAgent):
                 send_keeping_token_to_eoa_xdai(
                     api_keys,
                     min_required_balance=self.min_balance_to_keep_in_native_currency,
-                    multiplier=2,
+                    multiplier=3,
                 )
 
     def process_market(

@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import pytest
 from pydantic import SecretStr
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -53,3 +54,22 @@ def test_gcp_secrets_from_dict_gcp() -> None:
     ):
         api_keys = APIKeys.model_validate({"BET_FROM_PRIVATE_KEY": "gcps:test:key"})
         assert api_keys.bet_from_private_key.get_secret_value() == "test_secret"
+
+
+@pytest.mark.parametrize(
+    "safe_address, expected",
+    [
+        (
+            "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+            "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d",
+        ),
+        (None, None),
+        (
+            "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d",
+            "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d",
+        ),
+    ],
+)
+def test_safe_is_checksummed(safe_address: str, expected: str) -> None:
+    api_keys = APIKeys.model_validate({"SAFE_ADDRESS": safe_address})
+    assert api_keys.SAFE_ADDRESS == expected

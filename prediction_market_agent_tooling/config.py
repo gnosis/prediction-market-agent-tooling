@@ -3,13 +3,13 @@ import typing as t
 from copy import deepcopy
 
 from eth_account.signers.local import LocalAccount
-from pydantic import Field, model_validator
+from pydantic import BeforeValidator, Field, model_validator
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
-from web3 import Account
+from web3 import Account, Web3
 
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
 from prediction_market_agent_tooling.gtypes import (
@@ -39,7 +39,10 @@ class APIKeys(BaseSettings):
     METACULUS_API_KEY: t.Optional[SecretStr] = None
     METACULUS_USER_ID: t.Optional[int] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
-    SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
+    SAFE_ADDRESS: t.Annotated[
+        ChecksumAddress | None,
+        BeforeValidator(lambda x: x if x is None else Web3.to_checksum_address(x)),
+    ] = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
     GRAPH_API_KEY: t.Optional[SecretStr] = None
     TENDERLY_FORK_RPC: t.Optional[str] = None

@@ -91,6 +91,7 @@ def db_cache(
                 api_keys=api_keys,
                 ignore_args=ignore_args,
                 ignore_arg_types=ignore_arg_types,
+                log_error_on_unsavable_data=log_error_on_unsavable_data,
             )
 
         return decorator

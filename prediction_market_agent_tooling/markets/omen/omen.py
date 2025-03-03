@@ -757,6 +757,7 @@ def omen_buy_outcome_tx(
     outcome: str,
     auto_deposit: bool,
     web3: Web3 | None = None,
+    slippage: float = 0.01,
 ) -> str:
     """
     Bets the given amount of xDai for the given outcome in the given market.
@@ -776,8 +777,8 @@ def omen_buy_outcome_tx(
     expected_shares = market_contract.calcBuyAmount(
         amount_wei_to_buy, outcome_index, web3=web3
     )
-    # Allow 1% slippage.
-    expected_shares = remove_fraction(expected_shares, 0.01)
+    # Allow small slippage.
+    expected_shares = remove_fraction(expected_shares, slippage)
     # Approve the market maker to withdraw our collateral token.
     collateral_token_contract.approve(
         api_keys=api_keys,
@@ -829,6 +830,7 @@ def omen_sell_outcome_tx(
     outcome: str,
     auto_withdraw: bool,
     web3: Web3 | None = None,
+    slippage: float = 0.005,
 ) -> str:
     """
     Sells the given xDai value of shares corresponding to the given outcome in
@@ -838,6 +840,7 @@ def omen_sell_outcome_tx(
     transaction.
     """
     amount_wei = xdai_to_wei(amount)
+    amount_wei = remove_fraction(amount_wei, slippage)
 
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     conditional_token_contract = OmenConditionalTokenContract()
@@ -859,8 +862,8 @@ def omen_sell_outcome_tx(
     max_outcome_tokens_to_sell = market_contract.calcSellAmount(
         amount_wei, outcome_index, web3=web3
     )
-    # Allow 1% slippage.
-    max_outcome_tokens_to_sell = add_fraction(max_outcome_tokens_to_sell, 0.01)
+    # Allow small slippage.
+    max_outcome_tokens_to_sell = add_fraction(max_outcome_tokens_to_sell, slippage)
 
     # Approve the market maker to move our (all) conditional tokens.
     conditional_token_contract.setApprovalForAll(

@@ -1,3 +1,4 @@
+![Banner Image](./docs.png)
 # Welcome to Prediction Market Agent Tooling
 
 Prediction Market Agent Tooling is a comprehensive suite designed to facilitate the benchmarking, deployment, and monitoring of agents within prediction market applications. This tooling is particularly useful for developers and researchers who are interested in creating and managing agents that interact with various prediction market platforms.

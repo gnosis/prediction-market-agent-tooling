@@ -830,7 +830,7 @@ def omen_sell_outcome_tx(
     outcome: str,
     auto_withdraw: bool,
     web3: Web3 | None = None,
-    slippage: float = 0.005,
+    slippage: float = 0.001,
 ) -> str:
     """
     Sells the given xDai value of shares corresponding to the given outcome in

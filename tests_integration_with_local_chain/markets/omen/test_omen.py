@@ -344,8 +344,9 @@ def test_omen_buy_and_sell_outcome(
     )
 
     # Check that we have sold our entire stake in the market.
+    # Assert equal to 0.001 because of the default slippage.
     remaining_tokens = get_market_outcome_tokens()
-    assert np.isclose(remaining_tokens.amount, 0, atol=1e-5)
+    assert np.isclose(remaining_tokens.amount, 0.001, atol=1e-3)
 
     # Check that the IDs of buy and sell calls are valid transaction hashes
     buy_tx = local_web3.eth.get_transaction(HexStr(buy_id))

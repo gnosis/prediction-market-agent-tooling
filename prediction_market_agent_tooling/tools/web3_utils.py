@@ -1,6 +1,6 @@
 import binascii
 from typing import Any, Optional, TypeVar
-
+import secrets
 import base58
 import tenacity
 from eth_account import Account
@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.gtypes import (
     PrivateKey,
     xDai,
     xdai_type,
+    private_key_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 
@@ -29,6 +30,10 @@ ONE_NONCE = Nonce(1)
 ONE_XDAI = xdai_type(1)
 ZERO_BYTES = HexBytes(HASH_ZERO)
 NOT_REVERTED_ICASE_REGEX_PATTERN = "(?i)(?!.*reverted.*)"
+
+
+def generate_private_key() -> PrivateKey:
+    return private_key_type("0x" + secrets.token_hex(32))
 
 
 def private_key_to_public_key(private_key: SecretStr) -> ChecksumAddress:

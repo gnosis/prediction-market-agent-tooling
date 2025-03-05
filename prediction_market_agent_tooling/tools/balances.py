@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from tenacity import retry, stop_after_attempt, wait_fixed
 from web3 import Web3
 from web3.types import Wei
 
@@ -20,6 +21,7 @@ class Balances(BaseModel):
         return xDai(self.xdai + self.wxdai + self.sdai)
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
 def get_balances(address: ChecksumAddress, web3: Web3 | None = None) -> Balances:
     if not web3:
         web3 = WrappedxDaiContract().get_web3()

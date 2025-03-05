@@ -1,6 +1,7 @@
 import binascii
-from typing import Any, Optional, TypeVar
 import secrets
+from typing import Any, Optional, TypeVar
+
 import base58
 import tenacity
 from eth_account import Account
@@ -20,9 +21,9 @@ from prediction_market_agent_tooling.gtypes import (
     HexStr,
     IPFSCIDVersion0,
     PrivateKey,
+    private_key_type,
     xDai,
     xdai_type,
-    private_key_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 

@@ -20,6 +20,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     ProbabilisticAnswer,
     TradeType,
 )
+from prediction_market_agent_tooling.gtypes import private_key_type
 from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
     SimulatedBetDetail,
@@ -36,9 +37,6 @@ from prediction_market_agent_tooling.monitor.financial_metrics.financial_metrics
     SharpeRatioCalculator,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.google_utils import (
-    get_private_key_from_gcp_secret,
-)
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     ProcessMarketTrace,
@@ -353,19 +351,15 @@ def main() -> None:
 
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
-        "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
-        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
-        "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
-        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
-        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
-        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
-        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
-    }
-
-    agent_pkey_map = {
-        k: get_private_key_from_gcp_secret(v) for k, v in agent_gcp_secret_map.items()
+        "DeployablePredictionProphetGPT4TurboFinalAgent": "gcps:pma-prophetgpt4turbo-final:private_key",
+        "DeployablePredictionProphetGPT4TurboPreviewAgent": "gcps:pma-prophetgpt4:private_key",
+        "DeployablePredictionProphetGPT4oAgent": "gcps:pma-prophetgpt3:private_key",
+        "DeployablePredictionProphetGPTo1PreviewAgent": "gcps:pma-prophet-o1-preview:private_key",
+        "DeployablePredictionProphetGPTo1MiniAgent": "gcps:pma-prophet-o1-mini:private_key",
+        "DeployableOlasEmbeddingOAAgent": "gcps:pma-evo-olas-embeddingoa:private_key",
+        "DeployableThinkThoroughlyAgent": "gcps:pma-think-thoroughly:private_key",
+        "DeployableThinkThoroughlyProphetResearchAgent": "gcps:pma-think-thoroughly-prophet-research:private_key",
+        "DeployableKnownOutcomeAgent": "gcps:pma-knownoutcome:private_key",
     }
 
     httpx_client = HttpxCachedClient().get_client()
@@ -378,9 +372,9 @@ def main() -> None:
         web3=OmenConditionalTokenContract().get_web3()
     )
 
-    for agent_name, private_key in agent_pkey_map.items():
+    for agent_name, private_key in agent_gcp_secret_map.items():
         print(f"\n## {agent_name}\n")
-        api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key)
+        api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key_type(private_key))
 
         # Two reasons for this date:
         # 1. Time after pool token number is stored in OmenAgentMarket

@@ -60,6 +60,8 @@ class APIKeys(BaseSettings):
     PINATA_API_SECRET: t.Optional[SecretStr] = None
 
     TAVILY_API_KEY: t.Optional[SecretStr] = None
+    # Don't get fooled! Serper and Serp are two different services.
+    SERPER_API_KEY: t.Optional[SecretStr] = None
 
     SQLALCHEMY_DB_URL: t.Optional[SecretStr] = None
 
@@ -101,6 +103,12 @@ class APIKeys(BaseSettings):
         data = self.model_copy(deep=True)
         data.SAFE_ADDRESS = None
         return data
+
+    @property
+    def serper_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.SERPER_API_KEY, "SERPER_API_KEY missing in the environment."
+        )
 
     @property
     def manifold_user_id(self) -> str:

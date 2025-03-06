@@ -106,6 +106,7 @@ class DeployableAgent:
     ) -> None:
         self.start_time = utcnow()
         self.enable_langfuse = enable_langfuse
+        self.api_keys = APIKeys()
         self.initialize_langfuse()
         self.load()
 

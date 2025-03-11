@@ -64,24 +64,28 @@ def get_traces_for_agent(
     has_output: bool,
     client: Langfuse,
     to_timestamp: DatetimeUTC | None = None,
+    tags: str | list[str] | None = None,
 ) -> list[TraceWithDetails]:
     """
     Fetch agent traces using pagination
     """
+    total_pages = -1
     page = 1  # index starts from 1
     all_agent_traces = []
     while True:
-        logger.debug(f"fetching page {page}")
+        logger.debug(f"Fetching Langfuse page {page} / {total_pages}.")
         traces = client.fetch_traces(
             name=trace_name,
             limit=100,
             page=page,
             from_timestamp=from_timestamp,
             to_timestamp=to_timestamp,
+            tags=tags,
         )
         if not traces.data:
             break
         page += 1
+        total_pages = traces.meta.total_pages
 
         agent_traces = [
             t

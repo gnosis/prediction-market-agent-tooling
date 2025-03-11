@@ -113,13 +113,13 @@ class ContractBaseClass(BaseModel):
         Used for changing a state (writing) to the contract.
         """
 
-        if api_keys.SAFE_ADDRESS:
+        if api_keys.safe_address_checksum:
             return send_function_on_contract_tx_using_safe(
                 web3=web3 or self.get_web3(),
                 contract_address=self.address,
                 contract_abi=self.abi,
                 from_private_key=api_keys.bet_from_private_key,
-                safe_address=api_keys.SAFE_ADDRESS,
+                safe_address=api_keys.safe_address_checksum,
                 function_name=function_name,
                 function_params=function_params,
                 tx_params=tx_params,

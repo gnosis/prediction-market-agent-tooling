@@ -3,7 +3,7 @@ import typing as t
 from copy import deepcopy
 
 from eth_account.signers.local import LocalAccount
-from pydantic import BeforeValidator, Field, model_validator
+from pydantic import Field, model_validator
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -39,10 +39,7 @@ class APIKeys(BaseSettings):
     METACULUS_API_KEY: t.Optional[SecretStr] = None
     METACULUS_USER_ID: t.Optional[int] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
-    SAFE_ADDRESS: t.Annotated[
-        ChecksumAddress | None,
-        BeforeValidator(lambda x: x if x is None else Web3.to_checksum_address(x)),
-    ] = None
+    SAFE_ADDRESS: str | None = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
     GRAPH_API_KEY: t.Optional[SecretStr] = None
     TENDERLY_FORK_RPC: t.Optional[str] = None
@@ -105,6 +102,12 @@ class APIKeys(BaseSettings):
         return data
 
     @property
+    def safe_address_checksum(self) -> ChecksumAddress | None:
+        return (
+            Web3.to_checksum_address(self.SAFE_ADDRESS) if self.SAFE_ADDRESS else None
+        )
+
+    @property
     def serper_api_key(self) -> SecretStr:
         return check_not_none(
             self.SERPER_API_KEY, "SERPER_API_KEY missing in the environment."
@@ -148,7 +151,11 @@ class APIKeys(BaseSettings):
     @property
     def bet_from_address(self) -> ChecksumAddress:
         """If the SAFE is available, we always route transactions via SAFE. Otherwise we use the EOA."""
-        return self.SAFE_ADDRESS if self.SAFE_ADDRESS else self.public_key
+        return (
+            self.safe_address_checksum
+            if self.safe_address_checksum
+            else self.public_key
+        )
 
     @property
     def openai_api_key(self) -> SecretStr:
@@ -257,10 +264,10 @@ class APIKeys(BaseSettings):
         }
 
     def check_if_is_safe_owner(self, ethereum_client: EthereumClient) -> bool:
-        if not self.SAFE_ADDRESS:
+        if not self.safe_address_checksum:
             raise ValueError("Cannot check ownership if safe_address is not defined.")
 
-        s = SafeV141(self.SAFE_ADDRESS, ethereum_client)
+        s = SafeV141(self.safe_address_checksum, ethereum_client)
         public_key_from_signer = private_key_to_public_key(self.bet_from_private_key)
         return s.retrieve_is_owner(public_key_from_signer)
 

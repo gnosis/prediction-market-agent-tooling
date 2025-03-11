@@ -72,4 +72,4 @@ def test_gcp_secrets_from_dict_gcp() -> None:
 )
 def test_safe_is_checksummed(safe_address: str, expected: str) -> None:
     api_keys = APIKeys.model_validate({"SAFE_ADDRESS": safe_address})
-    assert api_keys.SAFE_ADDRESS == expected
+    assert api_keys.safe_address_checksum == expected

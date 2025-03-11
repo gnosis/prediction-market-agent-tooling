@@ -1,4 +1,5 @@
 import typing as t
+from datetime import timedelta
 from pathlib import Path
 
 import optuna
@@ -10,6 +11,7 @@ from pydantic import BaseModel
 from web3.exceptions import TransactionNotFound
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.agent import AnsweredEnum, MarketType
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     GuaranteedLossError,
@@ -47,7 +49,7 @@ from prediction_market_agent_tooling.tools.langfuse_client_utils import (
 from prediction_market_agent_tooling.tools.transaction_cache import (
     TransactionBlockCache,
 )
-from prediction_market_agent_tooling.tools.utils import utc_datetime
+from prediction_market_agent_tooling.tools.utils import utc_datetime, utcnow
 
 if t.TYPE_CHECKING:
     from optuna.trial import FrozenTrial
@@ -351,15 +353,25 @@ def main() -> None:
 
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
-        "DeployablePredictionProphetGPT4TurboFinalAgent": "gcps:pma-prophetgpt4turbo-final:private_key",
-        "DeployablePredictionProphetGPT4TurboPreviewAgent": "gcps:pma-prophetgpt4:private_key",
-        "DeployablePredictionProphetGPT4oAgent": "gcps:pma-prophetgpt3:private_key",
-        "DeployablePredictionProphetGPTo1PreviewAgent": "gcps:pma-prophet-o1-preview:private_key",
-        "DeployablePredictionProphetGPTo1MiniAgent": "gcps:pma-prophet-o1-mini:private_key",
-        "DeployableOlasEmbeddingOAAgent": "gcps:pma-evo-olas-embeddingoa:private_key",
-        "DeployableThinkThoroughlyAgent": "gcps:pma-think-thoroughly:private_key",
-        "DeployableThinkThoroughlyProphetResearchAgent": "gcps:pma-think-thoroughly-prophet-research:private_key",
-        "DeployableKnownOutcomeAgent": "gcps:pma-knownoutcome:private_key",
+        "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
+        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+        "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
+        "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
+        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        "DeployablePredictionProphetGemini20Flash": "prophet-gemini20flash",
+        "DeployablePredictionProphetDeepSeekR1": "prophet-deepseekr1",
+        "DeployablePredictionProphetDeepSeekChat": "prophet-deepseekchat",
+        "DeployablePredictionProphetGPT4ominiAgent": "pma-prophet-gpt4o-mini",
+        "DeployablePredictionProphetGPTo1": "pma-prophet-o1",
+        "DeployablePredictionProphetGPTo3mini": "pma-prophet-o3-mini",
+        "DeployablePredictionProphetClaude3OpusAgent": "prophet-claude3-opus",
+        "DeployablePredictionProphetClaude35HaikuAgent": "prophet-claude35-haiku",
+        "DeployablePredictionProphetClaude35SonnetAgent": "prophet-claude35-sonnet",
+        "AdvancedAgent": "advanced-agent",
     }
 
     httpx_client = HttpxCachedClient().get_client()
@@ -374,12 +386,42 @@ def main() -> None:
 
     for agent_name, private_key in agent_gcp_secret_map.items():
         print(f"\n## {agent_name}\n")
-        api_keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key_type(private_key))
+        # Get the private key for the agent from GCP Secret Manager,
+        # but we don't have an standardized format, so try until it success.
+        try:
+            api_keys = APIKeys(
+                BET_FROM_PRIVATE_KEY=private_key_type(
+                    f"gcps:{private_key}:private_key"
+                ),
+                SAFE_ADDRESS=f"gcps:{private_key}:safe_address",
+            )
+        except Exception:
+            try:
+                api_keys = APIKeys(
+                    BET_FROM_PRIVATE_KEY=private_key_type(
+                        f"gcps:{private_key}:private_key"
+                    ),
+                    SAFE_ADDRESS=f"gcps:{private_key}:SAFE_ADDRESS",
+                )
+            except Exception:
+                try:
+                    api_keys = APIKeys(
+                        BET_FROM_PRIVATE_KEY=private_key_type(
+                            f"gcps:{private_key}:private_key"
+                        ),
+                        SAFE_ADDRESS=None,
+                    )
+                except Exception as e:
+                    raise ValueError("No usual combination of keys found.") from e
 
-        # Two reasons for this date:
-        # 1. Time after pool token number is stored in OmenAgentMarket
-        # 2. The day when we used customized betting strategies: https://github.com/gnosis/prediction-market-agent/pull/494
-        creation_start_time = utc_datetime(2024, 10, 5)
+        creation_start_time = max(
+            # Two reasons for this date:
+            # 1. Time after pool token number is stored in OmenAgentMarket
+            # 2. The day when we used customized betting strategies: https://github.com/gnosis/prediction-market-agent/pull/494
+            utc_datetime(2024, 10, 5),
+            # However, Langfuse doesn't allow to filter only for traces for a specific agent, so limit only to last N months of data to speed up the process.
+            utcnow() - timedelta(days=60),
+        )
 
         langfuse = Langfuse(
             secret_key=api_keys.langfuse_secret_key.get_secret_value(),
@@ -394,6 +436,7 @@ def main() -> None:
             from_timestamp=creation_start_time,
             has_output=True,
             client=langfuse,
+            tags=[AnsweredEnum.ANSWERED.value, MarketType.OMEN.value],
         )
         process_market_traces: list[ProcessMarketTrace] = []
         for trace in traces:

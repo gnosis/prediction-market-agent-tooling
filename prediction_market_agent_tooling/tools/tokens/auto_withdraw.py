@@ -7,10 +7,7 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC20BaseClass,
     ContractERC4626BaseClass,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import (
-    get_buy_token_amount,
-    swap_tokens_waiting,
-)
+from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (

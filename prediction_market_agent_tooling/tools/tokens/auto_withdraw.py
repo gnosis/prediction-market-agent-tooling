@@ -7,10 +7,7 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC20BaseClass,
     ContractERC4626BaseClass,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import (
-    get_buy_token_amount,
-    swap_tokens_waiting,
-)
+from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 from prediction_market_agent_tooling.tools.web3_utils import (
@@ -60,18 +57,11 @@ def auto_withdraw_collateral_token(
         )
     elif isinstance(collateral_token_contract, ContractERC20BaseClass):
         logger.info(
-            f"Swapping {wei_to_xdai(amount_wei)} {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
+            f"Swapping {wei_to_xdai(amount_wei)} from {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
         )
         # Otherwise, DEX will handle the rest of token swaps.
-        # First, convert `amount_wei` from xDai-based value into the collateral token-based value.
-        collateral_amount_wei = get_buy_token_amount(
-            amount_wei,
-            KEEPING_ERC20_TOKEN.address,
-            collateral_token_contract.address,
-        )
-        # And then sell it.
         swap_tokens_waiting(
-            amount_wei=collateral_amount_wei,
+            amount_wei=amount_wei,
             sell_token=collateral_token_contract.address,
             buy_token=KEEPING_ERC20_TOKEN.address,
             api_keys=api_keys,

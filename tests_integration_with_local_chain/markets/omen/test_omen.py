@@ -284,7 +284,7 @@ def test_omen_fund_and_remove_fund_market(
         market.market_maker_contract_address_checksummed,
     )
 
-    funds = xdai_to_wei(xdai_type(0.1))
+    funds = xdai_type(0.1)
     remove_fund = xdai_to_wei(xdai_type(0.01))
 
     omen_fund_market_tx(

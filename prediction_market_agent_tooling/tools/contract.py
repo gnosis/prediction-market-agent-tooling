@@ -246,10 +246,6 @@ class ContractERC20BaseClass(ContractBaseClass):
         balance: Wei = self.call("balanceOf", [for_address], web3=web3)
         return balance
 
-    def get_in_shares(self, amount: Wei, web3: Web3 | None = None) -> Wei:
-        # ERC-20 just holds the token, so the exact amount we send there, is the amount of shares we have there.
-        return amount
-
 
 class ContractDepositableWrapperERC20BaseClass(ContractERC20BaseClass):
     """

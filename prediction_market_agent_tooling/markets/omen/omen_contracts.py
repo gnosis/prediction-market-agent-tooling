@@ -896,9 +896,11 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
 class CollateralTokenChoice(str, Enum):
     wxdai = "wxdai"
     sdai = "sdai"
+    gno = "gno"
 
 
 COLLATERAL_TOKEN_CHOICE_TO_ADDRESS = {
     CollateralTokenChoice.wxdai: WrappedxDaiContract().address,
     CollateralTokenChoice.sdai: sDaiContract().address,
+    CollateralTokenChoice.gno: GNOContract().address,
 }

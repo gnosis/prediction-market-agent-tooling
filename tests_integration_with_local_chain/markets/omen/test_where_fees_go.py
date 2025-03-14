@@ -29,7 +29,6 @@ from prediction_market_agent_tooling.markets.omen.omen_resolving import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import mint_new_block
 
 
@@ -115,7 +114,7 @@ def test_where_fees_go(
     omen_fund_market_tx(
         api_keys_B,
         agent_market,
-        xdai_to_wei(additional_funds),
+        additional_funds,
         auto_deposit=True,
         web3=local_web3,
     )

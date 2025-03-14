@@ -72,6 +72,7 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
+from prediction_market_agent_tooling.tools.cow.cow_order import get_buy_token_amount
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -767,8 +768,12 @@ def omen_buy_outcome_tx(
     market_contract: OmenFixedProductMarketMakerContract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract(web3)
 
-    # In case of ERC4626, obtained (for example) sDai out of xDai could be lower than the `amount_wei`, so we need to handle it.
-    amount_wei_to_buy = collateral_token_contract.get_in_shares(amount_wei, web3)
+    # Function receives how much xDai to bet, but if collateral is GNO for example, actual buying will be like 2 xDai -> 0.001 GNO.
+    amount_wei_to_buy = get_buy_token_amount(
+        amount_wei,
+        sell_token=KEEPING_ERC20_TOKEN.address,
+        buy_token=collateral_token_contract.address,
+    )
 
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
@@ -991,9 +996,11 @@ def omen_create_market_tx(
             web3=web3,
         )
 
-    # In case of ERC4626, obtained (for example) sDai out of xDai could be lower than the `amount_wei`, so we need to handle it.
-    initial_funds_in_shares = collateral_token_contract.get_in_shares(
-        amount=initial_funds_wei, web3=web3
+    # We accept the amount in (w)xDai, but the amount of that exchanged in collateral is different.
+    initial_funds_in_shares = get_buy_token_amount(
+        initial_funds_wei,
+        sell_token=KEEPING_ERC20_TOKEN.address,
+        buy_token=collateral_token_contract.address,
     )
 
     # Approve the market maker to withdraw our collateral token.
@@ -1041,14 +1048,19 @@ def omen_create_market_tx(
 def omen_fund_market_tx(
     api_keys: APIKeys,
     market: OmenAgentMarket,
-    funds: Wei,
+    funds: xDai,
     auto_deposit: bool,
     web3: Web3 | None = None,
 ) -> None:
+    funds_wei = xdai_to_wei(funds)
     market_contract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract(web3=web3)
 
-    amount_to_fund = collateral_token_contract.get_in_shares(funds, web3)
+    amount_to_fund = get_buy_token_amount(
+        funds_wei,
+        sell_token=KEEPING_ERC20_TOKEN.address,
+        buy_token=collateral_token_contract.address,
+    )
 
     collateral_token_contract.approve(
         api_keys=api_keys,
@@ -1058,8 +1070,10 @@ def omen_fund_market_tx(
     )
 
     if auto_deposit:
-        # In auto-depositing, we need to deposit the original `funds`, e.g. we can deposit 2 xDai, but receive 1.8 sDai, so for the funding we will use `amount_to_fund`.
-        auto_deposit_collateral_token(collateral_token_contract, funds, api_keys, web3)
+        # In auto-depositing, we need to deposit the original `funds_wei`, e.g. we can deposit 2 xDai, but receive 0.1 GNO, so for the funding we will use `amount_to_fund`.
+        auto_deposit_collateral_token(
+            collateral_token_contract, funds_wei, api_keys, web3
+        )
 
     market_contract.addFunding(api_keys, amount_to_fund, web3=web3)
 

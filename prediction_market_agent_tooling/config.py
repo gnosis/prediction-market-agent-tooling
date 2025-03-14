@@ -290,6 +290,9 @@ class RPCConfig(BaseSettings):
     def chain_id(self) -> ChainID:
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
+    def get_web3(self) -> Web3:
+        return Web3(Web3.HTTPProvider(self.gnosis_rpc_url))
+
 
 class CloudCredentials(BaseSettings):
     model_config = SettingsConfigDict(

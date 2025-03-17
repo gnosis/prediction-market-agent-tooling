@@ -72,7 +72,6 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import get_buy_token_amount
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -82,6 +81,9 @@ from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
     auto_withdraw_collateral_token,
 )
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
+from prediction_market_agent_tooling.tools.tokens.token_utils import (
+    convert_to_another_token,
+)
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
@@ -769,10 +771,10 @@ def omen_buy_outcome_tx(
     collateral_token_contract = market_contract.get_collateral_token_contract(web3)
 
     # Function receives how much xDai to bet, but if collateral is GNO for example, actual buying will be like 2 xDai -> 0.001 GNO.
-    amount_wei_to_buy = get_buy_token_amount(
+    amount_wei_to_buy = convert_to_another_token(
         amount_wei,
-        sell_token=KEEPING_ERC20_TOKEN.address,
-        buy_token=collateral_token_contract.address,
+        from_token=KEEPING_ERC20_TOKEN.address,
+        to_token=collateral_token_contract.address,
     )
 
     # Get the index of the outcome we want to buy.
@@ -997,10 +999,10 @@ def omen_create_market_tx(
         )
 
     # We accept the amount in (w)xDai, but the amount of that exchanged in collateral is different.
-    initial_funds_in_shares = get_buy_token_amount(
+    initial_funds_in_shares = convert_to_another_token(
         initial_funds_wei,
-        sell_token=KEEPING_ERC20_TOKEN.address,
-        buy_token=collateral_token_contract.address,
+        from_token=KEEPING_ERC20_TOKEN.address,
+        to_token=collateral_token_contract.address,
     )
 
     # Approve the market maker to withdraw our collateral token.
@@ -1056,10 +1058,10 @@ def omen_fund_market_tx(
     market_contract = market.get_contract()
     collateral_token_contract = market_contract.get_collateral_token_contract(web3=web3)
 
-    amount_to_fund = get_buy_token_amount(
+    amount_to_fund = convert_to_another_token(
         funds_wei,
-        sell_token=KEEPING_ERC20_TOKEN.address,
-        buy_token=collateral_token_contract.address,
+        from_token=KEEPING_ERC20_TOKEN.address,
+        to_token=collateral_token_contract.address,
     )
 
     collateral_token_contract.approve(

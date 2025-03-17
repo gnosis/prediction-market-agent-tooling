@@ -9,7 +9,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WETHContract,
     sDaiContract,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import get_buy_token_amount
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
@@ -17,6 +16,9 @@ from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
     auto_withdraw_collateral_token,
 )
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
+from prediction_market_agent_tooling.tools.tokens.token_utils import (
+    convert_to_another_token,
+)
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import RUN_PAID_TESTS
 
@@ -42,13 +44,13 @@ def test_auto_deposit_and_withdraw(
 
     # How much we want to sell of main_token.
     amount_in_main_token_to_sell = xdai_to_wei(xdai_type(1))
-    amount_in_token_2_to_get = get_buy_token_amount(
+    amount_in_token_2_to_get = convert_to_another_token(
         amount_in_main_token_to_sell,
         KEEPING_ERC20_TOKEN.address,
         collateral_token_contract.address,
     )
     # auto_deposit will deposit only as much as is needed, so add the existing balance to the amount we want to deposit in this test.
-    initial_balance_of_token_2_in_main_token_units = get_buy_token_amount(
+    initial_balance_of_token_2_in_main_token_units = convert_to_another_token(
         collateral_token_contract.balanceOf(api_keys.bet_from_address),
         collateral_token_contract.address,
         KEEPING_ERC20_TOKEN.address,
@@ -57,7 +59,7 @@ def test_auto_deposit_and_withdraw(
         amount_in_main_token_to_sell + initial_balance_of_token_2_in_main_token_units
     )
     # And how much we expect to have in token_2 after the sell.
-    amount_in_token_2 = get_buy_token_amount(
+    amount_in_token_2 = convert_to_another_token(
         amount_in_main_token,
         KEEPING_ERC20_TOKEN.address,
         collateral_token_contract.address,

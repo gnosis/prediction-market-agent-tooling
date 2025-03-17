@@ -53,12 +53,14 @@ from prediction_market_agent_tooling.tools.cow.cow_manager import (
     CowManager,
     NoLiquidityAvailableOnCowException,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import get_buy_token_amount
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
+from prediction_market_agent_tooling.tools.tokens.token_utils import (
+    convert_to_another_token,
+)
 from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
@@ -312,10 +314,10 @@ def seer_create_market_tx(
         )
 
     # In case of other tokens, obtained (for example) GNO out of xDai could be lower than the `amount_wei`, so we need to handle it.
-    initial_funds_in_shares = get_buy_token_amount(
+    initial_funds_in_shares = convert_to_another_token(
         initial_funds_wei,
-        sell_token=KEEPING_ERC20_TOKEN.address,
-        buy_token=collateral_token_address,
+        from_token=KEEPING_ERC20_TOKEN.address,
+        to_token=collateral_token_address,
     )
 
     # Approve the market maker to withdraw our collateral token.

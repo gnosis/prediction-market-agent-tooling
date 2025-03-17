@@ -46,6 +46,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
+    GNOContract,
     OmenAgentResultMappingContract,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
@@ -256,6 +257,7 @@ def test_balance_for_user_in_market() -> None:
     [
         (WrappedxDaiContract().address, "WXDAI"),
         (sDaiContract().address, "sDAI"),
+        (GNOContract().address, "GNO"),
     ],
 )
 def test_omen_fund_and_remove_fund_market(

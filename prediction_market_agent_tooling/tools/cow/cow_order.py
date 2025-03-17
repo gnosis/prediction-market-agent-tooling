@@ -47,6 +47,8 @@ def get_buy_token_amount(
     chain: Chain = Chain.GNOSIS,
     env: Envs = "prod",
 ) -> Wei:
+    if sell_token == buy_token:
+        return amount_wei
     order_book_api = get_order_book_api(env, chain)
     order_quote_request = OrderQuoteRequest(
         sellToken=Address(sell_token),

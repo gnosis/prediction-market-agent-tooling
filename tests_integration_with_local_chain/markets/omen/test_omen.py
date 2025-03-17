@@ -311,7 +311,9 @@ def test_omen_buy_and_sell_outcome(
 ) -> None:
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
     # You can double check your address at https://gnosisscan.io/ afterwards.
-    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    market = OmenAgentMarket.from_data_model(
+        pick_binary_market(collateral_token_address_in=(WrappedxDaiContract().address,))
+    )
     outcome = True
     outcome_str = get_bet_outcome(outcome)
     bet_amount = market.get_bet_amount(amount=0.4)

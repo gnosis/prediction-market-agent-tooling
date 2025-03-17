@@ -65,6 +65,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     build_parent_collection_id,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    SAFE_COLLATERAL_TOKENS_ADDRESSES,
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
@@ -740,11 +741,18 @@ def get_omen_user_url(address: ChecksumAddress) -> str:
 
 
 def pick_binary_market(
-    sort_by: SortBy = SortBy.CLOSING_SOONEST, filter_by: FilterBy = FilterBy.OPEN
+    sort_by: SortBy = SortBy.CLOSING_SOONEST,
+    filter_by: FilterBy = FilterBy.OPEN,
+    collateral_token_address_in: (
+        tuple[ChecksumAddress, ...] | None
+    ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
 ) -> OmenMarket:
     subgraph_handler = OmenSubgraphHandler()
     return subgraph_handler.get_omen_binary_markets_simple(
-        limit=1, sort_by=sort_by, filter_by=filter_by
+        limit=1,
+        sort_by=sort_by,
+        filter_by=filter_by,
+        collateral_token_address_in=collateral_token_address_in,
     )[0]
 
 

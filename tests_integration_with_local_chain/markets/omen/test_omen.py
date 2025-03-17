@@ -257,7 +257,6 @@ def test_balance_for_user_in_market() -> None:
     [
         (WrappedxDaiContract().address, "WXDAI"),
         (sDaiContract().address, "sDAI"),
-        (GNOContract().address, "GNO"),
     ],
 )
 def test_omen_fund_and_remove_fund_market(

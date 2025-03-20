@@ -59,6 +59,7 @@ cowdao-cowpy = "^1.0.0rc1"
 eth-keys = "^0.6.1"
 proto-plus = "^1.0.0"
 protobuf = "^5.0.0"
+types-cachetools = "^5.5.0.20240820"
 
 [tool.poetry.extras]
 openai = ["openai"]

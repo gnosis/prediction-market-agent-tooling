@@ -14,6 +14,8 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderMetaData,
     OrderQuoteRequest,
     OrderQuoteSide1,
+    OrderQuoteSide3,
+    OrderQuoteSideKindBuy,
     OrderQuoteSideKindSell,
     OrderStatus,
     TokenAmount,
@@ -34,13 +36,41 @@ def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
     return OrderBookApi(OrderBookAPIConfigFactory.get_config(env, chain_id))
 
 
+def get_sell_token_amount(
+    buy_amount: Wei,
+    sell_token: ChecksumAddress,
+    buy_token: ChecksumAddress,
+    chain: Chain = Chain.GNOSIS,
+    env: Envs = "prod",
+) -> Wei:
+    """
+    Calculate how much of the sell_token is needed to obtain a specified amount of buy_token.
+    """
+    order_book_api = get_order_book_api(env, chain)
+    order_quote_request = OrderQuoteRequest(
+        sellToken=Address(sell_token),
+        buyToken=Address(buy_token),
+        from_=Address(
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ),  # Just random address, doesn't matter.
+    )
+    order_side = OrderQuoteSide3(
+        kind=OrderQuoteSideKindBuy.buy,
+        buyAmountAfterFee=TokenAmount(str(buy_amount)),
+    )
+    order_quote = asyncio.run(
+        order_book_api.post_quote(order_quote_request, order_side)
+    )
+    return Wei(order_quote.quote.sellAmount.root)
+
+
 @tenacity.retry(
     stop=tenacity.stop_after_attempt(3),
     wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(f"get_buy_token_amount failed, {x.attempt_number=}."),
 )
 def get_buy_token_amount(
-    amount_wei: Wei,
+    sell_amount: Wei,
     sell_token: ChecksumAddress,
     buy_token: ChecksumAddress,
     chain: Chain = Chain.GNOSIS,
@@ -56,7 +86,7 @@ def get_buy_token_amount(
     )
     order_side = OrderQuoteSide1(
         kind=OrderQuoteSideKindSell.sell,
-        sellAmountBeforeFee=TokenAmount(str(amount_wei)),
+        sellAmountBeforeFee=TokenAmount(str(sell_amount)),
     )
     order_quote = asyncio.run(
         order_book_api.post_quote(order_quote_request, order_side)

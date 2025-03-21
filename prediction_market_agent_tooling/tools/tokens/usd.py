@@ -55,7 +55,7 @@ def get_single_token_unit_to_usd_rate(token_address: ChecksumAddress) -> USD:
             .as_token.value
         )
     in_wei = get_buy_token_amount(
-        amount_wei=Token(1).as_wei,
+        sell_amount=Token(1).as_wei,
         sell_token=token_address,
         buy_token=WRAPPED_XDAI_CONTRACT_ADDRESS,
     )

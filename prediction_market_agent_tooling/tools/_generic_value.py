@@ -255,3 +255,7 @@ class _GenericValue(
     @classmethod
     def zero(cls: type[GenericValueType]) -> GenericValueType:
         return cls(0)  # type: ignore[arg-type]
+
+    @property
+    def symbol(self) -> str:
+        return self.__class__.__name__

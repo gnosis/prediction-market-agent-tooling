@@ -17,7 +17,6 @@ from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     ExistingPosition,
     PlacedTrade,
-    Position,
     ProbabilisticAnswer,
     Resolution,
     ResolvedBet,

@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from prediction_market_agent_tooling.gtypes import Token
+
 
 class MarketFees(BaseModel):
     bet_proportion: float = Field(
@@ -32,5 +34,5 @@ class MarketFees(BaseModel):
         total_fee = self.total_fee_absolute_value(bet_amount)
         return total_fee / bet_amount
 
-    def get_bet_size_after_fees(self, bet_amount: float) -> float:
-        return bet_amount - self.total_fee_absolute_value(bet_amount)
+    def get_after_fees(self, bet_amount: Token) -> Token:
+        return bet_amount - Token(self.total_fee_absolute_value(bet_amount.value))

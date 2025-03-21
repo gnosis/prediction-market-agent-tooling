@@ -5,7 +5,7 @@ from datetime import timedelta
 import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import omen_outcome_type, xdai_type
+from prediction_market_agent_tooling.gtypes import OutcomeToken, xDai
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
     TEST_CATEGORY,
@@ -21,8 +21,8 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.tokens.usd import get_xdai_in_usd
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -35,21 +35,22 @@ def test_created_market_corresponds_to_subgraph_market() -> None:
     question = f"Will GNO hit $1000 {close_in} seconds from now?"
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)
-    funds = xdai_type(0.1)
+    funds_xdai = xDai(0.1)
+    funds_usd = get_xdai_in_usd(funds_xdai)
     finalization_wait_time_seconds = 60
     category = TEST_CATEGORY
     language = "en"
     distribution_hint = [
-        omen_outcome_type(xdai_to_wei(xdai_type(0.05))),  # 75% for yes
-        omen_outcome_type(xdai_to_wei(xdai_type(0.15))),  # 25% for now
+        OutcomeToken(0.05).as_outcome_wei,  # 75% for yes
+        OutcomeToken(0.15).as_outcome_wei,  # 25% for now
     ]
-    assert sum(distribution_hint) == 2 * xdai_to_wei(
-        funds
+    assert (
+        sum(x.value for x in distribution_hint) == 2 * funds_xdai.as_xdai_wei.value
     ), "This should be equal, we are testing skewed markets."
 
     created_market = omen_create_market_tx(
         api_keys=api_keys,
-        initial_funds=funds,
+        initial_funds=funds_usd,
         fee_perc=OMEN_DEFAULT_MARKET_FEE_PERC,
         question=question,
         closing_time=closing_time,

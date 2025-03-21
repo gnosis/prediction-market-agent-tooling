@@ -3,24 +3,37 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import Mana, Probability
-from prediction_market_agent_tooling.markets.data_models import (
-    Currency,
-    ProfitAmount,
-    Resolution,
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    Mana,
+    OutcomeStr,
+    OutcomeToken,
+    Probability,
+    Token,
 )
+from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
 
 
-class ManifoldPool(BaseModel):
-    NO: float
-    YES: float
+def mana_to_usd(mana: Mana) -> USD:
+    # Not really, but for sake of simplicity. Mana are just play money.
+    return USD(mana.value)
 
-    def size_for_outcome(self, outcome: str) -> float:
+
+def usd_to_mana(usd: USD) -> Mana:
+    # Not really, but for sake of simplicity. Mana are just play money.
+    return Mana(usd.value)
+
+
+class ManifoldPool(BaseModel):
+    NO: OutcomeToken
+    YES: OutcomeToken
+
+    def size_for_outcome(self, outcome: str) -> OutcomeToken:
         if hasattr(self, outcome):
-            return float(getattr(self, outcome))
+            return OutcomeToken(getattr(self, outcome))
         else:
             should_not_happen(f"Unexpected outcome string, '{outcome}'.")
 
@@ -49,8 +62,6 @@ class ManifoldMarket(BaseModel):
     https://docs.manifold.markets/api#get-v0markets
     """
 
-    BET_AMOUNT_CURRENCY: t.ClassVar[Currency] = Currency.Mana
-
     id: str
     question: str
     creatorId: str
@@ -71,15 +82,15 @@ class ManifoldMarket(BaseModel):
     pool: ManifoldPool
     probability: Probability
     slug: str
-    totalLiquidity: t.Optional[Mana] = None
+    totalLiquidity: t.Optional[Token] = None
     uniqueBettorCount: int
     url: str
-    volume: Mana
-    volume24Hours: Mana
+    volume: Token
+    volume24Hours: Token
 
     @property
-    def outcomes(self) -> list[str]:
-        return list(self.pool.model_fields.keys())
+    def outcomes(self) -> t.Sequence[OutcomeStr]:
+        return [OutcomeStr(o) for o in self.pool.model_fields.keys()]
 
     def get_resolved_boolean_outcome(self) -> bool:
         if self.resolution == Resolution.YES:
@@ -170,18 +181,18 @@ class ManifoldBet(BaseModel):
     https://docs.manifold.markets/api#get-v0bets
     """
 
-    shares: float
+    shares: Token
     probBefore: Probability
     isFilled: t.Optional[bool] = None
     probAfter: Probability
     userId: str
-    amount: Mana
+    amount: Token
     contractId: str
     id: str
     fees: ManifoldBetFees
     isCancelled: t.Optional[bool] = None
-    loanAmount: Mana | None
-    orderAmount: t.Optional[Mana] = None
+    loanAmount: Token | None
+    orderAmount: t.Optional[Token] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
     createdTime: DatetimeUTC
     outcome: Resolution
@@ -194,16 +205,13 @@ class ManifoldBet(BaseModel):
         else:
             should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
 
-    def get_profit(self, market_outcome: bool) -> ProfitAmount:
+    def get_profit(self, market_outcome: bool) -> Token:
         profit = (
             self.shares - self.amount
             if self.get_resolved_boolean_outcome() == market_outcome
             else -self.amount
         )
-        return ProfitAmount(
-            amount=profit,
-            currency=Currency.Mana,
-        )
+        return profit
 
 
 class ManifoldContractMetric(BaseModel):

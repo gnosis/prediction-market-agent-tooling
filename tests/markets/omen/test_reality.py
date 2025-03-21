@@ -1,3 +1,4 @@
+from prediction_market_agent_tooling.gtypes import OutcomeStr
 from prediction_market_agent_tooling.markets.omen.data_models import (
     ParsedQuestion,
     format_realitio_question,
@@ -8,7 +9,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 def test_format_and_decode_question() -> None:
     question = ParsedQuestion(
         question="How are you?",
-        outcomes=["Cool", "Not cool"],
+        outcomes=[OutcomeStr("Cool"), OutcomeStr("Not cool")],
         language="en",
         category="life",
     )

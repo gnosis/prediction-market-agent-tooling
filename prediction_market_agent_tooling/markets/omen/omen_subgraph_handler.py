@@ -11,7 +11,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     Wei,
-    wei_type,
 )
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
@@ -24,6 +23,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     OmenPosition,
     OmenUserPosition,
+    OutcomeStr,
+    OutcomeWei,
     RealityAnswer,
     RealityQuestion,
     RealityResponse,
@@ -44,6 +45,7 @@ from prediction_market_agent_tooling.tools.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     byte32_to_ipfscidv0,
+    unwrap_generic_value,
 )
 
 SAFE_COLLATERAL_TOKENS = (
@@ -209,7 +211,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         self,
         creator: HexAddress | None,
         creator_in: t.Sequence[HexAddress] | None,
-        outcomes: list[str],
+        outcomes: t.Sequence[OutcomeStr],
         created_after: DatetimeUTC | None,
         question_opened_before: DatetimeUTC | None,
         question_opened_after: DatetimeUTC | None,
@@ -347,7 +349,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             # because even closed markets don't need to be resolved yet (e.g. if someone forgot to finalize the question on reality).
             opened_after = utcnow()
             # Even if the market isn't closed yet, liquidity can be withdrawn to 0, which essentially closes the market.
-            liquidity_bigger_than = wei_type(0)
+            liquidity_bigger_than = Wei(0)
         elif filter_by == FilterBy.NONE:
             pass
         else:
@@ -391,7 +393,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         id_in: list[str] | None = None,
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
-        outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
+        outcomes: t.Sequence[OutcomeStr] = OMEN_BINARY_MARKET_OUTCOMES,
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
         ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
@@ -434,7 +436,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible markets
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
             **optional_params,
         )
 
@@ -489,7 +491,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["conditionIds_contains"] = [condition_id.hex()]
 
         positions = self.conditional_tokens_subgraph.Query.positions(
-            first=sys.maxsize, where=where_stms
+            first=sys.maxsize, where=unwrap_generic_value(where_stms)
         )
         fields = self._get_fields_for_positions(positions)
         result = self.sg.query_json(fields)
@@ -500,7 +502,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         self,
         better_address: ChecksumAddress,
         position_id_in: list[HexBytes] | None = None,
-        total_balance_bigger_than: Wei | None = None,
+        total_balance_bigger_than: OutcomeWei | None = None,
     ) -> list[OmenUserPosition]:
         where_stms: dict[str, t.Any] = {
             "user": better_address.lower(),
@@ -514,7 +516,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["position_"]["positionId_in"] = [x.hex() for x in position_id_in]
 
         positions = self.conditional_tokens_subgraph.Query.userPositions(
-            first=sys.maxsize, where=where_stms
+            first=sys.maxsize, where=unwrap_generic_value(where_stms)
         )
         fields = self._get_fields_for_user_positions(positions)
         result = self.sg.query_json(fields)
@@ -568,7 +570,9 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
                 < to_int_timestamp(market_resolved_before)
             )
         if collateral_amount_more_than is not None:
-            where_stms.append(trade.collateralAmount > collateral_amount_more_than)
+            where_stms.append(
+                trade.collateralAmount > collateral_amount_more_than.value
+            )
 
         # These values can not be set to `None`, but they can be omitted.
         optional_params = {}
@@ -579,7 +583,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         trades = self.trades_subgraph.Query.fpmmTrades(
             first=limit if limit else sys.maxsize,
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
             **optional_params,
         )
         fields = self._get_fields_for_bets(trades)
@@ -818,7 +822,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
         )
         fields = self._get_fields_for_reality_questions(questions)
         result = self.sg.query_json(fields)
@@ -832,7 +836,9 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             answer.question.questionId == question_id.hex(),
         ]
 
-        answers = self.realityeth_subgraph.Query.answers(where=where_stms)
+        answers = self.realityeth_subgraph.Query.answers(
+            where=unwrap_generic_value(where_stms)
+        )
         fields = self._get_fields_for_answers(answers)
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
@@ -879,7 +885,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
         )
         fields = self._get_fields_for_responses(responses)
         result = self.sg.query_json(fields)
@@ -938,7 +944,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         prediction_added = (
             self.omen_agent_result_mapping_subgraph.Query.predictionAddeds(
-                where=where_stms,
+                where=unwrap_generic_value(where_stms),
                 orderBy="blockNumber",
                 orderDirection="asc",
             )

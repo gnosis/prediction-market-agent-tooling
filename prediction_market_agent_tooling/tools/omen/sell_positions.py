@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
@@ -23,7 +24,9 @@ def sell_all(
         better_address=better_address,
         market_opening_after=utcnow() + timedelta(days=closing_later_than_days),
     )
-    bets_total_usd = sum(b.collateral_amount_usd for b in bets)
+    bets_total_usd = sum(
+        (b.get_collateral_amount_usd() for b in bets), start=USD.zero()
+    )
     unique_market_urls = set(b.fpmm.url for b in bets)
     starting_balance = get_balances(better_address)
     new_balance = starting_balance
@@ -37,9 +40,9 @@ def sell_all(
         outcome = agent_market.outcomes[bet.outcomeIndex]
         current_token_balance = agent_market.get_token_balance(better_address, outcome)
 
-        if current_token_balance.amount <= OmenAgentMarket.get_tiny_bet_amount().amount:
+        if current_token_balance.as_token <= agent_market.get_tiny_bet_amount():
             logger.info(
-                f"Skipping bet on {bet.fpmm.url} because the actual balance is unreasonably low {current_token_balance.amount}."
+                f"Skipping bet on {bet.fpmm.url} because the actual balance is unreasonably low {current_token_balance}."
             )
             continue
 

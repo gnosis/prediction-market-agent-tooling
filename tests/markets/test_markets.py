@@ -4,7 +4,7 @@ from prediction_market_agent_tooling.deploy.agent import (
     DeployablePredictionAgent,
     DeployableTraderAgent,
 )
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import OutcomeStr, OutcomeToken, Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -29,8 +29,8 @@ def test_valid_token_pool() -> None:
         id="foo",
         question="bar",
         description=None,
-        outcomes=["yes", "no"],
-        outcome_token_pool={"yes": 1.1, "no": 2.0},
+        outcomes=[OutcomeStr("yes"), OutcomeStr("no")],
+        outcome_token_pool={"yes": OutcomeToken(1.1), "no": OutcomeToken(2.0)},
         resolution=None,
         created_time=None,
         close_time=None,
@@ -40,8 +40,8 @@ def test_valid_token_pool() -> None:
         fees=MarketFees.get_zero_fees(),
     )
     assert market.has_token_pool() is True
-    assert market.get_pool_tokens("yes") == 1.1
-    assert market.get_pool_tokens("no") == 2.0
+    assert market.get_pool_tokens("yes") == OutcomeToken(1.1)
+    assert market.get_pool_tokens("no") == OutcomeToken(2.0)
 
 
 def test_invalid_token_pool() -> None:
@@ -50,8 +50,8 @@ def test_invalid_token_pool() -> None:
             id="foo",
             question="bar",
             description=None,
-            outcomes=["yes", "no"],
-            outcome_token_pool={"baz": 1.1, "qux": 2.0},
+            outcomes=[OutcomeStr("yes"), OutcomeStr("no")],
+            outcome_token_pool={"baz": OutcomeToken(1.1), "qux": OutcomeToken(2.0)},
             resolution=None,
             created_time=None,
             close_time=None,
@@ -91,7 +91,7 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
         assert market.has_token_pool() is True
         for outcome in market.outcomes:
             # Sanity check
-            assert market.get_pool_tokens(outcome) > 0
+            assert market.get_pool_tokens(outcome).value > 0
 
 
 @pytest.mark.parametrize(

@@ -17,8 +17,14 @@ def test_match_bet_ids_with_get_subgraph_bets() -> None:
         filter_by=FilterBy.OPEN,
     )[0]
     now = utcnow()
-    id0 = market.buy_tokens(outcome=True, amount=market.get_tiny_bet_amount())
-    id1 = market.buy_tokens(outcome=True, amount=market.get_tiny_bet_amount())
+    id0 = market.buy_tokens(
+        outcome=True,
+        amount=market.get_token_in_usd(market.get_tiny_bet_amount()),
+    )
+    id1 = market.buy_tokens(
+        outcome=True,
+        amount=market.get_token_in_usd(market.get_tiny_bet_amount()),
+    )
     assert id0 != id1
 
     time.sleep(10)  # wait for the subgraph to index the bets

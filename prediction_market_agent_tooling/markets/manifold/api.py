@@ -5,11 +5,7 @@ import tenacity
 
 from prediction_market_agent_tooling.gtypes import Mana, SecretStr
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
-    Currency,
-    ResolvedBet,
-)
+from prediction_market_agent_tooling.markets.data_models import ResolvedBet
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     FullManifoldMarket,
     ManifoldBet,
@@ -211,7 +207,7 @@ def manifold_to_generic_resolved_bet(
     market_outcome = market.get_resolved_boolean_outcome()
     return ResolvedBet(
         id=bet.id,
-        amount=BetAmount(amount=bet.amount, currency=Currency.Mana),
+        amount=bet.amount,
         outcome=bet.get_resolved_boolean_outcome(),
         created_time=bet.createdTime,
         market_question=market.question,

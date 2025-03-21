@@ -3,7 +3,7 @@ import typer
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, private_key_type
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
@@ -24,7 +24,7 @@ CLOSING_DATE_COLUMN = "Closing date"
 def main(
     path: str,
     category: str = typer.Option(),
-    initial_funds: str = typer.Option(),
+    initial_funds_usd: str = typer.Option(),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(None),
     cl_token: CollateralTokenChoice = CollateralTokenChoice.sdai,
@@ -82,13 +82,13 @@ def main(
             omen_create_market_tx(
                 api_keys=api_keys,
                 collateral_token_address=COLLATERAL_TOKEN_CHOICE_TO_ADDRESS[cl_token],
-                initial_funds=xdai_type(initial_funds),
+                initial_funds=USD(initial_funds_usd),
                 fee_perc=fee_perc,
                 question=row[QUESTION_COLUMN],
                 closing_time=row[CLOSING_DATE_COLUMN],
                 category=category,
                 language=language,
-                outcomes=outcomes,
+                outcomes=[OutcomeStr(x) for x in outcomes],
                 auto_deposit=auto_deposit,
             )
         )

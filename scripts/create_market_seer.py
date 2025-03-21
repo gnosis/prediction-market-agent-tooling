@@ -4,7 +4,12 @@ import typer
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    OutcomeStr,
+    private_key_type,
+    xDai,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
@@ -17,7 +22,7 @@ def main(
     question: str = typer.Option(),
     opening_time: datetime = typer.Option(),
     category: str = typer.Option(),
-    initial_funds: str = typer.Option(),
+    initial_funds_usd: str = typer.Option(),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(None),
     min_bond_xdai: int = typer.Option(0.01),
@@ -32,7 +37,7 @@ def main(
         question (str): The question for the market.
         opening_time (datetime): The opening time for the market.
         category (str): The category of the market.
-        initial_funds (str): The initial funds for the market.
+        initial_funds_usd (str): The initial funds for the market.
         from_private_key (str): The private key to use for transactions.
         safe_address (str, optional): The safe address for transactions. Defaults to None.
         min_bond_xdai (int, optional): The minimum bond in xDai. Defaults to 0.01 xDai.
@@ -52,14 +57,14 @@ def main(
     )
     market = seer_create_market_tx(
         api_keys=api_keys,
-        initial_funds=xdai_type(initial_funds),
+        initial_funds=USD(initial_funds_usd),
         question=question,
         opening_time=DatetimeUTC.from_datetime(opening_time),
         category=category,
         language=language,
-        outcomes=outcomes,
+        outcomes=[OutcomeStr(x) for x in outcomes],
         auto_deposit=auto_deposit,
-        min_bond_xdai=xdai_type(min_bond_xdai),
+        min_bond_xdai=xDai(min_bond_xdai),
     )
     logger.info(f"Market created: {market}")
 

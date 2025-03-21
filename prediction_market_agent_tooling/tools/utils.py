@@ -9,7 +9,13 @@ from pydantic import BaseModel, ValidationError
 from scipy.optimize import newton
 from scipy.stats import entropy
 
-from prediction_market_agent_tooling.gtypes import DatetimeUTC, Probability, SecretStr
+from prediction_market_agent_tooling.gtypes import (
+    DatetimeUTC,
+    OutcomeToken,
+    Probability,
+    SecretStr,
+    Token,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 
@@ -182,11 +188,11 @@ def prob_uncertainty(prob: Probability) -> float:
 
 
 def calculate_sell_amount_in_collateral(
-    shares_to_sell: float,
-    holdings: float,
-    other_holdings: float,
+    shares_to_sell: OutcomeToken,
+    holdings: OutcomeToken,
+    other_holdings: OutcomeToken,
     fees: MarketFees,
-) -> float:
+) -> Token:
     """
     Computes the amount of collateral that needs to be sold to get `shares`
     amount of shares. Returns None if the amount can't be computed.
@@ -199,11 +205,11 @@ def calculate_sell_amount_in_collateral(
             raise ValueError("All share args must be greater than 0")
 
     def f(r: float) -> float:
-        R = (r + fees.absolute) / (1 - fees.bet_proportion)
+        R = OutcomeToken((r + fees.absolute) / (1 - fees.bet_proportion))
         first_term = other_holdings - R
         second_term = holdings + shares_to_sell - R
         third_term = holdings * other_holdings
-        return (first_term * second_term) - third_term
+        return ((first_term * second_term) - third_term).value
 
     amount_to_sell = newton(f, 0)
-    return float(amount_to_sell) * 0.999999  # Avoid rounding errors
+    return Token(float(amount_to_sell) * 0.999999)  # Avoid rounding errors

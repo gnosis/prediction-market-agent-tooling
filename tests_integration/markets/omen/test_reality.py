@@ -4,7 +4,7 @@ from datetime import timedelta
 import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import OutcomeStr, xDai, xDaiWei
+from prediction_market_agent_tooling.gtypes import OutcomeStr, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     Arbitrator,

@@ -12,10 +12,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
     TradeType,
 )
+from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 

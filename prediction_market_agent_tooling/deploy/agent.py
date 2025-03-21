@@ -30,7 +30,7 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
 )
-from prediction_market_agent_tooling.gtypes import USD, xDai
+from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,

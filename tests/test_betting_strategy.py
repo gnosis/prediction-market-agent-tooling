@@ -79,7 +79,7 @@ def test_rebalance() -> None:
             OMEN_FALSE_OUTCOME: OutcomeToken(mock_amount.value),
         },
     )
-    buy_token_amount = Token(10)
+    buy_token_amount = OutcomeToken(10)
     bet_amount = USD(tiny_amount.value) + mock_existing_position.total_amount_current
     strategy = MaxAccuracyBettingStrategy(bet_amount=bet_amount)
     mock_answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=0.5)

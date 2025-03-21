@@ -566,7 +566,12 @@ class OmenAgentMarket(AgentMarket):
                 amounts_ot[outecome_str] = omen_position.totalBalance.as_outcome_token
 
             amounts_current = {
-                k: market.get_token_in_usd(market.get_sell_value_of_outcome_token(k, v))
+                k: market.get_token_in_usd(
+                    # If the market is not open for trading anymore, then current value is equal to potential value.
+                    market.get_sell_value_of_outcome_token(k, v)
+                    if market.can_be_traded()
+                    else v.as_token
+                )
                 for k, v in amounts_ot.items()
             }
             amounts_potential = {

@@ -6,7 +6,7 @@ from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.gtypes import USD, Token, private_key_type, xDai
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
@@ -75,7 +75,8 @@ def test_where_fees_go(
     question = f"Will job X be completed in {close_in} seconds from now?"
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)
-    funds = xdai_type(1)
+    funds = USD(1)
+    funds_t = Token(funds.value)  #   In this test, 1 USD = 1 Token
     fee_perc = 0.5
     finalization_wait_time_seconds = 1
     category = "cryptocurrency"
@@ -107,10 +108,11 @@ def test_where_fees_go(
     assert (
         balance_after_market_creation_A < starting_balance_A
     ), "Starting balance of A should have been lowered"
-    assert agent_market.get_liquidity_in_xdai(local_web3) == funds
+    assert agent_market.get_liquidity(local_web3) == funds_t
 
     # Add double the liquidity from account B
-    additional_funds = xdai_type(funds * 2)
+    additional_funds = funds * USD(2)
+    additional_funds_t = Token(additional_funds.value)  # In this test, 1 USD = 1 Token
     omen_fund_market_tx(
         api_keys_B,
         agent_market,
@@ -124,11 +126,13 @@ def test_where_fees_go(
     assert (
         balance_after_adding_liquidity_B < starting_balance_B
     ), "Balance of B should have be lowered from adding liquidity"
-    assert agent_market.get_liquidity_in_xdai(local_web3) == funds + additional_funds
+    assert (
+        agent_market.get_liquidity(local_web3).value == (funds + additional_funds).value
+    )
 
     # Buy YES tokens from account C
     # Buy for a lot more than given liquidity, to be a loser because of the fees.
-    buy_yes_for_c = xdai_type(funds * 10)
+    buy_yes_for_c = funds * USD(10)
     buyer_binary_outcome = True
     binary_omen_buy_outcome_tx(
         api_keys_C,
@@ -143,7 +147,7 @@ def test_where_fees_go(
         balance_after_buying_C < starting_balance_C
     ), "Balance of B should have be lowered from betting"
     assert (
-        agent_market.get_liquidity_in_xdai(local_web3) == funds + additional_funds
+        agent_market.get_liquidity(local_web3) == funds_t + additional_funds_t
     ), "Assumption was that fee is not added to the liquidity of the market"
 
     # Wait for market's closing time
@@ -157,7 +161,7 @@ def test_where_fees_go(
         api_keys_A,
         omen_market,
         Resolution.from_bool(buyer_binary_outcome),
-        bond=xdai_type(0.001),
+        bond=xDai(0.001),
         web3=local_web3,
     )
 
@@ -215,8 +219,8 @@ def test_where_fees_go(
         account_B_difference > account_A_difference
     ), "Assumption was that B will receive more from the fees because he provided more liquidity."
     assert np.isclose(
-        account_B_difference, 2 * account_A_difference, atol=1e-2
-    ), f"Assumption was that B will receive roughly double the amount because he provided double the liquidity, but {account_B_difference=} {2*account_A_difference=}"
+        account_B_difference.value, 2 * account_A_difference.value, atol=1e-2
+    ), f"Assumption was that B will receive roughly double the amount because he provided double the liquidity, but {account_B_difference=} {2*account_A_difference.value=}"
     assert (
         account_C_difference < 0
     ), "Assumption was that even that C was correct, he will lose money because of the huge fees and unreasonable bet size given the liquidity."

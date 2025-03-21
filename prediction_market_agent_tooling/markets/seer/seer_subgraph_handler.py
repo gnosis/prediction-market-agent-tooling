@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
+from prediction_market_agent_tooling.tools.web3_utils import unwrap_generic_value
 
 
 class SeerSubgraphHandler(BaseSubgraphHandler):
@@ -158,7 +159,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible markets,
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
             **optional_params,
         )
         fields = self._get_fields_for_markets(markets_field)
@@ -219,7 +220,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                     {"token1": wrapped_token.lower()},
                 ]
             )
-        pools_field = self.swapr_algebra_subgraph.Query.pools(where={"or": wheres})
+        pools_field = self.swapr_algebra_subgraph.Query.pools(
+            where=unwrap_generic_value({"or": wheres})
+        )
         fields = self._get_fields_for_pools(pools_field)
         pools = self.do_query(fields=fields, pydantic_model=SeerPool)
         return pools

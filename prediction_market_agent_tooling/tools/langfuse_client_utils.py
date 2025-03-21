@@ -12,6 +12,9 @@ from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
     TradeType,
 )
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    WRAPPED_XDAI_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
@@ -147,11 +150,20 @@ def get_trace_for_bet(
     # Filter for traces with the same bet outcome and amount
     traces_for_bet: list[ProcessMarketTrace] = []
     for t in traces:
+        if (
+            t.market.collateral_token_contract_address_checksummed
+            not in WRAPPED_XDAI_CONTRACT_ADDRESS
+        ):
+            # TODO: We need to compute bet amount token in USD here, but at the time of bet placement!
+            logger.warning(
+                "This currently works only for WXDAI markets, because we need to compare against USD value."
+            )
+            continue
         # Cannot use exact comparison due to gas fees
         if (
             t.buy_trade
             and t.buy_trade.outcome == bet.outcome
-            and np.isclose(t.buy_trade.amount.amount, bet.amount.amount)
+            and np.isclose(t.buy_trade.amount.value, bet.amount.value)
         ):
             traces_for_bet.append(t)
 

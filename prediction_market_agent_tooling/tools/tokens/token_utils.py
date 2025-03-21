@@ -1,8 +1,6 @@
 from eth_typing.evm import ChecksumAddress
 from web3 import Web3
-from web3.types import Wei
 
-from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC4626BaseClass,
@@ -18,7 +16,6 @@ def convert_to_another_token(
     to_token: ChecksumAddress,
     web3: Web3 | None = None,
 ) -> Wei:
-    web3 = web3 or RPCConfig().get_web3()
     from_token_contract = to_gnosis_chain_contract(
         init_collateral_token_contract(from_token, web3)
     )

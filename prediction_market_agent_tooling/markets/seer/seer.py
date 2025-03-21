@@ -4,15 +4,16 @@ from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.types import TxReceipt
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
+    USD,
     HexAddress,
     HexBytes,
     OutcomeStr,
-    Wei,
-    wei_type,
+    OutcomeToken,
+    OutcomeWei,
+    Token,
     xDai,
-    xdai_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -23,15 +24,9 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
-from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
-    Currency,
-    Position,
-    TokenAmount,
-)
+from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract
 from prediction_market_agent_tooling.markets.seer.data_models import (
     NewMarketEvent,
     SeerMarket,
@@ -43,7 +38,6 @@ from prediction_market_agent_tooling.markets.seer.seer_contracts import (
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
@@ -57,18 +51,16 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
-from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
-from prediction_market_agent_tooling.tools.tokens.token_utils import (
-    convert_to_another_token,
+from prediction_market_agent_tooling.tools.tokens.usd import (
+    get_token_in_usd,
+    get_usd_in_token,
 )
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
-SEER_TINY_BET_AMOUNT = xdai_type(0.1)
+SEER_TINY_BET_AMOUNT = USD(0.1)
 
 
 class SeerAgentMarket(AgentMarket):
-    currency = Currency.sDai
     wrapped_tokens: list[ChecksumAddress]
     creator: HexAddress
     collateral_token_contract_address_checksummed: ChecksumAddress
@@ -77,6 +69,16 @@ class SeerAgentMarket(AgentMarket):
     description: str | None = (
         None  # Seer markets don't have a description, so just default to None.
     )
+
+    def get_collateral_token_contract(
+        self, web3: Web3 | None = None
+    ) -> ContractERC20OnGnosisChain:
+        web3 = web3 or RPCConfig().get_web3()
+        return to_gnosis_chain_contract(
+            init_collateral_token_contract(
+                self.collateral_token_contract_address_checksummed, web3
+            )
+        )
 
     def store_prediction(
         self,
@@ -99,29 +101,28 @@ class SeerAgentMarket(AgentMarket):
             agent_name=agent_name,
         )
 
-    def _convert_bet_amount_into_wei(self, bet_amount: BetAmount) -> Wei:
-        if bet_amount.currency == self.currency:
-            return xdai_to_wei(xdai_type(bet_amount.amount))
-        raise ValueError(
-            f"Currencies don't match. Currency bet amount {bet_amount.currency} currency market: {self.currency}"
-        )
+    def get_token_in_usd(self, x: Token) -> USD:
+        return get_token_in_usd(x, self.collateral_token_contract_address_checksummed)
+
+    def get_usd_in_token(self, x: USD) -> Token:
+        return get_usd_in_token(x, self.collateral_token_contract_address_checksummed)
 
     def get_buy_token_amount(
-        self, bet_amount: BetAmount, direction: bool
-    ) -> TokenAmount:
+        self, bet_amount: USD | Token, direction: bool
+    ) -> OutcomeToken:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
         outcome_token = self.get_wrapped_token_for_outcome(direction)
-
-        bet_amount_in_wei = self._convert_bet_amount_into_wei(bet_amount=bet_amount)
+        bet_amount_in_tokens = self.get_in_token(bet_amount)
+        bet_amount_in_wei = bet_amount_in_tokens.as_wei
 
         quote = CowManager().get_quote(
             buy_token=outcome_token,
             sell_amount=bet_amount_in_wei,
             collateral_token=self.collateral_token_contract_address_checksummed,
         )
-        sell_amount = wei_to_xdai(wei_type(quote.quote.buyAmount.root))
-        return TokenAmount(amount=sell_amount, currency=bet_amount.currency)
+        sell_amount = OutcomeWei(quote.quote.buyAmount.root).as_outcome_token
+        return sell_amount
 
     def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
         outcome_translated = SeerOutcomeEnum.from_bool(outcome)
@@ -129,33 +130,46 @@ class SeerAgentMarket(AgentMarket):
         return OutcomeStr(self.outcomes[idx])
 
     @staticmethod
-    def get_trade_balance(api_keys: APIKeys) -> float:
+    def get_trade_balance(api_keys: APIKeys) -> USD:
         return OmenAgentMarket.get_trade_balance(api_keys=api_keys)
 
-    @classmethod
-    def get_tiny_bet_amount(cls) -> BetAmount:
-        return BetAmount(amount=SEER_TINY_BET_AMOUNT, currency=cls.currency)
+    def get_tiny_bet_amount(self) -> Token:
+        return self.get_in_token(SEER_TINY_BET_AMOUNT)
 
-    def get_position(self, user_id: str, web3: Web3 | None = None) -> Position | None:
+    def get_position(
+        self, user_id: str, web3: Web3 | None = None
+    ) -> ExistingPosition | None:
         """
         Fetches position from the user in a given market.
         We ignore the INVALID balances since we are only interested in binary outcomes.
         """
 
-        amounts = {}
+        amounts_ot: dict[OutcomeStr, OutcomeToken] = {}
 
         for outcome in [True, False]:
             wrapped_token = self.get_wrapped_token_for_outcome(outcome)
 
-            outcome_token_balance = ContractERC20OnGnosisChain(
-                address=wrapped_token
-            ).balanceOf(for_address=Web3.to_checksum_address(user_id), web3=web3)
-            outcome_str = self.get_outcome_str_from_bool(outcome=outcome)
-            amounts[outcome_str] = TokenAmount(
-                amount=wei_to_xdai(outcome_token_balance), currency=self.currency
+            outcome_token_balance_wei = OutcomeWei.from_wei(
+                ContractERC20OnGnosisChain(address=wrapped_token).balanceOf(
+                    for_address=Web3.to_checksum_address(user_id), web3=web3
+                )
             )
+            outcome_str = self.get_outcome_str_from_bool(outcome=outcome)
+            amounts_ot[outcome_str] = outcome_token_balance_wei.as_outcome_token
 
-        return Position(market_id=self.id, amounts=amounts)
+        amounts_current = {
+            k: self.get_token_in_usd(self.get_sell_value_of_outcome_token(k, v))
+            for k, v in amounts_ot.items()
+        }
+        amounts_potential = {
+            k: self.get_token_in_usd(v.as_token) for k, v in amounts_ot.items()
+        }
+        return ExistingPosition(
+            market_id=self.id,
+            amounts_current=amounts_current,
+            amounts_potential=amounts_potential,
+            amounts_ot=amounts_ot,
+        )
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
@@ -214,9 +228,9 @@ class SeerAgentMarket(AgentMarket):
             CowManager().get_quote(
                 collateral_token=self.collateral_token_contract_address_checksummed,
                 buy_token=outcome_token,
-                sell_amount=xdai_to_wei(
-                    xdai_type(1)
-                ),  # we take 1 xDai as a baseline value for common trades the agents take.
+                sell_amount=Token(
+                    1
+                ).as_wei,  # we take 1 as a baseline value for common trades the agents take.
             )
             return True
         except NoLiquidityAvailableOnCowException:
@@ -240,7 +254,7 @@ class SeerAgentMarket(AgentMarket):
     def place_bet(
         self,
         outcome: bool,
-        amount: BetAmount,
+        amount: USD,
         auto_deposit: bool = True,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
@@ -251,32 +265,27 @@ class SeerAgentMarket(AgentMarket):
                 f"Market {self.id} is not open for trading. Cannot place bet."
             )
 
-        if amount.currency != self.currency:
-            raise ValueError(f"Seer bets are made in xDai. Got {amount.currency}.")
+        amount_in_token = self.get_usd_in_token(amount)
+        amount_wei = amount_in_token.as_wei
+        collateral_contract = self.get_collateral_token_contract()
 
-        collateral_contract = sDaiContract()
         if auto_deposit:
-            # We convert the deposit amount (in sDai) to assets in order to convert.
-            asset_amount = collateral_contract.convertToAssets(
-                xdai_to_wei(xdai_type(amount.amount))
-            )
             auto_deposit_collateral_token(
-                collateral_contract, asset_amount, api_keys, web3
+                collateral_contract, amount_wei, api_keys, web3
             )
 
-        # We require that amount is given in sDAI.
-        collateral_balance = get_balances(address=api_keys.bet_from_address, web3=web3)
-        if collateral_balance.sdai < amount.amount:
+        collateral_balance = collateral_contract.balanceOf(api_keys.bet_from_address)
+        if collateral_balance < amount_wei:
             raise ValueError(
-                f"Balance {collateral_balance.sdai} not enough for bet size {amount.amount}"
+                f"Balance {collateral_balance} not enough for bet size {amount}"
             )
 
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
-        #  Sell sDAI using token address
+        # Sell using token address
         order_metadata = CowManager().swap(
-            amount=xdai_type(amount.amount),
+            amount=amount_in_token,
             sell_token=collateral_contract.address,
-            buy_token=Web3.to_checksum_address(outcome_token),
+            buy_token=outcome_token,
             api_keys=api_keys,
             web3=web3,
         )
@@ -286,18 +295,17 @@ class SeerAgentMarket(AgentMarket):
 
 def seer_create_market_tx(
     api_keys: APIKeys,
-    initial_funds: xDai,
+    initial_funds: USD | Token,
     question: str,
     opening_time: DatetimeUTC,
     language: str,
-    outcomes: list[str],
+    outcomes: t.Sequence[OutcomeStr],
     auto_deposit: bool,
     category: str,
     min_bond_xdai: xDai,
     web3: Web3 | None = None,
 ) -> ChecksumAddress:
     web3 = web3 or SeerMarketFactory.get_web3()  # Default to Gnosis web3.
-    initial_funds_wei = xdai_to_wei(initial_funds)
 
     factory_contract = SeerMarketFactory()
     collateral_token_address = factory_contract.collateral_token(web3=web3)
@@ -305,26 +313,26 @@ def seer_create_market_tx(
         init_collateral_token_contract(collateral_token_address, web3)
     )
 
+    initial_funds_in_collateral = (
+        get_usd_in_token(initial_funds, collateral_token_address)
+        if isinstance(initial_funds, USD)
+        else initial_funds
+    )
+    initial_funds_in_collateral_wei = initial_funds_in_collateral.as_wei
+
     if auto_deposit:
         auto_deposit_collateral_token(
             collateral_token_contract=collateral_token_contract,
             api_keys=api_keys,
-            amount_wei=initial_funds_wei,
+            collateral_amount_wei_or_usd=initial_funds_in_collateral_wei,
             web3=web3,
         )
-
-    # In case of other tokens, obtained (for example) GNO out of xDai could be lower than the `amount_wei`, so we need to handle it.
-    initial_funds_in_shares = convert_to_another_token(
-        initial_funds_wei,
-        from_token=KEEPING_ERC20_TOKEN.address,
-        to_token=collateral_token_address,
-    )
 
     # Approve the market maker to withdraw our collateral token.
     collateral_token_contract.approve(
         api_keys=api_keys,
         for_address=factory_contract.address,
-        amount_wei=initial_funds_in_shares,
+        amount_wei=initial_funds_in_collateral_wei,
         web3=web3,
     )
 
@@ -335,7 +343,7 @@ def seer_create_market_tx(
         opening_time=opening_time,
         language=language,
         category=category,
-        min_bond_xdai=min_bond_xdai,
+        min_bond=min_bond_xdai,
     )
     tx_receipt = factory_contract.create_categorical_market(
         api_keys=api_keys, params=params, web3=web3

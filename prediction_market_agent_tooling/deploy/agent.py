@@ -30,7 +30,7 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
 )
-from prediction_market_agent_tooling.gtypes import xDai
+from prediction_market_agent_tooling.gtypes import USD, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -40,8 +40,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    ExistingPosition,
     PlacedTrade,
-    Position,
     ProbabilisticAnswer,
     Trade,
 )
@@ -582,9 +582,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         """
         user_id = market.get_user_id(api_keys=APIKeys())
 
-        total_amount = market.get_tiny_bet_amount().amount
+        total_amount = market.get_in_usd(market.get_tiny_bet_amount())
         if existing_position := market.get_position(user_id=user_id):
-            total_amount += existing_position.total_amount.amount
+            total_amount += existing_position.total_amount_current
 
         return MaxAccuracyBettingStrategy(bet_amount=total_amount)
 
@@ -592,11 +592,10 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         self,
         market: AgentMarket,
         answer: ProbabilisticAnswer,
-        existing_position: Position | None,
+        existing_position: ExistingPosition | None,
     ) -> list[Trade]:
         strategy = self.get_betting_strategy(market=market)
         trades = strategy.calculate_trades(existing_position, answer, market)
-        BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 
     def before_process_market(

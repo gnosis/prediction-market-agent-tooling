@@ -6,19 +6,13 @@ from ape_test import TestAccount
 from eth_account import Account
 from numpy import isclose
 from web3 import Web3
-from web3.types import Wei
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xDai, xdai_type
-from prediction_market_agent_tooling.markets.omen.omen import get_total_balance
+from prediction_market_agent_tooling.gtypes import Token, private_key_type, xDai
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import DebuggingContract
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import (
-    send_xdai_to,
-    wei_to_xdai,
-    xdai_to_wei,
-)
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to
 from tests.utils import mint_new_block
 
 
@@ -27,7 +21,7 @@ def test_connect_local_chain(local_web3: Web3) -> None:
 
 
 def test_send_xdai(local_web3: Web3, accounts: list[TestAccount]) -> None:
-    value = xdai_to_wei(xDai(10))
+    value = xDai(10).as_xdai_wei
     from_account = accounts[0]
     to_account = accounts[1]
     initial_balance_from = get_balances(from_account.address, local_web3)
@@ -42,12 +36,12 @@ def test_send_xdai(local_web3: Web3, accounts: list[TestAccount]) -> None:
 
     final_balance_from = get_balances(from_account.address, local_web3)
     final_balance_to = get_balances(to_account.address, local_web3)
-    assert int(final_balance_to.xdai - initial_balance_to.xdai) == local_web3.from_wei(
-        value, "ether"
-    )
     assert int(
-        initial_balance_from.xdai - final_balance_from.xdai
-    ) == local_web3.from_wei(value, "ether")
+        final_balance_to.xdai.value - initial_balance_to.xdai.value
+    ) == local_web3.from_wei(value.value, "ether")
+    assert int(
+        initial_balance_from.xdai.value - final_balance_from.xdai.value
+    ) == local_web3.from_wei(value.value, "ether")
 
 
 def test_send_xdai_from_locked_account(
@@ -55,8 +49,8 @@ def test_send_xdai_from_locked_account(
     test_keys: APIKeys,
 ) -> None:
     from_account = Account.from_key(test_keys.bet_from_private_key.get_secret_value())
-    fund_value = xdai_to_wei(xDai(10))
-    transfer_back_value = xdai_to_wei(xDai(5))
+    fund_value = xDai(10).as_xdai_wei
+    transfer_back_value = xDai(5).as_xdai_wei
     random_locked_account = local_web3.eth.account.create()
     # we fund the random account for later sending
     send_xdai_to(
@@ -67,7 +61,7 @@ def test_send_xdai_from_locked_account(
     )
 
     balance_random = get_balances(random_locked_account.address, local_web3)
-    assert xdai_to_wei(balance_random.xdai) == fund_value
+    assert balance_random.xdai.as_xdai_wei == fund_value
     send_xdai_to(
         web3=local_web3,
         from_private_key=private_key_type(random_locked_account.key.hex()),
@@ -77,8 +71,8 @@ def test_send_xdai_from_locked_account(
     balance_random = get_balances(random_locked_account.address, local_web3)
     # We use isclose due to gas costs minimally affecting the balance
     assert isclose(
-        balance_random.xdai,
-        wei_to_xdai(Wei(fund_value - transfer_back_value)),
+        balance_random.xdai.value,
+        (fund_value - transfer_back_value).as_xdai.value,
         rtol=0.001,
     )
 
@@ -88,13 +82,13 @@ def test_anvil_account_has_more_than_minimum_required_balance(
     accounts: list[TestAccount],
 ) -> None:
     account_adr = Web3.to_checksum_address(accounts[0].address)
-    assert get_total_balance(account_adr, local_web3) > xdai_type(0.5)
+    assert get_balances(account_adr, local_web3).total > Token(0.5)
 
 
 def test_fresh_account_has_less_than_minimum_required_balance(local_web3: Web3) -> None:
     fresh_account_adr = Account.create().address
     account_adr = Web3.to_checksum_address(fresh_account_adr)
-    assert get_total_balance(account_adr, local_web3) < xdai_type(0.5)
+    assert get_balances(account_adr, local_web3).total < Token(0.5)
 
 
 def test_now(local_web3: Web3, test_keys: APIKeys) -> None:
@@ -134,16 +128,16 @@ def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
 @pytest.mark.parametrize(
     "message, value_xdai",
     [
-        ("Hello there!", xDai(10)),
-        (zlib.compress(b"Hello there!"), xDai(10)),
-        ("Hello there!", xDai(0)),
-        ("", xDai(0)),
+        ("Hello there!", 10),
+        (zlib.compress(b"Hello there!"), 10),
+        ("Hello there!", 0),
+        ("", 0),
     ],
 )
 def test_send_xdai_with_data(
-    message: str, value_xdai: xDai, local_web3: Web3, accounts: list[TestAccount]
+    message: str, value_xdai: float, local_web3: Web3, accounts: list[TestAccount]
 ) -> None:
-    value = xdai_to_wei(value_xdai)
+    value = xDai(value_xdai).as_xdai_wei
     message = "Hello there!"
     from_account = accounts[0]
     to_account = accounts[1]
@@ -162,4 +156,4 @@ def test_send_xdai_with_data(
     assert transaction_message == message
 
     # Check that the value is correct
-    assert transaction["value"] == value
+    assert transaction["value"] == value.value

@@ -4,7 +4,7 @@ from datetime import timedelta
 import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import wei_type, xdai_type
+from prediction_market_agent_tooling.gtypes import OutcomeStr, xDai, xDaiWei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     Arbitrator,
@@ -17,7 +17,6 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -26,7 +25,7 @@ def test_claim_bonds() -> None:
     api_keys = APIKeys()
     realitio_contract = OmenRealitioContract()
     timeout = timedelta(seconds=60)
-    outcomes = ["Yes", "No"]
+    outcomes = [OutcomeStr("Yes"), OutcomeStr("No")]
 
     # Ask a question
     question_event = realitio_contract.askQuestion(
@@ -43,7 +42,7 @@ def test_claim_bonds() -> None:
     time.sleep(2)  # Wait for the question to be opened.
 
     # Add multiple answers
-    bond = xdai_to_wei(xdai_type(0.00001))
+    bond = xDai(0.00001).as_xdai_wei
     answers = [outcomes[0], outcomes[1], outcomes[0], outcomes[1]]
     for answer in answers:
         realitio_contract.submit_answer(
@@ -53,7 +52,7 @@ def test_claim_bonds() -> None:
             outcomes=outcomes,
             bond=bond,
         )
-        bond = wei_type(bond * 2)
+        bond *= 2
         logger.info(f"Answered with: {answer}")
         time.sleep(2)  # Give it a moment to settle on chain.
 

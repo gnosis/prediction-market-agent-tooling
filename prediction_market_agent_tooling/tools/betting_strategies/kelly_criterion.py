@@ -1,3 +1,4 @@
+from prediction_market_agent_tooling.gtypes import OutcomeToken, Token
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 
@@ -8,7 +9,7 @@ def check_is_valid_probability(probability: float) -> None:
 
 
 def get_kelly_bet_simplified(
-    max_bet: float,
+    max_bet: Token,
     market_p_yes: float,
     estimated_p_yes: float,
     confidence: float,
@@ -51,17 +52,17 @@ def get_kelly_bet_simplified(
     kelly_fraction = edge / odds
 
     # Ensure bet size is non-negative does not exceed the wallet balance
-    bet_size = min(kelly_fraction * max_bet, max_bet)
+    bet_size = Token(min(kelly_fraction * max_bet.value, max_bet.value))
 
     return SimpleBet(direction=bet_direction, size=bet_size)
 
 
 def get_kelly_bet_full(
-    yes_outcome_pool_size: float,
-    no_outcome_pool_size: float,
+    yes_outcome_pool_size: OutcomeToken,
+    no_outcome_pool_size: OutcomeToken,
     estimated_p_yes: float,
     confidence: float,
-    max_bet: float,
+    max_bet: Token,
     fees: MarketFees,
 ) -> SimpleBet:
     """
@@ -97,13 +98,13 @@ def get_kelly_bet_full(
     check_is_valid_probability(confidence)
 
     if max_bet == 0:
-        return SimpleBet(direction=True, size=0)
+        return SimpleBet(direction=True, size=Token(0))
 
-    x = yes_outcome_pool_size
-    y = no_outcome_pool_size
+    x = yes_outcome_pool_size.value
+    y = no_outcome_pool_size.value
     p = estimated_p_yes
     c = confidence
-    b = max_bet
+    b = max_bet.value
     f = 1 - fee
 
     if x == y:
@@ -144,5 +145,6 @@ def get_kelly_bet_full(
 
     # Clip the bet size to max_bet to account for rounding errors.
     return SimpleBet(
-        direction=kelly_bet_amount > 0, size=min(max_bet, abs(kelly_bet_amount))
+        direction=kelly_bet_amount > 0,
+        size=Token(min(max_bet.value, abs(kelly_bet_amount))),
     )

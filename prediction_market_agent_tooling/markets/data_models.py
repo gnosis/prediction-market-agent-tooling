@@ -1,17 +1,16 @@
 from enum import Enum
-from typing import Annotated, TypeAlias
+from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, computed_field
 
-from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    OutcomeStr,
+    OutcomeToken,
+    Probability,
+    Token,
+)
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
-
-
-class Currency(str, Enum):
-    xDai = "xDai"
-    sDai = "sDai"
-    Mana = "Mana"
-    USDC = "USDC"
 
 
 class Resolution(str, Enum):
@@ -25,21 +24,9 @@ class Resolution(str, Enum):
         return Resolution.YES if value else Resolution.NO
 
 
-class TokenAmount(BaseModel):
-    amount: float
-    currency: Currency
-
-    def __str__(self) -> str:
-        return f"Amount {self.amount} currency {self.currency}"
-
-
-BetAmount: TypeAlias = TokenAmount
-ProfitAmount: TypeAlias = TokenAmount
-
-
 class Bet(BaseModel):
     id: str
-    amount: BetAmount
+    amount: Token
     outcome: bool
     created_time: DatetimeUTC
     market_question: str
@@ -52,7 +39,7 @@ class Bet(BaseModel):
 class ResolvedBet(Bet):
     market_outcome: bool
     resolved_time: DatetimeUTC
-    profit: ProfitAmount
+    profit: Token
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -61,10 +48,6 @@ class ResolvedBet(Bet):
 
     def __str__(self) -> str:
         return f"Resolved bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}. Bet was resolved at {self.resolved_time} and was {'correct' if self.is_correct else 'incorrect'}. Profit was {self.profit}"
-
-
-class TokenAmountAndDirection(TokenAmount):
-    direction: bool
 
 
 def to_boolean_outcome(value: str | bool) -> bool:
@@ -102,21 +85,34 @@ class ProbabilisticAnswer(BaseModel):
 
 class Position(BaseModel):
     market_id: str
-    amounts: dict[OutcomeStr, TokenAmount]
+    # This is for how much we could buy or sell the position right now.
+    amounts_current: dict[OutcomeStr, USD]
 
     @property
-    def total_amount(self) -> TokenAmount:
-        return TokenAmount(
-            amount=sum(amount.amount for amount in self.amounts.values()),
-            currency=self.amounts[next(iter(self.amounts.keys()))].currency,
-        )
+    def total_amount_current(self) -> USD:
+        return sum(self.amounts_current.values(), start=USD(0))
 
     def __str__(self) -> str:
         amounts_str = ", ".join(
-            f"{amount.amount} '{outcome}' tokens"
-            for outcome, amount in self.amounts.items()
+            f"{amount} USD of '{outcome}' tokens"
+            for outcome, amount in self.amounts_current.items()
         )
         return f"Position for market id {self.market_id}: {amounts_str}"
+
+
+class ExistingPosition(Position):
+    # This is how much we will get if we win.
+    amounts_potential: dict[OutcomeStr, USD]
+    # These are raw outcome tokens of the market.
+    amounts_ot: dict[OutcomeStr, OutcomeToken]
+
+    @property
+    def total_amount_potential(self) -> USD:
+        return sum(self.amounts_potential.values(), start=USD(0))
+
+    @property
+    def total_amount_ot(self) -> OutcomeToken:
+        return sum(self.amounts_ot.values(), start=OutcomeToken(0))
 
 
 class TradeType(str, Enum):
@@ -127,7 +123,7 @@ class TradeType(str, Enum):
 class Trade(BaseModel):
     trade_type: TradeType
     outcome: bool
-    amount: TokenAmount
+    amount: USD
 
 
 class PlacedTrade(Trade):
@@ -149,12 +145,12 @@ class SimulatedBetDetail(BaseModel):
     market_p_yes: float
     agent_p_yes: float
     agent_conf: float
-    org_bet: float
-    sim_bet: float
+    org_bet: Token
+    sim_bet: Token
     org_dir: bool
     sim_dir: bool
-    org_profit: float
-    sim_profit: float
+    org_profit: Token
+    sim_profit: Token
     timestamp: DatetimeUTC
 
 
@@ -166,10 +162,10 @@ class SharpeOutput(BaseModel):
 
 class SimulatedLifetimeDetail(BaseModel):
     p_yes_mse: float
-    total_bet_amount: float
-    total_bet_profit: float
-    total_simulated_amount: float
-    total_simulated_profit: float
+    total_bet_amount: Token
+    total_bet_profit: Token
+    total_simulated_amount: Token
+    total_simulated_profit: Token
     roi: float
     simulated_roi: float
     sharpe_output_original: SharpeOutput

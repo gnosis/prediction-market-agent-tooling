@@ -15,12 +15,12 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     HexStr,
     IPFSCIDVersion0,
-    OmenOutcomeToken,
+    OutcomeWei,
     TxParams,
     TxReceipt,
     Wei,
     int_to_hexbytes,
-    wei_type,
+    xDaiWei,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     INVALID_ANSWER_HEX_BYTES,
@@ -128,8 +128,8 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
 
     def balanceOf(
         self, from_address: ChecksumAddress, position_id: int, web3: Web3 | None = None
-    ) -> Wei:
-        balance = wei_type(
+    ) -> OutcomeWei:
+        balance = OutcomeWei(
             self.call("balanceOf", [from_address, position_id], web3=web3)
         )
         return balance
@@ -169,7 +169,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         collateral_token_address: ChecksumAddress,
         conditionId: HexBytes,
         index_sets: t.List[int],
-        amount: Wei,
+        amount: OutcomeWei,
         parent_collection_id: HexStr = build_parent_collection_id(),
         web3: Web3 | None = None,
     ) -> TxReceipt:
@@ -296,28 +296,28 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
     # Factory contract at https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0.
 
     def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
-        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
+        balance = Wei(self.call("balanceOf", [for_address], web3=web3))
         return balance
 
     def calcBuyAmount(
         self, investment_amount: Wei, outcome_index: int, web3: Web3 | None = None
-    ) -> OmenOutcomeToken:
+    ) -> OutcomeWei:
         """
         Returns amount of shares we will get for the given outcome_index for the given investment amount.
         """
-        calculated_shares: OmenOutcomeToken = self.call(
-            "calcBuyAmount", [investment_amount, outcome_index], web3=web3
+        calculated_shares = OutcomeWei(
+            self.call("calcBuyAmount", [investment_amount, outcome_index], web3=web3)
         )
         return calculated_shares
 
     def calcSellAmount(
         self, return_amount: Wei, outcome_index: int, web3: Web3 | None = None
-    ) -> OmenOutcomeToken:
+    ) -> OutcomeWei:
         """
         Returns amount of shares we will sell for the requested wei.
         """
-        calculated_shares: OmenOutcomeToken = self.call(
-            "calcSellAmount", [return_amount, outcome_index], web3=web3
+        calculated_shares = OutcomeWei(
+            self.call("calcSellAmount", [return_amount, outcome_index], web3=web3)
         )
         return calculated_shares
 
@@ -334,7 +334,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         amount_wei: Wei,
         outcome_index: int,
-        min_outcome_tokens_to_buy: OmenOutcomeToken,
+        min_outcome_tokens_to_buy: OutcomeWei,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
@@ -355,7 +355,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         amount_wei: Wei,
         outcome_index: int,
-        max_outcome_tokens_to_sell: OmenOutcomeToken,
+        max_outcome_tokens_to_sell: OutcomeWei,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
@@ -411,7 +411,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
     def totalSupply(self, web3: Web3 | None = None) -> Wei:
         # This is the liquidity you seen on the Omen website (but in Wei).
-        total_supply: Wei = self.call("totalSupply", web3=web3)
+        total_supply = Wei(self.call("totalSupply", web3=web3))
         return total_supply
 
     def get_collateral_token_contract(
@@ -466,7 +466,7 @@ class OmenFixedProductMarketMakerFactoryContract(ContractOnGnosisChain):
         initial_funds_wei: Wei,
         collateral_token_address: ChecksumAddress,
         fee: Wei,  # This is actually fee in %, 'where 100% == 1 xDai'.
-        distribution_hint: list[OmenOutcomeToken] | None = None,
+        distribution_hint: list[OutcomeWei] | None = None,
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> tuple[
@@ -585,7 +585,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         question: str,
         category: str,
-        outcomes: list[str],
+        outcomes: t.Sequence[str],
         language: str,
         arbitrator: Arbitrator,
         opening: DatetimeUTC,
@@ -640,14 +640,14 @@ class OmenRealitioContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         question_id: HexBytes,
         answer: HexBytes,
-        bond: Wei,
-        max_previous: Wei | None = None,
+        bond: xDaiWei,
+        max_previous: xDaiWei | None = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         if max_previous is None:
             # If not provided, defaults to 0, which means no checking,
             # same as on Omen website: https://github.com/protofire/omen-exchange/blob/763d9c9d05ebf9edacbc1dbaa561aa5d08813c0f/app/src/services/realitio.ts#L363.
-            max_previous = Wei(0)
+            max_previous = xDaiWei(0)
 
         return self.send_with_value(
             api_keys=api_keys,
@@ -657,7 +657,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
                 answer=answer,
                 max_previous=max_previous,
             ),
-            amount_wei=bond,
+            amount_wei=bond.as_wei,
             web3=web3,
         )
 
@@ -666,9 +666,9 @@ class OmenRealitioContract(ContractOnGnosisChain):
         api_keys: APIKeys,
         question_id: HexBytes,
         answer: str,
-        outcomes: list[str],
-        bond: Wei,
-        max_previous: Wei | None = None,
+        outcomes: t.Sequence[str],
+        bond: xDaiWei,
+        max_previous: xDaiWei | None = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         # Normalise the answer to lowercase, to match Enum values as [YES, NO] against outcomes as ["Yes", "No"].
@@ -690,8 +690,8 @@ class OmenRealitioContract(ContractOnGnosisChain):
         self,
         api_keys: APIKeys,
         question_id: HexBytes,
-        bond: Wei,
-        max_previous: Wei | None = None,
+        bond: xDaiWei,
+        max_previous: xDaiWei | None = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.submitAnswer(
@@ -709,7 +709,7 @@ class OmenRealitioContract(ContractOnGnosisChain):
         question_id: HexBytes,
         history_hashes: list[HexBytes],
         addresses: list[ChecksumAddress],
-        bonds: list[Wei],
+        bonds: list[xDaiWei],
         answers: list[HexBytes],
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
@@ -732,8 +732,8 @@ class OmenRealitioContract(ContractOnGnosisChain):
         self,
         from_address: ChecksumAddress,
         web3: Web3 | None = None,
-    ) -> Wei:
-        balance = wei_type(self.call("balanceOf", [from_address], web3=web3))
+    ) -> xDaiWei:
+        balance = xDaiWei(self.call("balanceOf", [from_address], web3=web3))
         return balance
 
     def withdraw(

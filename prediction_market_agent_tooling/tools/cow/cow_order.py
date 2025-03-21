@@ -21,10 +21,9 @@ from cowdao_cowpy.order_book.generated.model import (
 from eth_account.signers.local import LocalAccount
 from eth_typing.evm import ChecksumAddress
 from web3 import Web3
-from web3.types import Wei
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, wei_type
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -62,7 +61,7 @@ def get_buy_token_amount(
     order_quote = asyncio.run(
         order_book_api.post_quote(order_quote_request, order_side)
     )
-    return wei_type(order_quote.quote.buyAmount.root)
+    return Wei(order_quote.quote.buyAmount.root)
 
 
 def swap_tokens_waiting(
@@ -102,7 +101,7 @@ async def swap_tokens_waiting_async(
     timeout: timedelta = timedelta(seconds=60),
 ) -> OrderMetaData:
     order = await swap_tokens(
-        amount=amount_wei,
+        amount=amount_wei.value,
         sell_token=sell_token,
         buy_token=buy_token,
         account=account,

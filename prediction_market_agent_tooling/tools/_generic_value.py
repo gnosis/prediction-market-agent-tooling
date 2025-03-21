@@ -1,6 +1,6 @@
 import typing as t
 from decimal import Decimal
-from typing import TypeVar
+from typing import TypeVar, overload
 
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
@@ -14,8 +14,8 @@ InternalValueType = TypeVar("InternalValueType", bound=t.Union[int, float, WeiWe
 
 class _GenericValue(
     t.Generic[InputValueType, InternalValueType],
-    # Not nice, but it allows to serialize this object with plain json.
-    dict[t.Literal["value"], InternalValueType],
+    # Not great, but it allows to serialize this object with plain json.
+    dict[t.Literal["value"] | t.Literal["type"], InternalValueType | str],
 ):
     """
     A helper class intended for inheritance. Do not instantiate this class directly.
@@ -51,7 +51,7 @@ class _GenericValue(
 
     def __init__(self, value: InputValueType) -> None:
         self.value: InternalValueType = self.parser(value)
-        super().__init__({"value": self.value})
+        super().__init__({"value": self.value, "type": self.__class__.__name__})
 
     def __str__(self) -> str:
         return f"{self.value}"
@@ -85,41 +85,61 @@ class _GenericValue(
         return type(self)(self.value + other.value)
 
     def __mul__(
-        self: GenericValueType, other: GenericValueType | t.Literal[0]
+        self: GenericValueType, other: GenericValueType | int | float
     ) -> GenericValueType:
-        if other == 0:
-            other = self.zero()
-        if not isinstance(other, _GenericValue):
+        if not isinstance(other, (_GenericValue, int, float)):
             raise TypeError("Cannot multiply different types")
-        if type(self) is not type(other):
+        if not isinstance(other, (int, float)) and type(self) is not type(other):
             raise TypeError("Cannot multiply different types")
-        return type(self)(self.value * other.value)
+        return type(self)(self.value * (other if isinstance(other, (int, float)) else other.value))  # type: ignore
+
+    @overload
+    def __truediv__(self: GenericValueType, other: int | float) -> GenericValueType:
+        ...
+
+    @overload
+    def __truediv__(
+        self: GenericValueType, other: GenericValueType
+    ) -> InternalValueType:
+        ...
 
     def __truediv__(
-        self: GenericValueType, other: GenericValueType | t.Literal[0]
-    ) -> GenericValueType:
+        self: GenericValueType, other: GenericValueType | int | float
+    ) -> GenericValueType | InternalValueType:
+        if not isinstance(other, (_GenericValue, int, float)):
+            raise TypeError("Cannot multiply different types")
+        if not isinstance(other, (int, float)) and type(self) is not type(other):
+            raise TypeError("Cannot multiply different types")
         if other == 0:
-            other = self.zero()
-        if not isinstance(other, _GenericValue):
-            raise TypeError("Cannot divide different types")
-        if type(self) is not type(other):
-            raise TypeError("Cannot divide different types")
-        if other.value == 0:
             raise ZeroDivisionError("Cannot divide by zero")
-        return type(self)(self.value / other.value)
+        if isinstance(other, (int, float)):
+            return type(self)(self.value / other)  # type: ignore
+        else:
+            return self.value / other.value  # type: ignore
+
+    @overload
+    def __floordiv__(self: GenericValueType, other: int | float) -> GenericValueType:
+        ...
+
+    @overload
+    def __floordiv__(
+        self: GenericValueType, other: GenericValueType
+    ) -> InternalValueType:
+        ...
 
     def __floordiv__(
-        self: GenericValueType, other: GenericValueType | t.Literal[0]
-    ) -> GenericValueType:
+        self: GenericValueType, other: GenericValueType | int | float
+    ) -> GenericValueType | InternalValueType:
+        if not isinstance(other, (_GenericValue, int, float)):
+            raise TypeError("Cannot multiply different types")
+        if not isinstance(other, (int, float)) and type(self) is not type(other):
+            raise TypeError("Cannot multiply different types")
         if other == 0:
-            other = self.zero()
-        if not isinstance(other, _GenericValue):
-            raise TypeError("Cannot floor divide different types")
-        if type(self) is not type(other):
-            raise TypeError("Cannot floor divide different types")
-        if other.value == 0:
-            raise ZeroDivisionError("Cannot floor divide by zero")
-        return type(self)(self.value // other.value)
+            raise ZeroDivisionError("Cannot divide by zero")
+        if isinstance(other, (int, float)):
+            return type(self)(self.value // other)  # type: ignore
+        else:
+            return self.value // other.value  # type: ignore
 
     def __lt__(self: GenericValueType, other: GenericValueType | t.Literal[0]) -> bool:
         if other == 0:
@@ -157,7 +177,7 @@ class _GenericValue(
             raise TypeError("Cannot compare different types")
         return bool(self.value >= other.value)
 
-    def __eq__(self: GenericValueType, other: object) -> bool:
+    def __eq__(self: GenericValueType, other: GenericValueType | t.Literal[0]) -> bool:  # type: ignore
         if other == 0:
             other = self.zero()
         if not isinstance(other, _GenericValue):
@@ -165,6 +185,15 @@ class _GenericValue(
         if type(self) is not type(other):
             raise TypeError("Cannot compare different types")
         return bool(self.value == other.value)
+
+    def __ne__(self: GenericValueType, other: GenericValueType | t.Literal[0]) -> bool:  # type: ignore
+        if other == 0:
+            other = self.zero()
+        if not isinstance(other, _GenericValue):
+            raise TypeError("Cannot compare different types")
+        if type(self) is not type(other):
+            raise TypeError("Cannot compare different types")
+        return bool(self.value != other.value)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.value})"

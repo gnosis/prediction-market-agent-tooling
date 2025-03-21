@@ -1,10 +1,16 @@
 import os
+import typing as t
 
 from web3 import Web3
 from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ABI, ChecksumAddress, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ABI,
+    ChecksumAddress,
+    OutcomeStr,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.seer.data_models import (
     CreateCategoricalMarketsParams,
 )
@@ -13,7 +19,6 @@ from prediction_market_agent_tooling.tools.contract import (
     abi_field_validator,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 class SeerMarketFactory(ContractOnGnosisChain):
@@ -31,9 +36,9 @@ class SeerMarketFactory(ContractOnGnosisChain):
     @staticmethod
     def build_market_params(
         market_question: str,
-        outcomes: list[str],
+        outcomes: t.Sequence[OutcomeStr],
         opening_time: DatetimeUTC,
-        min_bond_xdai: xDai,
+        min_bond: xDai,
         language: str = "en_US",
         category: str = "misc",
     ) -> CreateCategoricalMarketsParams:
@@ -42,7 +47,7 @@ class SeerMarketFactory(ContractOnGnosisChain):
             token_names=[
                 o.upper() for o in outcomes
             ],  # Following usual token names on Seer (YES,NO).
-            min_bond=xdai_to_wei(min_bond_xdai),
+            min_bond=min_bond.as_xdai_wei.value,
             opening_time=int(opening_time.timestamp()),
             outcomes=outcomes,
             lang=language,

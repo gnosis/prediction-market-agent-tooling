@@ -3,7 +3,7 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.gtypes import USD, private_key_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     omen_buy_outcome_tx,
@@ -18,7 +18,7 @@ app = typer.Typer()
 
 @app.command()
 def buy(
-    amount: str = typer.Option(),
+    amount_usd: str = typer.Option(),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(default=None),
     market_id: str = typer.Option(),
@@ -47,7 +47,7 @@ def buy(
             SAFE_ADDRESS=safe_address_checksum,
             BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
         ),
-        amount=xdai_type(amount),
+        amount=USD(amount_usd),
         market=market,
         outcome=outcome,
         auto_deposit=auto_deposit,
@@ -56,7 +56,7 @@ def buy(
 
 @app.command()
 def sell(
-    amount: str = typer.Option(),
+    amount_usd: str = typer.Option(),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(default=None),
     market_id: str = typer.Option(),
@@ -86,7 +86,7 @@ def sell(
             SAFE_ADDRESS=safe_address_checksum,
             BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
         ),
-        amount=xdai_type(amount),
+        amount=USD(amount_usd),
         market=market,
         outcome=outcome,
         auto_withdraw=auto_withdraw,

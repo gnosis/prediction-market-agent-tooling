@@ -27,7 +27,7 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import (  # noqa: F40
 )
 
 
-class Token(_GenericValue[int | float | str | Decimal], parser=float):
+class Token(_GenericValue[int | float | str | Decimal, float], parser=float):
     """
     Represents any token in its decimal form, it could be 1.1 GNO, WXDAI, XDAI, Mana, whatever. We don't know the currency, just that it's in the decimal form.
     """
@@ -37,7 +37,7 @@ class Token(_GenericValue[int | float | str | Decimal], parser=float):
         return Wei(Web3.to_wei(self.value, "ether"))
 
 
-class OutcomeToken(_GenericValue[int | float | str | Decimal], parser=float):
+class OutcomeToken(_GenericValue[int | float | str | Decimal, float], parser=float):
     """
     Represents outcome tokens in market in decimal form.
     After you redeem the outcome tokens, 1 OutcomeToken equals to 1 Token, but before, it's important to distinguish between them.
@@ -61,11 +61,11 @@ class OutcomeToken(_GenericValue[int | float | str | Decimal], parser=float):
         return Token(self.value)
 
 
-class USD(_GenericValue[int | float | str | Decimal], parser=float):
+class USD(_GenericValue[int | float | str | Decimal, float], parser=float):
     """Represents values in USD."""
 
 
-class xDai(_GenericValue[int | float | str | Decimal], parser=float):
+class xDai(_GenericValue[int | float | str | Decimal, float], parser=float):
     """Represents values in xDai."""
 
     @property
@@ -80,15 +80,15 @@ class xDai(_GenericValue[int | float | str | Decimal], parser=float):
         return xDaiWei(Web3.to_wei(self.value, "ether"))
 
 
-class Mana(_GenericValue[int | float | str | Decimal], parser=float):
+class Mana(_GenericValue[int | float | str | Decimal, float], parser=float):
     """Represents values in Manifold's Mana."""
 
 
-class USDC(_GenericValue[int | float | str | Decimal], parser=float):
+class USDC(_GenericValue[int | float | str | Decimal, float], parser=float):
     """Represents values in USDC."""
 
 
-class Wei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=Web3Wei):
+class Wei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
     """Represents values in Wei. We don't know what currency, but in its integer form called Wei."""
 
     @property
@@ -96,7 +96,7 @@ class Wei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=Web3Wei):
         return Token(Web3.from_wei(self.value, "ether"))
 
 
-class OutcomeWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=Web3Wei):
+class OutcomeWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
     """
     Similar to OutcomeToken, but in Wei units.
     """
@@ -117,7 +117,7 @@ class OutcomeWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=Web3Wei):
         return Wei(self.value)
 
 
-class xDaiWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=Web3Wei):
+class xDaiWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
     """Represents xDai in Wei, like 1.9 xDai is 1.9 * 10**18 Wei. In contrast to just `Wei`, we don't know what unit Wei is (Wei of GNO, sDai, or whatever), but xDaiWei is xDai converted to Wei."""
 
     @property
@@ -145,11 +145,13 @@ def private_key_type(k: str) -> PrivateKey:
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1: ...
+def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1:
+    ...
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: None) -> None: ...
+def secretstr_to_v1_secretstr(s: None) -> None:
+    ...
 
 
 def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:

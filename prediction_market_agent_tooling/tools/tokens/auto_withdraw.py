@@ -10,10 +10,6 @@ from prediction_market_agent_tooling.tools.contract import (
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
 from prediction_market_agent_tooling.tools.utils import should_not_happen
-from prediction_market_agent_tooling.tools.web3_utils import (
-    remove_fraction,
-    wei_to_xdai,
-)
 
 
 def auto_withdraw_collateral_token(
@@ -24,10 +20,7 @@ def auto_withdraw_collateral_token(
     slippage: float = 0.001,
 ) -> None:
     # Small slippage as exact exchange rate constantly changes and we don't care about small differences.
-    amount_wei = remove_fraction(
-        amount_wei,
-        slippage,
-    )
+    amount_wei = amount_wei.without_fraction(slippage)
 
     if not amount_wei:
         logger.warning(
@@ -48,7 +41,7 @@ def auto_withdraw_collateral_token(
     ):
         # If the ERC4626 is backed by KEEPING_ERC20_TOKEN, we can withdraw it directly, no need to go through DEX.
         logger.info(
-            f"Withdrawing {wei_to_xdai(amount_wei)} from {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
+            f"Withdrawing {amount_wei.as_token} from {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
         )
         collateral_token_contract.withdraw_in_shares(
             api_keys,
@@ -57,7 +50,7 @@ def auto_withdraw_collateral_token(
         )
     elif isinstance(collateral_token_contract, ContractERC20BaseClass):
         logger.info(
-            f"Swapping {wei_to_xdai(amount_wei)} from {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
+            f"Swapping {amount_wei.as_token} from {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
         )
         # Otherwise, DEX will handle the rest of token swaps.
         swap_tokens_waiting(

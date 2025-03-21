@@ -361,7 +361,7 @@ class AgentMarket(BaseModel):
         user_id: str,
         liquid_only: bool = False,
         larger_than: OutcomeToken = OutcomeToken(0),
-    ) -> t.Sequence[Position]:
+    ) -> t.Sequence[ExistingPosition]:
         """
         Get all non-zero positions a user has in any market.
 

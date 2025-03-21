@@ -9,7 +9,10 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     ContractERC4626BaseClass,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_sell_token_amount,
+    swap_tokens_waiting,
+)
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
 from prediction_market_agent_tooling.tools.tokens.usd import get_usd_in_token
 from prediction_market_agent_tooling.tools.utils import should_not_happen
@@ -134,8 +137,15 @@ def auto_deposit_erc20(
     )
     if not remaining_to_get_in_collateral_wei:
         return
-    # Estimate of how much of the source token we need to sell in order to fill the remaining collateral amount, with 1% slippage to be sure.
-    amount_to_sell_wei = remaining_to_get_in_collateral_wei * 1.01
+    # Get of how much of the source token we need to sell in order to fill the remaining collateral amount, with 1% slippage to be sure.
+    amount_to_sell_wei = (
+        get_sell_token_amount(
+            remaining_to_get_in_collateral_wei,
+            sell_token=KEEPING_ERC20_TOKEN.address,
+            buy_token=collateral_token_contract.address,
+        )
+        * 1.01
+    )
     # If we don't have enough of the source token.
     if amount_to_sell_wei > ContractERC20OnGnosisChain(
         address=KEEPING_ERC20_TOKEN.address

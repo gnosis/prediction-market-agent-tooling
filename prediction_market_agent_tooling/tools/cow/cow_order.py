@@ -36,6 +36,11 @@ def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
     return OrderBookApi(OrderBookAPIConfigFactory.get_config(env, chain_id))
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_sell_token_amount failed, {x.attempt_number=}."),
+)
 def get_sell_token_amount(
     buy_amount: Wei,
     sell_token: ChecksumAddress,

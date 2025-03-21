@@ -29,10 +29,19 @@ class _GenericValue(
     d = Mana(100) # Mana is a subclass of _GenericValue
     e = xDai(50)
 
+    # Mypy will complain if we try to work with different currencies (types)
     b - c # mypy will report incompatible types
     c - d # mypy will report incompatible types
     c - e # mypy will be ok
     a - b # mypy won't report issues, as others are subclasses of _GenericValue, and that's a problem, so don't use _GenericValue directly
+
+    # Resulting types after arithmetic operations are as expected, so we don't need to wrap them as before (e.g. xdai_type(c + c))
+    x = c - e # x is of type xDai
+    x = c * e # x if of type xDai
+    x = c / e # x is of type float (pure value after division with same types)
+    x = c / 2 # x is of type xDai
+    x = c // 2 # x is of type xDai
+    x * x * 2 # x is of type xDai
     ```
 
     TODO: There are some type ignores which isn't cool, but it works and type-wise values are also correct. Idk how to explain it to mypy though.
@@ -95,14 +104,12 @@ class _GenericValue(
         return type(self)(self.value * (other if isinstance(other, (int, float)) else other.value))  # type: ignore
 
     @overload
-    def __truediv__(self: GenericValueType, other: int | float) -> GenericValueType:
-        ...
+    def __truediv__(self: GenericValueType, other: int | float) -> GenericValueType: ...
 
     @overload
     def __truediv__(
         self: GenericValueType, other: GenericValueType
-    ) -> InternalValueType:
-        ...
+    ) -> InternalValueType: ...
 
     def __truediv__(
         self: GenericValueType, other: GenericValueType | int | float
@@ -119,14 +126,14 @@ class _GenericValue(
             return self.value / other.value  # type: ignore
 
     @overload
-    def __floordiv__(self: GenericValueType, other: int | float) -> GenericValueType:
-        ...
+    def __floordiv__(
+        self: GenericValueType, other: int | float
+    ) -> GenericValueType: ...
 
     @overload
     def __floordiv__(
         self: GenericValueType, other: GenericValueType
-    ) -> InternalValueType:
-        ...
+    ) -> InternalValueType: ...
 
     def __floordiv__(
         self: GenericValueType, other: GenericValueType | int | float

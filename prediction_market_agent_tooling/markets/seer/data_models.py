@@ -238,6 +238,9 @@ class SeerPool(BaseModel):
     liquidity: int
     token0: SeerToken
     token1: SeerToken
+    token0Price: float
+    token1Price: float
+    sqrtPrice: int
 
 
 class NewMarketEvent(BaseModel):

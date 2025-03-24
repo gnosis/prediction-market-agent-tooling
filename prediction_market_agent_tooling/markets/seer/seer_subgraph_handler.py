@@ -200,6 +200,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         fields = [
             pools_field.id,
             pools_field.liquidity,
+            pools_field.sqrtPrice,
+            pools_field.token0Price,
+            pools_field.token1Price,
             pools_field.token0.id,
             pools_field.token0.name,
             pools_field.token0.symbol,

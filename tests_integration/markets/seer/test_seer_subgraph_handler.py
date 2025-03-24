@@ -1,5 +1,7 @@
+import pytest
+
 from prediction_market_agent_tooling.gtypes import HexBytes
-from prediction_market_agent_tooling.markets.agent_market import FilterBy
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
@@ -66,3 +68,37 @@ def test_get_pools_for_market(seer_subgraph_handler_test: SeerSubgraphHandler) -
             pool.token0.id.hex() in market.wrapped_tokens
             or pool.token1.id.hex() in market.wrapped_tokens
         )
+
+
+def test_get_binary_markets_newest_open(
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+) -> None:
+    # test method get_binary_markets
+    markets = seer_subgraph_handler_test.get_binary_markets(
+        sort_by=SortBy.NEWEST, filter_by=FilterBy.OPEN
+    )
+    # We expect at least 1 open markets
+    assert len(markets) > 0
+    assert not markets[0].is_resolved
+
+
+@pytest.mark.parametrize(
+    ("filter_by", "sort_by"),
+    [
+        (FilterBy.OPEN, SortBy.NEWEST),
+        (FilterBy.NONE, SortBy.CLOSING_SOONEST),
+        (FilterBy.RESOLVED, SortBy.HIGHEST_LIQUIDITY),
+        (FilterBy.RESOLVED, SortBy.LOWEST_LIQUIDITY),
+    ],
+)
+def test_binary_markets_retrieved(
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+    filter_by: FilterBy,
+    sort_by: SortBy,
+) -> None:
+    # test method get_binary_markets
+    markets = seer_subgraph_handler_test.get_binary_markets(
+        limit=1, sort_by=sort_by, filter_by=filter_by
+    )
+    # We expect at least 1 open markets
+    assert markets

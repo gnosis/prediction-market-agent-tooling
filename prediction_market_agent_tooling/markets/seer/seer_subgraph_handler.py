@@ -120,10 +120,10 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         match sort_by:
             case SortBy.NEWEST:
                 sort_direction = "desc"
-                sort_by_field = self.seer_subgraph.Market.block_timestamp
+                sort_by_field = self.seer_subgraph.Market.blockTimestamp
             case SortBy.CLOSING_SOONEST:
                 sort_direction = "asc"
-                sort_by_field = self.seer_subgraph.Market.opening_ts
+                sort_by_field = self.seer_subgraph.Market.openingTs
             # ToDo - Implement liquidity conditions by looking up Swapr subgraph.
             case SortBy.NONE | SortBy.HIGHEST_LIQUIDITY | SortBy.LOWEST_LIQUIDITY:
                 sort_direction = None

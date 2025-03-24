@@ -115,21 +115,21 @@ def get_outcome_for_trace(
         market_before_placing_bet
     )
 
-    but_trade_in_tokes = omen_agent_market_before_placing_bet.get_in_token(
+    buy_trade_in_tokes = omen_agent_market_before_placing_bet.get_in_token(
         buy_trade.amount
     )
     if not correct:
-        profit = -but_trade_in_tokes
+        profit = -buy_trade_in_tokes
     else:
         received_outcome_tokens = (
             omen_agent_market_before_placing_bet.get_buy_token_amount(
                 buy_trade.amount, direction=buy_trade.outcome
             )
         )
-        profit = received_outcome_tokens.as_token - but_trade_in_tokes
+        profit = received_outcome_tokens.as_token - buy_trade_in_tokes
 
     return SimulatedOutcome(
-        size=but_trade_in_tokes,
+        size=buy_trade_in_tokes,
         direction=buy_trade.outcome,
         correct=correct,
         profit=profit,

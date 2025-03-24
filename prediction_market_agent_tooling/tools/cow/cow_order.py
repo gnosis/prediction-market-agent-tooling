@@ -31,6 +31,10 @@ from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosis
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 
+class OrderStatusError(Exception):
+    pass
+
+
 def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
     chain_id = SupportedChainId(chain.value[0])
     return OrderBookApi(OrderBookAPIConfigFactory.get_config(env, chain_id))
@@ -99,6 +103,12 @@ def get_buy_token_amount(
     return Wei(order_quote.quote.buyAmount.root)
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
+    after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
+)
 def swap_tokens_waiting(
     amount_wei: Wei,
     sell_token: ChecksumAddress,
@@ -159,7 +169,7 @@ async def swap_tokens_waiting_async(
             OrderStatus.cancelled,
             OrderStatus.expired,
         ):
-            raise ValueError(f"Order {order.uid} failed. {order.url}")
+            raise OrderStatusError(f"Order {order.uid} failed. {order.url}")
 
         if utcnow() - start_time > timeout:
             raise TimeoutError(

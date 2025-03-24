@@ -10,11 +10,11 @@ from scipy.optimize import newton
 from scipy.stats import entropy
 
 from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
     DatetimeUTC,
     OutcomeToken,
     Probability,
     SecretStr,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.market_fees import MarketFees

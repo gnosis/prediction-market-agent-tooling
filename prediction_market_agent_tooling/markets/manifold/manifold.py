@@ -4,9 +4,9 @@ from math import ceil
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    CollateralToken,
     Mana,
     Probability,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,

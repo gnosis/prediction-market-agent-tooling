@@ -10,11 +10,11 @@ from web3.constants import ADDRESS_ZERO
 from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
+    CollateralToken,
     HexAddress,
     HexBytes,
     OutcomeStr,
     Probability,
-    CollateralToken,
     Web3Wei,
 )
 from prediction_market_agent_tooling.loggers import logger

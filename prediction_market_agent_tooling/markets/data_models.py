@@ -5,10 +5,10 @@ from pydantic import BaseModel, BeforeValidator, computed_field
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    CollateralToken,
     OutcomeStr,
     OutcomeToken,
     Probability,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 

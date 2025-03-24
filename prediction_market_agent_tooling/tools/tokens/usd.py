@@ -4,8 +4,8 @@ from eth_typing.evm import ChecksumAddress
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
-    OutcomeToken,
     CollateralToken,
+    OutcomeToken,
     xDai,
 )
 from prediction_market_agent_tooling.markets.omen.omen_constants import (

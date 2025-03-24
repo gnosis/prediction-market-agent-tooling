@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from scipy.optimize import minimize_scalar
 
-from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, CollateralToken
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeToken
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
 from prediction_market_agent_tooling.markets.data_models import (

@@ -10,13 +10,13 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    CollateralToken,
     HexAddress,
     HexBytes,
     HexStr,
     OutcomeStr,
     OutcomeToken,
     Probability,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,

@@ -7,12 +7,12 @@ from web3.types import TxReceipt
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    CollateralToken,
     HexAddress,
     HexBytes,
     OutcomeStr,
     OutcomeToken,
     OutcomeWei,
-    CollateralToken,
     xDai,
 )
 from prediction_market_agent_tooling.loggers import logger

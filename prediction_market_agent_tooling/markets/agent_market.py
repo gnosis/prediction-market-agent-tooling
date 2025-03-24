@@ -7,20 +7,20 @@ from pydantic_core.core_schema import FieldValidationInfo
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
     OutcomeStr,
     OutcomeToken,
     Probability,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
     Bet,
+    CollateralToken,
     ExistingPosition,
     PlacedTrade,
     ProbabilisticAnswer,
     Resolution,
     ResolvedBet,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.utils import (

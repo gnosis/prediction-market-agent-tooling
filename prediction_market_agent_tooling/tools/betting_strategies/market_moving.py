@@ -3,9 +3,9 @@ from functools import reduce
 import numpy as np
 
 from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
     OutcomeToken,
     Probability,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     MarketFees,

@@ -5,11 +5,11 @@ from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    CollateralToken,
     Mana,
     OutcomeStr,
     OutcomeToken,
     Probability,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen

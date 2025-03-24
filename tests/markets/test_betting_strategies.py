@@ -7,12 +7,12 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    CollateralToken,
     HexBytes,
     Mana,
     OutcomeStr,
     OutcomeWei,
     Probability,
-    CollateralToken,
     Wei,
     xDai,
 )

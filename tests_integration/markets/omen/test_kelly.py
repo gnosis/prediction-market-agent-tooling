@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from prediction_market_agent_tooling.deploy.betting_strategy import KellyBettingStrategy
-from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, CollateralToken
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeToken
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketFees,

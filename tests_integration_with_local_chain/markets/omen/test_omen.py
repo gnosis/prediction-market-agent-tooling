@@ -10,11 +10,11 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
+    CollateralToken,
     HexAddress,
     HexStr,
     OutcomeToken,
     OutcomeWei,
-    CollateralToken,
     private_key_type,
     xDai,
 )

@@ -725,6 +725,10 @@ def omen_buy_outcome_tx(
     amount_token = market.get_in_token(amount)
     amount_wei = amount_token.as_wei
 
+    logger.info(
+        f"Buying asked {amount.value=} {amount.symbol}, converted to {amount_token.value=} {amount_token.symbol} for {outcome=} in market {market.url=}."
+    )
+
     # Get the index of the outcome we want to buy.
     outcome_index: int = market.get_outcome_index(outcome)
 
@@ -806,7 +810,7 @@ def omen_sell_outcome_tx(
     amount_wei = amount_wei.without_fraction(slippage)
 
     logger.info(
-        f"Selling asked {amount.value=} {amount.symbol}, converted to {amount_wei.as_token.value=} (collateral token worth) for {outcome=} in market {market.url=}."
+        f"Selling asked {amount.value=} {amount.symbol}, converted to {amount_wei.as_token.value=} {amount_wei.as_token.symbol} for {outcome=} in market {market.url=}."
     )
 
     # Verify, that markets uses conditional tokens that we expect.

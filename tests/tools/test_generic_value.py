@@ -90,7 +90,7 @@ def test_generic_value_str() -> None:
 
 
 def test_generic_value_repr() -> None:
-    assert repr(CollateralToken(1)) == "Token(1.0)"
+    assert repr(CollateralToken(1)) == "CollateralToken(1.0)"
     assert repr(Wei(1)) == "Wei(1)"
     assert repr(xDai(1)) == "xDai(1.0)"
 

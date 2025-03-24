@@ -24,7 +24,7 @@ def test_generic_value_with_pydantic_2() -> None:
 
     dumped = m.model_dump()
     assert dumped == {
-        "t": {"value": 1, "type": "Token"},
+        "t": {"value": 1, "type": "CollateralToken"},
         "w": {"value": 2, "type": "Wei"},
         "x": {"value": 3, "type": "xDai"},
     }
@@ -49,7 +49,7 @@ def test_generic_value_with_json() -> None:
     m = {"t": CollateralToken(1), "w": Wei(2), "x": xDai(3)}
     assert (
         json.dumps(m)
-        == """{"t": {"value": 1.0, "type": "Token"}, "w": {"value": 2, "type": "Wei"}, "x": {"value": 3.0, "type": "xDai"}}"""
+        == """{"t": {"value": 1.0, "type": "CollateralToken"}, "w": {"value": 2, "type": "Wei"}, "x": {"value": 3.0, "type": "xDai"}}"""
     )
 
 

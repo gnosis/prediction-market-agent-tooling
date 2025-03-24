@@ -5,7 +5,7 @@ from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
     OutcomeToken,
-    Token,
+    CollateralToken,
     xDai,
 )
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
@@ -26,13 +26,13 @@ def get_xdai_in_usd(amount: xDai) -> USD:
     return USD(amount.value)
 
 
-def get_usd_in_token(amount: USD, token_address: ChecksumAddress) -> Token:
+def get_usd_in_token(amount: USD, token_address: ChecksumAddress) -> CollateralToken:
     rate = get_single_token_unit_to_usd_rate(token_address)
-    return Token(amount.value / rate.value)
+    return CollateralToken(amount.value / rate.value)
 
 
 def get_token_in_usd(
-    amount: Token | OutcomeToken, token_address: ChecksumAddress
+    amount: CollateralToken | OutcomeToken, token_address: ChecksumAddress
 ) -> USD:
     rate = get_single_token_unit_to_usd_rate(token_address)
     return USD(amount.value * rate.value)
@@ -51,11 +51,11 @@ def get_single_token_unit_to_usd_rate(token_address: ChecksumAddress) -> USD:
     if SDAI_CONTRACT_ADDRESS == token_address:
         return USD(
             ContractERC4626OnGnosisChain(address=SDAI_CONTRACT_ADDRESS)
-            .convertToAssets(Token(1).as_wei)
+            .convertToAssets(CollateralToken(1).as_wei)
             .as_token.value
         )
     in_wei = get_buy_token_amount(
-        sell_amount=Token(1).as_wei,
+        sell_amount=CollateralToken(1).as_wei,
         sell_token=token_address,
         buy_token=WRAPPED_XDAI_CONTRACT_ADDRESS,
     )

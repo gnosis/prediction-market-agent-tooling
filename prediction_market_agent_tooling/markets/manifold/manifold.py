@@ -2,7 +2,12 @@ import typing as t
 from math import ceil
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import USD, Mana, Probability, Token
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    Mana,
+    Probability,
+    CollateralToken,
+)
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -48,8 +53,8 @@ class ManifoldAgentMarket(AgentMarket):
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
         return self.current_p_no
 
-    def get_tiny_bet_amount(self) -> Token:
-        return Token(1)
+    def get_tiny_bet_amount(self) -> CollateralToken:
+        return CollateralToken(1)
 
     def get_minimum_bet_to_win(self, answer: bool, amount_to_win: float) -> Mana:
         # Manifold lowest bet is 1 Mana, so we need to ceil the result.

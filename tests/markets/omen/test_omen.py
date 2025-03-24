@@ -6,7 +6,7 @@ from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import USD, Token
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
@@ -260,7 +260,7 @@ def test_calculate_marginal_prices(
     assert calculate_marginal_prices(
         [OutcomeWei(x) for x in outcome_token_amounts]
     ) == (
-        [Token(x) for x in expected_marginal_prices]
+        [CollateralToken(x) for x in expected_marginal_prices]
         if expected_marginal_prices
         else None
     )

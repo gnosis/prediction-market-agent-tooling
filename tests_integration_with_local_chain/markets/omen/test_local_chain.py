@@ -8,7 +8,11 @@ from numpy import isclose
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Token, private_key_type, xDai
+from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
+    private_key_type,
+    xDai,
+)
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import DebuggingContract
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -82,13 +86,13 @@ def test_anvil_account_has_more_than_minimum_required_balance(
     accounts: list[TestAccount],
 ) -> None:
     account_adr = Web3.to_checksum_address(accounts[0].address)
-    assert get_balances(account_adr, local_web3).total > Token(0.5)
+    assert get_balances(account_adr, local_web3).total > CollateralToken(0.5)
 
 
 def test_fresh_account_has_less_than_minimum_required_balance(local_web3: Web3) -> None:
     fresh_account_adr = Account.create().address
     account_adr = Web3.to_checksum_address(fresh_account_adr)
-    assert get_balances(account_adr, local_web3).total < Token(0.5)
+    assert get_balances(account_adr, local_web3).total < CollateralToken(0.5)
 
 
 def test_now(local_web3: Web3, test_keys: APIKeys) -> None:

@@ -4,7 +4,7 @@ from safe_eth.safe import Safe
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Token
+from prediction_market_agent_tooling.gtypes import CollateralToken
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
 )
@@ -20,7 +20,7 @@ def test_erc20_send_updates_balance(
 
     collateral_token_contract = WrappedxDaiContract()
     # deposit from account 1
-    amount_deposit = Token(10).as_wei
+    amount_deposit = CollateralToken(10).as_wei
     collateral_token_contract.deposit(test_keys, amount_deposit, web3=local_web3)
     assert (
         collateral_token_contract.balanceOf(test_keys.bet_from_address, local_web3)

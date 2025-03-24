@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     OutcomeWei,
-    Token,
+    CollateralToken,
     xDai,
 )
 from prediction_market_agent_tooling.loggers import logger
@@ -101,14 +101,14 @@ class SeerAgentMarket(AgentMarket):
             agent_name=agent_name,
         )
 
-    def get_token_in_usd(self, x: Token) -> USD:
+    def get_token_in_usd(self, x: CollateralToken) -> USD:
         return get_token_in_usd(x, self.collateral_token_contract_address_checksummed)
 
-    def get_usd_in_token(self, x: USD) -> Token:
+    def get_usd_in_token(self, x: USD) -> CollateralToken:
         return get_usd_in_token(x, self.collateral_token_contract_address_checksummed)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | Token, direction: bool
+        self, bet_amount: USD | CollateralToken, direction: bool
     ) -> OutcomeToken:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
@@ -133,7 +133,7 @@ class SeerAgentMarket(AgentMarket):
     def get_trade_balance(api_keys: APIKeys) -> USD:
         return OmenAgentMarket.get_trade_balance(api_keys=api_keys)
 
-    def get_tiny_bet_amount(self) -> Token:
+    def get_tiny_bet_amount(self) -> CollateralToken:
         return self.get_in_token(SEER_TINY_BET_AMOUNT)
 
     def get_position(
@@ -228,7 +228,7 @@ class SeerAgentMarket(AgentMarket):
             CowManager().get_quote(
                 collateral_token=self.collateral_token_contract_address_checksummed,
                 buy_token=outcome_token,
-                sell_amount=Token(
+                sell_amount=CollateralToken(
                     1
                 ).as_wei,  # we take 1 as a baseline value for common trades the agents take.
             )
@@ -295,7 +295,7 @@ class SeerAgentMarket(AgentMarket):
 
 def seer_create_market_tx(
     api_keys: APIKeys,
-    initial_funds: USD | Token,
+    initial_funds: USD | CollateralToken,
     question: str,
     opening_time: DatetimeUTC,
     language: str,

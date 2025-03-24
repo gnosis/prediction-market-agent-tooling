@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from prediction_market_agent_tooling.gtypes import Token
+from prediction_market_agent_tooling.gtypes import CollateralToken
 
 
 class MarketFees(BaseModel):
@@ -34,5 +34,7 @@ class MarketFees(BaseModel):
         total_fee = self.total_fee_absolute_value(bet_amount)
         return total_fee / bet_amount
 
-    def get_after_fees(self, bet_amount: Token) -> Token:
-        return bet_amount - Token(self.total_fee_absolute_value(bet_amount.value))
+    def get_after_fees(self, bet_amount: CollateralToken) -> CollateralToken:
+        return bet_amount - CollateralToken(
+            self.total_fee_absolute_value(bet_amount.value)
+        )

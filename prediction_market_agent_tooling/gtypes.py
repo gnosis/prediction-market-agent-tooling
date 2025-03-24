@@ -27,7 +27,7 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import (  # noqa: F40
 )
 
 
-class Token(_GenericValue[int | float | str | Decimal, float], parser=float):
+class CollateralToken(_GenericValue[int | float | str | Decimal, float], parser=float):
     """
     Represents any token in its decimal form, it could be 1.1 GNO, WXDAI, XDAI, Mana, whatever. We don't know the currency, just that it's in the decimal form.
     """
@@ -46,7 +46,7 @@ class OutcomeToken(_GenericValue[int | float | str | Decimal, float], parser=flo
     """
 
     @staticmethod
-    def from_token(token: Token) -> "OutcomeToken":
+    def from_token(token: CollateralToken) -> "OutcomeToken":
         return OutcomeToken(token.value)
 
     @property
@@ -54,11 +54,11 @@ class OutcomeToken(_GenericValue[int | float | str | Decimal, float], parser=flo
         return OutcomeWei(Web3.to_wei(self.value, "ether"))
 
     @property
-    def as_token(self) -> Token:
+    def as_token(self) -> CollateralToken:
         """
         OutcomeToken is essentialy Token as well, when you know you really need to convert it, you can convert it explicitly using this.
         """
-        return Token(self.value)
+        return CollateralToken(self.value)
 
 
 class USD(_GenericValue[int | float | str | Decimal, float], parser=float):
@@ -69,11 +69,11 @@ class xDai(_GenericValue[int | float | str | Decimal, float], parser=float):
     """Represents values in xDai."""
 
     @property
-    def as_token(self) -> Token:
+    def as_token(self) -> CollateralToken:
         """
         xDai is essentialy Token as well, when you know you need to pass it, you can convert it using this.
         """
-        return Token(self.value)
+        return CollateralToken(self.value)
 
     @property
     def as_xdai_wei(self) -> "xDaiWei":
@@ -92,8 +92,8 @@ class Wei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
     """Represents values in Wei. We don't know what currency, but in its integer form called Wei."""
 
     @property
-    def as_token(self) -> Token:
-        return Token(Web3.from_wei(self.value, "ether"))
+    def as_token(self) -> CollateralToken:
+        return CollateralToken(Web3.from_wei(self.value, "ether"))
 
 
 class OutcomeWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
@@ -145,13 +145,11 @@ def private_key_type(k: str) -> PrivateKey:
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1:
-    ...
+def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1: ...
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: None) -> None:
-    ...
+def secretstr_to_v1_secretstr(s: None) -> None: ...
 
 
 def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:

@@ -1,7 +1,7 @@
 import pytest
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import Token
+from prediction_market_agent_tooling.gtypes import CollateralToken
 from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract
 from prediction_market_agent_tooling.tools.cow.cow_manager import (
     CowManager,
@@ -24,5 +24,5 @@ def test_nonexistent_quote(test_manager: CowManager) -> None:
         test_manager.get_quote(
             collateral_token=collateral_token,
             buy_token=token_without_liquidity,
-            sell_amount=Token(1).as_wei,
+            sell_amount=CollateralToken(1).as_wei,
         )

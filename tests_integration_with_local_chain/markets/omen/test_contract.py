@@ -7,7 +7,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
-    Token,
+    CollateralToken,
     private_key_type,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
@@ -109,7 +109,7 @@ def test_contract_implements_function(
     reason="See https://github.com/gnosis/prediction-market-agent-tooling/issues/625"
 )
 def test_wont_retry(local_web3: Web3, accounts: list[TestAccount]) -> None:
-    value = Token(10).as_wei
+    value = CollateralToken(10).as_wei
     from_account = accounts[0]
     to_account = accounts[1]
 

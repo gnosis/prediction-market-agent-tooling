@@ -19,7 +19,7 @@ from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Token, Wei
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, CollateralToken, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 
@@ -93,7 +93,7 @@ class CowManager:
 
     @staticmethod
     def swap(
-        amount: Token,
+        amount: CollateralToken,
         sell_token: ChecksumAddress,
         buy_token: ChecksumAddress,
         api_keys: APIKeys,

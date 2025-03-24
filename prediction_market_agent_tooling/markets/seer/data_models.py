@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     OutcomeStr,
     Probability,
-    Token,
+    CollateralToken,
     Web3Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
@@ -207,7 +207,7 @@ class SeerMarket(BaseModel):
         return Probability(price_yes)
 
     def _get_price_for_token(self, token: ChecksumAddress) -> float:
-        collateral_exchange_amount = Token(1).as_wei
+        collateral_exchange_amount = CollateralToken(1).as_wei
         try:
             quote = CowManager().get_quote(
                 collateral_token=self.collateral_token_contract_address_checksummed,

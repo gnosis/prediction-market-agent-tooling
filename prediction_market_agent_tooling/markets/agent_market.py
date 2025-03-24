@@ -10,7 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
-    Token,
+    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
@@ -20,7 +20,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProbabilisticAnswer,
     Resolution,
     ResolvedBet,
-    Token,
+    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.utils import (
@@ -71,7 +71,7 @@ class AgentMarket(BaseModel):
     close_time: DatetimeUTC | None
     current_p_yes: Probability
     url: str
-    volume: Token | None
+    volume: CollateralToken | None
     fees: MarketFees
 
     @field_validator("outcome_token_pool")
@@ -103,24 +103,24 @@ class AgentMarket(BaseModel):
         return Probability(1 - self.current_p_yes)
 
     @property
-    def yes_outcome_price(self) -> Token:
+    def yes_outcome_price(self) -> CollateralToken:
         """
         Price at prediction market is equal to the probability of given outcome.
         Keep as an extra property, in case it wouldn't be true for some prediction market platform.
         """
-        return Token(self.current_p_yes)
+        return CollateralToken(self.current_p_yes)
 
     @property
     def yes_outcome_price_usd(self) -> USD:
         return self.get_token_in_usd(self.yes_outcome_price)
 
     @property
-    def no_outcome_price(self) -> Token:
+    def no_outcome_price(self) -> CollateralToken:
         """
         Price at prediction market is equal to the probability of given outcome.
         Keep as an extra property, in case it wouldn't be true for some prediction market platform.
         """
-        return Token(self.current_p_no)
+        return CollateralToken(self.current_p_no)
 
     @property
     def no_outcome_price_usd(self) -> USD:
@@ -159,11 +159,11 @@ class AgentMarket(BaseModel):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def get_last_trade_yes_outcome_price(self) -> Token | None:
+    def get_last_trade_yes_outcome_price(self) -> CollateralToken | None:
         # Price on prediction markets are, by definition, equal to the probability of an outcome.
         # Just making it explicit in this function.
         if last_trade_p_yes := self.get_last_trade_p_yes():
-            return Token(last_trade_p_yes)
+            return CollateralToken(last_trade_p_yes)
         return None
 
     def get_last_trade_yes_outcome_price_usd(self) -> USD | None:
@@ -171,11 +171,11 @@ class AgentMarket(BaseModel):
             return self.get_token_in_usd(last_trade_yes_outcome_price)
         return None
 
-    def get_last_trade_no_outcome_price(self) -> Token | None:
+    def get_last_trade_no_outcome_price(self) -> CollateralToken | None:
         # Price on prediction markets are, by definition, equal to the probability of an outcome.
         # Just making it explicit in this function.
         if last_trade_p_no := self.get_last_trade_p_no():
-            return Token(last_trade_p_no)
+            return CollateralToken(last_trade_p_no)
         return None
 
     def get_last_trade_no_outcome_price_usd(self) -> USD | None:
@@ -187,13 +187,13 @@ class AgentMarket(BaseModel):
         tiny_amount = self.get_tiny_bet_amount()
         return OutcomeToken.from_token(tiny_amount / 10)
 
-    def get_token_in_usd(self, x: Token) -> USD:
+    def get_token_in_usd(self, x: CollateralToken) -> USD:
         """
         Token of this market can have whatever worth (e.g. sDai and ETH markets will have different worth of 1 token). Use this to convert it to USD.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def get_usd_in_token(self, x: USD) -> Token:
+    def get_usd_in_token(self, x: USD) -> CollateralToken:
         """
         Markets on a single platform can have different tokens as collateral (sDai, wxDai, GNO, ...). Use this to convert USD to the token of this market.
         """
@@ -201,24 +201,24 @@ class AgentMarket(BaseModel):
 
     def get_sell_value_of_outcome_token(
         self, outcome: str, amount: OutcomeToken
-    ) -> Token:
+    ) -> CollateralToken:
         """
         When you hold OutcomeToken(s), it's easy to calculate how much you get at the end if you win (1 OutcomeToken will equal to 1 Token).
         But use this to figure out, how much are these outcome tokens worth right now (for how much you can sell them).
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def get_in_usd(self, x: USD | Token) -> USD:
+    def get_in_usd(self, x: USD | CollateralToken) -> USD:
         if isinstance(x, USD):
             return x
         return self.get_token_in_usd(x)
 
-    def get_in_token(self, x: USD | Token) -> Token:
-        if isinstance(x, Token):
+    def get_in_token(self, x: USD | CollateralToken) -> CollateralToken:
+        if isinstance(x, CollateralToken):
             return x
         return self.get_usd_in_token(x)
 
-    def get_tiny_bet_amount(self) -> Token:
+    def get_tiny_bet_amount(self) -> CollateralToken:
         """
         Tiny bet amount that the platform still allows us to do.
         """
@@ -234,7 +234,7 @@ class AgentMarket(BaseModel):
         return self.place_bet(outcome=outcome, amount=amount)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | Token, direction: bool
+        self, bet_amount: USD | CollateralToken, direction: bool
     ) -> OutcomeToken:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -319,7 +319,7 @@ class AgentMarket(BaseModel):
     def is_resolved(self) -> bool:
         return self.resolution is not None
 
-    def get_liquidity(self) -> Token:
+    def get_liquidity(self) -> CollateralToken:
         raise NotImplementedError("Subclasses must implement this method")
 
     def has_liquidity(self) -> bool:

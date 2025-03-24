@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     OutcomeWei,
     Probability,
-    Token,
+    CollateralToken,
     Wei,
     xDai,
 )
@@ -145,16 +145,16 @@ class OmenAgentMarket(AgentMarket):
     def get_liquidity_in_wei(self, web3: Web3 | None = None) -> Wei:
         return self.get_contract().totalSupply(web3)
 
-    def get_liquidity(self, web3: Web3 | None = None) -> Token:
+    def get_liquidity(self, web3: Web3 | None = None) -> CollateralToken:
         return self.get_liquidity_in_wei(web3).as_token
 
-    def get_tiny_bet_amount(self) -> Token:
+    def get_tiny_bet_amount(self) -> CollateralToken:
         return self.get_in_token(OMEN_TINY_BET_AMOUNT)
 
-    def get_token_in_usd(self, x: Token) -> USD:
+    def get_token_in_usd(self, x: CollateralToken) -> USD:
         return get_token_in_usd(x, self.collateral_token_contract_address_checksummed)
 
-    def get_usd_in_token(self, x: USD) -> Token:
+    def get_usd_in_token(self, x: USD) -> CollateralToken:
         return get_usd_in_token(x, self.collateral_token_contract_address_checksummed)
 
     def liquidate_existing_positions(
@@ -226,7 +226,7 @@ class OmenAgentMarket(AgentMarket):
 
     def get_sell_value_of_outcome_token(
         self, outcome: str, amount: OutcomeToken, web3: Web3 | None = None
-    ) -> Token:
+    ) -> CollateralToken:
         """
         Market can have as collateral token GNO for example.
         When you place bet, you buy shares with GNO. For example, you get 10 shares for 1 GNO.
@@ -593,7 +593,7 @@ class OmenAgentMarket(AgentMarket):
         return get_omen_user_url(keys.bet_from_address)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | Token, direction: bool
+        self, bet_amount: USD | CollateralToken, direction: bool
     ) -> OutcomeToken:
         """
         Note: this is only valid if the market instance's token pool is
@@ -709,7 +709,7 @@ def pick_binary_market(
 )
 def omen_buy_outcome_tx(
     api_keys: APIKeys,
-    amount: USD | Token,
+    amount: USD | CollateralToken,
     market: OmenAgentMarket,
     outcome: str,
     auto_deposit: bool,
@@ -761,7 +761,7 @@ def omen_buy_outcome_tx(
 
 def binary_omen_buy_outcome_tx(
     api_keys: APIKeys,
-    amount: USD | Token,
+    amount: USD | CollateralToken,
     market: OmenAgentMarket,
     binary_outcome: bool,
     auto_deposit: bool,
@@ -779,7 +779,7 @@ def binary_omen_buy_outcome_tx(
 
 def omen_sell_outcome_tx(
     api_keys: APIKeys,
-    amount: OutcomeToken | Token | USD,
+    amount: OutcomeToken | CollateralToken | USD,
     market: OmenAgentMarket,
     outcome: str,
     auto_withdraw: bool,
@@ -852,7 +852,7 @@ def omen_sell_outcome_tx(
 
 def binary_omen_sell_outcome_tx(
     api_keys: APIKeys,
-    amount: OutcomeToken | Token | USD,
+    amount: OutcomeToken | CollateralToken | USD,
     market: OmenAgentMarket,
     binary_outcome: bool,
     auto_withdraw: bool,
@@ -870,7 +870,7 @@ def binary_omen_sell_outcome_tx(
 
 def omen_create_market_tx(
     api_keys: APIKeys,
-    initial_funds: USD | Token,
+    initial_funds: USD | CollateralToken,
     question: str,
     closing_time: DatetimeUTC,
     category: str,
@@ -964,7 +964,7 @@ def omen_create_market_tx(
     )
 
     # Create the market.
-    fee = Token(fee_perc).as_wei
+    fee = CollateralToken(fee_perc).as_wei
     (
         market_event,
         funding_event,
@@ -1000,7 +1000,7 @@ def omen_create_market_tx(
 def omen_fund_market_tx(
     api_keys: APIKeys,
     market: OmenAgentMarket,
-    funds: USD | Token,
+    funds: USD | CollateralToken,
     auto_deposit: bool,
     web3: Web3 | None = None,
 ) -> None:
@@ -1350,7 +1350,7 @@ def send_keeping_token_to_eoa_xdai(
 
 
 def get_buy_outcome_token_amount(
-    investment_amount: Token,
+    investment_amount: CollateralToken,
     buy_direction: bool,
     yes_outcome_pool_size: OutcomeToken,
     no_outcome_pool_size: OutcomeToken,

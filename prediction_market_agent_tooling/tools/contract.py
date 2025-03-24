@@ -15,7 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChainID,
     ChecksumAddress,
     Nonce,
-    Token,
+    CollateralToken,
     TxParams,
     TxReceipt,
     Wei,
@@ -66,9 +66,7 @@ class ContractBaseClass(BaseModel):
     address: ChecksumAddress
 
     _abi_field_validator = field_validator("abi", mode="before")(abi_field_validator)
-    _cache: dict[
-        str, t.Any
-    ] = (
+    _cache: dict[str, t.Any] = (
         {}
     )  # Can be used to hold values that aren't going to change after getting them for the first time, as for example `symbol` of an ERC-20 token.
 
@@ -249,7 +247,7 @@ class ContractERC20BaseClass(ContractBaseClass):
 
     def balance_of_in_tokens(
         self, for_address: ChecksumAddress, web3: Web3 | None = None
-    ) -> Token:
+    ) -> CollateralToken:
         return self.balanceOf(for_address, web3=web3).as_token
 
 

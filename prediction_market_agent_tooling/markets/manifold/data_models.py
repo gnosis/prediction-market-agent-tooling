@@ -9,7 +9,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
-    Token,
+    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
@@ -82,11 +82,11 @@ class ManifoldMarket(BaseModel):
     pool: ManifoldPool
     probability: Probability
     slug: str
-    totalLiquidity: t.Optional[Token] = None
+    totalLiquidity: t.Optional[CollateralToken] = None
     uniqueBettorCount: int
     url: str
-    volume: Token
-    volume24Hours: Token
+    volume: CollateralToken
+    volume24Hours: CollateralToken
 
     @property
     def outcomes(self) -> t.Sequence[OutcomeStr]:
@@ -181,18 +181,18 @@ class ManifoldBet(BaseModel):
     https://docs.manifold.markets/api#get-v0bets
     """
 
-    shares: Token
+    shares: CollateralToken
     probBefore: Probability
     isFilled: t.Optional[bool] = None
     probAfter: Probability
     userId: str
-    amount: Token
+    amount: CollateralToken
     contractId: str
     id: str
     fees: ManifoldBetFees
     isCancelled: t.Optional[bool] = None
-    loanAmount: Token | None
-    orderAmount: t.Optional[Token] = None
+    loanAmount: CollateralToken | None
+    orderAmount: t.Optional[CollateralToken] = None
     fills: t.Optional[list[ManifoldBetFills]] = None
     createdTime: DatetimeUTC
     outcome: Resolution
@@ -205,7 +205,7 @@ class ManifoldBet(BaseModel):
         else:
             should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
 
-    def get_profit(self, market_outcome: bool) -> Token:
+    def get_profit(self, market_outcome: bool) -> CollateralToken:
         profit = (
             self.shares - self.amount
             if self.get_resolved_boolean_outcome() == market_outcome

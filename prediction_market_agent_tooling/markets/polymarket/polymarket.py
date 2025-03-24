@@ -1,6 +1,6 @@
 import typing as t
 
-from prediction_market_agent_tooling.gtypes import USD, Token
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -48,7 +48,7 @@ class PolymarketAgentMarket(AgentMarket):
             outcome_token_pool=None,
         )
 
-    def get_tiny_bet_amount(self) -> Token:
+    def get_tiny_bet_amount(self) -> CollateralToken:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     def place_bet(self, outcome: bool, amount: USD) -> str:

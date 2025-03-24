@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeWei,
     Probability,
-    Token,
+    CollateralToken,
     Wei,
     xDai,
     xDaiWei,
@@ -226,7 +226,7 @@ class OmenMarket(BaseModel):
     collateralToken: HexAddress
     outcomes: t.Sequence[OutcomeStr]
     outcomeTokenAmounts: list[OutcomeWei]
-    outcomeTokenMarginalPrices: t.Optional[list[Token]]
+    outcomeTokenMarginalPrices: t.Optional[list[CollateralToken]]
     fee: t.Optional[Wei]
     resolutionTimestamp: t.Optional[int] = None
     answerFinalizedTimestamp: t.Optional[int] = None
@@ -485,7 +485,7 @@ def calculate_liquidity_parameter(
 
 def calculate_marginal_prices(
     outcome_token_amounts: list[OutcomeWei],
-) -> list[Token] | None:
+) -> list[CollateralToken] | None:
     """
     Converted to Python from https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/utils/fpmm.ts#L197.
     """
@@ -506,7 +506,7 @@ def calculate_marginal_prices(
     sum_weights = sum(weights, start=Wei(0))
 
     marginal_prices = [weights[i].value / sum_weights.value for i in range(n_outcomes)]
-    return [Token(mp) for mp in marginal_prices]
+    return [CollateralToken(mp) for mp in marginal_prices]
 
 
 class OmenBetCreator(BaseModel):
@@ -517,8 +517,8 @@ class OmenBet(BaseModel):
     id: HexAddress  # A concatenation of: FPMM contract ID, trader ID and nonce. See https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/FixedProductMarketMakerMapping.ts#L109
     title: str
     collateralToken: HexAddress
-    outcomeTokenMarginalPrice: Token
-    oldOutcomeTokenMarginalPrice: Token
+    outcomeTokenMarginalPrice: CollateralToken
+    oldOutcomeTokenMarginalPrice: CollateralToken
     type: str
     creator: OmenBetCreator
     creationTimestamp: int
@@ -530,7 +530,7 @@ class OmenBet(BaseModel):
     fpmm: OmenMarket
 
     @property
-    def collateral_amount_token(self) -> Token:
+    def collateral_amount_token(self) -> CollateralToken:
         return self.collateralAmount.as_token
 
     @property
@@ -560,7 +560,7 @@ class OmenBet(BaseModel):
             self.collateral_amount_token, self.collateral_token_checksummed
         )
 
-    def get_profit(self) -> Token:
+    def get_profit(self) -> CollateralToken:
         bet_amount = self.collateral_amount_token
         profit = (
             self.outcomeTokensTraded.as_outcome_token.as_token - bet_amount

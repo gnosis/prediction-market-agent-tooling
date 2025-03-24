@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from scipy.optimize import minimize_scalar
 
-from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, Token
+from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, CollateralToken
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
 from prediction_market_agent_tooling.markets.data_models import (
@@ -209,7 +209,7 @@ class KellyBettingStrategy(BettingStrategy):
     def calculate_price_impact_for_bet_amount(
         self,
         buy_direction: bool,
-        bet_amount: Token,
+        bet_amount: CollateralToken,
         yes: OutcomeToken,
         no: OutcomeToken,
         fees: MarketFees,
@@ -232,7 +232,7 @@ class KellyBettingStrategy(BettingStrategy):
         self,
         market: AgentMarket,
         kelly_bet: SimpleBet,
-    ) -> Token:
+    ) -> CollateralToken:
         def calculate_price_impact_deviation_from_target_price_impact(
             bet_amount_usd: float,  # Needs to be float because it's used in minimize_scalar internally.
         ) -> float:
@@ -269,7 +269,7 @@ class KellyBettingStrategy(BettingStrategy):
             tol=1e-11,
             options={"maxiter": 10000},
         )
-        return Token(optimized_bet_amount.x)
+        return CollateralToken(optimized_bet_amount.x)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount}, max_price_impact={self.max_price_impact})"

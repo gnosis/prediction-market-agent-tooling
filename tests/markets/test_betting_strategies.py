@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeWei,
     Probability,
-    Token,
+    CollateralToken,
     Wei,
     xDai,
 )
@@ -70,8 +70,8 @@ def omen_market() -> OmenMarket:
             OutcomeWei(13741270543921756242),
         ],
         outcomeTokenMarginalPrices=[
-            Token("0.6537666061181695741160552853310822"),
-            Token("0.3462333938818304258839447146689178"),
+            CollateralToken("0.6537666061181695741160552853310822"),
+            CollateralToken("0.3462333938818304258839447146689178"),
         ],
         fee=Wei(20000000000000000),
         category="foo",
@@ -231,7 +231,7 @@ def test_stretch_bet_between(
 
 @pytest.mark.parametrize("est_p_yes", [Probability(0.1), Probability(0.9)])
 def test_kelly_bet(est_p_yes: Probability, omen_market: OmenMarket) -> None:
-    max_bet = Token(10)
+    max_bet = CollateralToken(10)
     confidence = 1.0
     market_p_yes = omen_market.current_p_yes
     expected_bet_direction = False if est_p_yes < market_p_yes else True
@@ -291,13 +291,13 @@ def test_zero_bets() -> None:
         no_outcome_pool_size=no_outcome_pool_size,
         estimated_p_yes=market.current_p_yes,
         confidence=1.0,
-        max_bet=Token(0),
+        max_bet=CollateralToken(0),
         fees=market.fees,
     )
     assert not kelly_bet.size
 
     kelly_bet_simple = get_kelly_bet_simplified(
-        max_bet=Token(100),
+        max_bet=CollateralToken(100),
         market_p_yes=market.current_p_yes,
         estimated_p_yes=market.current_p_yes,
         confidence=1.0,

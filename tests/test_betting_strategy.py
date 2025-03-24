@@ -16,7 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
-    Token,
+    CollateralToken,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
@@ -60,9 +60,9 @@ def mock_outcome_str(x: bool) -> OutcomeStr:
 
 def test_rebalance() -> None:
     # For simplicity, 1 Token = 1 USD in this test.
-    tiny_amount = Token(0.0001)
+    tiny_amount = CollateralToken(0.0001)
     mock_amount = USD(5)
-    liquidity_amount = Token(100)
+    liquidity_amount = CollateralToken(100)
     mock_existing_position = ExistingPosition(
         market_id="0x123",
         # For simplicity just mock them all as the same amount.
@@ -88,7 +88,7 @@ def test_rebalance() -> None:
     mock_market.get_tiny_bet_amount.return_value = tiny_amount
     mock_market.get_buy_token_amount.return_value = buy_token_amount
     mock_market.get_outcome_str_from_bool.side_effect = mock_outcome_str
-    mock_market.get_usd_in_collateral_token = lambda x: Token(x.value)
+    mock_market.get_usd_in_collateral_token = lambda x: CollateralToken(x.value)
     mock_market.get_token_in_usd = lambda x: USD(x.value)
     mock_market.current_p_yes = 0.5
     mock_market.id = "0x123"

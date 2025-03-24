@@ -8,7 +8,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
-    Token,
+    CollateralToken,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
@@ -26,7 +26,7 @@ class Resolution(str, Enum):
 
 class Bet(BaseModel):
     id: str
-    amount: Token
+    amount: CollateralToken
     outcome: bool
     created_time: DatetimeUTC
     market_question: str
@@ -39,7 +39,7 @@ class Bet(BaseModel):
 class ResolvedBet(Bet):
     market_outcome: bool
     resolved_time: DatetimeUTC
-    profit: Token
+    profit: CollateralToken
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -145,12 +145,12 @@ class SimulatedBetDetail(BaseModel):
     market_p_yes: float
     agent_p_yes: float
     agent_conf: float
-    org_bet: Token
-    sim_bet: Token
+    org_bet: CollateralToken
+    sim_bet: CollateralToken
     org_dir: bool
     sim_dir: bool
-    org_profit: Token
-    sim_profit: Token
+    org_profit: CollateralToken
+    sim_profit: CollateralToken
     timestamp: DatetimeUTC
 
 
@@ -162,10 +162,10 @@ class SharpeOutput(BaseModel):
 
 class SimulatedLifetimeDetail(BaseModel):
     p_yes_mse: float
-    total_bet_amount: Token
-    total_bet_profit: Token
-    total_simulated_amount: Token
-    total_simulated_profit: Token
+    total_bet_amount: CollateralToken
+    total_bet_profit: CollateralToken
+    total_simulated_amount: CollateralToken
+    total_simulated_profit: CollateralToken
     roi: float
     simulated_roi: float
     sharpe_output_original: SharpeOutput

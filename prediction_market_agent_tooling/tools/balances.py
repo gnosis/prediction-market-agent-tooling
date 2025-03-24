@@ -2,7 +2,12 @@ from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_fixed
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Token, xDai, xDaiWei
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    CollateralToken,
+    xDai,
+    xDaiWei,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
@@ -11,11 +16,11 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 
 class Balances(BaseModel):
     xdai: xDai
-    wxdai: Token
-    sdai: Token
+    wxdai: CollateralToken
+    sdai: CollateralToken
 
     @property
-    def total(self) -> Token:
+    def total(self) -> CollateralToken:
         return self.xdai.as_token + self.wxdai + self.sdai
 
 

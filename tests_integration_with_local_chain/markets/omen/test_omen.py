@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexStr,
     OutcomeToken,
     OutcomeWei,
-    Token,
+    CollateralToken,
     private_key_type,
     xDai,
 )
@@ -387,7 +387,7 @@ def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> Non
     )
 
     balance = get_balances(address=fresh_account.address, web3=local_web3)
-    assert balance.wxdai == Token(0)
+    assert balance.wxdai == CollateralToken(0)
 
 
 @pytest.mark.parametrize(

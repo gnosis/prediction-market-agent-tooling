@@ -22,7 +22,11 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     ProbabilisticAnswer,
     TradeType,
 )
-from prediction_market_agent_tooling.gtypes import USD, Token, private_key_type
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    private_key_type,
+)
 from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
     SimulatedBetDetail,
@@ -58,10 +62,10 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
 class SimulatedOutcome(BaseModel):
-    size: Token
+    size: CollateralToken
     direction: bool
     correct: bool
-    profit: Token
+    profit: CollateralToken
 
 
 def get_outcome_for_trace(
@@ -181,11 +185,13 @@ def calc_metrics(
         sum_squared_errors += (estimated_p_yes - actual_answer) ** 2
 
     p_yes_mse = sum_squared_errors / len(bets)
-    total_bet_amount = sum([bt.bet.amount for bt in bets], start=Token(0))
-    total_bet_profit = sum([bt.bet.profit for bt in bets], start=Token(0))
-    total_simulated_amount = sum([so.size for so in simulated_outcomes], start=Token(0))
+    total_bet_amount = sum([bt.bet.amount for bt in bets], start=CollateralToken(0))
+    total_bet_profit = sum([bt.bet.profit for bt in bets], start=CollateralToken(0))
+    total_simulated_amount = sum(
+        [so.size for so in simulated_outcomes], start=CollateralToken(0)
+    )
     total_simulated_profit = sum(
-        [so.profit for so in simulated_outcomes], start=Token(0)
+        [so.profit for so in simulated_outcomes], start=CollateralToken(0)
     )
     roi = 100 * total_bet_profit.value / total_bet_amount.value
     simulated_roi = 100 * (total_simulated_profit / total_simulated_amount)
@@ -482,7 +488,9 @@ def main() -> None:
         upper_max_price_impact = 1.0
         folds = generate_folds(bets_with_traces)
 
-        total_simulation_profit, total_original_profit = Token(0), Token(0)
+        total_simulation_profit, total_original_profit = CollateralToken(
+            0
+        ), CollateralToken(0)
 
         for fold_idx, (_, test_bets_with_traces) in enumerate(folds):
             used_training_folds = [train for train, _ in folds[: fold_idx + 1]]

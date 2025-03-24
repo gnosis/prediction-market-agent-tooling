@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
     SecretStr,
-    Token,
+    CollateralToken,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
@@ -192,7 +192,7 @@ def calculate_sell_amount_in_collateral(
     holdings: OutcomeToken,
     other_holdings: OutcomeToken,
     fees: MarketFees,
-) -> Token:
+) -> CollateralToken:
     """
     Computes the amount of collateral that needs to be sold to get `shares`
     amount of shares. Returns None if the amount can't be computed.
@@ -212,4 +212,4 @@ def calculate_sell_amount_in_collateral(
         return ((first_term * second_term) - third_term).value
 
     amount_to_sell = newton(f, 0)
-    return Token(float(amount_to_sell) * 0.999999)  # Avoid rounding errors
+    return CollateralToken(float(amount_to_sell) * 0.999999)  # Avoid rounding errors

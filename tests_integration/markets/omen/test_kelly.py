@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from prediction_market_agent_tooling.deploy.betting_strategy import KellyBettingStrategy
-from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, Token
+from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, CollateralToken
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketFees,
@@ -23,7 +23,7 @@ def test_kelly_price_impact_calculation1() -> None:
     kelly = KellyBettingStrategy(max_bet_amount=USD(1), max_price_impact=0.5)
     yes = OutcomeToken(10)
     no = OutcomeToken(10)
-    bet_amount = Token(10)
+    bet_amount = CollateralToken(10)
     buy_direction = True
     assert_price_impact(bet_amount, buy_direction, yes, no, kelly)
 
@@ -34,7 +34,7 @@ def test_kelly_price_impact_calculation2() -> None:
     # after first bet 10 xDAI on Yes, new yes/no
     yes = OutcomeToken(5)
     no = OutcomeToken(20)
-    bet_amount = Token(10)
+    bet_amount = CollateralToken(10)
     buy_direction = False
     assert_price_impact(bet_amount, buy_direction, yes, no, kelly)
 
@@ -116,7 +116,7 @@ def assert_price_impact_converges(
 
 
 def assert_price_impact(
-    bet_amount: Token,
+    bet_amount: CollateralToken,
     buy_direction: bool,
     yes: OutcomeToken,
     no: OutcomeToken,

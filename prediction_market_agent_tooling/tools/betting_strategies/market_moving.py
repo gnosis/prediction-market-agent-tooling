@@ -2,7 +2,11 @@ from functools import reduce
 
 import numpy as np
 
-from prediction_market_agent_tooling.gtypes import OutcomeToken, Probability, Token
+from prediction_market_agent_tooling.gtypes import (
+    OutcomeToken,
+    Probability,
+    CollateralToken,
+)
 from prediction_market_agent_tooling.markets.omen.omen import (
     MarketFees,
     OmenAgentMarket,
@@ -41,7 +45,7 @@ def get_market_moving_bet(
     fixed_product = yes_outcome_pool_size * no_outcome_pool_size
     bet_direction: bool = target_p_yes > market_p_yes
 
-    min_bet_amount = Token(0.0)
+    min_bet_amount = CollateralToken(0.0)
     max_bet_amount = (
         yes_outcome_pool_size + no_outcome_pool_size
     ).as_token * 100  # TODO set a better upper bound

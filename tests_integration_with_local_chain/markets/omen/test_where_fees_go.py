@@ -6,7 +6,12 @@ from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import USD, Token, private_key_type, xDai
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    private_key_type,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
@@ -76,7 +81,7 @@ def test_where_fees_go(
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)
     funds = USD(1)
-    funds_t = Token(funds.value)  #   In this test, 1 USD = 1 Token
+    funds_t = CollateralToken(funds.value)  #   In this test, 1 USD = 1 Token
     fee_perc = 0.5
     finalization_wait_time_seconds = 1
     category = "cryptocurrency"
@@ -112,7 +117,9 @@ def test_where_fees_go(
 
     # Add double the liquidity from account B
     additional_funds = funds * USD(2)
-    additional_funds_t = Token(additional_funds.value)  # In this test, 1 USD = 1 Token
+    additional_funds_t = CollateralToken(
+        additional_funds.value
+    )  # In this test, 1 USD = 1 Token
     omen_fund_market_tx(
         api_keys_B,
         agent_market,

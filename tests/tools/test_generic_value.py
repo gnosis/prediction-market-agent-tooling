@@ -3,24 +3,24 @@ import json
 import pytest
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import Token, Wei, xDai
+from prediction_market_agent_tooling.gtypes import CollateralToken, Wei, xDai
 
 
 class TestModel(BaseModel):
-    t: Token
+    t: CollateralToken
     w: Wei
     x: xDai
 
 
 def test_generic_value_with_pydantic_1() -> None:
-    m = TestModel(t=Token(1), w=Wei(2), x=xDai(3))
+    m = TestModel(t=CollateralToken(1), w=Wei(2), x=xDai(3))
     assert m.t.value == 1
     assert m.w.value == 2
     assert m.x.value == 3
 
 
 def test_generic_value_with_pydantic_2() -> None:
-    m = TestModel(t=Token(1), w=Wei(2), x=xDai(3))
+    m = TestModel(t=CollateralToken(1), w=Wei(2), x=xDai(3))
 
     dumped = m.model_dump()
     assert dumped == {
@@ -46,7 +46,7 @@ def test_generic_value_with_pydantic_3() -> None:
 
 
 def test_generic_value_with_json() -> None:
-    m = {"t": Token(1), "w": Wei(2), "x": xDai(3)}
+    m = {"t": CollateralToken(1), "w": Wei(2), "x": xDai(3)}
     assert (
         json.dumps(m)
         == """{"t": {"value": 1.0, "type": "Token"}, "w": {"value": 2, "type": "Wei"}, "x": {"value": 3.0, "type": "xDai"}}"""
@@ -54,7 +54,7 @@ def test_generic_value_with_json() -> None:
 
 
 def test_incompatible_operations() -> None:
-    t = Token(1)
+    t = CollateralToken(1)
     w = Wei(2)
     x = xDai(3)
     w_2 = w + Wei(5)
@@ -73,24 +73,24 @@ def test_incompatible_operations() -> None:
 
 
 def test_generic_value_sum() -> None:
-    values = [Token(1), Token(2), Token(3)]
+    values = [CollateralToken(1), CollateralToken(2), CollateralToken(3)]
     assert type(sum(values)) == type(values[0])
-    assert sum(values) == Token(6)
+    assert sum(values) == CollateralToken(6)
 
-    assert sum([Token(0), Token(0)]) == 0, "Should work with zero."
+    assert sum([CollateralToken(0), CollateralToken(0)]) == 0, "Should work with zero."
 
     with pytest.raises(TypeError):
         assert sum(values) == 6, "Should not work when comparing with non zero"
 
 
 def test_generic_value_str() -> None:
-    assert str(Token(1)) == "1.0"
+    assert str(CollateralToken(1)) == "1.0"
     assert str(Wei(1)) == "1"
     assert str(xDai(1)) == "1.0"
 
 
 def test_generic_value_repr() -> None:
-    assert repr(Token(1)) == "Token(1.0)"
+    assert repr(CollateralToken(1)) == "Token(1.0)"
     assert repr(Wei(1)) == "Wei(1)"
     assert repr(xDai(1)) == "xDai(1.0)"
 
@@ -102,6 +102,6 @@ def test_init_with_str() -> None:
 
 
 def test_zero_equal() -> None:
-    a = Token(0)
+    a = CollateralToken(0)
     assert a == 0
     assert not (a != 0)

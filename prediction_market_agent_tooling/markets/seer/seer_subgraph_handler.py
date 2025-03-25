@@ -5,6 +5,7 @@ from typing import Any
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
+from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
@@ -192,7 +193,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         return binary_markets
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
-        markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())
+        markets_field = self.seer_subgraph.Query.seer_market(id=market_id.hex().lower())
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         if len(markets) != 1:
@@ -217,17 +218,19 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         ]
         return fields
 
-    def get_swapr_pools_for_market(self, market: SeerMarket) -> list[SeerPool]:
+    def get_pool_by_token(self, token_address: ChecksumAddress) -> SeerPool | None:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
         wheres = []
-        for wrapped_token in market.wrapped_tokens:
-            wheres.extend(
-                [
-                    {"token0": wrapped_token.lower()},
-                    {"token1": wrapped_token.lower()},
-                ]
-            )
+        wheres.extend(
+            [
+                {"token0": token_address.lower()},
+                {"token1": token_address.lower()},
+            ]
+        )
         pools_field = self.swapr_algebra_subgraph.Query.pools(where={"or": wheres})
         fields = self._get_fields_for_pools(pools_field)
         pools = self.do_query(fields=fields, pydantic_model=SeerPool)
-        return pools
+        # We assume there is only one pool for outcomeToken/sDAI.
+        if pools:
+            return pools[0]
+        return None

@@ -352,4 +352,4 @@ def extract_market_address_from_tx(
         .process_receipt(tx_receipt)
     )
     new_market_event = NewMarketEvent(**event_logs[0]["args"])
-    return Web3.to_checksum_address(new_market_event.market)
+    return Web3.to_checksum_address(new_market_event.seer_market)

@@ -5,7 +5,6 @@ from urllib.parse import urljoin
 
 from pydantic import BaseModel, ConfigDict, Field
 from web3 import Web3
-from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import (
@@ -13,37 +12,13 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     Probability,
-    Wei,
-    xdai_type,
 )
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
+from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
+from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
+    SeerParentMarket,
+)
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
-
-
-class CreateCategoricalMarketsParams(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    market_name: str = Field(..., alias="marketName")
-    outcomes: list[str]
-    # Only relevant for scalar markets
-    question_start: str = Field(alias="questionStart", default="")
-    question_end: str = Field(alias="questionEnd", default="")
-    outcome_type: str = Field(alias="outcomeType", default="")
-
-    # Not needed for non-conditional markets.
-    parent_outcome: int = Field(alias="parentOutcome", default=0)
-    parent_market: HexAddress = Field(alias="parentMarket", default=ADDRESS_ZERO)
-
-    category: str
-    lang: str
-    lower_bound: int = Field(alias="lowerBound", default=0)
-    upper_bound: int = Field(alias="upperBound", default=0)
-    min_bond: Wei = Field(..., alias="minBond")
-    opening_time: int = Field(..., alias="openingTime")
-    token_names: list[str] = Field(..., alias="tokenNames")
 
 
 class SeerOutcomeEnum(str, Enum):
@@ -82,10 +57,6 @@ class SeerOutcomeEnum(str, Enum):
             raise ValueError("Cannot convert INVALID outcome to boolean.")
         else:
             raise ValueError(f"Unknown outcome: {self}")
-
-
-class SeerParentMarket(BaseModel):
-    id: HexBytes
 
 
 SEER_BASE_URL = "https://app.seer.pm"
@@ -189,65 +160,10 @@ class SeerMarket(BaseModel):
 
     @property
     def current_p_yes(self) -> Probability:
-        price_data = {}
-        for idx in range(len(self.outcomes)):
-            wrapped_token = self.wrapped_tokens[idx]
-            price = self._get_price_for_token(
-                token=Web3.to_checksum_address(wrapped_token)
-            )
-            price_data[idx] = price
-
-        if sum(price_data.values()) == 0:
-            logger.warning(
-                f"Could not get p_yes for market {self.id.hex()}, all price quotes are 0."
-            )
-            return Probability(0)
-
-        yes_idx = self.outcome_as_enums[SeerOutcomeEnum.YES]
-        price_yes = price_data[yes_idx] / sum(price_data.values())
-        return Probability(price_yes)
-
-    def _get_price_for_token(self, token: ChecksumAddress) -> float:
-        collateral_exchange_amount = xdai_to_wei(xdai_type(1))
-        try:
-            quote = CowManager().get_quote(
-                collateral_token=self.collateral_token_contract_address_checksummed,
-                buy_token=token,
-                sell_amount=collateral_exchange_amount,
-            )
-        except Exception as e:
-            logger.warning(f"Could not get quote for {token=}, returning price 0. {e=}")
-            return 0
-
-        return collateral_exchange_amount / float(quote.quote.buyAmount.root)
+        p = PriceManager(self)
+        return p.current_market_p_yes
 
     @property
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
         return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
-
-
-class SeerToken(BaseModel):
-    id: HexBytes
-    name: str
-    symbol: str
-
-
-class SeerPool(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    id: HexBytes
-    liquidity: int
-    token0: SeerToken
-    token1: SeerToken
-    token0Price: float
-    token1Price: float
-    sqrtPrice: int
-
-
-class NewMarketEvent(BaseModel):
-    market: HexAddress
-    marketName: str
-    parentMarket: HexAddress
-    conditionId: HexBytes
-    questionId: HexBytes
-    questionsIds: list[HexBytes]

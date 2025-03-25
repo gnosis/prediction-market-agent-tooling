@@ -1,7 +1,9 @@
 import pytest
+from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.seer.data_models import SeerOutcomeEnum
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
@@ -56,17 +58,19 @@ def test_binary_market_retrieved(
     assert BINARY_CONDITIONAL_MARKET_ID in market_ids
 
 
-def test_get_pools_for_market(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
+def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
     us_election_market_id = HexBytes("0x43d881f5920ed29fc5cd4917d6817496abbba6d9")
     market = seer_subgraph_handler_test.get_market_by_id(us_election_market_id)
-
-    pools = seer_subgraph_handler_test.get_swapr_pools_for_market(market)
-    assert len(pools) > 1
-    for pool in pools:
-        # one of the tokens must be a wrapped token
+    # There must be pools for the Yes,No outcomes.
+    for outcome_enum in [SeerOutcomeEnum.YES, SeerOutcomeEnum.NO]:
+        idx = market.outcome_as_enums[outcome_enum]
+        wrapped_token = market.wrapped_tokens[idx]
+        pool = seer_subgraph_handler_test.get_pool_by_token(
+            token_address=Web3.to_checksum_address(wrapped_token.lower())
+        )
         assert (
-            pool.token0.id.hex() in market.wrapped_tokens
-            or pool.token1.id.hex() in market.wrapped_tokens
+            pool.token0.id.hex().lower() == wrapped_token.lower()
+            or pool.token1.id.hex().lower() == wrapped_token.lower()
         )
 
 

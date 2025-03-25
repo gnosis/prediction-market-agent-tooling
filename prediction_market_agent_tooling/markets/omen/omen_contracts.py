@@ -894,7 +894,7 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
 
 
 class CowGPv2SettlementContract(ContractOnGnosisChain):
-    # Contract ABI taken from https://github.com/cowprotocol/cow-sdk/blob/main/abi/GPv2Settlement.json
+    # Contract ABI taken from https://github.com/cowprotocol/cow-sdk/blob/main/abi/GPv2Settlement.json.
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),

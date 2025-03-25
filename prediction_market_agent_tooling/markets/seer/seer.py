@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.gtypes import (
     wei_type,
     xDai,
     xdai_type,
+    Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -174,7 +175,7 @@ class SeerAgentMarket(AgentMarket):
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
     ) -> "SeerAgentMarket":
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-        current_p_yes = p.get_current_p_price()
+        current_p_yes = p.current_p_yes()
 
         return SeerAgentMarket(
             id=model.id.hex(),
@@ -213,7 +214,7 @@ class SeerAgentMarket(AgentMarket):
             outcome_token_pool=None,
             resolution=model.get_resolution_enum(),
             volume=None,
-            current_p_yes=model.current_p_yes,
+            current_p_yes=Probability(123),  # ToDo dont use this method
             seer_outcomes=model.outcome_as_enums,
         )
 
@@ -225,11 +226,17 @@ class SeerAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
     ) -> t.Sequence["SeerAgentMarket"]:
-        markets = SeerSubgraphHandler().get_binary_markets(
+        seer_subgraph = SeerSubgraphHandler()
+        markets = seer_subgraph.get_binary_markets(
             limit=limit, sort_by=sort_by, filter_by=filter_by
         )
 
-        return [SeerAgentMarket.from_data_model(m) for m in markets]
+        return [
+            SeerAgentMarket.from_data_model_with_subgraph(
+                model=m, seer_subgraph=seer_subgraph
+            )
+            for m in markets
+        ]
 
     def has_liquidity_for_outcome(self, outcome: bool) -> bool:
         outcome_token = self.get_wrapped_token_for_outcome(outcome)

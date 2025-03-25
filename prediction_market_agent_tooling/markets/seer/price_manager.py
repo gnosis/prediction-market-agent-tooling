@@ -23,7 +23,6 @@ class PriceManager:
         self.seer_market = seer_market
         self.seer_subgraph = seer_subgraph
 
-    @property
     def current_p_yes(self) -> Probability:
         price_data = {}
         for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):

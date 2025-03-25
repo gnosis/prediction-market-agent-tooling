@@ -193,7 +193,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         return binary_markets
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
-        markets_field = self.seer_subgraph.Query.seer_market(id=market_id.hex().lower())
+        markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         if len(markets) != 1:

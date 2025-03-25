@@ -11,9 +11,6 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
-from prediction_market_agent_tooling.tools.caches.inmemory_cache import (
-    persistent_inmemory_cache,
-)
 from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
@@ -51,7 +48,6 @@ class PriceManager:
             price_yes = price_yes / sum(price_data.values())
             return Probability(price_yes)
 
-    @persistent_inmemory_cache
     def get_price_for_token(
         self,
         token: ChecksumAddress,
@@ -87,23 +83,26 @@ class PriceManager:
             return 0
         # Check if other token is market's collateral (sanity check).
 
-        collateral_address = (
+        # Collateral is the other token in the pair
+        collateral_address = Web3.to_checksum_address(
             pool.token0.id
-            if self._pool_token0_matches_token(token=token, pool=pool)
+            if not self._pool_token0_matches_token(token=token, pool=pool)
             else pool.token1.id
         )
         if (
-            collateral_address.hex().lower()
-            != self.seer_market.collateral_token_contract_address_checksummed.lower()
+            collateral_address
+            != self.seer_market.collateral_token_contract_address_checksummed
         ):
             logger.warning(
                 f"Pool {pool.id.hex()} has collateral mismatch with market. Collateral from pool {collateral_address.hex()}, collateral from market {self.seer_market.collateral_token_contract_address_checksummed}, returning 0."
             )
             return 0
 
+        # The mapping below is odd but surprisingly the Algebra subgraph delivers the token1Price
+        # for the token0 and the token0Price for the token1 pool.
         price_in_collateral_units = (
-            pool.token0Price
+            pool.token1Price
             if self._pool_token0_matches_token(token=token, pool=pool)
-            else pool.token1Price
+            else pool.token0Price
         )
         return price_in_collateral_units

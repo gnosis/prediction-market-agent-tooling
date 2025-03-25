@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
+from web3.constants import ADDRESS_ZERO
 
-from prediction_market_agent_tooling.gtypes import HexBytes, HexAddress
+from prediction_market_agent_tooling.gtypes import HexBytes, HexAddress, Wei
 
 
 class SeerToken(BaseModel):

@@ -3,6 +3,7 @@ import typing as t
 from copy import deepcopy
 
 from eth_account.signers.local import LocalAccount
+from eth_typing import URI
 from pydantic import Field, model_validator
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
@@ -277,11 +278,11 @@ class RPCConfig(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    GNOSIS_RPC_URL: str = Field(default="https://rpc.gnosischain.com")
+    GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosischain.com"))
     CHAIN_ID: ChainID = Field(default=ChainID(100))
 
     @property
-    def gnosis_rpc_url(self) -> str:
+    def gnosis_rpc_url(self) -> URI:
         return check_not_none(
             self.GNOSIS_RPC_URL, "GNOSIS_RPC_URL missing in the environment."
         )

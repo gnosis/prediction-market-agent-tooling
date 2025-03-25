@@ -49,6 +49,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.creator,
             markets_field.conditionId,
             markets_field.marketName,
+            markets_field.outcomesSupply,
             markets_field.parentOutcome,
             markets_field.outcomes,
             markets_field.payoutReported,
@@ -124,8 +125,12 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case SortBy.CLOSING_SOONEST:
                 sort_direction = "asc"
                 sort_by_field = self.seer_subgraph.Market.openingTs
-            # ToDo - Implement liquidity conditions by looking up Swapr subgraph.
-            case SortBy.NONE | SortBy.HIGHEST_LIQUIDITY | SortBy.LOWEST_LIQUIDITY:
+            case SortBy.HIGHEST_LIQUIDITY | SortBy.LOWEST_LIQUIDITY:
+                sort_direction = (
+                    "desc" if sort_by == SortBy.HIGHEST_LIQUIDITY else "asc"
+                )
+                sort_by_field = self.seer_subgraph.Market.outcomesSupply
+            case SortBy.NONE:
                 sort_direction = None
                 sort_by_field = None
             case _:

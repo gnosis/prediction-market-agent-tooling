@@ -110,6 +110,7 @@ class SeerMarket(BaseModel):
     has_answers: bool | None = Field(alias="hasAnswers")
     payout_reported: bool = Field(alias="payoutReported")
     payout_numerators: list[int] = Field(alias="payoutNumerators")
+    outcomes_supply: int = Field(alias="outcomesSupply")
 
     @property
     def has_valid_answer(self) -> bool:

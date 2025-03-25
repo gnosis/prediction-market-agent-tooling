@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, xdai_type
@@ -48,6 +50,7 @@ class PriceManager:
             price_yes = price_yes / sum(price_data.values())
             return Probability(price_yes)
 
+    @lru_cache(typed=True)
     def get_price_for_token(
         self,
         token: ChecksumAddress,

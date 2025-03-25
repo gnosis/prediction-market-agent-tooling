@@ -55,7 +55,7 @@ hishel = "^0.0.31"
 pytest-postgresql = "^6.1.1"
 optuna = { version = "^4.1.0", optional = true}
 httpx = ">=0.25.2,<1.0.0"
-cowdao-cowpy = "^1.0.0rc1"
+cowdao-cowpy = { git = "https://github.com/kongzii/cow-py", branch = "peter/cow" }
 eth-keys = "^0.6.1"
 proto-plus = "^1.0.0"
 protobuf = "^5.0.0"

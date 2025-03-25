@@ -4,6 +4,7 @@ from enum import Enum
 from eth_typing import ChecksumAddress
 from pydantic import BaseModel, field_validator, model_validator
 from pydantic_core.core_schema import FieldValidationInfo
+from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
@@ -246,6 +247,7 @@ class AgentMarket(BaseModel):
         traded_market: ProcessedTradedMarket | None,
         keys: APIKeys,
         agent_name: str,
+        web3: Web3 | None = None,
     ) -> None:
         """
         If market allows to upload trades somewhere, implement it in this method.

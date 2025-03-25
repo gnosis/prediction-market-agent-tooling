@@ -1,5 +1,6 @@
 from web3 import Web3
 from web3.constants import HASH_ZERO
+from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -48,7 +49,8 @@ def store_trades(
     traded_market: ProcessedTradedMarket | None,
     keys: APIKeys,
     agent_name: str,
-) -> None:
+    web3: Web3 | None = None,
+) -> TxReceipt:
     if traded_market is None:
         logger.warning(f"No prediction for market {market_id}, not storing anything.")
         return
@@ -76,7 +78,9 @@ def store_trades(
         api_keys=keys,
         market_address=Web3.to_checksum_address(market_id),
         prediction=prediction,
+        web3=web3,
     )
     logger.info(
         f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].hex()}."
     )
+    return tx_receipt

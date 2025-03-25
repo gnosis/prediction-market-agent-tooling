@@ -91,12 +91,14 @@ class SeerAgentMarket(AgentMarket):
         traded_market: ProcessedTradedMarket | None,
         keys: APIKeys,
         agent_name: str,
-    ) -> None:
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
         return store_trades(
             market_id=self.id,
             traded_market=traded_market,
             keys=keys,
             agent_name=agent_name,
+            web3=web3,
         )
 
     def _convert_bet_amount_into_wei(self, bet_amount: BetAmount) -> Wei:

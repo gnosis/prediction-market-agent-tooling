@@ -104,7 +104,8 @@ async def swap_tokens_waiting_async(
     api_keys: APIKeys,
     chain: Chain,
     env: Envs,
-    timeout: timedelta = timedelta(seconds=60),
+    timeout: timedelta = timedelta(seconds=120),
+    slippage_tolerance: float = 0.01,
 ) -> OrderMetaData:
     account = api_keys.get_account()
     safe_address = api_keys.safe_address_checksum
@@ -117,6 +118,7 @@ async def swap_tokens_waiting_async(
         safe_address=safe_address,
         chain=chain,
         env=env,
+        slippage_tolerance=slippage_tolerance,
     )
     logger.info(f"Order created: {order}")
 
@@ -153,6 +155,11 @@ async def swap_tokens_waiting_async(
         await asyncio.sleep(3.14)
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"sign_safe_cow_swap failed, {x.attempt_number=}."),
+)
 async def sign_safe_cow_swap(
     api_keys: APIKeys,
     order: CompletedOrder,

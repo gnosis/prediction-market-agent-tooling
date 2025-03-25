@@ -33,15 +33,18 @@ from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract
 from prediction_market_agent_tooling.markets.seer.data_models import (
-    NewMarketEvent,
     SeerMarket,
     SeerOutcomeEnum,
 )
+from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
+)
+from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
+    NewMarketEvent,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
@@ -167,6 +170,33 @@ class SeerAgentMarket(AgentMarket):
         return OmenAgentMarket.verify_operational_balance(api_keys=api_keys)
 
     @staticmethod
+    def from_data_model_with_subgraph(
+        model: SeerMarket, seer_subgraph: SeerSubgraphHandler
+    ) -> "SeerAgentMarket":
+        p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
+        current_p_yes = p.get_current_p_price()
+
+        return SeerAgentMarket(
+            id=model.id.hex(),
+            question=model.title,
+            creator=model.creator,
+            created_time=model.created_time,
+            outcomes=model.outcomes,
+            collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
+            condition_id=model.condition_id,
+            url=model.url,
+            close_time=model.close_time,
+            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
+            fees=MarketFees.get_zero_fees(),
+            outcome_token_pool=None,
+            resolution=model.get_resolution_enum(),
+            volume=None,
+            # current_p_yes=model.current_p_yes,
+            current_p_yes=current_p_yes,
+            seer_outcomes=model.outcome_as_enums,
+        )
+
+    @staticmethod
     def from_data_model(model: SeerMarket) -> "SeerAgentMarket":
         return SeerAgentMarket(
             id=model.id.hex(),
@@ -195,14 +225,11 @@ class SeerAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
     ) -> t.Sequence["SeerAgentMarket"]:
-        return [
-            SeerAgentMarket.from_data_model(m)
-            for m in SeerSubgraphHandler().get_binary_markets(
-                limit=limit,
-                sort_by=sort_by,
-                filter_by=filter_by,
-            )
-        ]
+        markets = SeerSubgraphHandler().get_binary_markets(
+            limit=limit, sort_by=sort_by, filter_by=filter_by
+        )
+
+        return [SeerAgentMarket.from_data_model(m) for m in markets]
 
     def has_liquidity_for_outcome(self, outcome: bool) -> bool:
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
@@ -352,4 +379,4 @@ def extract_market_address_from_tx(
         .process_receipt(tx_receipt)
     )
     new_market_event = NewMarketEvent(**event_logs[0]["args"])
-    return Web3.to_checksum_address(new_market_event.seer_market)
+    return Web3.to_checksum_address(new_market_event.market)

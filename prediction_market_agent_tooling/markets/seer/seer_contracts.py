@@ -5,7 +5,7 @@ from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ABI, ChecksumAddress, xDai
-from prediction_market_agent_tooling.markets.seer.data_models import (
+from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
 )
 from prediction_market_agent_tooling.tools.contract import (

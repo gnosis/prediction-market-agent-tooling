@@ -7,6 +7,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import SeerOutcome
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 CONDITIONAL_MARKET_ID = HexBytes("0xfe2cc518b4d8c1d5db682db553c3de750d901ce0")
 BINARY_MARKET_ID = HexBytes("0x7d72aa56ecdda207005fd7a02dbfd33f92d0def7")
@@ -68,6 +69,7 @@ def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         pool = seer_subgraph_handler_test.get_pool_by_token(
             token_address=Web3.to_checksum_address(wrapped_token.lower())
         )
+        pool = check_not_none(pool)
         assert (
             pool.token0.id.hex().lower() == wrapped_token.lower()
             or pool.token1.id.hex().lower() == wrapped_token.lower()

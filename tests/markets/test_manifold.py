@@ -3,7 +3,7 @@ from datetime import timedelta
 import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import mana_type
+from prediction_market_agent_tooling.gtypes import Mana, OutcomeToken
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_manifold_bets,
@@ -28,7 +28,7 @@ def a_user_id() -> str:
 def test_manifold() -> None:
     market = get_one_manifold_binary_market()
     logger.info("Placing bet on market:", market.question)
-    place_bet(mana_type(1), market.id, True, APIKeys().manifold_api_key)
+    place_bet(Mana(1), market.id, True, APIKeys().manifold_api_key)
 
 
 def test_manifold_markets() -> None:
@@ -72,9 +72,9 @@ def test_resolved_manifold_bets(a_user_id: str) -> None:
 
 
 def test_manifold_pool() -> None:
-    pool = ManifoldPool(NO=1, YES=2)
-    assert pool.size_for_outcome("NO") == 1.0
-    assert pool.size_for_outcome("YES") == 2.0
+    pool = ManifoldPool(NO=OutcomeToken(1), YES=OutcomeToken(2))
+    assert pool.size_for_outcome("NO") == OutcomeToken(1.0)
+    assert pool.size_for_outcome("YES") == OutcomeToken(2.0)
 
     with pytest.raises(ValueError) as e:
         pool.size_for_outcome("FOO")

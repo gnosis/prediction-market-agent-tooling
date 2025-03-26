@@ -6,15 +6,15 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
     HexBytes,
     Mana,
+    OutcomeStr,
+    OutcomeWei,
     Probability,
     Wei,
-    mana_type,
-    omen_outcome_type,
-    usd_type,
-    wei_type,
-    xdai_type,
+    xDai,
 )
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.manifold.manifold import (
@@ -47,7 +47,6 @@ from prediction_market_agent_tooling.tools.betting_strategies.stretch_bet_betwee
     stretch_bet_between,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 GANACHE_ADDRESS_NR_1 = HexAddress(
     Web3.to_checksum_address("0x9B7bc47837d4061a11389267C06D829c5C97E404")
@@ -61,26 +60,26 @@ def omen_market() -> OmenMarket:
         title="Will Plex launch a store for movies and TV shows by 26 January 2024?",
         creator=GANACHE_ADDRESS_NR_1,
         collateralVolume=Wei(4369016776639073062),
-        usdVolume=usd_type("4.369023756584789670441178585394842"),
+        usdVolume=USD("4.369023756584789670441178585394842"),
         collateralToken=HexAddress(
             HexStr("0xe91d153e0b41518a2ce8dd3d7944fa863463a97d")
         ),
-        outcomes=["Yes", "No"],
+        outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
         outcomeTokenAmounts=[
-            omen_outcome_type(7277347438897016099),
-            omen_outcome_type(13741270543921756242),
+            OutcomeWei(7277347438897016099),
+            OutcomeWei(13741270543921756242),
         ],
         outcomeTokenMarginalPrices=[
-            xdai_type("0.6537666061181695741160552853310822"),
-            xdai_type("0.3462333938818304258839447146689178"),
+            CollateralToken("0.6537666061181695741160552853310822"),
+            CollateralToken("0.3462333938818304258839447146689178"),
         ],
-        fee=wei_type(20000000000000000),
+        fee=Wei(20000000000000000),
         category="foo",
         condition=Condition(id=HexBytes("0x123"), outcomeSlotCount=2),
         question=Question(
             id=HexBytes("0x123"),
             title="title",
-            outcomes=["Yes", "No"],
+            outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
             templateId=2,
             isPendingArbitration=False,
             data="...",
@@ -109,7 +108,7 @@ def test_minimum_bet_to_win(
             id="id",
             question="question",
             creator=GANACHE_ADDRESS_NR_1,
-            outcomes=["Yes", "No"],
+            outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
             current_p_yes=market_p_yes,
             collateral_token_contract_address_checksummed=WrappedxDaiContract().address,
             market_maker_contract_address_checksummed=Web3.to_checksum_address(
@@ -135,8 +134,8 @@ def test_minimum_bet_to_win(
 @pytest.mark.parametrize(
     "outcome, market_p_yes, amount_to_win, expected_min_bet",
     [
-        (True, 0.68, 1, mana_type(3)),
-        (False, 0.68, 1, mana_type(1)),
+        (True, 0.68, 1, Mana(3)),
+        (False, 0.68, 1, Mana(1)),
     ],
 )
 def test_minimum_bet_to_win_manifold(
@@ -149,7 +148,7 @@ def test_minimum_bet_to_win_manifold(
         id="id",
         question="question",
         description=None,
-        outcomes=["Yes", "No"],
+        outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
         current_p_yes=market_p_yes,
         created_time=utcnow() - timedelta(days=1),
         close_time=utcnow(),
@@ -164,30 +163,30 @@ def test_minimum_bet_to_win_manifold(
 @pytest.mark.parametrize(
     "target_p_yes, expected_bet_size, expected_bet_direction",
     [
-        (Probability(0.1), xdai_type(23.19), False),
-        (Probability(0.9), xdai_type(18.1), True),
+        (Probability(0.1), xDai(23.19), False),
+        (Probability(0.9), xDai(18.1), True),
     ],
 )
 def test_get_market_moving_bet(
     target_p_yes: Probability,
-    expected_bet_size: float,
+    expected_bet_size: xDai,
     expected_bet_direction: bool,
     omen_market: OmenMarket,
 ) -> None:
     bet = get_market_moving_bet(
         target_p_yes=target_p_yes,
         market_p_yes=omen_market.current_p_yes,
-        yes_outcome_pool_size=wei_to_xdai(
-            Wei(omen_market.outcomeTokenAmounts[omen_market.yes_index])
+        yes_outcome_pool_size=(
+            omen_market.outcomeTokenAmounts[omen_market.yes_index].as_outcome_token
         ),
-        no_outcome_pool_size=wei_to_xdai(
-            Wei(omen_market.outcomeTokenAmounts[omen_market.no_index])
+        no_outcome_pool_size=(
+            omen_market.outcomeTokenAmounts[omen_market.no_index].as_outcome_token
         ),
         fees=OmenAgentMarket.from_data_model(omen_market).fees,
     )
     assert np.isclose(
-        bet.size,
-        expected_bet_size,
+        bet.size.value,
+        expected_bet_size.value,
         atol=2.0,  # We don't expect it to be 100% accurate, but close enough.
     )
     assert bet.direction == expected_bet_direction
@@ -232,7 +231,7 @@ def test_stretch_bet_between(
 
 @pytest.mark.parametrize("est_p_yes", [Probability(0.1), Probability(0.9)])
 def test_kelly_bet(est_p_yes: Probability, omen_market: OmenMarket) -> None:
-    max_bet = 10
+    max_bet = CollateralToken(10)
     confidence = 1.0
     market_p_yes = omen_market.current_p_yes
     expected_bet_direction = False if est_p_yes < market_p_yes else True
@@ -252,12 +251,12 @@ def test_kelly_bet(est_p_yes: Probability, omen_market: OmenMarket) -> None:
 
     assert (
         get_kelly_bet_full(
-            yes_outcome_pool_size=wei_to_xdai(
-                Wei(omen_market.outcomeTokenAmounts[omen_market.yes_index])
-            ),
-            no_outcome_pool_size=wei_to_xdai(
-                Wei(omen_market.outcomeTokenAmounts[omen_market.no_index])
-            ),
+            yes_outcome_pool_size=omen_market.outcomeTokenAmounts[
+                omen_market.yes_index
+            ].as_outcome_token,
+            no_outcome_pool_size=omen_market.outcomeTokenAmounts[
+                omen_market.no_index
+            ].as_outcome_token,
             estimated_p_yes=est_p_yes,
             max_bet=max_bet,
             confidence=confidence,
@@ -285,22 +284,22 @@ def test_zero_bets() -> None:
         target_p_yes=market.current_p_yes,
         fees=market.fees,
     )
-    assert np.isclose(market_moving_bet.size, 0.0, atol=1e-3)
+    assert np.isclose(market_moving_bet.size.value, 0.0, atol=1e-3)
 
     kelly_bet = get_kelly_bet_full(
         yes_outcome_pool_size=yes_outcome_pool_size,
         no_outcome_pool_size=no_outcome_pool_size,
         estimated_p_yes=market.current_p_yes,
         confidence=1.0,
-        max_bet=0,
+        max_bet=CollateralToken(0),
         fees=market.fees,
     )
-    assert kelly_bet.size == 0
+    assert not kelly_bet.size
 
     kelly_bet_simple = get_kelly_bet_simplified(
-        max_bet=100,
+        max_bet=CollateralToken(100),
         market_p_yes=market.current_p_yes,
         estimated_p_yes=market.current_p_yes,
         confidence=1.0,
     )
-    assert kelly_bet_simple.size == 0
+    assert not kelly_bet_simple.size

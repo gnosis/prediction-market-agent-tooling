@@ -14,6 +14,8 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderMetaData,
     OrderQuoteRequest,
     OrderQuoteSide1,
+    OrderQuoteSide3,
+    OrderQuoteSideKindBuy,
     OrderQuoteSideKindSell,
     OrderStatus,
     TokenAmount,
@@ -21,13 +23,16 @@ from cowdao_cowpy.order_book.generated.model import (
 from eth_account.signers.local import LocalAccount
 from eth_typing.evm import ChecksumAddress
 from web3 import Web3
-from web3.types import Wei
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, wei_type
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
+
+
+class OrderStatusError(Exception):
+    pass
 
 
 def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
@@ -38,10 +43,43 @@ def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
 @tenacity.retry(
     stop=tenacity.stop_after_attempt(3),
     wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_sell_token_amount failed, {x.attempt_number=}."),
+)
+def get_sell_token_amount(
+    buy_amount: Wei,
+    sell_token: ChecksumAddress,
+    buy_token: ChecksumAddress,
+    chain: Chain = Chain.GNOSIS,
+    env: Envs = "prod",
+) -> Wei:
+    """
+    Calculate how much of the sell_token is needed to obtain a specified amount of buy_token.
+    """
+    order_book_api = get_order_book_api(env, chain)
+    order_quote_request = OrderQuoteRequest(
+        sellToken=Address(sell_token),
+        buyToken=Address(buy_token),
+        from_=Address(
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ),  # Just random address, doesn't matter.
+    )
+    order_side = OrderQuoteSide3(
+        kind=OrderQuoteSideKindBuy.buy,
+        buyAmountAfterFee=TokenAmount(str(buy_amount)),
+    )
+    order_quote = asyncio.run(
+        order_book_api.post_quote(order_quote_request, order_side)
+    )
+    return Wei(order_quote.quote.sellAmount.root)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(f"get_buy_token_amount failed, {x.attempt_number=}."),
 )
 def get_buy_token_amount(
-    amount_wei: Wei,
+    sell_amount: Wei,
     sell_token: ChecksumAddress,
     buy_token: ChecksumAddress,
     chain: Chain = Chain.GNOSIS,
@@ -57,14 +95,20 @@ def get_buy_token_amount(
     )
     order_side = OrderQuoteSide1(
         kind=OrderQuoteSideKindSell.sell,
-        sellAmountBeforeFee=TokenAmount(str(amount_wei)),
+        sellAmountBeforeFee=TokenAmount(str(sell_amount)),
     )
     order_quote = asyncio.run(
         order_book_api.post_quote(order_quote_request, order_side)
     )
-    return wei_type(order_quote.quote.buyAmount.root)
+    return Wei(order_quote.quote.buyAmount.root)
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
+    after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
+)
 def swap_tokens_waiting(
     amount_wei: Wei,
     sell_token: ChecksumAddress,
@@ -102,7 +146,7 @@ async def swap_tokens_waiting_async(
     timeout: timedelta = timedelta(seconds=60),
 ) -> OrderMetaData:
     order = await swap_tokens(
-        amount=amount_wei,
+        amount=amount_wei.value,
         sell_token=sell_token,
         buy_token=buy_token,
         account=account,
@@ -125,7 +169,7 @@ async def swap_tokens_waiting_async(
             OrderStatus.cancelled,
             OrderStatus.expired,
         ):
-            raise ValueError(f"Order {order.uid} failed. {order.url}")
+            raise OrderStatusError(f"Order {order.uid} failed. {order.url}")
 
         if utcnow() - start_time > timeout:
             raise TimeoutError(

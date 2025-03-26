@@ -10,24 +10,24 @@ from web3.constants import ADDRESS_ZERO
 from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
+    CollateralToken,
     HexAddress,
     HexBytes,
+    OutcomeStr,
     Probability,
-    Wei,
-    xdai_type,
+    Web3Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 class CreateCategoricalMarketsParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     market_name: str = Field(..., alias="marketName")
-    outcomes: list[str]
+    outcomes: t.Sequence[OutcomeStr]
     # Only relevant for scalar markets
     question_start: str = Field(alias="questionStart", default="")
     question_end: str = Field(alias="questionEnd", default="")
@@ -41,7 +41,7 @@ class CreateCategoricalMarketsParams(BaseModel):
     lang: str
     lower_bound: int = Field(alias="lowerBound", default=0)
     upper_bound: int = Field(alias="upperBound", default=0)
-    min_bond: Wei = Field(..., alias="minBond")
+    min_bond: Web3Wei = Field(..., alias="minBond")
     opening_time: int = Field(..., alias="openingTime")
     token_names: list[str] = Field(..., alias="tokenNames")
 
@@ -97,7 +97,7 @@ class SeerMarket(BaseModel):
     id: HexBytes
     creator: HexAddress
     title: str = Field(alias="marketName")
-    outcomes: list[str]
+    outcomes: t.Sequence[OutcomeStr]
     wrapped_tokens: list[HexAddress] = Field(alias="wrappedTokens")
     parent_outcome: int = Field(alias="parentOutcome")
     parent_market: t.Optional[SeerParentMarket] = Field(
@@ -207,7 +207,7 @@ class SeerMarket(BaseModel):
         return Probability(price_yes)
 
     def _get_price_for_token(self, token: ChecksumAddress) -> float:
-        collateral_exchange_amount = xdai_to_wei(xdai_type(1))
+        collateral_exchange_amount = CollateralToken(1).as_wei
         try:
             quote = CowManager().get_quote(
                 collateral_token=self.collateral_token_contract_address_checksummed,
@@ -218,7 +218,7 @@ class SeerMarket(BaseModel):
             logger.warning(f"Could not get quote for {token=}, returning price 0. {e=}")
             return 0
 
-        return collateral_exchange_amount / float(quote.quote.buyAmount.root)
+        return collateral_exchange_amount.value / float(quote.quote.buyAmount.root)
 
     @property
     def url(self) -> str:

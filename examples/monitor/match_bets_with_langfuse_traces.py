@@ -22,7 +22,11 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     ProbabilisticAnswer,
     TradeType,
 )
-from prediction_market_agent_tooling.gtypes import private_key_type
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    private_key_type,
+)
 from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
     SimulatedBetDetail,
@@ -58,10 +62,10 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
 class SimulatedOutcome(BaseModel):
-    size: float
+    size: CollateralToken
     direction: bool
     correct: bool
-    profit: float
+    profit: CollateralToken
 
 
 def get_outcome_for_trace(
@@ -96,34 +100,36 @@ def get_outcome_for_trace(
     ), "Can only buy without previous position."
     buy_trade = trades[0]
     correct = buy_trade.outcome == market_outcome
-    # If not correct, stop early because profit is known.
-    if not correct:
-        profit = -buy_trade.amount.amount
-    else:
-        # We use a historical state (by passing in a block_number as arg) to get the correct outcome token balances.
-        try:
-            bet_tx_block_number = tx_block_cache.get_block_number(actual_placed_bet.id)
-        except tenacity.RetryError as e:
-            if isinstance(e.last_attempt.exception(), TransactionNotFound):
-                return None
-            raise
-        # We need market at state before the bet was placed, otherwise it wouldn't be fair (outcome price is higher from the original bet at `bet_tx_block_number`)
-        market_before_placing_bet = get_omen_market_by_market_id_cached(
-            HexAddress(HexStr(market.id)), block_number=bet_tx_block_number - 1
-        )
-        omen_agent_market_before_placing_bet = OmenAgentMarket.from_data_model(
-            market_before_placing_bet
-        )
+    # We use a historical state (by passing in a block_number as arg) to get the correct outcome token balances.
+    try:
+        bet_tx_block_number = tx_block_cache.get_block_number(actual_placed_bet.id)
+    except tenacity.RetryError as e:
+        if isinstance(e.last_attempt.exception(), TransactionNotFound):
+            return None
+        raise
+    # We need market at state before the bet was placed, otherwise it wouldn't be fair (outcome price is higher from the original bet at `bet_tx_block_number`)
+    market_before_placing_bet = get_omen_market_by_market_id_cached(
+        HexAddress(HexStr(market.id)), block_number=bet_tx_block_number - 1
+    )
+    omen_agent_market_before_placing_bet = OmenAgentMarket.from_data_model(
+        market_before_placing_bet
+    )
 
+    buy_trade_in_tokes = omen_agent_market_before_placing_bet.get_in_token(
+        buy_trade.amount
+    )
+    if not correct:
+        profit = -buy_trade_in_tokes
+    else:
         received_outcome_tokens = (
             omen_agent_market_before_placing_bet.get_buy_token_amount(
                 buy_trade.amount, direction=buy_trade.outcome
-            ).amount
+            )
         )
-        profit = received_outcome_tokens - buy_trade.amount.amount
+        profit = received_outcome_tokens.as_token - buy_trade_in_tokes
 
     return SimulatedOutcome(
-        size=buy_trade.amount.amount,
+        size=buy_trade_in_tokes,
         direction=buy_trade.outcome,
         correct=correct,
         profit=profit,
@@ -155,11 +161,11 @@ def calc_metrics(
             market_p_yes=round(bet_with_trace.trace.market.current_p_yes, 4),
             agent_p_yes=round(bet_with_trace.trace.answer.p_yes, 4),
             agent_conf=round(bet_with_trace.trace.answer.confidence, 4),
-            org_bet=round(bet_with_trace.bet.amount.amount, 4),
+            org_bet=round(bet_with_trace.bet.amount, 4),
             sim_bet=round(simulated_outcome.size, 4),
             org_dir=bet_with_trace.bet.outcome,
             sim_dir=simulated_outcome.direction,
-            org_profit=round(bet_with_trace.bet.profit.amount, 4),
+            org_profit=round(bet_with_trace.bet.profit, 4),
             sim_profit=round(simulated_outcome.profit, 4),
             timestamp=bet_with_trace.trace.timestamp_datetime,
         )
@@ -179,12 +185,16 @@ def calc_metrics(
         sum_squared_errors += (estimated_p_yes - actual_answer) ** 2
 
     p_yes_mse = sum_squared_errors / len(bets)
-    total_bet_amount = sum([bt.bet.amount.amount for bt in bets])
-    total_bet_profit = sum([bt.bet.profit.amount for bt in bets])
-    total_simulated_amount = sum([so.size for so in simulated_outcomes])
-    total_simulated_profit = sum([so.profit for so in simulated_outcomes])
-    roi = 100 * total_bet_profit / total_bet_amount
-    simulated_roi = 100 * total_simulated_profit / total_simulated_amount
+    total_bet_amount = sum([bt.bet.amount for bt in bets], start=CollateralToken(0))
+    total_bet_profit = sum([bt.bet.profit for bt in bets], start=CollateralToken(0))
+    total_simulated_amount = sum(
+        [so.size for so in simulated_outcomes], start=CollateralToken(0)
+    )
+    total_simulated_profit = sum(
+        [so.profit for so in simulated_outcomes], start=CollateralToken(0)
+    )
+    roi = 100 * total_bet_profit.value / total_bet_amount.value
+    simulated_roi = 100 * (total_simulated_profit / total_simulated_amount)
 
     return per_bet_details, SimulatedLifetimeDetail(
         p_yes_mse=p_yes_mse,
@@ -196,7 +206,7 @@ def calc_metrics(
         simulated_roi=simulated_roi,
         sharpe_output_original=sharpe_output_original,
         sharpe_output_simulation=sharpe_output_simulation,
-        maximize=total_simulated_profit,  # Metric to be maximized for.
+        maximize=total_simulated_profit.value,  # Metric to be maximized for.
     )
 
 
@@ -221,7 +231,7 @@ def get_objective(
                 KellyBettingStrategy.__name__,
             ],
         )
-        bet_amount = trial.suggest_float("bet_amount", 0, upper_bet_amount)
+        bet_amount = USD(trial.suggest_float("bet_amount", 0, upper_bet_amount))
         max_price_impact = (
             trial.suggest_float("max_price_impact", 0, upper_max_price_impact)
             if strategy_name == KellyBettingStrategy.__name__
@@ -478,7 +488,9 @@ def main() -> None:
         upper_max_price_impact = 1.0
         folds = generate_folds(bets_with_traces)
 
-        total_simulation_profit, total_original_profit = 0.0, 0.0
+        total_simulation_profit, total_original_profit = CollateralToken(
+            0
+        ), CollateralToken(0)
 
         for fold_idx, (_, test_bets_with_traces) in enumerate(folds):
             used_training_folds = [train for train, _ in folds[: fold_idx + 1]]

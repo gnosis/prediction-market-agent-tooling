@@ -2,30 +2,25 @@ import time
 from datetime import timedelta
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
+    USD,
     ChecksumAddress,
+    CollateralToken,
     HexAddress,
     HexStr,
-    OutcomeStr,
-    Wei,
+    OutcomeToken,
+    OutcomeWei,
     private_key_type,
     xDai,
-    xdai_type,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
-from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
-    Currency,
-    Position,
-    TokenAmount,
-)
+from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
     OMEN_FALSE_OUTCOME,
@@ -58,8 +53,11 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.tokens.usd import (
+    get_token_in_usd,
+    get_xdai_in_usd,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
 DEFAULT_REASON = "Test logic need to be rewritten for usage of local chain, see ToDos"
@@ -83,7 +81,7 @@ def test_create_bet_withdraw_resolve_market(
 
     created_market = omen_create_market_tx(
         api_keys=test_keys,
-        initial_funds=xdai_type(0.001),
+        initial_funds=USD(0.001),
         fee_perc=OMEN_DEFAULT_MARKET_FEE_PERC,
         question=question,
         closing_time=closing_time,
@@ -108,7 +106,7 @@ def test_create_bet_withdraw_resolve_market(
 
     binary_omen_buy_outcome_tx(
         api_keys=test_keys,
-        amount=xdai_type(0.001),
+        amount=USD(0.001),
         market=agent_market,
         binary_outcome=False,
         auto_deposit=True,
@@ -128,7 +126,7 @@ def test_create_bet_withdraw_resolve_market(
         question_id=market.question.id,
         answer=OMEN_FALSE_OUTCOME,
         outcomes=market.question.outcomes,
-        bond=xdai_to_wei(xDai(0.001)),
+        bond=xDai(0.001).as_xdai_wei,
     )
 
     # ToDo - Instead of subgraph, fetch data directly from contract.
@@ -151,7 +149,7 @@ def test_omen_create_market_wxdai(
 ) -> None:
     created_market = omen_create_market_tx(
         api_keys=test_keys,
-        initial_funds=xdai_type(0.001),
+        initial_funds=USD(0.001),
         question="Will GNO hit $1000 in 2 minutes from creation of this market?",
         closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
@@ -178,7 +176,7 @@ def test_omen_create_market_sdai(
 ) -> None:
     created_market = omen_create_market_tx(
         api_keys=test_keys,
-        initial_funds=xdai_type(100),
+        initial_funds=USD(100),
         question="Will GNO hit $1000 in 2 minutes from creation of this market?",
         closing_time=utcnow() + timedelta(minutes=2),
         category="cryptocurrency",
@@ -236,19 +234,17 @@ def test_balance_for_user_in_market() -> None:
     )
     market_id = "0x59975b067b0716fef6f561e1e30e44f606b08803"
     market = OmenAgentMarket.get_binary_market(market_id)
-    balance_yes: TokenAmount = market.get_token_balance(
+    balance_yes = market.get_token_balance(
         user_id=user_address,
         outcome=OMEN_TRUE_OUTCOME,
     )
-    assert balance_yes.currency == Currency.xDai
-    assert float(balance_yes.amount) == 0
+    assert float(balance_yes) == 0
 
     balance_no = market.get_token_balance(
         user_id=user_address,
         outcome=OMEN_FALSE_OUTCOME,
     )
-    assert balance_no.currency == Currency.xDai
-    assert float(balance_no.amount) == 0
+    assert float(balance_no) == 0
 
 
 @pytest.mark.parametrize(
@@ -284,13 +280,13 @@ def test_omen_fund_and_remove_fund_market(
         market.market_maker_contract_address_checksummed,
     )
 
-    funds = xdai_to_wei(xdai_type(0.1))
-    remove_fund = xdai_to_wei(xdai_type(0.01))
+    funds = xDai(0.1)
+    remove_fund = xDai(0.01).as_xdai_wei
 
     omen_fund_market_tx(
         api_keys=test_keys,
         market=market,
-        funds=funds,
+        funds=get_xdai_in_usd(funds),
         auto_deposit=True,
         web3=local_web3,
     )
@@ -298,23 +294,34 @@ def test_omen_fund_and_remove_fund_market(
     omen_remove_fund_market_tx(
         api_keys=test_keys,
         market=market,
-        shares=remove_fund,
+        shares=remove_fund.as_wei,
         web3=local_web3,
     )
 
 
+@pytest.mark.parametrize(
+    "collateral_token_address",
+    [
+        WrappedxDaiContract().address,
+        sDaiContract().address,
+    ],
+)
 def test_omen_buy_and_sell_outcome(
+    collateral_token_address: ChecksumAddress,
     local_web3: Web3,
     test_keys: APIKeys,
 ) -> None:
     # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
     # You can double check your address at https://gnosisscan.io/ afterwards.
-    market = OmenAgentMarket.from_data_model(pick_binary_market())
+    market = OmenAgentMarket.from_data_model(
+        pick_binary_market(collateral_token_address_in=(collateral_token_address,))
+    )
+    print(market.url)
     outcome = True
     outcome_str = get_bet_outcome(outcome)
-    bet_amount = market.get_bet_amount(amount=0.4)
+    bet_amount = USD(0.4)
 
-    def get_market_outcome_tokens() -> TokenAmount:
+    def get_market_outcome_tokens() -> OutcomeToken:
         return market.get_token_balance(
             user_id=test_keys.bet_from_address,
             outcome=outcome_str,
@@ -323,7 +330,7 @@ def test_omen_buy_and_sell_outcome(
 
     # Check our wallet has sufficient funds
     balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
-    assert balances.xdai + balances.wxdai > bet_amount.amount
+    assert balances.xdai.value > bet_amount.value
 
     buy_id = market.place_bet(
         outcome=outcome,
@@ -334,7 +341,7 @@ def test_omen_buy_and_sell_outcome(
 
     # Check that we now have a position in the market.
     outcome_tokens = get_market_outcome_tokens()
-    assert outcome_tokens.amount > 0
+    assert get_market_outcome_tokens() > 0
 
     sell_id = market.sell_tokens(
         outcome=outcome,
@@ -343,10 +350,9 @@ def test_omen_buy_and_sell_outcome(
         api_keys=test_keys,
     )
 
-    # Check that we have sold our entire stake in the market.
-    # Assert equal to 0.001 because of the default slippage.
+    # Check that we have sold our entire stake in the market up to some slippage
     remaining_tokens = get_market_outcome_tokens()
-    assert np.isclose(remaining_tokens.amount, 0.001, atol=1e-3)
+    assert remaining_tokens.value < outcome_tokens.value * 0.01
 
     # Check that the IDs of buy and sell calls are valid transaction hashes
     buy_tx = local_web3.eth.get_transaction(HexStr(buy_id))
@@ -361,7 +367,7 @@ def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> Non
     fresh_account = create_and_fund_random_account(
         private_key=test_keys.bet_from_private_key,
         web3=local_web3,
-        deposit_amount=xDai(deposit_amount * 2),  # 2* for safety
+        deposit_amount=xDai(deposit_amount.value * 2),  # 2* for safety
     )
 
     api_keys = APIKeys(
@@ -370,24 +376,27 @@ def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> Non
     )
     wxdai = WrappedxDaiContract()
     wxdai.deposit(
-        api_keys=api_keys, amount_wei=xdai_to_wei(deposit_amount), web3=local_web3
+        api_keys=api_keys,
+        amount_wei=deposit_amount.as_xdai_wei.as_wei,
+        web3=local_web3,
     )
     balance = get_balances(address=fresh_account.address, web3=local_web3)
-    assert balance.wxdai == deposit_amount
+    assert balance.wxdai.value == deposit_amount.value
 
     wxdai.withdraw(
         api_keys=api_keys,
-        amount_wei=xdai_to_wei(balance.wxdai),
+        amount_wei=balance.wxdai.as_wei,
         web3=local_web3,
     )
 
     balance = get_balances(address=fresh_account.address, web3=local_web3)
-    assert balance.wxdai == xDai(0)
+    assert balance.wxdai == CollateralToken(0)
 
 
 @pytest.mark.parametrize(
     "collateral_token_address, expected_symbol",
     [
+        # Test only wxDai and sDai there, because for anything else we would need CoW which isn't available on local chain.
         (WrappedxDaiContract().address, "WXDAI"),
         (sDaiContract().address, "sDAI"),
     ],
@@ -406,7 +415,7 @@ def test_place_bet_with_autodeposit(
             collateral_token_address_in=(collateral_token_address,),
         )[0]
     )
-    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    print(market.url)
     collateral_token_contract = market.get_contract().get_collateral_token_contract(
         local_web3
     )
@@ -419,21 +428,45 @@ def test_place_bet_with_autodeposit(
         collateral_token_contract, ContractERC4626OnGnosisChain
     ), "Omen market should adhere to one of these classes."
 
-    # Start by moving all funds from wxdai to xdai
-    if initial_balances.wxdai > 0:
-        WrappedxDaiContract().withdraw(
-            api_keys=test_keys,
-            amount_wei=xdai_to_wei(initial_balances.wxdai),
-            web3=local_web3,
+    # If we have anything in the collateral token, withdraw it.
+    if (
+        balance_in_collateral := collateral_token_contract.balance_of_in_tokens(
+            for_address=test_keys.bet_from_address, web3=local_web3
         )
+    ) > 0:
+        balance_in_collateral *= 0.95  # Withdraw only most of it.
+        if isinstance(
+            collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
+        ):
+            collateral_token_contract.withdraw(
+                api_keys=test_keys,
+                amount_wei=balance_in_collateral.as_wei,
+                web3=local_web3,
+            )
+        elif isinstance(collateral_token_contract, ContractERC4626OnGnosisChain):
+            collateral_token_contract.withdraw_in_shares(
+                api_keys=test_keys,
+                shares_wei=balance_in_collateral.as_wei,
+                web3=local_web3,
+            )
+        else:
+            raise ValueError("Unknown contract type for this test.")
 
-    # Check that we have xdai funds, but no wxdai funds
-    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
-    assert np.isclose(initial_balances.wxdai, xdai_type(0))
-    assert initial_balances.xdai > xdai_type(0)
+    # Try to place a bet with 10% of the xDai funds (xDai ~= USD)
+    balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    bet_amount = get_xdai_in_usd(balances.xdai * 0.1)
 
-    # Try to place a bet with 90% of the xDai funds
-    bet_amount = BetAmount(amount=initial_balances.xdai * 0.9, currency=Currency.xDai)
+    # Check that we don't have enough in the collateral token
+    assert (
+        get_token_in_usd(
+            collateral_token_contract.balance_of_in_tokens(
+                for_address=test_keys.bet_from_address, web3=local_web3
+            ),
+            collateral_token_contract.address,
+        )
+        < bet_amount
+    )
+
     market.place_bet(
         outcome=True,
         amount=bet_amount,
@@ -445,7 +478,7 @@ def test_place_bet_with_autodeposit(
 
 def get_position_balance_by_position_id(
     from_address: ChecksumAddress, position_id: int, web3: Web3
-) -> Wei:
+) -> OutcomeWei:
     """Fetches balance from a given position in the ConditionalTokens contract."""
     return OmenConditionalTokenContract().balanceOf(
         from_address=from_address,
@@ -494,7 +527,7 @@ def test_place_bet_with_prev_existing_positions(
     omen_agent_market = OmenAgentMarket.from_data_model(market)
 
     # Place a bet using a standard account (from .env)
-    bet_amount = BetAmount(amount=1, currency=Currency.xDai)
+    bet_amount = USD(1)
     omen_agent_market.place_bet(True, bet_amount, web3=local_web3, api_keys=test_keys)
 
     conditional_token = OmenConditionalTokenContract()
@@ -509,16 +542,23 @@ def test_place_bet_with_prev_existing_positions(
         from_address=test_keys.bet_from_address, position_id=pos_id, web3=local_web3
     )
     # Assert that there is a positive balance since a bet was placed.
-    assert position_balance > 0
-
+    assert position_balance.value > 0
     mock_positions = [
-        Position(
+        ExistingPosition(
             market_id=omen_agent_market.id,
-            amounts={
-                OutcomeStr(OMEN_TRUE_OUTCOME): TokenAmount(
-                    amount=wei_to_xdai(Wei(position_balance)), currency=Currency.xDai
+            amounts_current={
+                OMEN_TRUE_OUTCOME: omen_agent_market.get_token_in_usd(
+                    omen_agent_market.get_sell_value_of_outcome_token(
+                        OMEN_TRUE_OUTCOME, position_balance.as_outcome_token, local_web3
+                    )
                 )
             },
+            amounts_potential={
+                OMEN_TRUE_OUTCOME: omen_agent_market.get_token_in_usd(
+                    position_balance.as_outcome_token.as_token
+                )
+            },
+            amounts_ot={OMEN_TRUE_OUTCOME: position_balance.as_outcome_token},
         )
     ]
 
@@ -539,4 +579,4 @@ def test_place_bet_with_prev_existing_positions(
     # We assert that positions were liquidated if < 1% of the original outcome tokens bought remain
     # in the position. This is because of implementation details in the ConditionalTokens contract,
     # avoiding the position to be fully sold.
-    assert position_balance_after_sell < 0.01 * position_balance  # xDAI
+    assert position_balance_after_sell.value < 0.01 * position_balance.value

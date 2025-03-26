@@ -19,10 +19,9 @@ from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, CollateralToken, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 COW_ENV: Envs = "prod"
 
@@ -94,14 +93,14 @@ class CowManager:
 
     @staticmethod
     def swap(
-        amount: xDai,
+        amount: CollateralToken,
         sell_token: ChecksumAddress,
         buy_token: ChecksumAddress,
         api_keys: APIKeys,
         web3: Web3 | None = None,
     ) -> OrderMetaData:
         order_metadata = swap_tokens_waiting(
-            amount_wei=xdai_to_wei(amount),
+            amount_wei=amount.as_wei,
             sell_token=sell_token,
             buy_token=buy_token,
             api_keys=api_keys,

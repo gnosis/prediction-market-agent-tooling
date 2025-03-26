@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChainID,
     ChecksumAddress,
+    CollateralToken,
     Nonce,
     TxParams,
     TxReceipt,
@@ -153,7 +154,7 @@ class ContractBaseClass(BaseModel):
             api_keys=api_keys,
             function_name=function_name,
             function_params=function_params,
-            tx_params={"value": amount_wei, **(tx_params or {})},
+            tx_params={"value": amount_wei.value, **(tx_params or {})},
             timeout=timeout,
             web3=web3,
         )
@@ -243,12 +244,13 @@ class ContractERC20BaseClass(ContractBaseClass):
         )
 
     def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
-        balance: Wei = self.call("balanceOf", [for_address], web3=web3)
+        balance = Wei(self.call("balanceOf", [for_address], web3=web3))
         return balance
 
-    def get_in_shares(self, amount: Wei, web3: Web3 | None = None) -> Wei:
-        # ERC-20 just holds the token, so the exact amount we send there, is the amount of shares we have there.
-        return amount
+    def balance_of_in_tokens(
+        self, for_address: ChecksumAddress, web3: Web3 | None = None
+    ) -> CollateralToken:
+        return self.balanceOf(for_address, web3=web3).as_token
 
 
 class ContractDepositableWrapperERC20BaseClass(ContractERC20BaseClass):
@@ -355,11 +357,11 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         return self.withdraw(api_keys=api_keys, assets_wei=assets, web3=web3)
 
     def convertToShares(self, assets: Wei, web3: Web3 | None = None) -> Wei:
-        shares: Wei = self.call("convertToShares", [assets], web3=web3)
+        shares = Wei(self.call("convertToShares", [assets], web3=web3))
         return shares
 
     def convertToAssets(self, shares: Wei, web3: Web3 | None = None) -> Wei:
-        assets: Wei = self.call("convertToAssets", [shares], web3=web3)
+        assets = Wei(self.call("convertToAssets", [shares], web3=web3))
         return assets
 
     def get_asset_token_contract(
@@ -434,8 +436,8 @@ class ContractERC721BaseClass(ContractBaseClass):
             web3=web3,
         )
 
-    def balanceOf(self, owner: ChecksumAddress, web3: Web3 | None = None) -> int:
-        balance: int = self.call("balanceOf", [owner], web3=web3)
+    def balanceOf(self, owner: ChecksumAddress, web3: Web3 | None = None) -> Wei:
+        balance = Wei(self.call("balanceOf", [owner], web3=web3))
         return balance
 
     def owner_of(self, token_id: int, web3: Web3 | None = None) -> ChecksumAddress:
@@ -604,12 +606,14 @@ def contract_implements_function(
 
 
 def init_collateral_token_contract(
-    address: ChecksumAddress, web3: Web3
+    address: ChecksumAddress, web3: Web3 | None
 ) -> ContractERC20BaseClass:
     """
     Checks if the given contract is Depositable ERC-20, ERC-20 or ERC-4626 and returns the appropriate class instance.
     Throws an error if the contract is neither of them.
     """
+    web3 = web3 or RPCConfig().get_web3()
+
     if contract_implements_function(address, "asset", web3=web3):
         return ContractERC4626BaseClass(address=address)
 

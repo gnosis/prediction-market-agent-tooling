@@ -1,4 +1,4 @@
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import xDai
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
@@ -15,4 +15,4 @@ KEEPING_ERC20_TOKEN = ContractDepositableWrapperERC20OnGnosisChain(
     address=WRAPPED_XDAI_CONTRACT_ADDRESS
 )
 
-MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES = xdai_type(0.1)
+MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES = xDai(0.1)

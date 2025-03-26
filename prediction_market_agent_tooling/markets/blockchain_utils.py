@@ -67,7 +67,7 @@ def store_trades(
 
     # tx_hashes must be list of bytes32 (see Solidity contract).
     # For regular tx hashes that's fine, but for other types of IDs (e.g. Cow order IDs)
-    # that must be normalized.
+    # we take the first 32 bytes (orderDigest).
     tx_hashes = [
         HexBytes(HexStr(i.id))[:32] for i in traded_market.trades if i.id is not None
     ]

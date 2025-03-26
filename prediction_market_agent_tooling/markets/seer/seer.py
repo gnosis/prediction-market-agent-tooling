@@ -1,5 +1,6 @@
 import typing as t
 
+import tenacity
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.types import TxReceipt
@@ -38,6 +39,9 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerOutcomeEnum,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
+from prediction_market_agent_tooling.markets.seer.seer_constants import (
+    COW_VAULT_RELAYER,
+)
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )
@@ -284,7 +288,7 @@ class SeerAgentMarket(AgentMarket):
             )
 
         if amount.currency != self.currency:
-            raise ValueError(f"Seer bets are made in xDai. Got {amount.currency}.")
+            raise ValueError(f"Seer bets are made in sDai. Got {amount.currency}.")
 
         collateral_contract = sDaiContract()
         if auto_deposit:
@@ -304,9 +308,18 @@ class SeerAgentMarket(AgentMarket):
             )
 
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
+        amount_to_trade = xdai_type(amount.amount)
+        approve_if_not_allowed(
+            allowed_token=collateral_contract.address,
+            api_keys=api_keys,
+            web3=web3,
+            amount_to_approve=amount_to_trade,
+            spender=Web3.to_checksum_address(COW_VAULT_RELAYER),
+        )
+
         #  Sell sDAI using token address
         order_metadata = CowManager().swap(
-            amount=xdai_type(amount.amount),
+            amount=amount_to_trade,
             sell_token=collateral_contract.address,
             buy_token=Web3.to_checksum_address(outcome_token),
             api_keys=api_keys,
@@ -314,6 +327,74 @@ class SeerAgentMarket(AgentMarket):
         )
 
         return order_metadata.uid.root
+
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_fixed(1),
+        after=lambda x: logger.debug(
+            f"seer_sell_outcome_tx failed, {x.attempt_number=}."
+        ),
+    )
+    def sell_tokens(
+        self,
+        outcome: bool,
+        amount: TokenAmount,
+        auto_withdraw: bool = True,
+        api_keys: APIKeys | None = None,
+        web3: Web3 | None = None,
+    ) -> str:
+        """
+        Sells the given number of shares for the given outcome in the given market.
+        """
+        outcome_token = self.get_wrapped_token_for_outcome(outcome)
+        api_keys = api_keys if api_keys is not None else APIKeys()
+        amount_to_trade = xdai_type(amount.amount)
+        approve_if_not_allowed(
+            allowed_token=outcome_token,
+            api_keys=api_keys,
+            web3=web3,
+            amount_to_approve=amount_to_trade,
+            spender=Web3.to_checksum_address(COW_VAULT_RELAYER),
+        )
+
+        order_metadata = CowManager().swap(
+            amount=amount_to_trade,
+            sell_token=outcome_token,
+            buy_token=Web3.to_checksum_address(
+                self.collateral_token_contract_address_checksummed
+            ),
+            api_keys=api_keys,
+            web3=web3,
+        )
+
+        return order_metadata.uid.root
+
+
+def approve_if_not_allowed(
+    allowed_token: ChecksumAddress,
+    api_keys: APIKeys,
+    spender: ChecksumAddress,
+    amount_to_approve: xDai,
+    web3: Web3 | None = None,
+) -> None:
+    token_contract = ContractERC20OnGnosisChain(address=allowed_token)
+    allowed_amount = wei_to_xdai(
+        Wei(
+            token_contract.allowance(
+                owner=api_keys.bet_from_address, for_address=spender, web3=web3
+            )
+        )
+    )
+    if allowed_amount < amount_to_approve:
+        logger.debug(
+            f"Allowance {allowed_amount} < amount {amount_to_approve} that needs to be approved. Approving..."
+        )
+        token_contract.approve(
+            api_keys=api_keys,
+            for_address=spender,
+            amount_wei=xdai_to_wei(amount_to_approve),
+            web3=web3,
+        )
 
 
 def seer_create_market_tx(

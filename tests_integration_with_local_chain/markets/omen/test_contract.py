@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     private_key_type,
     xDai,
+    xdai_type,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
@@ -141,3 +142,23 @@ def test_sdai_asset_balance_of(local_web3: Web3) -> None:
         )
         >= 0
     )
+
+
+def test_sdai_allowance_and_approval(
+    local_web3: Web3, test_keys: APIKeys, accounts: list[TestAccount]
+) -> None:
+    # set allowance
+    # check approval set
+    amount_wei = xdai_to_wei(xdai_type(1))
+    for_address = accounts[-1].address
+    token_contract = sDaiContract()
+    token_contract.approve(
+        api_keys=test_keys,
+        amount_wei=amount_wei,
+        for_address=for_address,
+        web3=local_web3,
+    )
+    allowance = token_contract.allowance(
+        owner=test_keys.public_key, for_address=for_address, web3=local_web3
+    )
+    assert amount_wei == allowance

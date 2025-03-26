@@ -39,7 +39,7 @@ class CowManager:
         self.precision = 18  # number of token decimals from ERC1155 wrapped tokens.
 
     @retry(
-        stop=stop_after_attempt(2),
+        stop=stop_after_attempt(3),
         wait=wait_fixed(2),
         retry=retry_if_not_exception_type(NoLiquidityAvailableOnCowException),
     )

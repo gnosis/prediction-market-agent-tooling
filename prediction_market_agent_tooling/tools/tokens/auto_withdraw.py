@@ -17,11 +17,7 @@ def auto_withdraw_collateral_token(
     amount_wei: Wei,
     api_keys: APIKeys,
     web3: Web3 | None = None,
-    slippage: float = 0.001,
 ) -> None:
-    # Small slippage as exact exchange rate constantly changes and we don't care about small differences.
-    amount_wei = amount_wei.without_fraction(slippage)
-
     if not amount_wei:
         logger.warning(
             f"Amount to withdraw is zero, skipping withdrawal of {collateral_token_contract.symbol_cached(web3)}."

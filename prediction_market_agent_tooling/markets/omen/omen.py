@@ -788,7 +788,7 @@ def omen_sell_outcome_tx(
     outcome: str,
     auto_withdraw: bool,
     web3: Web3 | None = None,
-    slippage: float = 0.001,
+    slippage: float = 0.01,
 ) -> str:
     """
     Sells the given xDai value of shares corresponding to the given outcome in
@@ -807,7 +807,6 @@ def omen_sell_outcome_tx(
         else market.get_in_token(amount)
     )
     amount_wei = amount_token.as_wei
-    amount_wei = amount_wei.without_fraction(slippage)
 
     logger.info(
         f"Selling asked {amount.value=} {amount.symbol}, converted to {amount_wei.as_token.value=} {amount_wei.as_token.symbol} for {outcome=} in market {market.url=}."

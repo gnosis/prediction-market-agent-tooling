@@ -2,6 +2,7 @@ import time
 from datetime import timedelta
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -53,7 +54,10 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.tokens.usd import get_xdai_in_usd
+from prediction_market_agent_tooling.tools.tokens.usd import (
+    get_xdai_in_usd,
+    get_token_in_usd,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
 from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
@@ -393,6 +397,7 @@ def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> Non
 @pytest.mark.parametrize(
     "collateral_token_address, expected_symbol",
     [
+        # Test only wxDai and sDai there, because for anything else we would need CoW which isn't available on local chain.
         (WrappedxDaiContract().address, "WXDAI"),
         (sDaiContract().address, "sDAI"),
     ],
@@ -412,7 +417,6 @@ def test_place_bet_with_autodeposit(
         )[0]
     )
     print(market.url)
-    initial_balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     collateral_token_contract = market.get_contract().get_collateral_token_contract(
         local_web3
     )
@@ -425,24 +429,45 @@ def test_place_bet_with_autodeposit(
         collateral_token_contract, ContractERC4626OnGnosisChain
     ), "Omen market should adhere to one of these classes."
 
-    # Start by moving all funds from wxdai to xdai
-    if initial_balances.wxdai > 0:
-        WrappedxDaiContract().withdraw(
-            api_keys=test_keys,
-            amount_wei=initial_balances.wxdai.as_wei,
-            web3=local_web3,
-        )
-
-    # Check that we have xdai funds, but no collateral token funds
-    assert (
-        collateral_token_contract.balance_of_in_tokens(
+    # If we have anything in the collateral token, withdraw it.
+    if (
+        balance_in_collateral := collateral_token_contract.balance_of_in_tokens(
             for_address=test_keys.bet_from_address, web3=local_web3
         )
-        == 0
+    ) > 0:
+        balance_in_collateral *= 0.95  # Withdraw only most of it.
+        if isinstance(
+            collateral_token_contract, ContractDepositableWrapperERC20OnGnosisChain
+        ):
+            collateral_token_contract.withdraw(
+                api_keys=test_keys,
+                amount_wei=balance_in_collateral.as_wei,
+                web3=local_web3,
+            )
+        elif isinstance(collateral_token_contract, ContractERC4626OnGnosisChain):
+            collateral_token_contract.withdraw_in_shares(
+                api_keys=test_keys,
+                shares_wei=balance_in_collateral.as_wei,
+                web3=local_web3,
+            )
+        else:
+            raise ValueError("Unknown contract type for this test.")
+
+    # Try to place a bet with 10% of the xDai funds (xDai ~= USD)
+    balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
+    bet_amount = get_xdai_in_usd(balances.xdai * 0.1)
+
+    # Check that we don't have enough in the collateral token
+    assert (
+        get_token_in_usd(
+            collateral_token_contract.balance_of_in_tokens(
+                for_address=test_keys.bet_from_address, web3=local_web3
+            ),
+            collateral_token_contract.address,
+        )
+        < bet_amount
     )
 
-    # Try to place a bet with 90% of the xDai funds (xDai ~= USD)
-    bet_amount = get_xdai_in_usd(initial_balances.xdai * 0.9)
     market.place_bet(
         outcome=True,
         amount=bet_amount,

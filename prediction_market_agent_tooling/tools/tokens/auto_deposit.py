@@ -23,7 +23,7 @@ def auto_deposit_collateral_token(
     collateral_amount_wei_or_usd: Wei | USD,
     api_keys: APIKeys,
     web3: Web3 | None = None,
-    slippage: float = 0.01,
+    surplus: float = 0.01,
 ) -> None:
     collateral_amount_wei = (
         collateral_amount_wei_or_usd
@@ -32,8 +32,8 @@ def auto_deposit_collateral_token(
             collateral_amount_wei_or_usd, collateral_token_contract.address
         ).as_wei
     )
-    # Deposit a bit more, to cover any later changes in the price.
-    collateral_amount_wei = collateral_amount_wei.with_fraction(slippage)
+    # Deposit a bit more to cover any small changes in conversions.
+    collateral_amount_wei = collateral_amount_wei.with_fraction(surplus)
 
     if isinstance(collateral_token_contract, ContractDepositableWrapperERC20BaseClass):
         # In this case, we can use deposit function directly, no need to go through DEX.
@@ -137,14 +137,11 @@ def auto_deposit_erc20(
     )
     if not remaining_to_get_in_collateral_wei:
         return
-    # Get of how much of the source token we need to sell in order to fill the remaining collateral amount, with 1% slippage to be sure.
-    amount_to_sell_wei = (
-        get_sell_token_amount(
-            remaining_to_get_in_collateral_wei,
-            sell_token=KEEPING_ERC20_TOKEN.address,
-            buy_token=collateral_token_contract.address,
-        )
-        * 1.01
+    # Get of how much of the source token we need to sell in order to fill the remaining collateral amount.
+    amount_to_sell_wei = get_sell_token_amount(
+        remaining_to_get_in_collateral_wei,
+        sell_token=KEEPING_ERC20_TOKEN.address,
+        buy_token=collateral_token_contract.address,
     )
     # If we don't have enough of the source token.
     if amount_to_sell_wei > ContractERC20OnGnosisChain(

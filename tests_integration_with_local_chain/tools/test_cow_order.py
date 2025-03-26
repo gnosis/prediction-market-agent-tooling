@@ -74,11 +74,10 @@ def test_swap_tokens_waiting(
 ) -> None:
     with pytest.raises(Exception) as e:
         swap_tokens_waiting(
-            amount_wei=CollateralToken(0.1).as_wei,
+            amount_wei=CollateralToken(1).as_wei,
             sell_token=sell_token,
             buy_token=buy_token,
             api_keys=test_keys,
-            env="staging",
             web3=local_web3,
         )
     # This is raised in `post_order` which is last call when swapping tokens, anvil's accounts don't have any balance on real chain, so this is expected,

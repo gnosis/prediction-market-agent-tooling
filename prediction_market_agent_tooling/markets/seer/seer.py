@@ -59,7 +59,6 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.cow.cow_manager import (
     CowManager,
-    NoLiquidityAvailableOnCowException,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -246,20 +245,8 @@ class SeerAgentMarket(AgentMarket):
 
     def has_liquidity_for_outcome(self, outcome: bool) -> bool:
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
-        try:
-            CowManager().get_quote(
-                collateral_token=self.collateral_token_contract_address_checksummed,
-                buy_token=outcome_token,
-                sell_amount=xdai_to_wei(
-                    xdai_type(1)
-                ),  # we take 1 xDai as a baseline value for common trades the agents take.
-            )
-            return True
-        except NoLiquidityAvailableOnCowException:
-            logger.info(
-                f"Could not get a quote for {outcome_token=} {outcome=}, returning no liquidity"
-            )
-            return False
+        pool = SeerSubgraphHandler().get_pool_by_token(token_address=outcome_token)
+        return pool is not None and pool.liquidity > 0
 
     def has_liquidity(self) -> bool:
         # We conservatively define a market as having liquidity if it has liquidity for the `True` outcome token AND the `False` outcome token.

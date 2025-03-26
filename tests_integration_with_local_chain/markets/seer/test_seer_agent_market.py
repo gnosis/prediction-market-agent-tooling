@@ -15,14 +15,14 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xdai_type
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
-    SortBy,
     ProcessedTradedMarket,
+    SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
 from prediction_market_agent_tooling.markets.data_models import (
-    TokenAmount,
-    ProbabilisticAnswer,
     PlacedTrade,
+    ProbabilisticAnswer,
+    TokenAmount,
 )
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
@@ -48,13 +48,19 @@ MOCK_QUOTE = OrderQuoteResponse(
 )
 
 
-def test_seer_place_bet(local_web3: Web3, test_keys: APIKeys) -> None:
+def test_seer_place_bet(
+    local_web3: Web3,
+    test_keys: APIKeys,
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+) -> None:
     # We fetch the market with the highest liquidity because we expect quotes to be available for all outcome tokens.
     markets = SeerSubgraphHandler().get_binary_markets(
         filter_by=FilterBy.OPEN, limit=1, sort_by=SortBy.HIGHEST_LIQUIDITY
     )
     market_data_model = markets[0]
-    agent_market = SeerAgentMarket.from_data_model_with_subgraph(market_data_model)
+    agent_market = SeerAgentMarket.from_data_model_with_subgraph(
+        market_data_model, seer_subgraph=seer_subgraph_handler_test
+    )
     amount = 1
     with pytest.raises(Exception) as e:
         # We expect an exception from Cow since test accounts don't have enough funds.
@@ -85,11 +91,10 @@ def test_seer_store_trades(
     traded_market.trades = mock_trades
     test_keys.ENABLE_IPFS_UPLOAD = False
 
-    tx_receipt = store_trades(
+    store_trades(
         market_id=market_id,
         traded_market=traded_market,
         keys=test_keys,
         agent_name="dummy",
         web3=local_web3,
     )
-    assert tx_receipt

@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import tenacity
 from web3 import Web3
+from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -434,7 +435,8 @@ class OmenAgentMarket(AgentMarket):
         traded_market: ProcessedTradedMarket | None,
         keys: APIKeys,
         agent_name: str,
-    ) -> None:
+        web3: Web3 | None = None,
+    ) -> TxReceipt | None:
         return store_trades(
             market_id=self.id,
             traded_market=traded_market,

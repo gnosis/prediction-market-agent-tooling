@@ -10,9 +10,7 @@ from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortB
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
-from prediction_market_agent_tooling.markets.seer.data_models import (
-    SeerMarket,
-)
+from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow

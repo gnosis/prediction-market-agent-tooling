@@ -147,8 +147,6 @@ def test_sdai_asset_balance_of(local_web3: Web3) -> None:
 def test_sdai_allowance_and_approval(
     local_web3: Web3, test_keys: APIKeys, accounts: list[TestAccount]
 ) -> None:
-    # set allowance
-    # check approval set
     amount_wei = xdai_to_wei(xdai_type(1))
     for_address = accounts[-1].address
     token_contract = sDaiContract()

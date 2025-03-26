@@ -50,10 +50,10 @@ def store_trades(
     keys: APIKeys,
     agent_name: str,
     web3: Web3 | None = None,
-) -> TxReceipt:
+) -> TxReceipt | None:
     if traded_market is None:
         logger.warning(f"No prediction for market {market_id}, not storing anything.")
-        return
+        return None
 
     reasoning = traded_market.answer.reasoning if traded_market.answer.reasoning else ""
 

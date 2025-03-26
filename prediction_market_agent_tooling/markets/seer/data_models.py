@@ -7,11 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import RPCConfig
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    HexAddress,
-    HexBytes,
-)
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexAddress, HexBytes
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerParentMarket,

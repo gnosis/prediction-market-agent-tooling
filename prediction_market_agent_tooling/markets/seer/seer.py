@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.gtypes import (
     wei_type,
     xDai,
     xdai_type,
-    Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -57,9 +56,7 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
-from prediction_market_agent_tooling.tools.cow.cow_manager import (
-    CowManager,
-)
+from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
@@ -95,7 +92,7 @@ class SeerAgentMarket(AgentMarket):
         keys: APIKeys,
         agent_name: str,
         web3: Web3 | None = None,
-    ) -> TxReceipt:
+    ) -> TxReceipt | None:
         return store_trades(
             market_id=self.id,
             traded_market=traded_market,
@@ -197,29 +194,7 @@ class SeerAgentMarket(AgentMarket):
             outcome_token_pool=None,
             resolution=model.get_resolution_enum(),
             volume=None,
-            # current_p_yes=model.current_p_yes,
             current_p_yes=current_p_yes,
-            seer_outcomes=model.outcome_as_enums,
-        )
-
-    @staticmethod
-    def from_data_model(model: SeerMarket) -> "SeerAgentMarket":
-        return SeerAgentMarket(
-            id=model.id.hex(),
-            question=model.title,
-            creator=model.creator,
-            created_time=model.created_time,
-            outcomes=model.outcomes,
-            collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
-            condition_id=model.condition_id,
-            url=model.url,
-            close_time=model.close_time,
-            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
-            fees=MarketFees.get_zero_fees(),
-            outcome_token_pool=None,
-            resolution=model.get_resolution_enum(),
-            volume=None,
-            current_p_yes=Probability(123),  # ToDo dont use this method
             seer_outcomes=model.outcome_as_enums,
         )
 

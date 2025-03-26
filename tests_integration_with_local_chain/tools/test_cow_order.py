@@ -82,4 +82,4 @@ def test_swap_tokens_waiting(
         )
     # This is raised in `post_order` which is last call when swapping tokens, anvil's accounts don't have any balance on real chain, so this is expected,
     # but still, it tests that all the logic behind calling CoW APIs is working correctly.
-    assert "InsufficientBalance" in str(e)
+    assert "InsufficientBalance" in str(e.value.__cause__)

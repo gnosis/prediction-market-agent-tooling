@@ -2,7 +2,6 @@ import time
 from datetime import timedelta
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -55,8 +54,8 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.tokens.usd import (
-    get_xdai_in_usd,
     get_token_in_usd,
+    get_xdai_in_usd,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 from tests_integration_with_local_chain.conftest import create_and_fund_random_account

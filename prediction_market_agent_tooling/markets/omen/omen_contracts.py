@@ -828,7 +828,7 @@ class OmenAgentResultMappingContract(ContractOnGnosisChain):
             function_name="addPrediction",
             function_params=[
                 market_address,
-                prediction.model_dump(by_alias=True, exclude="publisher_checksummed"),
+                prediction.model_dump(by_alias=True),
             ],
             web3=web3,
         )

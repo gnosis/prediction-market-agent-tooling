@@ -247,7 +247,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         pools = self.do_query(fields=fields, pydantic_model=SeerPool)
         # We assume there is only one pool for outcomeToken/sDAI.
         if len(pools) > 1:
-            logger.warning(
+            logger.info(
                 f"Multiple pools found for token {token_address}, selecting the first."
             )
         if pools:

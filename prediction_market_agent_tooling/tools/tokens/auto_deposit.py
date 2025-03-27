@@ -10,7 +10,7 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC4626BaseClass,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
-    get_buy_token_amount,
+    get_buy_token_amount_else_raise,
     swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
@@ -113,7 +113,7 @@ def auto_deposit_erc20(
     web3: Web3 | None,
 ) -> None:
     # How much it is in the other token (collateral token).
-    collateral_amount_wei = get_buy_token_amount(
+    collateral_amount_wei = get_buy_token_amount_else_raise(
         amount_xdai_wei,
         KEEPING_ERC20_TOKEN.address,
         collateral_token_contract.address,

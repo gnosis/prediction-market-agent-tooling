@@ -6,6 +6,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     Probability,
     xdai_type,
+    Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -16,7 +17,8 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
-from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
+from prediction_market_agent_tooling.tools.cow.cow_order import get_quote
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
@@ -24,6 +26,12 @@ class PriceManager:
     def __init__(self, seer_market: SeerMarket, seer_subgraph: SeerSubgraphHandler):
         self.seer_market = seer_market
         self.seer_subgraph = seer_subgraph
+
+    @staticmethod
+    def build(market_id: HexBytes) -> "PriceManager":
+        s = SeerSubgraphHandler()
+        market = s.get_market_by_id(market_id=market_id)
+        return PriceManager(seer_market=market, seer_subgraph=s)
 
     def current_p_yes(self) -> Probability | None:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
@@ -54,14 +62,15 @@ class PriceManager:
     def get_price_for_token(
         self,
         token: ChecksumAddress,
+        collateral_exchange_amount: Wei = xdai_to_wei(xdai_type(1)),
     ) -> float | None:
-        collateral_exchange_amount = xdai_to_wei(xdai_type(1))
         try:
-            quote = CowManager().get_quote(
-                collateral_token=self.seer_market.collateral_token_contract_address_checksummed,
+            quote = get_quote(
+                amount_wei=collateral_exchange_amount,
+                sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
-                sell_amount=collateral_exchange_amount,
             )
+
         except Exception as e:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "

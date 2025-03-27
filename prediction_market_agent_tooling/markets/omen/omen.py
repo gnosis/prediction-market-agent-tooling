@@ -700,6 +700,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
         received_token_amount = self.get_buy_token_amount(bet_amount, direction).amount
+        received_token_amount = check_not_none(received_token_amount)
         if direction:
             new_yes_outcome_pool_size -= received_token_amount
         else:

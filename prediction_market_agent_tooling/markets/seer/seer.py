@@ -1,6 +1,7 @@
 import typing as t
 
 import tenacity
+from eth_pydantic_types import HexStr
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.types import TxReceipt
@@ -11,7 +12,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     OutcomeStr,
     Wei,
-    wei_type,
     xDai,
     xdai_type,
 )
@@ -51,7 +51,7 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
-from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
+from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
@@ -90,20 +90,23 @@ class SeerAgentMarket(AgentMarket):
 
     def get_buy_token_amount(
         self, bet_amount: BetAmount, direction: bool
-    ) -> TokenAmount:
+    ) -> TokenAmount | None:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
         outcome_token = self.get_wrapped_token_for_outcome(direction)
 
         bet_amount_in_wei = self._convert_bet_amount_into_wei(bet_amount=bet_amount)
 
-        quote = CowManager().get_quote(
-            buy_token=outcome_token,
-            sell_amount=bet_amount_in_wei,
-            collateral_token=self.collateral_token_contract_address_checksummed,
+        p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
+        price_in_collateral_units = p.get_price_for_token(
+            token=outcome_token, collateral_exchange_amount=bet_amount_in_wei
         )
-        sell_amount = wei_to_xdai(wei_type(quote.quote.buyAmount.root))
-        return TokenAmount(amount=sell_amount, currency=bet_amount.currency)
+        if not price_in_collateral_units:
+            logger.info(f"Could not get price for token {outcome_token}")
+            return None
+
+        buy_amount = bet_amount_in_wei / price_in_collateral_units
+        return TokenAmount(amount=buy_amount, currency=bet_amount.currency)
 
     def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
         outcome_translated = SeerOutcomeEnum.from_bool(outcome)
@@ -264,12 +267,15 @@ class SeerAgentMarket(AgentMarket):
         amount_to_trade = xdai_type(amount.amount)
 
         #  Sell sDAI using token address
-        order_metadata = CowManager().swap(
-            amount=amount_to_trade,
+        order_metadata = swap_tokens_waiting(
+            amount_wei=xdai_to_wei(amount_to_trade),
             sell_token=collateral_contract.address,
             buy_token=Web3.to_checksum_address(outcome_token),
             api_keys=api_keys,
             web3=web3,
+        )
+        logger.debug(
+            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Order details {order_metadata}"
         )
 
         return order_metadata.uid.root
@@ -296,14 +302,18 @@ class SeerAgentMarket(AgentMarket):
         api_keys = api_keys if api_keys is not None else APIKeys()
         amount_to_trade = xdai_type(amount.amount)
 
-        order_metadata = CowManager().swap(
-            amount=amount_to_trade,
+        order_metadata = swap_tokens_waiting(
+            amount_wei=xdai_to_wei(amount_to_trade),
             sell_token=outcome_token,
             buy_token=Web3.to_checksum_address(
                 self.collateral_token_contract_address_checksummed
             ),
             api_keys=api_keys,
             web3=web3,
+        )
+
+        logger.debug(
+            f"Sold {outcome_token} in exchange for {self.collateral_token_contract_address_checksummed}. Order details {order_metadata}"
         )
 
         return order_metadata.uid.root

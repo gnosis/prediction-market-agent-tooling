@@ -8,7 +8,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     sDaiContract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
-    get_buy_token_amount,
+    get_buy_token_amount_else_raise,
     swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
@@ -16,7 +16,7 @@ from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 def test_get_buy_token_amount() -> None:
     sell_amount = xdai_to_wei(xdai_type(0.1))
-    buy_amount = get_buy_token_amount(
+    buy_amount = get_buy_token_amount_else_raise(
         amount_wei=sell_amount,
         sell_token=WrappedxDaiContract().address,
         buy_token=sDaiContract().address,

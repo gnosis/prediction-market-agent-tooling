@@ -20,10 +20,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     ProcessedMarket,
-    ProcessedTradedMarket,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
     Currency,
@@ -38,9 +36,6 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerOutcomeEnum,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
-from prediction_market_agent_tooling.markets.seer.seer_constants import (
-    COW_VAULT_RELAYER,
-)
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )
@@ -85,21 +80,6 @@ class SeerAgentMarket(AgentMarket):
         agent_name: str,
     ) -> None:
         """On Seer, we have to store predictions along with trades, see `store_trades`."""
-
-    def store_trades(
-        self,
-        traded_market: ProcessedTradedMarket | None,
-        keys: APIKeys,
-        agent_name: str,
-        web3: Web3 | None = None,
-    ) -> TxReceipt | None:
-        return store_trades(
-            market_id=self.id,
-            traded_market=traded_market,
-            keys=keys,
-            agent_name=agent_name,
-            web3=web3,
-        )
 
     def _convert_bet_amount_into_wei(self, bet_amount: BetAmount) -> Wei:
         if bet_amount.currency == self.currency:
@@ -175,9 +155,14 @@ class SeerAgentMarket(AgentMarket):
     @staticmethod
     def from_data_model_with_subgraph(
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
-    ) -> "SeerAgentMarket":
+    ) -> "SeerAgentMarket" | None:
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
         current_p_yes = p.current_p_yes()
+        if not current_p_yes:
+            logger.info(
+                f"p_yes for market {model.id.hex()} could not be calculated. Skipping."
+            )
+            return None
 
         return SeerAgentMarket(
             id=model.id.hex(),
@@ -211,11 +196,17 @@ class SeerAgentMarket(AgentMarket):
             limit=limit, sort_by=sort_by, filter_by=filter_by
         )
 
+        # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
+        # represents an invalid market.
         return [
-            SeerAgentMarket.from_data_model_with_subgraph(
-                model=m, seer_subgraph=seer_subgraph
-            )
+            market
             for m in markets
+            if (
+                market := SeerAgentMarket.from_data_model_with_subgraph(
+                    model=m, seer_subgraph=seer_subgraph
+                )
+            )
+            is not None
         ]
 
     def has_liquidity_for_outcome(self, outcome: bool) -> bool:
@@ -271,13 +262,6 @@ class SeerAgentMarket(AgentMarket):
 
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         amount_to_trade = xdai_type(amount.amount)
-        approve_if_not_allowed(
-            allowed_token=collateral_contract.address,
-            api_keys=api_keys,
-            web3=web3,
-            amount_to_approve=amount_to_trade,
-            spender=Web3.to_checksum_address(COW_VAULT_RELAYER),
-        )
 
         #  Sell sDAI using token address
         order_metadata = CowManager().swap(
@@ -311,13 +295,6 @@ class SeerAgentMarket(AgentMarket):
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         api_keys = api_keys if api_keys is not None else APIKeys()
         amount_to_trade = xdai_type(amount.amount)
-        approve_if_not_allowed(
-            allowed_token=outcome_token,
-            api_keys=api_keys,
-            web3=web3,
-            amount_to_approve=amount_to_trade,
-            spender=Web3.to_checksum_address(COW_VAULT_RELAYER),
-        )
 
         order_metadata = CowManager().swap(
             amount=amount_to_trade,
@@ -330,33 +307,6 @@ class SeerAgentMarket(AgentMarket):
         )
 
         return order_metadata.uid.root
-
-
-def approve_if_not_allowed(
-    allowed_token: ChecksumAddress,
-    api_keys: APIKeys,
-    spender: ChecksumAddress,
-    amount_to_approve: xDai,
-    web3: Web3 | None = None,
-) -> None:
-    token_contract = ContractERC20OnGnosisChain(address=allowed_token)
-    allowed_amount = wei_to_xdai(
-        Wei(
-            token_contract.allowance(
-                owner=api_keys.bet_from_address, for_address=spender, web3=web3
-            )
-        )
-    )
-    if allowed_amount < amount_to_approve:
-        logger.debug(
-            f"Allowance {allowed_amount} < amount {amount_to_approve} that needs to be approved. Approving..."
-        )
-        token_contract.approve(
-            api_keys=api_keys,
-            for_address=spender,
-            amount_wei=xdai_to_wei(amount_to_approve),
-            web3=web3,
-        )
 
 
 def seer_create_market_tx(

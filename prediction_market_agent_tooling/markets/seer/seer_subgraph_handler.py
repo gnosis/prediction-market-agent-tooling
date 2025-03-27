@@ -6,9 +6,13 @@ from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
+)
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    SDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
@@ -221,14 +225,32 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         wheres = []
         wheres.extend(
             [
-                {"token0": token_address.lower()},
-                {"token1": token_address.lower()},
+                {
+                    "token0": token_address.lower(),
+                    "token1": SDAI_CONTRACT_ADDRESS.lower(),
+                },
+                {
+                    "token0": SDAI_CONTRACT_ADDRESS.lower(),
+                    "token1": token_address.lower(),
+                },
             ]
         )
-        pools_field = self.swapr_algebra_subgraph.Query.pools(where={"or": wheres})
+
+        optional_params = {}
+        optional_params["orderBy"] = self.swapr_algebra_subgraph.Pool.liquidity
+        optional_params["orderDirection"] = "desc"
+
+        pools_field = self.swapr_algebra_subgraph.Query.pools(
+            where={"or": wheres}, **optional_params
+        )
         fields = self._get_fields_for_pools(pools_field)
         pools = self.do_query(fields=fields, pydantic_model=SeerPool)
         # We assume there is only one pool for outcomeToken/sDAI.
+        if len(pools) > 1:
+            logger.warning(
+                f"Multiple pools found for token {token_address}, selecting the first."
+            )
         if pools:
+            # We select the first one
             return pools[0]
         return None

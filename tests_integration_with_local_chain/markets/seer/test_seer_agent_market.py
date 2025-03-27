@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 MOCK_APP_DATA = "0x0000000000000000000000000000000000000000000000000000000000000000"  # web3-private-key-ok
@@ -61,6 +62,7 @@ def test_seer_place_bet(
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
         market_data_model, seer_subgraph=seer_subgraph_handler_test
     )
+    agent_market = check_not_none(agent_market)
     amount = 1
     with pytest.raises(Exception) as e:
         # We expect an exception from Cow since test accounts don't have enough funds.

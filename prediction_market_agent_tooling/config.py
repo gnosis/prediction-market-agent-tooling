@@ -65,6 +65,8 @@ class APIKeys(BaseSettings):
     ENABLE_CACHE: bool = False
     CACHE_DIR: str = "./.cache"
 
+    STORE_TRADES: bool = True
+
     @model_validator(mode="before")
     @classmethod
     def _model_validator(cls, data: t.Any) -> t.Any:

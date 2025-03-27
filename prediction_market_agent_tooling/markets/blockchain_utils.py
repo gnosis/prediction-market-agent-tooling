@@ -1,6 +1,5 @@
 from web3 import Web3
 from web3.constants import HASH_ZERO
-from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -50,7 +49,7 @@ def store_trades(
     keys: APIKeys,
     agent_name: str,
     web3: Web3 | None = None,
-) -> TxReceipt | None:
+) -> None:
     if traded_market is None:
         logger.warning(f"No prediction for market {market_id}, not storing anything.")
         return None
@@ -66,10 +65,9 @@ def store_trades(
         ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
     # tx_hashes must be list of bytes32 (see Solidity contract).
-    # For regular tx hashes that's fine, but for other types of IDs (e.g. Cow order IDs)
-    # we take the first 32 bytes (orderDigest).
+    # For regular tx hashes that's fine, but for other types of IDs we take the first 32 bytes (orderDigest).
     tx_hashes = [
-        HexBytes(HexStr(i.id))[:32] for i in traded_market.trades if i.id is not None
+        HexBytes(HexStr(i.id[:32])) for i in traded_market.trades if i.id is not None
     ]
     prediction = ContractPrediction(
         publisher=keys.bet_from_address,
@@ -86,4 +84,3 @@ def store_trades(
     logger.info(
         f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].hex()}."
     )
-    return tx_receipt

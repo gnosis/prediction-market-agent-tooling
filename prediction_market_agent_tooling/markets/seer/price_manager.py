@@ -25,7 +25,8 @@ class PriceManager:
         self.seer_market = seer_market
         self.seer_subgraph = seer_subgraph
 
-    def current_p_yes(self) -> Probability:
+    def current_p_yes(self) -> Probability | None:
+        # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
         price_data = {}
         for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
             price = self.get_price_for_token(
@@ -34,30 +35,26 @@ class PriceManager:
 
             price_data[idx] = price
 
-        if sum(price_data.values()) == 0:
-            logger.warning(
-                f"Could not get p_yes for market {self.seer_market.id.hex()}, all price quotes are 0."
-            )
-            return Probability(0)
-
         price_yes = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.YES]]
         price_no = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.NO]]
-        if price_yes and not price_no:
-            # We simply return p_yes since it's probably a bug that p_no wasn't found.
+
+        # We only return a probability if we have both price_yes and price_no, since we could place bets
+        # in both sides hence we need current probabilities for both outcomes.
+        if price_yes and price_no:
+            # If other outcome`s price is None, we set it to 0.
+            total_price = sum(
+                price if price is not None else 0.0 for price in price_data.values()
+            )
+            price_yes = price_yes / total_price
             return Probability(price_yes)
-        elif price_no and not price_yes:
-            # We return the complement of p_no (and ignore invalid).
-            return Probability(1.0 - price_no)
         else:
-            # If all prices are available, we normalize price_yes by the other prices for the final probability.
-            price_yes = price_yes / sum(price_data.values())
-            return Probability(price_yes)
+            return None
 
     @lru_cache(typed=True)
     def get_price_for_token(
         self,
         token: ChecksumAddress,
-    ) -> float:
+    ) -> float | None:
         collateral_exchange_amount = xdai_to_wei(xdai_type(1))
         try:
             quote = CowManager().get_quote(
@@ -69,8 +66,7 @@ class PriceManager:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
             )
-            price = self.get_token_price_from_pools(token=token)
-            return price
+            return self.get_token_price_from_pools(token=token)
 
         return collateral_exchange_amount / float(quote.quote.buyAmount.root)
 
@@ -81,12 +77,12 @@ class PriceManager:
     def get_token_price_from_pools(
         self,
         token: ChecksumAddress,
-    ) -> float:
+    ) -> float | None:
         pool = SeerSubgraphHandler().get_pool_by_token(token_address=token)
 
         if not pool:
-            logger.warning(f"Could not find a pool for {token=}, returning 0.")
-            return 0
+            logger.warning(f"Could not find a pool for {token=}")
+            return None
 
         # Collateral is the other token in the pair
         collateral_address = Web3.to_checksum_address(
@@ -100,10 +96,8 @@ class PriceManager:
             collateral_address
             != self.seer_market.collateral_token_contract_address_checksummed
         ):
-            logger.warning(
-                f"Pool {pool.id.hex()} has collateral mismatch with market. Collateral from pool {collateral_address}, collateral from market {self.seer_market.collateral_token_contract_address_checksummed}, returning 0."
-            )
-            return 0
+            logger.warning(f"Pool {pool.id.hex()} has collateral mismatch with market.")
+            return None
 
         # The mapping below is odd but surprisingly the Algebra subgraph delivers the token1Price
         # for the token0 and the token0Price for the token1 pool.

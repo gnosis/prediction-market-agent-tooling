@@ -65,7 +65,11 @@ from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, ob
 from prediction_market_agent_tooling.tools.tokens.main_token import (
     MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    check_not_none,
+    utcnow,
+)
 
 MAX_AVAILABLE_MARKETS = 1000
 
@@ -615,9 +619,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
             return None
 
         api_keys = APIKeys()
-        existing_position = market.get_position(
-            user_id=market.get_user_id(api_keys=api_keys)
-        )
+        user_id = market.get_user_id(api_keys=api_keys)
+
+        existing_position = market.get_position(user_id=user_id)
         trades = self.build_trades(
             market=market,
             answer=processed_market.answer,
@@ -643,8 +647,20 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                             outcome=trade.outcome, amount=trade.amount
                         )
                     case TradeType.SELL:
+                        # Get actual value of the position we are going to sell, and if it's less than we wanted to sell, simply sell all of it.
+                        current_position_value = check_not_none(
+                            market.get_position(user_id),
+                            "Should exists if we are going to sell outcomes.",
+                        ).amounts_current[
+                            market.get_outcome_str_from_bool(trade.outcome)
+                        ]
+                        if current_position_value < trade.amount:
+                            logger.warning(
+                                f"Current value of position {trade.outcome=}, {current_position_value=} is less than the desired selling amount {trade.amount=}. Selling all."
+                            )
                         id = market.sell_tokens(
-                            outcome=trade.outcome, amount=trade.amount
+                            outcome=trade.outcome,
+                            amount=min(trade.amount, current_position_value),
                         )
                     case _:
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")

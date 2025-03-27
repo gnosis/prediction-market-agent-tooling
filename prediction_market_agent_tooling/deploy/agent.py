@@ -647,7 +647,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                             outcome=trade.outcome, amount=trade.amount
                         )
                     case TradeType.SELL:
-                        # Get actual value of the position we are going to sell, and if it's less then we wanted to sell, simply sell all of it.
+                        # Get actual value of the position we are going to sell, and if it's less than we wanted to sell, simply sell all of it.
                         current_position_value = check_not_none(
                             market.get_position(user_id),
                             "Should exists if we are going to sell outcomes.",

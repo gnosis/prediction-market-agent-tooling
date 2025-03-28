@@ -73,10 +73,10 @@ class BettingStrategy(ABC):
                     continue
 
                 if outcome_tokens_to_get.amount < trade.amount.amount:
-                    logger.info(
-                        f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}. Skipping trades."
+                    raise GuaranteedLossError(
+                        f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}. Halting execution."
                     )
-                    continue
+
             clean_trades.append(trade)
 
         return clean_trades

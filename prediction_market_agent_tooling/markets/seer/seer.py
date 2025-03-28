@@ -21,6 +21,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     ProcessedMarket,
     SortBy,
+    ProcessedTradedMarket,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     BetAmount,
@@ -80,6 +81,16 @@ class SeerAgentMarket(AgentMarket):
         agent_name: str,
     ) -> None:
         """On Seer, we have to store predictions along with trades, see `store_trades`."""
+        pass
+
+    def store_trades(
+        self,
+        traded_market: ProcessedTradedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
+        web3: Web3 | None = None,
+    ) -> None:
+        pass
 
     def _convert_bet_amount_into_wei(self, bet_amount: BetAmount) -> Wei:
         if bet_amount.currency == self.currency:

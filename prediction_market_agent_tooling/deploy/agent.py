@@ -674,7 +674,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
             processed_market,
         )
         if isinstance(processed_market, ProcessedTradedMarket):
-            if api_keys.STORE_TRADES:
+            if self.store_trades:
                 market.store_trades(processed_market, api_keys, self.agent_name)
             else:
                 logger.info(

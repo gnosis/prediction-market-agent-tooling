@@ -2,6 +2,10 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai, xdai_type
+from prediction_market_agent_tooling.gtypes import OutcomeStr, xDai
+from prediction_market_agent_tooling.markets.seer.data_models import (
+    CreateCategoricalMarketsParams,
+)
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )
@@ -14,11 +18,11 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 def build_params() -> CreateCategoricalMarketsParams:
     return SeerMarketFactory.build_market_params(
         market_question="test test test",
-        outcomes=["Yes", "No"],
+        outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
         opening_time=DatetimeUTC.now(),
         language="en_US",
         category="misc",
-        min_bond_xdai=xdai_type(xDai(0.01)),
+        min_bond=xDai(0.01),
     )
 
 

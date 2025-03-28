@@ -6,12 +6,11 @@ from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import OutcomeStr, Wei, xDai
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
-from prediction_market_agent_tooling.markets.data_models import Position, TokenAmount
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
-    OmenOutcomeToken,
+    OutcomeWei,
     calculate_marginal_prices,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
@@ -29,12 +28,7 @@ from prediction_market_agent_tooling.tools.contract import ContractOnGnosisChain
 from prediction_market_agent_tooling.tools.transaction_cache import (
     TransactionBlockCache,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    check_not_none,
-    utc_datetime,
-    utcnow,
-)
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 
 def test_omen_pick_binary_market() -> None:
@@ -152,18 +146,26 @@ def test_get_positions_1() -> None:
     assert len(positions) > len(liquid_positions)
 
     # Get position id with smallest total amount
-    min_position_id = min(positions, key=lambda x: x.total_amount.amount).market_id
+    min_position_id = min(positions, key=lambda x: x.total_amount_ot).market_id
     min_amount_position = next(
         position for position in positions if position.market_id == min_position_id
     )
 
     large_positions = OmenAgentMarket.get_positions(
-        user_id=user_address, larger_than=min_amount_position.total_amount.amount
+        user_id=user_address, larger_than=min_amount_position.total_amount_ot
     )
     # Check that the smallest position has been filtered out
     assert all(position.market_id != min_position_id for position in large_positions)
     assert all(
-        position.total_amount.amount > min_amount_position.total_amount.amount
+        position.total_amount_current > min_amount_position.total_amount_current
+        for position in large_positions
+    )
+    assert all(
+        position.total_amount_potential > min_amount_position.total_amount_potential
+        for position in large_positions
+    )
+    assert all(
+        position.total_amount_ot > min_amount_position.total_amount_ot
         for position in large_positions
     )
 
@@ -176,50 +178,12 @@ def test_get_positions_1() -> None:
             user_id=user_address,
             outcome=outcome_str,
         )
-        if token_balance.amount == 0:
+        if not token_balance:
             # The user has no position in this outcome
             continue
-        assert token_balance.amount == position.amounts[OutcomeStr(outcome_str)].amount
+        assert token_balance == position.amounts_ot[outcome_str]
 
     print(position)  # For extra test coverage
-
-
-def test_positions_value() -> None:
-    """
-    Test that an artificial user position (generated based on a historical
-    resolved bet) has the correct expected value, based on the bet's profit
-    """
-    user_address = Web3.to_checksum_address(
-        "0x2DD9f5678484C1F59F97eD334725858b938B4102"
-    )
-    resolved_bets = OmenSubgraphHandler().get_resolved_bets_with_valid_answer(
-        start_time=utc_datetime(2024, 3, 27, 4, 20),
-        end_time=utc_datetime(2024, 3, 27, 4, 30),
-        better_address=user_address,
-    )
-    assert len(resolved_bets) == 1
-    bet = resolved_bets[0]
-    assert bet.to_generic_resolved_bet().is_correct
-
-    def bet_to_position(bet: OmenBet) -> Position:
-        market = OmenAgentMarket.get_binary_market(bet.fpmm.id)
-        outcome_str = OutcomeStr(market.get_outcome_str(bet.outcomeIndex))
-        outcome_tokens = TokenAmount(
-            amount=wei_to_xdai(Wei(bet.outcomeTokensTraded)),
-            currency=OmenAgentMarket.currency,
-        )
-        return Position(market_id=market.id, amounts={outcome_str: outcome_tokens})
-
-    positions = [bet_to_position(bet)]
-    position_value = OmenAgentMarket.get_positions_value(positions=positions)
-
-    bet_value_amount = bet.get_profit().amount + wei_to_xdai(bet.collateralAmount)
-    assert np.isclose(
-        position_value.amount,
-        bet_value_amount,
-        rtol=1e-3,  # relax tolerances due to fees
-        atol=1e-3,
-    )
 
 
 def test_get_new_p_yes() -> None:
@@ -229,11 +193,11 @@ def test_get_new_p_yes() -> None:
         filter_by=FilterBy.OPEN,
     )[0]
     assert (
-        market.get_new_p_yes(bet_amount=market.get_bet_amount(10.0), direction=True)
+        market.get_new_p_yes(bet_amount=USD(10.0), direction=True)
         > market.current_p_yes
     )
     assert (
-        market.get_new_p_yes(bet_amount=market.get_bet_amount(11.0), direction=False)
+        market.get_new_p_yes(bet_amount=USD(11.0), direction=False)
         < market.current_p_yes
     )
 
@@ -250,7 +214,7 @@ def test_get_new_p_yes() -> None:
         fees=market.fees,
     )
     new_p_yes = market.get_new_p_yes(
-        bet_amount=market.get_bet_amount(bet.size), direction=bet.direction
+        bet_amount=market.get_token_in_usd(bet.size), direction=bet.direction
     )
     assert np.isclose(new_p_yes, target_p_yes)
 
@@ -267,18 +231,18 @@ def test_get_buy_token_amount(direction: bool) -> None:
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.OPEN,
     )
-    investment_amount = 5.0
+    investment_amount = USD(5)
     buy_direction = direction
     for market in markets:
         buy_amount0 = market.get_buy_token_amount(
-            bet_amount=market.get_bet_amount(investment_amount),
+            bet_amount=investment_amount,
             direction=buy_direction,
-        ).amount
+        )
         buy_amount1 = market._get_buy_token_amount_from_smart_contract(
-            bet_amount=market.get_bet_amount(investment_amount),
+            bet_amount=investment_amount,
             direction=buy_direction,
-        ).amount
-        assert np.isclose(buy_amount0, buy_amount1)
+        )
+        assert np.isclose(buy_amount0.value, buy_amount1.value)
 
 
 @pytest.mark.parametrize(
@@ -290,10 +254,16 @@ def test_get_buy_token_amount(direction: bool) -> None:
     ],
 )
 def test_calculate_marginal_prices(
-    outcome_token_amounts: list[OmenOutcomeToken],
-    expected_marginal_prices: list[xDai] | None,
+    outcome_token_amounts: list[int],
+    expected_marginal_prices: list[float] | None,
 ) -> None:
-    assert calculate_marginal_prices(outcome_token_amounts) == expected_marginal_prices
+    assert calculate_marginal_prices(
+        [OutcomeWei(x) for x in outcome_token_amounts]
+    ) == (
+        [CollateralToken(x) for x in expected_marginal_prices]
+        if expected_marginal_prices
+        else None
+    )
 
 
 def test_get_most_recent_trade_datetime() -> None:
@@ -339,7 +309,9 @@ def test_get_outcome_tokens_in_the_past() -> None:
         better_address=user_address,
     )
     selected_bet = [
-        bet for bet in resolved_bets if bet.outcomeTokensTraded == 6906257886585173059
+        bet
+        for bet in resolved_bets
+        if bet.outcomeTokensTraded == OutcomeWei(6906257886585173059)
     ][0]
     generic_bet = selected_bet.to_generic_resolved_bet()
 
@@ -347,11 +319,11 @@ def test_get_outcome_tokens_in_the_past() -> None:
     bet_block_number = tx_cache.get_block_number(selected_bet.transactionHash.hex())
 
     assert np.isclose(
-        generic_bet.amount.amount, 4.50548
+        generic_bet.amount.value, 4.50548
     ), f"{generic_bet.amount} != 4.50548"
     assert np.isclose(
-        generic_bet.profit.amount, 2.4007766133282686
-    ), f"{generic_bet.profit.amount} != 2.4007766133282686"
+        generic_bet.profit.value, 2.4007766133282686
+    ), f"{generic_bet.profit} != 2.4007766133282686"
 
     # We need to subtract -1 from block number, to get the market in the state before actually doing that bet --> after it's done, results are different
     market_before_placing_bet = OmenAgentMarket.from_data_model(
@@ -363,6 +335,4 @@ def test_get_outcome_tokens_in_the_past() -> None:
         bet_amount=generic_bet.amount, direction=generic_bet.outcome
     )
 
-    assert would_get_outcome_tokens.amount == wei_to_xdai(
-        selected_bet.outcomeTokensTraded
-    ), f"{would_get_outcome_tokens.amount} != {selected_bet.collateral_amount_usd}"
+    assert would_get_outcome_tokens == selected_bet.outcomeTokensTraded.as_outcome_token

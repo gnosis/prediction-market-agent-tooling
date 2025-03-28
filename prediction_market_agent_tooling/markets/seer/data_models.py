@@ -8,11 +8,44 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexAddress, HexBytes
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    CollateralToken,
+    HexAddress,
+    HexBytes,
+    OutcomeStr,
+    Probability,
+    Web3Wei,
+)
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerParentMarket,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+
+
+class CreateCategoricalMarketsParams(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    market_name: str = Field(..., alias="marketName")
+    outcomes: t.Sequence[OutcomeStr]
+    # Only relevant for scalar markets
+    question_start: str = Field(alias="questionStart", default="")
+    question_end: str = Field(alias="questionEnd", default="")
+    outcome_type: str = Field(alias="outcomeType", default="")
+
+    # Not needed for non-conditional markets.
+    parent_outcome: int = Field(alias="parentOutcome", default=0)
+    parent_market: HexAddress = Field(alias="parentMarket", default=ADDRESS_ZERO)
+
+    category: str
+    lang: str
+    lower_bound: int = Field(alias="lowerBound", default=0)
+    upper_bound: int = Field(alias="upperBound", default=0)
+    min_bond: Web3Wei = Field(..., alias="minBond")
+    opening_time: int = Field(..., alias="openingTime")
+    token_names: list[str] = Field(..., alias="tokenNames")
 
 
 class SeerOutcomeEnum(str, Enum):
@@ -62,7 +95,7 @@ class SeerMarket(BaseModel):
     id: HexBytes
     creator: HexAddress
     title: str = Field(alias="marketName")
-    outcomes: list[str]
+    outcomes: t.Sequence[OutcomeStr]
     wrapped_tokens: list[HexAddress] = Field(alias="wrappedTokens")
     parent_outcome: int = Field(alias="parentOutcome")
     parent_market: t.Optional[SeerParentMarket] = Field(

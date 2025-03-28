@@ -7,6 +7,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
+    CollateralToken,
     private_key_type,
     xDai,
     xdai_type,
@@ -22,7 +23,6 @@ from prediction_market_agent_tooling.tools.contract import (
     contract_implements_function,
     init_collateral_token_contract,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 def test_init_erc4626_erc20_contract_return_erc4626_instance(local_web3: Web3) -> None:
@@ -111,7 +111,7 @@ def test_contract_implements_function(
     reason="See https://github.com/gnosis/prediction-market-agent-tooling/issues/625"
 )
 def test_wont_retry(local_web3: Web3, accounts: list[TestAccount]) -> None:
-    value = xdai_to_wei(xDai(10))
+    value = CollateralToken(10).as_wei
     from_account = accounts[0]
     to_account = accounts[1]
 

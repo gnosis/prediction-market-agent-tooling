@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import USDC, Probability, usdc_type
+from prediction_market_agent_tooling.gtypes import USDC, OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_FALSE_OUTCOME,
@@ -22,7 +22,7 @@ class PolymarketRewards(BaseModel):
 
 class PolymarketToken(BaseModel):
     token_id: str
-    outcome: str
+    outcome: OutcomeStr
     winner: bool
 
 
@@ -111,7 +111,7 @@ class PolymarketPriceResponse(BaseModel):
 
     @property
     def price_dec(self) -> USDC:
-        return usdc_type(self.price)
+        return USDC(self.price)
 
 
 class Prices(BaseModel):

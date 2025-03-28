@@ -186,12 +186,12 @@ def monitor_agent(agent: DeployedAgent) -> None:
         return
     bets_info = {
         "Market Question": [bet.market_question for bet in agent_bets],
-        "Bet Amount": [bet.amount.amount for bet in agent_bets],
+        "Bet Amount": [bet.amount for bet in agent_bets],
         "Bet Outcome": [bet.outcome for bet in agent_bets],
         "Created Time": [bet.created_time for bet in agent_bets],
         "Resolved Time": [bet.resolved_time for bet in agent_bets],
         "Is Correct": [bet.is_correct for bet in agent_bets],
-        "Profit": [round(bet.profit.amount, 2) for bet in agent_bets],
+        "Profit": [round(bet.profit, 2) for bet in agent_bets],
     }
 
     # Time column to use for x-axes and sorting

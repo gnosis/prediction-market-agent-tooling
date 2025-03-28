@@ -424,6 +424,7 @@ class OmenAgentMarket(AgentMarket):
         traded_market: ProcessedTradedMarket | None,
         keys: APIKeys,
         agent_name: str,
+        web3: Web3 | None = None,
     ) -> None:
         return store_trades(
             market_id=self.id,

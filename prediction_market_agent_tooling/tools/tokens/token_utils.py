@@ -1,4 +1,3 @@
-from eth_typing.evm import ChecksumAddress
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
@@ -7,7 +6,9 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import get_buy_token_amount
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_buy_token_amount_else_raise,
+)
 
 
 def convert_to_another_token(
@@ -39,7 +40,7 @@ def convert_to_another_token(
         return from_token_contract.convertToAssets(amount)
 
     else:
-        return get_buy_token_amount(
+        return get_buy_token_amount_else_raise(
             amount,
             from_token,
             to_token,

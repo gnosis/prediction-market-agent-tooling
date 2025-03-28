@@ -47,23 +47,39 @@ class BettingStrategy(ABC):
     @staticmethod
     def assert_buy_trade_wont_be_guaranteed_loss(
         market: AgentMarket, trades: list[Trade]
-    ) -> None:
+    ) -> list[Trade]:
+        clean_trades = []
         for trade in trades:
             if trade.trade_type == TradeType.BUY:
                 outcome_tokens_to_get = market.get_buy_token_amount(
                     trade.amount, trade.outcome
                 )
+
+                if not outcome_tokens_to_get:
+                    logger.info(
+                        f"Could not determine buy_token_amount for trade {trade}. Skipping trade."
+                    )
+                    continue
+
                 outcome_tokens_to_get_in_usd = market.get_token_in_usd(
                     outcome_tokens_to_get.as_token
                 )
+
                 if outcome_tokens_to_get_in_usd <= trade.amount:
                     raise GuaranteedLossError(
-                        f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}."
+                        f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}. Halting execution."
                     )
 
+            clean_trades.append(trade)
+
+        return clean_trades
+
     @staticmethod
-    def check_trades(market: AgentMarket, trades: list[Trade]) -> None:
-        BettingStrategy.assert_buy_trade_wont_be_guaranteed_loss(market, trades)
+    def filter_trades(market: AgentMarket, trades: list[Trade]) -> list[Trade]:
+        trades = BettingStrategy.assert_buy_trade_wont_be_guaranteed_loss(
+            market, trades
+        )
+        return trades
 
     def _build_rebalance_trades_from_positions(
         self,
@@ -109,7 +125,7 @@ class BettingStrategy(ABC):
         trades.sort(key=lambda t: t.trade_type == TradeType.SELL)
 
         # Run some sanity checks to not place unreasonable bets.
-        BettingStrategy.check_trades(market, trades)
+        trades = BettingStrategy.filter_trades(market, trades)
 
         return trades
 

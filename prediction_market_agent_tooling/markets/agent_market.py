@@ -4,6 +4,7 @@ from enum import Enum
 from eth_typing import ChecksumAddress
 from pydantic import BaseModel, field_validator, model_validator
 from pydantic_core.core_schema import FieldValidationInfo
+from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -235,7 +236,7 @@ class AgentMarket(BaseModel):
 
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, direction: bool
-    ) -> OutcomeToken:
+    ) -> OutcomeToken | None:
         raise NotImplementedError("Subclasses must implement this method")
 
     def sell_tokens(self, outcome: bool, amount: USD | OutcomeToken) -> str:
@@ -293,6 +294,7 @@ class AgentMarket(BaseModel):
         traded_market: ProcessedTradedMarket | None,
         keys: APIKeys,
         agent_name: str,
+        web3: Web3 | None = None,
     ) -> None:
         """
         If market allows to upload trades somewhere, implement it in this method.

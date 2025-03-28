@@ -140,3 +140,21 @@ def test_sdai_asset_balance_of(local_web3: Web3) -> None:
         )
         >= 0
     )
+
+
+def test_sdai_allowance_and_approval(
+    local_web3: Web3, test_keys: APIKeys, accounts: list[TestAccount]
+) -> None:
+    amount_wei = CollateralToken(1).as_wei
+    for_address = accounts[-1].address
+    token_contract = sDaiContract()
+    token_contract.approve(
+        api_keys=test_keys,
+        amount_wei=amount_wei,
+        for_address=for_address,
+        web3=local_web3,
+    )
+    allowance = token_contract.allowance(
+        owner=test_keys.public_key, for_address=for_address, web3=local_web3
+    )
+    assert amount_wei == allowance

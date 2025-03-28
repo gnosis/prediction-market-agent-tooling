@@ -33,6 +33,15 @@ class PriceManager:
         market = s.get_market_by_id(market_id=market_id)
         return PriceManager(seer_market=market, seer_subgraph=s)
 
+    def _log_track_price_normalization_diff(
+        self, old_price: float, normalized_price: float, max_price_diff: float = 0.05
+    ) -> None:
+        price_diff_pct = abs(old_price - normalized_price) / old_price
+        if price_diff_pct > max_price_diff:
+            logger.info(
+                f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
+            )
+
     def current_p_yes(self) -> Probability | None:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
         price_data = {}
@@ -53,8 +62,11 @@ class PriceManager:
             total_price = sum(
                 price if price is not None else 0.0 for price in price_data.values()
             )
-            price_yes = price_yes / total_price
-            return Probability(price_yes)
+            normalized_price_yes = price_yes / total_price
+            self._log_track_price_normalization_diff(
+                old_price=price_yes, normalized_price=normalized_price_yes
+            )
+            return Probability(normalized_price_yes)
         else:
             return None
 

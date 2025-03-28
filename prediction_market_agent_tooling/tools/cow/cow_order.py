@@ -20,16 +20,22 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderStatus,
     TokenAmount,
     OrderQuoteResponse,
+    OrderQuoteSide3,
+    OrderQuoteSideKindBuy,
 )
 from eth_account.signers.local import LocalAccount
 from tenacity import stop_after_attempt, wait_fixed, retry_if_not_exception_type
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, wei_type
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
+
+
+class OrderStatusError(Exception):
+    pass
 
 
 class NoLiquidityAvailableOnCowException(Exception):
@@ -42,8 +48,41 @@ def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
 
 
 @tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"get_sell_token_amount failed, {x.attempt_number=}."),
+)
+def get_sell_token_amount(
+    buy_amount: Wei,
+    sell_token: ChecksumAddress,
+    buy_token: ChecksumAddress,
+    chain: Chain = Chain.GNOSIS,
+    env: Envs = "prod",
+) -> Wei:
+    """
+    Calculate how much of the sell_token is needed to obtain a specified amount of buy_token.
+    """
+    order_book_api = get_order_book_api(env, chain)
+    order_quote_request = OrderQuoteRequest(
+        sellToken=Address(sell_token),
+        buyToken=Address(buy_token),
+        from_=Address(
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ),  # Just random address, doesn't matter.
+    )
+    order_side = OrderQuoteSide3(
+        kind=OrderQuoteSideKindBuy.buy,
+        buyAmountAfterFee=TokenAmount(str(buy_amount)),
+    )
+    order_quote = asyncio.run(
+        order_book_api.post_quote(order_quote_request, order_side)
+    )
+    return Wei(order_quote.quote.sellAmount.root)
+
+
+@tenacity.retry(
     stop=stop_after_attempt(3),
-    wait=wait_fixed(2),
+    wait=wait_fixed(1),
     retry=retry_if_not_exception_type(NoLiquidityAvailableOnCowException),
 )
 def get_quote(
@@ -101,7 +140,7 @@ def get_buy_token_amount_else_raise(
         chain=chain,
         env=env,
     )
-    return wei_type(order_quote.quote.buyAmount.root)
+    return Wei(order_quote.quote.buyAmount.root)
 
 
 def swap_tokens_waiting(
@@ -141,7 +180,7 @@ async def swap_tokens_waiting_async(
     timeout: timedelta = timedelta(seconds=60),
 ) -> OrderMetaData:
     order = await swap_tokens(
-        amount=amount_wei,
+        amount=amount_wei.value,
         sell_token=sell_token,
         buy_token=buy_token,
         account=account,

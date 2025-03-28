@@ -4,43 +4,21 @@ import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xdai_type
+from prediction_market_agent_tooling.gtypes import USD
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.agent_market import (
-    FilterBy,
     ProcessedTradedMarket,
-    SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
 from prediction_market_agent_tooling.markets.data_models import (
     PlacedTrade,
     ProbabilisticAnswer,
-    TokenAmount,
 )
-from prediction_market_agent_tooling.gtypes import USD
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
-
-MOCK_APP_DATA = "0x0000000000000000000000000000000000000000000000000000000000000000"  # web3-private-key-ok
-MOCK_QUOTE = OrderQuoteResponse(
-    quote=OrderParameters(
-        buyAmount=TokenAmountCow(str(xdai_to_wei(xdai_type(2)))),  # 0.5 odds
-        sellToken=Address("0xabc"),
-        buyToken=Address("0xdef"),
-        sellAmount=TokenAmountCow("0.5"),
-        validTo=1739474477,
-        appData=AppDataHash(MOCK_APP_DATA),
-        feeAmount=TokenAmountCow("0.5"),
-        kind=OrderKind.buy,
-        partiallyFillable=False,
-    ),
-    expiration="1985-03-10T18:35:18.814523Z",
-    verified=False,
-)
 
 
 def test_seer_place_bet(

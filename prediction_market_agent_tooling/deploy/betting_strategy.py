@@ -54,15 +54,16 @@ class BettingStrategy(ABC):
                 outcome_tokens_to_get = market.get_buy_token_amount(
                     trade.amount, trade.outcome
                 )
-                outcome_tokens_to_get_in_usd = market.get_token_in_usd(
-                    outcome_tokens_to_get.as_token
-                )
 
                 if not outcome_tokens_to_get:
                     logger.info(
                         f"Could not determine buy_token_amount for trade {trade}. Skipping trade."
                     )
                     continue
+
+                outcome_tokens_to_get_in_usd = market.get_token_in_usd(
+                    outcome_tokens_to_get.as_token
+                )
 
                 if outcome_tokens_to_get_in_usd <= trade.amount:
                     raise GuaranteedLossError(

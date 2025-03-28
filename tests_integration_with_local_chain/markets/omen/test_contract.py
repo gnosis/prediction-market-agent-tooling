@@ -9,8 +9,6 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
     private_key_type,
-    xDai,
-    xdai_type,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
@@ -147,7 +145,7 @@ def test_sdai_asset_balance_of(local_web3: Web3) -> None:
 def test_sdai_allowance_and_approval(
     local_web3: Web3, test_keys: APIKeys, accounts: list[TestAccount]
 ) -> None:
-    amount_wei = xdai_to_wei(xdai_type(1))
+    amount_wei = CollateralToken(1).as_wei
     for_address = accounts[-1].address
     token_contract = sDaiContract()
     token_contract.approve(

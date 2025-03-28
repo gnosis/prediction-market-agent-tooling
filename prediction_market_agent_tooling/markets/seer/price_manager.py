@@ -1,12 +1,10 @@
-from functools import lru_cache
-
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     Probability,
-    xdai_type,
     Wei,
+    CollateralToken,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -19,7 +17,7 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.cow.cow_order import get_quote
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class PriceManager:
@@ -70,12 +68,15 @@ class PriceManager:
         else:
             return None
 
-    @lru_cache(typed=True)
     def get_price_for_token(
-        self,
-        token: ChecksumAddress,
-        collateral_exchange_amount: Wei = xdai_to_wei(xdai_type(1)),
+        self, token: ChecksumAddress, collateral_exchange_amount: Wei | None = None
     ) -> float | None:
+        collateral_exchange_amount = (
+            collateral_exchange_amount
+            if collateral_exchange_amount is not None
+            else CollateralToken(1).as_wei
+        )
+
         try:
             quote = get_quote(
                 amount_wei=collateral_exchange_amount,
@@ -89,7 +90,9 @@ class PriceManager:
             )
             return self.get_token_price_from_pools(token=token)
 
-        return collateral_exchange_amount / float(quote.quote.buyAmount.root)
+        collateral_exchange_amount = check_not_none(collateral_exchange_amount)
+        price = collateral_exchange_amount / float(quote.quote.buyAmount.root)
+        return Wei(str(price)).value
 
     @staticmethod
     def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:

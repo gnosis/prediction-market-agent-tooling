@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from web3.constants import ADDRESS_ZERO
 
-from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei
+from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, Wei, OutcomeStr
 
 
 class SeerToken(BaseModel):
@@ -34,7 +34,7 @@ class CreateCategoricalMarketsParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     market_name: str = Field(..., alias="marketName")
-    outcomes: list[str]
+    outcomes: list[OutcomeStr]
     # Only relevant for scalar markets
     question_start: str = Field(alias="questionStart", default="")
     question_end: str = Field(alias="questionEnd", default="")

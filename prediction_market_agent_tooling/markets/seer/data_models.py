@@ -5,19 +5,16 @@ from urllib.parse import urljoin
 
 from pydantic import BaseModel, ConfigDict, Field
 from web3 import Web3
+from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.config import RPCConfig
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexAddress, HexBytes
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
-    CollateralToken,
     HexAddress,
     HexBytes,
     OutcomeStr,
-    Probability,
     Web3Wei,
 )
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerParentMarket,

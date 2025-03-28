@@ -1,5 +1,4 @@
 from cachetools import TTLCache, cached
-from eth_typing.evm import ChecksumAddress
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -12,7 +11,9 @@ from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC4626OnGnosisChain
-from prediction_market_agent_tooling.tools.cow.cow_order import get_buy_token_amount
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_buy_token_amount_else_raise,
+)
 
 
 def get_usd_in_xdai(amount: USD) -> xDai:
@@ -48,8 +49,8 @@ def get_single_token_to_usd_rate(token_address: ChecksumAddress) -> USD:
             .convertToAssets(CollateralToken(1).as_wei)
             .as_token.value
         )
-    in_wei = get_buy_token_amount(
-        sell_amount=CollateralToken(1).as_wei,
+    in_wei = get_buy_token_amount_else_raise(
+        amount_wei=CollateralToken(1).as_wei,
         sell_token=token_address,
         buy_token=WRAPPED_XDAI_CONTRACT_ADDRESS,
     )
@@ -70,8 +71,8 @@ def get_single_usd_to_token_rate(token_address: ChecksumAddress) -> CollateralTo
             .convertToShares(CollateralToken(1).as_wei)
             .as_token.value
         )
-    in_wei = get_buy_token_amount(
-        sell_amount=CollateralToken(1).as_wei,
+    in_wei = get_buy_token_amount_else_raise(
+        amount_wei=CollateralToken(1).as_wei,
         sell_token=WRAPPED_XDAI_CONTRACT_ADDRESS,
         buy_token=token_address,
     )

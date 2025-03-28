@@ -2,7 +2,6 @@ import os
 import typing as t
 
 from web3 import Web3
-from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -10,6 +9,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     OutcomeStr,
     xDai,
+    TxReceipt,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
@@ -47,9 +47,9 @@ class SeerMarketFactory(ContractOnGnosisChain):
             token_names=[
                 o.upper() for o in outcomes
             ],  # Following usual token names on Seer (YES,NO).
-            min_bond=min_bond.as_xdai_wei.value,
+            min_bond=min_bond.as_xdai_wei.as_wei,
             opening_time=int(opening_time.timestamp()),
-            outcomes=outcomes,
+            outcomes=list(outcomes),
             lang=language,
             category=category,
         )

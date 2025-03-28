@@ -13,7 +13,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     OutcomeStr,
-    Wei,
     OutcomeToken,
     OutcomeWei,
     xDai,
@@ -43,7 +42,6 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     NewMarketEvent,
 )
-from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
@@ -108,25 +106,23 @@ class SeerAgentMarket(AgentMarket):
         return get_usd_in_token(x, self.collateral_token_contract_address_checksummed)
 
     def get_buy_token_amount(
-        self, bet_amount: BetAmount, direction: bool
+        self, bet_amount: USD | CollateralToken, direction: bool
     ) -> OutcomeToken | None:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
         outcome_token = self.get_wrapped_token_for_outcome(direction)
         bet_amount_in_tokens = self.get_in_token(bet_amount)
-        bet_amount_in_wei = bet_amount_in_tokens.as_wei
 
         p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
         price_in_collateral_units = p.get_price_for_token(
-            token=outcome_token, collateral_exchange_amount=bet_amount_in_wei
+            token=outcome_token, collateral_exchange_amount=bet_amount_in_tokens.as_wei
         )
         if not price_in_collateral_units:
             logger.info(f"Could not get price for token {outcome_token}")
             return None
 
-        buy_amount = bet_amount_in_wei / price_in_collateral_units
-        sell_amount = OutcomeWei(buy_amount).as_outcome_token
-        return sell_amount
+        amount_outcome_tokens = bet_amount_in_tokens.value / price_in_collateral_units
+        return OutcomeToken(amount_outcome_tokens)
 
     def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
         outcome_translated = SeerOutcomeEnum.from_bool(outcome)
@@ -191,7 +187,7 @@ class SeerAgentMarket(AgentMarket):
     @staticmethod
     def from_data_model_with_subgraph(
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
-    ) -> "SeerAgentMarket" | None:
+    ) -> t.Optional["SeerAgentMarket"]:
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
         current_p_yes = p.current_p_yes()
         if not current_p_yes:
@@ -295,11 +291,10 @@ class SeerAgentMarket(AgentMarket):
             )
 
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
-        amount_to_trade = xdai_type(amount.amount)
 
         #  Sell sDAI using token address
         order_metadata = swap_tokens_waiting(
-            amount_wei=xdai_to_wei(amount_to_trade),
+            amount_wei=amount_wei,
             sell_token=collateral_contract.address,
             buy_token=outcome_token,
             api_keys=api_keys,
@@ -321,7 +316,7 @@ class SeerAgentMarket(AgentMarket):
     def sell_tokens(
         self,
         outcome: bool,
-        amount: TokenAmount,
+        amount: USD | OutcomeToken,
         auto_withdraw: bool = True,
         api_keys: APIKeys | None = None,
         web3: Web3 | None = None,
@@ -331,10 +326,16 @@ class SeerAgentMarket(AgentMarket):
         """
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         api_keys = api_keys if api_keys is not None else APIKeys()
-        amount_to_trade = xdai_type(amount.amount)
+
+        ########
+        token_amount = (
+            amount.as_outcome_wei.as_wei
+            if isinstance(amount, OutcomeToken)
+            else self.get_in_token(amount).as_wei
+        )
 
         order_metadata = swap_tokens_waiting(
-            amount_wei=xdai_to_wei(amount_to_trade),
+            amount_wei=token_amount,
             sell_token=outcome_token,
             buy_token=Web3.to_checksum_address(
                 self.collateral_token_contract_address_checksummed

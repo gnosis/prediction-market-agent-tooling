@@ -1,11 +1,7 @@
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import xDai, xdai_type
 from prediction_market_agent_tooling.gtypes import OutcomeStr, xDai
-from prediction_market_agent_tooling.markets.seer.data_models import (
-    CreateCategoricalMarketsParams,
-)
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )

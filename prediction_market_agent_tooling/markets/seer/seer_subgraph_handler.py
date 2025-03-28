@@ -11,9 +11,6 @@ from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortB
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
-from prediction_market_agent_tooling.markets.omen.omen_constants import (
-    SDAI_CONTRACT_ADDRESS,
-)
 from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -220,17 +217,19 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         ]
         return fields
 
-    def get_pool_by_token(self, token_address: ChecksumAddress) -> SeerPool | None:
+    def get_pool_by_token(
+        self, token_address: ChecksumAddress, collateral_address: ChecksumAddress
+    ) -> SeerPool | None:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
         wheres = []
         wheres.extend(
             [
                 {
                     "token0": token_address.lower(),
-                    "token1": SDAI_CONTRACT_ADDRESS.lower(),
+                    "token1": collateral_address.lower(),
                 },
                 {
-                    "token0": SDAI_CONTRACT_ADDRESS.lower(),
+                    "token0": collateral_address.lower(),
                     "token1": token_address.lower(),
                 },
             ]

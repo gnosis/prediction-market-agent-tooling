@@ -214,7 +214,10 @@ class SeerAgentMarket(AgentMarket):
 
     def has_liquidity_for_outcome(self, outcome: bool) -> bool:
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
-        pool = SeerSubgraphHandler().get_pool_by_token(token_address=outcome_token)
+        pool = SeerSubgraphHandler().get_pool_by_token(
+            token_address=outcome_token,
+            collateral_address=self.collateral_token_contract_address_checksummed,
+        )
         return pool is not None and pool.liquidity > 0
 
     def has_liquidity(self) -> bool:

@@ -99,25 +99,13 @@ class PriceManager:
         self,
         token: ChecksumAddress,
     ) -> float | None:
-        pool = SeerSubgraphHandler().get_pool_by_token(token_address=token)
+        pool = SeerSubgraphHandler().get_pool_by_token(
+            token_address=token,
+            collateral_address=self.seer_market.collateral_token_contract_address_checksummed,
+        )
 
         if not pool:
             logger.warning(f"Could not find a pool for {token=}")
-            return None
-
-        # Collateral is the other token in the pair
-        collateral_address = Web3.to_checksum_address(
-            pool.token0.id
-            if not self._pool_token0_matches_token(token=token, pool=pool)
-            else pool.token1.id
-        )
-
-        # Check if other token is market's collateral (sanity check).
-        if (
-            collateral_address
-            != self.seer_market.collateral_token_contract_address_checksummed
-        ):
-            logger.warning(f"Pool {pool.id.hex()} has collateral mismatch with market.")
             return None
 
         # The mapping below is odd but surprisingly the Algebra subgraph delivers the token1Price

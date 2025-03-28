@@ -67,7 +67,8 @@ def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         idx = market.outcome_as_enums[outcome_enum]
         wrapped_token = market.wrapped_tokens[idx]
         pool = seer_subgraph_handler_test.get_pool_by_token(
-            token_address=Web3.to_checksum_address(wrapped_token.lower())
+            token_address=Web3.to_checksum_address(wrapped_token.lower()),
+            collateral_address=market.collateral_token_contract_address_checksummed,
         )
         pool = check_not_none(pool)
         assert (

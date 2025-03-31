@@ -114,7 +114,7 @@ class SeerAgentMarket(AgentMarket):
 
         p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
         price = p.get_price_for_token(
-            token=outcome_token, collateral_exchange_amount=bet_amount_in_tokens.as_wei
+            token=outcome_token, collateral_exchange_amount=bet_amount_in_tokens
         )
         if not price:
             logger.info(f"Could not get price for token {outcome_token}")

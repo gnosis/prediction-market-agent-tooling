@@ -65,17 +65,19 @@ class PriceManager:
             return None
 
     def get_price_for_token(
-        self, token: ChecksumAddress, collateral_exchange_amount: Wei | None = None
+        self,
+        token: ChecksumAddress,
+        collateral_exchange_amount: CollateralToken | None = None,
     ) -> CollateralToken | None:
         collateral_exchange_amount = (
             collateral_exchange_amount
             if collateral_exchange_amount is not None
-            else CollateralToken(1).as_wei
+            else CollateralToken(1)
         )
 
         try:
             quote = get_quote(
-                amount_wei=collateral_exchange_amount,
+                amount_wei=collateral_exchange_amount.as_wei,
                 sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
             )
@@ -86,8 +88,7 @@ class PriceManager:
             )
             return self.get_token_price_from_pools(token=token)
 
-        collateral_exchange_amount = check_not_none(collateral_exchange_amount)
-        price = collateral_exchange_amount.as_token / float(quote.quote.buyAmount.root)
+        price = collateral_exchange_amount / float(quote.quote.buyAmount.root)
         return price
 
     @staticmethod

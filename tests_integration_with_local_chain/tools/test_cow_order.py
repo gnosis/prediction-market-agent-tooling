@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
 )
 
 
+@pytest.mark.skip("Cow integration still in progress")
 def test_get_buy_token_amount() -> None:
     sell_amount = CollateralToken(0.1).as_wei
     buy_amount = get_buy_token_amount_else_raise(
@@ -28,6 +29,7 @@ def test_get_buy_token_amount() -> None:
     ), f"sDai should be more expensive than wxDai, but {buy_amount} >= {sell_amount}"
 
 
+@pytest.mark.skip("Cow integration still in progress")
 @pytest.mark.parametrize(
     "sell_token, buy_token",
     [

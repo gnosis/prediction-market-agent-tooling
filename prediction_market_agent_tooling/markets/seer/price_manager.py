@@ -4,7 +4,6 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
     Probability,
-    Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -17,7 +16,6 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.cow.cow_order import get_quote
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class PriceManager:

@@ -9,7 +9,6 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     OutcomeStr,
     TxReceipt,
-    xDai,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
@@ -38,7 +37,7 @@ class SeerMarketFactory(ContractOnGnosisChain):
         market_question: str,
         outcomes: t.Sequence[OutcomeStr],
         opening_time: DatetimeUTC,
-        min_bond: xDai,
+        min_bond: int,
         language: str = "en_US",
         category: str = "misc",
     ) -> CreateCategoricalMarketsParams:
@@ -47,7 +46,7 @@ class SeerMarketFactory(ContractOnGnosisChain):
             token_names=[
                 o.upper() for o in outcomes
             ],  # Following usual token names on Seer (YES,NO).
-            min_bond=min_bond.as_xdai_wei.as_wei,
+            min_bond=min_bond,
             opening_time=int(opening_time.timestamp()),
             outcomes=list(outcomes),
             lang=language,

@@ -55,6 +55,7 @@ def main(
         BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
         SAFE_ADDRESS=safe_address_checksum,
     )
+
     market = seer_create_market_tx(
         api_keys=api_keys,
         initial_funds=USD(initial_funds_usd),
@@ -64,7 +65,7 @@ def main(
         language=language,
         outcomes=[OutcomeStr(x) for x in outcomes],
         auto_deposit=auto_deposit,
-        min_bond_xdai=xDai(min_bond_xdai),
+        min_bond_wei=xDai(min_bond_xdai).as_xdai_wei.value,
     )
     logger.info(f"Market created: {market}")
 

@@ -6,7 +6,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     OutcomeStr,
-    Wei,
 )
 
 
@@ -54,7 +53,9 @@ class CreateCategoricalMarketsParams(BaseModel):
     lang: str
     lower_bound: int = Field(alias="lowerBound", default=0)
     upper_bound: int = Field(alias="upperBound", default=0)
-    min_bond: Wei = Field(..., alias="minBond")
+    min_bond: int = Field(
+        ..., alias="minBond"
+    )  # typed as int for later .model_dump() usage (if using Wei, other keys also exported)
     opening_time: int = Field(..., alias="openingTime")
     token_names: list[str] = Field(..., alias="tokenNames")
 

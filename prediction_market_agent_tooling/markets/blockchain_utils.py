@@ -47,7 +47,7 @@ def store_trades(
     prediction = ContractPrediction(
         publisher=keys.bet_from_address,
         ipfs_hash=ipfs_hash_decoded,
-        tx_hashes=tx_hashes,
+        tx_hashes=tx_hashes,  # type: ignore[arg-type]
         estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
     )
     tx_receipt = OmenAgentResultMappingContract().add_prediction(

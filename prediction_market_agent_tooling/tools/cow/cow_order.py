@@ -15,16 +15,16 @@ from cowdao_cowpy.order_book.generated.model import (
     Address,
     OrderMetaData,
     OrderQuoteRequest,
+    OrderQuoteResponse,
     OrderQuoteSide1,
+    OrderQuoteSide3,
+    OrderQuoteSideKindBuy,
     OrderQuoteSideKindSell,
     OrderStatus,
     TokenAmount,
-    OrderQuoteResponse,
-    OrderQuoteSide3,
-    OrderQuoteSideKindBuy,
 )
 from eth_account.signers.local import LocalAccount
-from tenacity import stop_after_attempt, wait_fixed, retry_if_not_exception_type
+from tenacity import retry_if_not_exception_type, stop_after_attempt, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys

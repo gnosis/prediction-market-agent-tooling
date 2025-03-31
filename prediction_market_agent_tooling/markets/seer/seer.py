@@ -22,8 +22,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     ProcessedMarket,
-    SortBy,
     ProcessedTradedMarket,
+    SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees

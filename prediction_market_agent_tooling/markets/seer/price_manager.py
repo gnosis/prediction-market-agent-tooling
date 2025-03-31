@@ -2,9 +2,9 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
+    CollateralToken,
     Probability,
     Wei,
-    CollateralToken,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import (

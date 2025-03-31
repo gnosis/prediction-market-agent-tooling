@@ -5,9 +5,10 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import USD
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
     ProcessedTradedMarket,
+    SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
 from prediction_market_agent_tooling.markets.data_models import (

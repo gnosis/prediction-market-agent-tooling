@@ -241,8 +241,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         optional_params["orderDirection"] = "desc"
 
         pools_field = self.swapr_algebra_subgraph.Query.pools(
-            where=unwrap_generic_value({"or": wheres}, **optional_params
-        )
+            where=unwrap_generic_value({"or": wheres}, **optional_params)
         )
         fields = self._get_fields_for_pools(pools_field)
         pools = self.do_query(fields=fields, pydantic_model=SeerPool)

@@ -8,8 +8,8 @@ from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
     OutcomeStr,
-    xDai,
     TxReceipt,
+    xDai,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,

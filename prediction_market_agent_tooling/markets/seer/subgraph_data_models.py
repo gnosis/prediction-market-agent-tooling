@@ -1,7 +1,13 @@
 from pydantic import BaseModel, ConfigDict, Field
 from web3.constants import ADDRESS_ZERO
 
-from prediction_market_agent_tooling.gtypes import HexAddress, HexBytes, OutcomeStr, Wei
+from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
+    HexAddress,
+    HexBytes,
+    OutcomeStr,
+    Wei,
+)
 
 
 class SeerToken(BaseModel):
@@ -16,8 +22,8 @@ class SeerPool(BaseModel):
     liquidity: int
     token0: SeerToken
     token1: SeerToken
-    token0Price: float
-    token1Price: float
+    token0Price: CollateralToken
+    token1Price: CollateralToken
     sqrtPrice: int
 
 

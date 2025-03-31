@@ -42,7 +42,7 @@ class PriceManager:
 
     def current_p_yes(self) -> Probability | None:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
-        price_data = {}
+        price_data: dict[int, CollateralToken | None] = {}
         for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
             price = self.get_price_for_token(
                 token=Web3.to_checksum_address(wrapped_token),
@@ -55,31 +55,29 @@ class PriceManager:
 
         # We only return a probability if we have both price_yes and price_no, since we could place bets
         # in both sides hence we need current probabilities for both outcomes.
-        if price_yes and price_no:
-            # If other outcome`s price is None, we set it to 0.
-            total_price = sum(
-                price if price is not None else 0.0 for price in price_data.values()
-            )
-            normalized_price_yes = price_yes / total_price
+        if price_yes is not None and price_no is not None:
+            normalized_price_yes = price_yes / (price_yes + price_no)
             self._log_track_price_normalization_diff(
-                old_price=price_yes, normalized_price=normalized_price_yes
+                old_price=price_yes.value, normalized_price=normalized_price_yes
             )
             return Probability(normalized_price_yes)
         else:
             return None
 
     def get_price_for_token(
-        self, token: ChecksumAddress, collateral_exchange_amount: Wei | None = None
-    ) -> float | None:
+        self,
+        token: ChecksumAddress,
+        collateral_exchange_amount: CollateralToken | None = None,
+    ) -> CollateralToken | None:
         collateral_exchange_amount = (
             collateral_exchange_amount
             if collateral_exchange_amount is not None
-            else CollateralToken(1).as_wei
+            else CollateralToken(1)
         )
 
         try:
             quote = get_quote(
-                amount_wei=collateral_exchange_amount,
+                amount_wei=collateral_exchange_amount.as_wei,
                 sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
             )
@@ -90,9 +88,8 @@ class PriceManager:
             )
             return self.get_token_price_from_pools(token=token)
 
-        collateral_exchange_amount = check_not_none(collateral_exchange_amount)
         price = collateral_exchange_amount / float(quote.quote.buyAmount.root)
-        return Wei(str(price)).value
+        return price
 
     @staticmethod
     def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:
@@ -101,7 +98,7 @@ class PriceManager:
     def get_token_price_from_pools(
         self,
         token: ChecksumAddress,
-    ) -> float | None:
+    ) -> CollateralToken | None:
         pool = SeerSubgraphHandler().get_pool_by_token(
             token_address=token,
             collateral_address=self.seer_market.collateral_token_contract_address_checksummed,
@@ -114,9 +111,9 @@ class PriceManager:
         # The mapping below is odd but surprisingly the Algebra subgraph delivers the token1Price
         # for the token0 and the token0Price for the token1 pool.
         # For example, in a outcomeYES (token0)/sDAI pool (token1), token1Price is the price of outcomeYES in units of sDAI.
-        price_in_collateral_units = (
+        price = (
             pool.token1Price
             if self._pool_token0_matches_token(token=token, pool=pool)
             else pool.token0Price
         )
-        return price_in_collateral_units
+        return price

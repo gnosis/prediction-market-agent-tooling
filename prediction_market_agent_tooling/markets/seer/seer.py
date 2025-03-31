@@ -113,14 +113,14 @@ class SeerAgentMarket(AgentMarket):
         bet_amount_in_tokens = self.get_in_token(bet_amount)
 
         p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
-        price_in_collateral_units = p.get_price_for_token(
-            token=outcome_token, collateral_exchange_amount=bet_amount_in_tokens.as_wei
+        price = p.get_price_for_token(
+            token=outcome_token, collateral_exchange_amount=bet_amount_in_tokens
         )
-        if not price_in_collateral_units:
+        if not price:
             logger.info(f"Could not get price for token {outcome_token}")
             return None
 
-        amount_outcome_tokens = bet_amount_in_tokens.value / price_in_collateral_units
+        amount_outcome_tokens = bet_amount_in_tokens / price
         return OutcomeToken(amount_outcome_tokens)
 
     def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:

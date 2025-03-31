@@ -41,8 +41,9 @@ def store_trades(
     # tx_hashes must be list of bytes32 (see Solidity contract).
     # For regular tx hashes that's fine, but for other types of IDs we take the first 32 bytes (orderDigest).
     tx_hashes = [
-        HexBytes(HexStr(i.id[:32])) for i in traded_market.trades if i.id is not None
+        HexBytes(HexStr(trade.id))[:32] for trade in traded_market.trades if trade.id
     ]
+
     prediction = ContractPrediction(
         publisher=keys.bet_from_address,
         ipfs_hash=ipfs_hash_decoded,

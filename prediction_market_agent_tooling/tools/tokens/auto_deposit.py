@@ -10,7 +10,6 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC4626BaseClass,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
-    get_buy_token_amount_else_raise,
     get_sell_token_amount,
     swap_tokens_waiting,
 )

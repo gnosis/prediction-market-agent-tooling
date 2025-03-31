@@ -60,7 +60,7 @@ def test_binary_market_retrieved(
 
 
 def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    us_election_market_id = HexBytes("0x43d881f5920ed29fc5cd4917d6817496abbba6d9")
+    us_election_market_id = HexBytes("0xa4b71ac2d0e17e1242e2d825e621acd18f0054ea")
     market = seer_subgraph_handler_test.get_market_by_id(us_election_market_id)
     # There must be pools for the Yes,No outcomes.
     for outcome_enum in [SeerOutcomeEnum.YES, SeerOutcomeEnum.NO]:

@@ -42,27 +42,23 @@ class PriceManager:
 
     def current_p_yes(self) -> Probability | None:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
-        price_data: dict[int, float | None] = {}
+        price_data: dict[int, CollateralToken | None] = {}
         for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
             price = self.get_price_for_token(
                 token=Web3.to_checksum_address(wrapped_token),
             )
 
-            price_data[idx] = price.value if price else None
+            price_data[idx] = price
 
         price_yes = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.YES]]
         price_no = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.NO]]
 
         # We only return a probability if we have both price_yes and price_no, since we could place bets
         # in both sides hence we need current probabilities for both outcomes.
-        if price_yes and price_no:
-            # If other outcome`s price is None, we set it to 0.
-            total_price = sum(
-                price if price is not None else 0.0 for price in price_data.values()
-            )
-            normalized_price_yes = price_yes / total_price
+        if price_yes is not None and price_no is not None:
+            normalized_price_yes = price_yes / (price_yes + price_no)
             self._log_track_price_normalization_diff(
-                old_price=price_yes, normalized_price=normalized_price_yes
+                old_price=price_yes.value, normalized_price=normalized_price_yes
             )
             return Probability(normalized_price_yes)
         else:

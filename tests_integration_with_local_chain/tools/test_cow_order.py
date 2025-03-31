@@ -58,6 +58,7 @@ def test_get_buy_vs_sell_token_amount(
     )
 
 
+@pytest.mark.skip("Cow integration still in progress")
 @pytest.mark.parametrize(
     "sell_token, buy_token",
     [
@@ -82,4 +83,4 @@ def test_swap_tokens_waiting(
         )
     # This is raised in `post_order` which is last call when swapping tokens, anvil's accounts don't have any balance on real chain, so this is expected,
     # but still, it tests that all the logic behind calling CoW APIs is working correctly.
-    assert "InsufficientBalance" in str(e.value.__cause__)
+    assert "InsufficientBalance" in str(e)

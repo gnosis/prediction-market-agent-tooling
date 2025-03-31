@@ -42,13 +42,13 @@ class PriceManager:
 
     def current_p_yes(self) -> Probability | None:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
-        price_data = {}
+        price_data: dict[int, float | None] = {}
         for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
             price = self.get_price_for_token(
                 token=Web3.to_checksum_address(wrapped_token),
             )
 
-            price_data[idx] = price
+            price_data[idx] = price.value if price else None
 
         price_yes = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.YES]]
         price_no = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.NO]]
@@ -70,7 +70,7 @@ class PriceManager:
 
     def get_price_for_token(
         self, token: ChecksumAddress, collateral_exchange_amount: Wei | None = None
-    ) -> float | None:
+    ) -> CollateralToken | None:
         collateral_exchange_amount = (
             collateral_exchange_amount
             if collateral_exchange_amount is not None
@@ -91,8 +91,8 @@ class PriceManager:
             return self.get_token_price_from_pools(token=token)
 
         collateral_exchange_amount = check_not_none(collateral_exchange_amount)
-        price = collateral_exchange_amount / float(quote.quote.buyAmount.root)
-        return Wei(str(price)).value
+        price = collateral_exchange_amount.as_token / float(quote.quote.buyAmount.root)
+        return price
 
     @staticmethod
     def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:
@@ -101,7 +101,7 @@ class PriceManager:
     def get_token_price_from_pools(
         self,
         token: ChecksumAddress,
-    ) -> float | None:
+    ) -> CollateralToken | None:
         pool = SeerSubgraphHandler().get_pool_by_token(
             token_address=token,
             collateral_address=self.seer_market.collateral_token_contract_address_checksummed,
@@ -114,9 +114,9 @@ class PriceManager:
         # The mapping below is odd but surprisingly the Algebra subgraph delivers the token1Price
         # for the token0 and the token0Price for the token1 pool.
         # For example, in a outcomeYES (token0)/sDAI pool (token1), token1Price is the price of outcomeYES in units of sDAI.
-        price_in_collateral_units = (
+        price = (
             pool.token1Price
             if self._pool_token0_matches_token(token=token, pool=pool)
             else pool.token0Price
         )
-        return price_in_collateral_units
+        return price

@@ -1,8 +1,13 @@
+import pytest
+from web3 import Web3
+
 from prediction_market_agent_tooling.gtypes import HexBytes
-from prediction_market_agent_tooling.markets.agent_market import FilterBy
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.seer.data_models import SeerOutcomeEnum
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 CONDITIONAL_MARKET_ID = HexBytes("0xfe2cc518b4d8c1d5db682db553c3de750d901ce0")
 BINARY_MARKET_ID = HexBytes("0x7d72aa56ecdda207005fd7a02dbfd33f92d0def7")
@@ -54,15 +59,53 @@ def test_binary_market_retrieved(
     assert BINARY_CONDITIONAL_MARKET_ID in market_ids
 
 
-def test_get_pools_for_market(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    us_election_market_id = HexBytes("0x43d881f5920ed29fc5cd4917d6817496abbba6d9")
+def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
+    us_election_market_id = HexBytes("0xa4b71ac2d0e17e1242e2d825e621acd18f0054ea")
     market = seer_subgraph_handler_test.get_market_by_id(us_election_market_id)
-
-    pools = seer_subgraph_handler_test.get_swapr_pools_for_market(market)
-    assert len(pools) > 1
-    for pool in pools:
-        # one of the tokens must be a wrapped token
-        assert (
-            pool.token0.id.hex() in market.wrapped_tokens
-            or pool.token1.id.hex() in market.wrapped_tokens
+    # There must be pools for the Yes,No outcomes.
+    for outcome_enum in [SeerOutcomeEnum.YES, SeerOutcomeEnum.NO]:
+        idx = market.outcome_as_enums[outcome_enum]
+        wrapped_token = market.wrapped_tokens[idx]
+        pool = seer_subgraph_handler_test.get_pool_by_token(
+            token_address=Web3.to_checksum_address(wrapped_token.lower()),
+            collateral_address=market.collateral_token_contract_address_checksummed,
         )
+        pool = check_not_none(pool)
+        assert (
+            pool.token0.id.hex().lower() == wrapped_token.lower()
+            or pool.token1.id.hex().lower() == wrapped_token.lower()
+        )
+
+
+def test_get_binary_markets_newest_open(
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+) -> None:
+    # test method get_binary_markets
+    markets = seer_subgraph_handler_test.get_binary_markets(
+        sort_by=SortBy.NEWEST, filter_by=FilterBy.OPEN
+    )
+    # We expect at least 1 open markets
+    assert len(markets) > 0
+    assert not markets[0].is_resolved
+
+
+@pytest.mark.parametrize(
+    ("filter_by", "sort_by"),
+    [
+        (FilterBy.OPEN, SortBy.NEWEST),
+        (FilterBy.NONE, SortBy.CLOSING_SOONEST),
+        (FilterBy.RESOLVED, SortBy.HIGHEST_LIQUIDITY),
+        (FilterBy.RESOLVED, SortBy.LOWEST_LIQUIDITY),
+    ],
+)
+def test_binary_markets_retrieved(
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+    filter_by: FilterBy,
+    sort_by: SortBy,
+) -> None:
+    # test method get_binary_markets
+    markets = seer_subgraph_handler_test.get_binary_markets(
+        limit=1, sort_by=sort_by, filter_by=filter_by
+    )
+    # We expect at least 1 market for the given filter
+    assert markets

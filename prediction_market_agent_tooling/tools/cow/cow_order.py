@@ -4,15 +4,18 @@ from datetime import timedelta
 import httpx
 import tenacity
 from cowdao_cowpy import swap_tokens
+from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
 from cowdao_cowpy.common.constants import CowContractAddress
+from cowdao_cowpy.cow.swap import get_order_quote
 from cowdao_cowpy.order_book.api import OrderBookApi
 from cowdao_cowpy.order_book.config import Envs, OrderBookAPIConfigFactory
 from cowdao_cowpy.order_book.generated.model import (
     Address,
     OrderMetaData,
     OrderQuoteRequest,
+    OrderQuoteResponse,
     OrderQuoteSide1,
     OrderQuoteSide3,
     OrderQuoteSideKindBuy,
@@ -21,7 +24,7 @@ from cowdao_cowpy.order_book.generated.model import (
     TokenAmount,
 )
 from eth_account.signers.local import LocalAccount
-from eth_typing.evm import ChecksumAddress
+from tenacity import retry_if_not_exception_type, stop_after_attempt, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -33,6 +36,10 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 
 class OrderStatusError(Exception):
     pass
+
+
+class NoLiquidityAvailableOnCowException(Exception):
+    """Custom exception for handling case where no liquidity available."""
 
 
 def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
@@ -74,17 +81,17 @@ def get_sell_token_amount(
 
 
 @tenacity.retry(
-    stop=tenacity.stop_after_attempt(3),
-    wait=tenacity.wait_fixed(1),
-    after=lambda x: logger.debug(f"get_buy_token_amount failed, {x.attempt_number=}."),
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_not_exception_type(NoLiquidityAvailableOnCowException),
 )
-def get_buy_token_amount(
-    sell_amount: Wei,
+def get_quote(
+    amount_wei: Wei,
     sell_token: ChecksumAddress,
     buy_token: ChecksumAddress,
     chain: Chain = Chain.GNOSIS,
     env: Envs = "prod",
-) -> Wei:
+) -> OrderQuoteResponse:
     order_book_api = get_order_book_api(env, chain)
     order_quote_request = OrderQuoteRequest(
         sellToken=Address(sell_token),
@@ -95,17 +102,50 @@ def get_buy_token_amount(
     )
     order_side = OrderQuoteSide1(
         kind=OrderQuoteSideKindSell.sell,
-        sellAmountBeforeFee=TokenAmount(str(sell_amount)),
+        sellAmountBeforeFee=TokenAmount(str(amount_wei)),
     )
-    order_quote = asyncio.run(
-        order_book_api.post_quote(order_quote_request, order_side)
+
+    try:
+        order_quote = asyncio.run(
+            get_order_quote(
+                order_quote_request=order_quote_request,
+                order_side=order_side,
+                order_book_api=order_book_api,
+            )
+        )
+
+        return order_quote
+
+    except UnexpectedResponseError as e1:
+        if "NoLiquidity" in e1.message:
+            raise NoLiquidityAvailableOnCowException(e1.message)
+        logger.warning(f"Found unexpected Cow response error: {e1}")
+        raise
+    except Exception as e:
+        logger.warning(f"Found unhandled Cow response error: {e}")
+        raise
+
+
+def get_buy_token_amount_else_raise(
+    amount_wei: Wei,
+    sell_token: ChecksumAddress,
+    buy_token: ChecksumAddress,
+    chain: Chain = Chain.GNOSIS,
+    env: Envs = "prod",
+) -> Wei:
+    order_quote = get_quote(
+        amount_wei=amount_wei,
+        sell_token=sell_token,
+        buy_token=buy_token,
+        chain=chain,
+        env=env,
     )
     return Wei(order_quote.quote.buyAmount.root)
 
 
 @tenacity.retry(
-    stop=tenacity.stop_after_attempt(3),
-    wait=tenacity.wait_fixed(1),
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
     retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
     after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
 )

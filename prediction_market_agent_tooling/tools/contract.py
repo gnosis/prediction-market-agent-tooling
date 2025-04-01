@@ -207,6 +207,17 @@ class ContractERC20BaseClass(ContractBaseClass):
         value: str = self._cache[cache_key]
         return value
 
+    def allowance(
+        self,
+        owner: ChecksumAddress,
+        for_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> int:
+        allowance_for_user: int = self.call(
+            "allowance", function_params=[owner, for_address], web3=web3
+        )
+        return allowance_for_user
+
     def approve(
         self,
         api_keys: APIKeys,

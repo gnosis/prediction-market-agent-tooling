@@ -5,14 +5,14 @@ from typing import Any
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
+from prediction_market_agent_tooling.gtypes import ChecksumAddress
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
-from prediction_market_agent_tooling.markets.seer.data_models import (
-    SeerMarket,
-    SeerPool,
-)
+from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
+from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import unwrap_generic_value
@@ -50,6 +50,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.creator,
             markets_field.conditionId,
             markets_field.marketName,
+            markets_field.outcomesSupply,
             markets_field.parentOutcome,
             markets_field.outcomes,
             markets_field.payoutReported,
@@ -121,12 +122,16 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         match sort_by:
             case SortBy.NEWEST:
                 sort_direction = "desc"
-                sort_by_field = self.seer_subgraph.Market.block_timestamp
+                sort_by_field = self.seer_subgraph.Market.blockTimestamp
             case SortBy.CLOSING_SOONEST:
                 sort_direction = "asc"
-                sort_by_field = self.seer_subgraph.Market.opening_ts
-            # ToDo - Implement liquidity conditions by looking up Swapr subgraph.
-            case SortBy.NONE | SortBy.HIGHEST_LIQUIDITY | SortBy.LOWEST_LIQUIDITY:
+                sort_by_field = self.seer_subgraph.Market.openingTs
+            case SortBy.HIGHEST_LIQUIDITY | SortBy.LOWEST_LIQUIDITY:
+                sort_direction = (
+                    "desc" if sort_by == SortBy.HIGHEST_LIQUIDITY else "asc"
+                )
+                sort_by_field = self.seer_subgraph.Market.outcomesSupply
+            case SortBy.NONE:
                 sort_direction = None
                 sort_by_field = None
             case _:
@@ -201,6 +206,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         fields = [
             pools_field.id,
             pools_field.liquidity,
+            pools_field.sqrtPrice,
+            pools_field.token0Price,
+            pools_field.token1Price,
             pools_field.token0.id,
             pools_field.token0.name,
             pools_field.token0.symbol,
@@ -210,19 +218,40 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         ]
         return fields
 
-    def get_swapr_pools_for_market(self, market: SeerMarket) -> list[SeerPool]:
+    def get_pool_by_token(
+        self, token_address: ChecksumAddress, collateral_address: ChecksumAddress
+    ) -> SeerPool | None:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
         wheres = []
-        for wrapped_token in market.wrapped_tokens:
-            wheres.extend(
-                [
-                    {"token0": wrapped_token.lower()},
-                    {"token1": wrapped_token.lower()},
-                ]
-            )
-        pools_field = self.swapr_algebra_subgraph.Query.pools(
-            where=unwrap_generic_value({"or": wheres})
+        wheres.extend(
+            [
+                {
+                    "token0": token_address.lower(),
+                    "token1": collateral_address.lower(),
+                },
+                {
+                    "token0": collateral_address.lower(),
+                    "token1": token_address.lower(),
+                },
+            ]
         )
+
+        optional_params = {}
+        optional_params["orderBy"] = self.swapr_algebra_subgraph.Pool.liquidity
+        optional_params["orderDirection"] = "desc"
+
+        pools_field = self.swapr_algebra_subgraph.Query.pools(
+            where=unwrap_generic_value({"or": wheres}), **optional_params
+        )
+
         fields = self._get_fields_for_pools(pools_field)
         pools = self.do_query(fields=fields, pydantic_model=SeerPool)
-        return pools
+        # We assume there is only one pool for outcomeToken/sDAI.
+        if len(pools) > 1:
+            logger.info(
+                f"Multiple pools found for token {token_address}, selecting the first."
+            )
+        if pools:
+            # We select the first one
+            return pools[0]
+        return None

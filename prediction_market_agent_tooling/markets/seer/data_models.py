@@ -10,16 +10,15 @@ from web3.constants import ADDRESS_ZERO
 from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
-    CollateralToken,
     HexAddress,
     HexBytes,
     OutcomeStr,
-    Probability,
     Web3Wei,
 )
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
+from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
+    SeerParentMarket,
+)
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
 
@@ -84,10 +83,6 @@ class SeerOutcomeEnum(str, Enum):
             raise ValueError(f"Unknown outcome: {self}")
 
 
-class SeerParentMarket(BaseModel):
-    id: HexBytes
-
-
 SEER_BASE_URL = "https://app.seer.pm"
 
 
@@ -110,6 +105,7 @@ class SeerMarket(BaseModel):
     has_answers: bool | None = Field(alias="hasAnswers")
     payout_reported: bool = Field(alias="payoutReported")
     payout_numerators: list[int] = Field(alias="payoutNumerators")
+    outcomes_supply: int = Field(alias="outcomesSupply")
 
     @property
     def has_valid_answer(self) -> bool:
@@ -187,63 +183,6 @@ class SeerMarket(BaseModel):
         return DatetimeUTC.to_datetime_utc(self.block_timestamp)
 
     @property
-    def current_p_yes(self) -> Probability:
-        price_data = {}
-        for idx in range(len(self.outcomes)):
-            wrapped_token = self.wrapped_tokens[idx]
-            price = self._get_price_for_token(
-                token=Web3.to_checksum_address(wrapped_token)
-            )
-            price_data[idx] = price
-
-        if sum(price_data.values()) == 0:
-            logger.warning(
-                f"Could not get p_yes for market {self.id.hex()}, all price quotes are 0."
-            )
-            return Probability(0)
-
-        yes_idx = self.outcome_as_enums[SeerOutcomeEnum.YES]
-        price_yes = price_data[yes_idx] / sum(price_data.values())
-        return Probability(price_yes)
-
-    def _get_price_for_token(self, token: ChecksumAddress) -> float:
-        collateral_exchange_amount = CollateralToken(1).as_wei
-        try:
-            quote = CowManager().get_quote(
-                collateral_token=self.collateral_token_contract_address_checksummed,
-                buy_token=token,
-                sell_amount=collateral_exchange_amount,
-            )
-        except Exception as e:
-            logger.warning(f"Could not get quote for {token=}, returning price 0. {e=}")
-            return 0
-
-        return collateral_exchange_amount.value / float(quote.quote.buyAmount.root)
-
-    @property
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
         return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
-
-
-class SeerToken(BaseModel):
-    id: HexBytes
-    name: str
-    symbol: str
-
-
-class SeerPool(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    id: HexBytes
-    liquidity: int
-    token0: SeerToken
-    token1: SeerToken
-
-
-class NewMarketEvent(BaseModel):
-    market: HexAddress
-    marketName: str
-    parentMarket: HexAddress
-    conditionId: HexBytes
-    questionId: HexBytes
-    questionsIds: list[HexBytes]

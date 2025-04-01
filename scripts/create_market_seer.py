@@ -25,7 +25,7 @@ def main(
     initial_funds_usd: str = typer.Option(),
     from_private_key: str = typer.Option(),
     safe_address: str = typer.Option(None),
-    min_bond_xdai: int = typer.Option(0.01),
+    min_bond_xdai: float = typer.Option(0.01),
     language: str = typer.Option("en_US"),
     outcomes: list[str] = typer.Option(OMEN_BINARY_MARKET_OUTCOMES),
     auto_deposit: bool = typer.Option(True),
@@ -40,7 +40,7 @@ def main(
         initial_funds_usd (str): The initial funds for the market.
         from_private_key (str): The private key to use for transactions.
         safe_address (str, optional): The safe address for transactions. Defaults to None.
-        min_bond_xdai (int, optional): The minimum bond in xDai. Defaults to 0.01 xDai.
+        min_bond_xdai (float, optional): The minimum bond in xDai. Defaults to 0.01 xDai.
         language (str, optional): The language of the market. Defaults to "en".
         outcomes (list[str], optional): The outcomes for the market. Defaults to OMEN_BINARY_MARKET_OUTCOMES.
         auto_deposit (bool, optional): Whether to automatically deposit funds. Defaults to True.
@@ -55,6 +55,7 @@ def main(
         BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),
         SAFE_ADDRESS=safe_address_checksum,
     )
+
     market = seer_create_market_tx(
         api_keys=api_keys,
         initial_funds=USD(initial_funds_usd),
@@ -64,7 +65,7 @@ def main(
         language=language,
         outcomes=[OutcomeStr(x) for x in outcomes],
         auto_deposit=auto_deposit,
-        min_bond_xdai=xDai(min_bond_xdai),
+        min_bond=xDai(min_bond_xdai),
     )
     logger.info(f"Market created: {market}")
 

@@ -8,15 +8,23 @@ from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
-def test_seer_place_bet(local_web3: Web3, test_keys: APIKeys) -> None:
+def test_seer_place_bet(
+    local_web3: Web3,
+    test_keys: APIKeys,
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+) -> None:
     # We fetch the market with the highest liquidity because we expect quotes to be available for all outcome tokens.
     markets = SeerSubgraphHandler().get_binary_markets(
         filter_by=FilterBy.OPEN, limit=1, sort_by=SortBy.HIGHEST_LIQUIDITY
     )
     market_data_model = markets[0]
-    agent_market = SeerAgentMarket.from_data_model(market_data_model)
+    agent_market = SeerAgentMarket.from_data_model_with_subgraph(
+        market_data_model, seer_subgraph=seer_subgraph_handler_test
+    )
+    agent_market = check_not_none(agent_market)
     amount = USD(1.0)
     with pytest.raises(Exception) as e:
         # We expect an exception from Cow since test accounts don't have enough funds.

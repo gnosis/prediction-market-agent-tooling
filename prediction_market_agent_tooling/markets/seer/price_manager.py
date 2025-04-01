@@ -33,7 +33,8 @@ class PriceManager:
     def _log_track_price_normalization_diff(
         self, old_price: float, normalized_price: float, max_price_diff: float = 0.05
     ) -> None:
-        price_diff_pct = abs(old_price - normalized_price) / old_price
+        # We add max(price,0.01) to avoid division by 0
+        price_diff_pct = abs(old_price - normalized_price) / max(old_price, 0.01)
         if price_diff_pct > max_price_diff:
             logger.info(
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "

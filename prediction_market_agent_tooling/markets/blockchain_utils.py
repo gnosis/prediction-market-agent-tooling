@@ -40,14 +40,23 @@ def store_trades(
 
     # tx_hashes must be list of bytes32 (see Solidity contract).
     # For regular tx hashes that's fine, but for other types of IDs we take the first 32 bytes (orderDigest).
-    tx_hashes = [
-        HexBytes(HexStr(trade.id))[:32] for trade in traded_market.trades if trade.id
-    ]
+    tx_hashes = []
+    for trade in traded_market.trades:
+        if not trade.id:
+            continue
+
+        tx_hash = HexBytes(HexStr(trade.id))
+        if len(tx_hash) > 32:
+            logger.info(
+                f"len(tx_hash) is {len(tx_hash)} should be <= 32, else contract will not accept it."
+            )
+        else:
+            tx_hashes.append(HexBytes(HexStr(trade.id)))
 
     prediction = ContractPrediction(
         publisher=keys.bet_from_address,
         ipfs_hash=ipfs_hash_decoded,
-        tx_hashes=tx_hashes,  # type: ignore[arg-type]
+        tx_hashes=tx_hashes,
         estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
     )
     tx_receipt = OmenAgentResultMappingContract().add_prediction(

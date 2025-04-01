@@ -143,6 +143,12 @@ def get_buy_token_amount_else_raise(
     return Wei(order_quote.quote.buyAmount.root)
 
 
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
+    after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
+)
 def swap_tokens_waiting(
     amount_wei: Wei,
     sell_token: ChecksumAddress,

@@ -1,6 +1,5 @@
 import typing as t
 
-import tenacity
 from eth_pydantic_types import HexStr
 from eth_typing import ChecksumAddress
 from web3 import Web3
@@ -304,13 +303,6 @@ class SeerAgentMarket(AgentMarket):
 
         return order_metadata.uid.root
 
-    @tenacity.retry(
-        stop=tenacity.stop_after_attempt(3),
-        wait=tenacity.wait_fixed(1),
-        after=lambda x: logger.debug(
-            f"seer_sell_outcome_tx failed, {x.attempt_number=}."
-        ),
-    )
     def sell_tokens(
         self,
         outcome: bool,
@@ -325,7 +317,6 @@ class SeerAgentMarket(AgentMarket):
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         api_keys = api_keys if api_keys is not None else APIKeys()
 
-        ########
         token_amount = (
             amount.as_outcome_wei.as_wei
             if isinstance(amount, OutcomeToken)

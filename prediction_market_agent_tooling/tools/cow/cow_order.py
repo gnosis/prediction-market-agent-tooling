@@ -209,7 +209,7 @@ async def swap_tokens_waiting_async(
             OrderStatus.cancelled,
             OrderStatus.expired,
         ):
-            raise ValueError(f"Order {order.uid} failed. {order.url}")
+            raise OrderStatusError(f"Order {order.uid} failed. {order.url}")
 
         if utcnow() - start_time > timeout:
             raise TimeoutError(

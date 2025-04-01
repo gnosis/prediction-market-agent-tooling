@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     OutcomeWei,
+    xDai,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -358,7 +359,7 @@ def seer_create_market_tx(
     outcomes: t.Sequence[OutcomeStr],
     auto_deposit: bool,
     category: str,
-    min_bond_wei: int,
+    min_bond: xDai,
     web3: Web3 | None = None,
 ) -> ChecksumAddress:
     web3 = web3 or SeerMarketFactory.get_web3()  # Default to Gnosis web3.
@@ -399,7 +400,7 @@ def seer_create_market_tx(
         opening_time=opening_time,
         language=language,
         category=category,
-        min_bond=min_bond_wei,
+        min_bond=min_bond,
     )
     tx_receipt = factory_contract.create_categorical_market(
         api_keys=api_keys, params=params, web3=web3

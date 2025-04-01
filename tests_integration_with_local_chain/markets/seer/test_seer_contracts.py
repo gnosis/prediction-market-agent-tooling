@@ -18,7 +18,7 @@ def build_params() -> CreateCategoricalMarketsParams:
         opening_time=DatetimeUTC.now(),
         language="en_US",
         category="misc",
-        min_bond=int(xDai(0.01).as_xdai_wei.value),
+        min_bond=xDai(0.01),
     )
 
 

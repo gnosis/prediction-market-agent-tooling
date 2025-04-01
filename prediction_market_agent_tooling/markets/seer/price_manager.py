@@ -4,6 +4,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
     Probability,
+    Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -86,8 +87,8 @@ class PriceManager:
             )
             return self.get_token_price_from_pools(token=token)
 
-        price = collateral_exchange_amount / float(quote.quote.buyAmount.root)
-        return price
+        price = collateral_exchange_amount.as_wei / Wei(quote.quote.buyAmount.root)
+        return CollateralToken(price)
 
     @staticmethod
     def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:

@@ -47,8 +47,8 @@ from prediction_market_agent_tooling.tools.contract import (
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
-    swap_tokens_waiting,
     get_buy_token_amount_else_raise,
+    swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (

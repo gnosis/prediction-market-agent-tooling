@@ -4,7 +4,6 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
     Probability,
-    Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -15,7 +14,9 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
-from prediction_market_agent_tooling.tools.cow.cow_order import get_quote
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_buy_token_amount_else_raise,
+)
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
@@ -76,20 +77,19 @@ class PriceManager:
         )
 
         try:
-            quote = get_quote(
+            buy_token_amount = get_buy_token_amount_else_raise(
                 amount_wei=collateral_exchange_amount.as_wei,
                 sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
             )
+            price = collateral_exchange_amount.as_wei / buy_token_amount
+            return CollateralToken(price)
 
         except Exception as e:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
             )
             return self.get_token_price_from_pools(token=token)
-
-        price = collateral_exchange_amount.as_wei / Wei(quote.quote.buyAmount.root)
-        return CollateralToken(price)
 
     @staticmethod
     def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:

@@ -1,9 +1,12 @@
+from functools import lru_cache
+
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
     Probability,
+    USD,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -18,6 +21,9 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_buy_token_amount_else_raise,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.tokens.usd import (
+    get_single_token_to_usd_rate,
+)
 
 
 class PriceManager:
@@ -65,6 +71,7 @@ class PriceManager:
         else:
             return None
 
+    @lru_cache
     def get_price_for_token(
         self,
         token: ChecksumAddress,
@@ -117,3 +124,30 @@ class PriceManager:
             else pool.token0Price
         )
         return price
+
+    def get_liquidity_usd_from_market(self) -> USD:
+        sdai_price_usd = get_single_token_to_usd_rate(
+            token_address=self.seer_market.collateral_token_contract_address_checksummed
+        )
+        liquidity_collateral_units = CollateralToken(0)
+        for token in self.seer_market.wrapped_tokens:
+            token_checksummed = Web3.to_checksum_address(token)
+            pool = self.seer_subgraph.get_pool_by_token(
+                token_address=token_checksummed,
+                collateral_address=self.seer_market.collateral_token_contract_address_checksummed,
+            )
+            if not pool:
+                continue
+            # find collateral
+            if self._pool_token0_matches_token(token=token_checksummed, pool=pool):
+                liquidity_collateral_units += (
+                    pool.totalValueLockedToken0 * pool.token0Price
+                    + pool.totalValueLockedToken1
+                )
+            else:
+                liquidity_collateral_units += (
+                    pool.totalValueLockedToken1 * pool.token1Price
+                    + pool.totalValueLockedToken0
+                )
+        liquidity_usd = liquidity_collateral_units * sdai_price_usd
+        return liquidity_usd

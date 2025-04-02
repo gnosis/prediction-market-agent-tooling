@@ -22,7 +22,9 @@ class SeerPool(BaseModel):
     token0: SeerToken
     token1: SeerToken
     token0Price: CollateralToken
+    totalValueLockedToken0: CollateralToken
     token1Price: CollateralToken
+    totalValueLockedToken1: CollateralToken
     sqrtPrice: int
 
 

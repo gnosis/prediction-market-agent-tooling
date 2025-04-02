@@ -14,7 +14,9 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
-from prediction_market_agent_tooling.tools.cow.cow_order import get_quote
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_buy_token_amount_else_raise,
+)
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
@@ -32,7 +34,8 @@ class PriceManager:
     def _log_track_price_normalization_diff(
         self, old_price: float, normalized_price: float, max_price_diff: float = 0.05
     ) -> None:
-        price_diff_pct = abs(old_price - normalized_price) / old_price
+        # We add max(price,0.01) to avoid division by 0
+        price_diff_pct = abs(old_price - normalized_price) / max(old_price, 0.01)
         if price_diff_pct > max_price_diff:
             logger.info(
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
@@ -74,20 +77,19 @@ class PriceManager:
         )
 
         try:
-            quote = get_quote(
+            buy_token_amount = get_buy_token_amount_else_raise(
                 amount_wei=collateral_exchange_amount.as_wei,
                 sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
             )
+            price = collateral_exchange_amount.as_wei / buy_token_amount
+            return CollateralToken(price)
 
         except Exception as e:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
             )
             return self.get_token_price_from_pools(token=token)
-
-        price = collateral_exchange_amount / float(quote.quote.buyAmount.root)
-        return price
 
     @staticmethod
     def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:

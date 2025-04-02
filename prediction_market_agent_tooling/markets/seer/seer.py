@@ -48,7 +48,7 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     swap_tokens_waiting,
-    get_sell_token_amount,
+    get_buy_token_amount_else_raise,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -131,8 +131,9 @@ class SeerAgentMarket(AgentMarket):
         outcome_index = self.get_outcome_index(outcome=outcome)
         wrapped_outcome_token = self.wrapped_tokens[outcome_index]
 
-        sell_amount = get_sell_token_amount(
-            buy_amount=amount.as_outcome_wei.as_wei,
+        # We calculate how much collateral we would get back if we sold `amount` of outcome token.
+        sell_amount = get_buy_token_amount_else_raise(
+            amount_wei=amount.as_outcome_wei.as_wei,
             sell_token=wrapped_outcome_token,
             buy_token=self.collateral_token_contract_address_checksummed,
         )

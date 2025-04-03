@@ -135,9 +135,8 @@ class SeerAgentMarket(AgentMarket):
         wrapped_outcome_token = self.wrapped_tokens[outcome_index]
 
         # We calculate how much collateral we would get back if we sold `amount` of outcome token.
-
         value_outcome_token_in_collateral = get_buy_token_amount_else_raise(
-            amount_wei=amount.as_outcome_wei.as_wei,
+            sell_amount=amount.as_outcome_wei.as_wei,
             sell_token=wrapped_outcome_token,
             buy_token=self.collateral_token_contract_address_checksummed,
         )
@@ -195,8 +194,8 @@ class SeerAgentMarket(AgentMarket):
     ) -> ExistingPosition | None:
         try:
             return self.get_position_else_raise(user_id=user_id, web3=web3)
-        except Exception:
-            logger.info(f"Could not get position for user {user_id}")
+        except Exception as e:
+            logger.warning(f"Could not get position for user {user_id}, exception {e}")
             return None
 
     @staticmethod

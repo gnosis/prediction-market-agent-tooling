@@ -1,7 +1,6 @@
 import typing as t
 
 from cachetools import TTLCache, cached
-from cachetools import TTLCache, cached
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (

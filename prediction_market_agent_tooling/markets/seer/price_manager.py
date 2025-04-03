@@ -22,13 +22,6 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
-"""
-def make_cache_key(
-    token: ChecksumAddress,
-    collateral_exchange_amount: CollateralToken | None = None,
-) -> str:
-"""
-
 
 def _make_cache_key(
     *args: t.Any,

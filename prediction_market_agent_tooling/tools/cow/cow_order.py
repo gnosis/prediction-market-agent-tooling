@@ -127,14 +127,14 @@ def get_quote(
 
 
 def get_buy_token_amount_else_raise(
-    amount_wei: Wei,
+    sell_amount: Wei,
     sell_token: ChecksumAddress,
     buy_token: ChecksumAddress,
     chain: Chain = Chain.GNOSIS,
     env: Envs = "prod",
 ) -> Wei:
     order_quote = get_quote(
-        amount_wei=amount_wei,
+        amount_wei=sell_amount,
         sell_token=sell_token,
         buy_token=buy_token,
         chain=chain,

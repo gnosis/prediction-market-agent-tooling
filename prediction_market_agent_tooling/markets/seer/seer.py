@@ -46,7 +46,10 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_buy_token_amount_else_raise,
+    swap_tokens_waiting,
+)
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
@@ -122,6 +125,23 @@ class SeerAgentMarket(AgentMarket):
         amount_outcome_tokens = bet_amount_in_tokens / price
         return OutcomeToken(amount_outcome_tokens)
 
+    def get_sell_value_of_outcome_token(
+        self, outcome: str, amount: OutcomeToken
+    ) -> CollateralToken:
+        if amount == amount.zero():
+            return CollateralToken.zero()
+
+        outcome_index = self.get_outcome_index(outcome=outcome)
+        wrapped_outcome_token = self.wrapped_tokens[outcome_index]
+
+        # We calculate how much collateral we would get back if we sold `amount` of outcome token.
+        value_outcome_token_in_collateral = get_buy_token_amount_else_raise(
+            sell_amount=amount.as_outcome_wei.as_wei,
+            sell_token=wrapped_outcome_token,
+            buy_token=self.collateral_token_contract_address_checksummed,
+        )
+        return value_outcome_token_in_collateral.as_token
+
     def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
         outcome_translated = SeerOutcomeEnum.from_bool(outcome)
         idx = self.seer_outcomes[outcome_translated]
@@ -134,9 +154,9 @@ class SeerAgentMarket(AgentMarket):
     def get_tiny_bet_amount(self) -> CollateralToken:
         return self.get_in_token(SEER_TINY_BET_AMOUNT)
 
-    def get_position(
+    def get_position_else_raise(
         self, user_id: str, web3: Web3 | None = None
-    ) -> ExistingPosition | None:
+    ) -> ExistingPosition:
         """
         Fetches position from the user in a given market.
         We ignore the INVALID balances since we are only interested in binary outcomes.
@@ -168,6 +188,15 @@ class SeerAgentMarket(AgentMarket):
             amounts_potential=amounts_potential,
             amounts_ot=amounts_ot,
         )
+
+    def get_position(
+        self, user_id: str, web3: Web3 | None = None
+    ) -> ExistingPosition | None:
+        try:
+            return self.get_position_else_raise(user_id=user_id, web3=web3)
+        except Exception as e:
+            logger.warning(f"Could not get position for user {user_id}, exception {e}")
+            return None
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:

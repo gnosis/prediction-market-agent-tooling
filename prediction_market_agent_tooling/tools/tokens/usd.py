@@ -50,7 +50,7 @@ def get_single_token_to_usd_rate(token_address: ChecksumAddress) -> USD:
             .as_token.value
         )
     in_wei = get_buy_token_amount_else_raise(
-        amount_wei=CollateralToken(1).as_wei,
+        sell_amount=CollateralToken(1).as_wei,
         sell_token=token_address,
         buy_token=WRAPPED_XDAI_CONTRACT_ADDRESS,
     )
@@ -72,7 +72,7 @@ def get_single_usd_to_token_rate(token_address: ChecksumAddress) -> CollateralTo
             .as_token.value
         )
     in_wei = get_buy_token_amount_else_raise(
-        amount_wei=CollateralToken(1).as_wei,
+        sell_amount=CollateralToken(1).as_wei,
         sell_token=WRAPPED_XDAI_CONTRACT_ADDRESS,
         buy_token=token_address,
     )

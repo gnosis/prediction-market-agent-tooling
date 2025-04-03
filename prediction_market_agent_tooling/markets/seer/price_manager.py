@@ -1,3 +1,4 @@
+from cachetools import TTLCache, cached
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -65,6 +66,7 @@ class PriceManager:
         else:
             return None
 
+    @cached(TTLCache(maxsize=100, ttl=5 * 60))
     def get_price_for_token(
         self,
         token: ChecksumAddress,
@@ -78,7 +80,7 @@ class PriceManager:
 
         try:
             buy_token_amount = get_buy_token_amount_else_raise(
-                amount_wei=collateral_exchange_amount.as_wei,
+                sell_amount=collateral_exchange_amount.as_wei,
                 sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
             )

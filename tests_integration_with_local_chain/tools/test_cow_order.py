@@ -20,7 +20,7 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
 def test_get_buy_token_amount() -> None:
     sell_amount = CollateralToken(0.1).as_wei
     buy_amount = get_buy_token_amount_else_raise(
-        amount_wei=sell_amount,
+        sell_amount=sell_amount,
         sell_token=WrappedxDaiContract().address,
         buy_token=sDaiContract().address,
     )
@@ -49,7 +49,7 @@ def test_get_buy_vs_sell_token_amount(
         buy_token=buy_token,
     )
     how_much_would_i_get_from_calculated = get_buy_token_amount_else_raise(
-        amount_wei=calculated_how_much_do_i_need_to_sell,
+        sell_amount=calculated_how_much_do_i_need_to_sell,
         sell_token=sell_token,
         buy_token=buy_token,
     )

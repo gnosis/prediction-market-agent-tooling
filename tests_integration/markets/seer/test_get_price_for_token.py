@@ -21,7 +21,7 @@ def test_get_price_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         mock_get_buy_token_amount.return_value = 1
 
         p = PriceManager.build(market_id=market.id)
-        collateral_token = CollateralToken(1)
+        CollateralToken(1)
         other_collateral_token = CollateralToken(2)
         # call it once for filling the cache
         p.get_price_for_token(

@@ -105,3 +105,26 @@ def test_zero_equal() -> None:
     a = CollateralToken(0)
     assert a == 0
     assert not (a != 0)
+
+
+def test_hash() -> None:
+    a = CollateralToken(1)
+    b = CollateralToken(1)
+    c = CollateralToken(2)
+
+    assert hash(a) == hash(b)
+    assert hash(a) != hash(c)
+
+
+def test_set_dict() -> None:
+    a = CollateralToken(1)
+    b = CollateralToken(2)
+
+    d = {a: 1, b: 2}
+    assert d[a] == 1
+    assert d[b] == 2
+
+    s = {a, b, b}
+    assert len(s) == 2
+    assert a in s
+    assert b in s

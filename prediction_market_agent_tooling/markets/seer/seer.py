@@ -27,13 +27,19 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    sDaiContract,
+    WrappedxDaiContract,
+)
 from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     SeerOutcomeEnum,
+    RedeemParams,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
+    GnosisRouter,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -53,6 +59,9 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
+)
+from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
+    auto_withdraw_collateral_token,
 )
 from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
@@ -203,9 +212,74 @@ class SeerAgentMarket(AgentMarket):
         return OmenAgentMarket.get_user_id(api_keys)
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys) -> None:
-        # ToDo - implement me (https://github.com/gnosis/prediction-market-agent-tooling/issues/499)
-        pass
+    def _is_redeemable(market: SeerMarket, balances: list[OutcomeWei]) -> bool:
+        if not market.payout_reported:
+            return False
+        return any(
+            payout and balance > 0
+            for payout, balance in zip(market.payout_numerators, balances)
+        )
+
+    @staticmethod
+    def _get_token_balances(
+        market, address: ChecksumAddress, web3: Web3 | None = None
+    ) -> list[OutcomeWei]:
+        return [
+            OutcomeWei.from_wei(
+                ContractERC20OnGnosisChain(
+                    address=Web3.to_checksum_address(token)
+                ).balanceOf(address, web3=web3)
+            )
+            for token in market.wrapped_tokens
+        ]
+
+    @staticmethod
+    def redeem_winnings(api_keys: APIKeys, auto_withdraw: bool = True) -> None:
+        web3 = RPCConfig().get_web3()
+        subgraph = SeerSubgraphHandler()
+
+        # Get all resolved markets and their balances
+        closed_markets = subgraph.get_binary_markets(
+            filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST
+        )
+        # ToDO - Filter the markets above by comparing these with the Cow orders the user has completed, then
+        #  match on wrapped_token.
+
+        market_balances = {
+            market.id: SeerAgentMarket._get_token_balances(
+                market, api_keys.bet_from_address, web3
+            )
+            for market in closed_markets
+        }
+
+        # Filter markets that can be redeemed
+        markets_to_redeem = [
+            market
+            for market in closed_markets
+            if SeerAgentMarket._is_redeemable(market, market_balances[market.id])
+        ]
+
+        # Process redemptions
+        gnosis_router = GnosisRouter()
+        for market in markets_to_redeem:
+            params = RedeemParams(
+                market=ChecksumAddress(HexStr(market.id)),
+                outcomeIndexes=list(range(len(market.payout_numerators))),
+                amounts=market_balances[market.id],
+            )
+            gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
+
+        if auto_withdraw:
+            wxdai_balance = WrappedxDaiContract().balanceOf(
+                api_keys.bet_from_address, web3=web3
+            )
+            logger.info(f"Converting {wxdai_balance} wxDai into sDAI.")
+            auto_withdraw_collateral_token(
+                collateral_token_contract=sDaiContract(),
+                amount_wei=wxdai_balance,
+                api_keys=api_keys,
+                web3=web3,
+            )
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

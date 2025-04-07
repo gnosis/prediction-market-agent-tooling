@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     OutcomeStr,
     Web3Wei,
+    OutcomeWei,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
@@ -186,3 +187,10 @@ class SeerMarket(BaseModel):
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
         return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
+
+
+class RedeemParams(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    market: ChecksumAddress
+    outcome_indices: list[int] = Field(alias="outcomeIndexes")
+    amounts: list[OutcomeWei]

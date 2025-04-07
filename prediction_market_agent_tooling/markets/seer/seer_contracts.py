@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     TxReceipt,
     xDai,
 )
+from prediction_market_agent_tooling.markets.seer.data_models import RedeemParams
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
 )
@@ -75,6 +76,34 @@ class SeerMarketFactory(ContractOnGnosisChain):
         receipt_tx = self.send(
             api_keys=api_keys,
             function_name="createCategoricalMarket",
+            function_params=[params.model_dump(by_alias=True)],
+            web3=web3,
+        )
+        return receipt_tx
+
+
+class GnosisRouter(ContractOnGnosisChain):
+    # https://gnosisscan.io/address/0x83183da839ce8228e31ae41222ead9edbb5cdcf1#code.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../../abis/seer_gnosis_router.abi.json",
+        )
+    )
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0xeC9048b59b3467415b1a38F63416407eA0c70fB8"
+    )
+
+    def redeem_to_base(
+        self,
+        api_keys: APIKeys,
+        params: RedeemParams,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        # ToDo - OutcomeWei can be cast to uint256?
+        receipt_tx = self.send(
+            api_keys=api_keys,
+            function_name="redeemToBase",
             function_params=[params.model_dump(by_alias=True)],
             web3=web3,
         )

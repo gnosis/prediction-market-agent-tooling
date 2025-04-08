@@ -100,11 +100,13 @@ class GnosisRouter(ContractOnGnosisChain):
         params: RedeemParams,
         web3: Web3 | None = None,
     ) -> TxReceipt:
-        # ToDo - OutcomeWei can be cast to uint256?
+        params_dict = params.model_dump(by_alias=True)
+        # We explicity set amounts since OutcomeWei gets serialized as dict.
+        params_dict["amounts"] = [amount.value for amount in params.amounts]
         receipt_tx = self.send(
             api_keys=api_keys,
             function_name="redeemToBase",
-            function_params=[params.model_dump(by_alias=True)],
+            function_params=params_dict,
             web3=web3,
         )
         return receipt_tx

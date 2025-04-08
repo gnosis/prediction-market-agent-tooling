@@ -234,7 +234,7 @@ def get_trades_by_owner(
 ) -> list[MinimalisticToken]:
     # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
     response = httpx.get(
-        f"https://api.cow.fi/xdai/api/v1/trades?owner={owner}",
+        f"https://api.cow.fi/xdai/api/v1/trades",
         params={"owner": owner},
     )
     response.raise_for_status()

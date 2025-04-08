@@ -215,7 +215,7 @@ class SeerAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def _get_token_balances(
+    def _get_outcome_token_balances(
         market: SeerMarket, address: ChecksumAddress, web3: Web3 | None = None
     ) -> list[OutcomeWei]:
         return [
@@ -228,7 +228,7 @@ class SeerAgentMarket(AgentMarket):
         ]
 
     @staticmethod
-    def _filter_markets_in_trades(
+    def _filter_markets_contained_in_trades(
         api_keys: APIKeys,
         markets: list[SeerMarket],
     ) -> list[SeerMarket]:
@@ -257,29 +257,26 @@ class SeerAgentMarket(AgentMarket):
         web3 = RPCConfig().get_web3()
         subgraph = SeerSubgraphHandler()
 
-        # Get all resolved markets and their balances
         closed_markets = subgraph.get_binary_markets(
             filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST
         )
-        filtered_markets = SeerAgentMarket._filter_markets_in_trades(
+        filtered_markets = SeerAgentMarket._filter_markets_contained_in_trades(
             api_keys, closed_markets
         )
 
         market_balances = {
-            market.id: SeerAgentMarket._get_token_balances(
+            market.id: SeerAgentMarket._get_outcome_token_balances(
                 market, api_keys.bet_from_address, web3
             )
             for market in filtered_markets
         }
 
-        # Filter markets that can be redeemed
         markets_to_redeem = [
             market
             for market in filtered_markets
             if SeerAgentMarket._is_redeemable(market, market_balances[market.id])
         ]
 
-        # Process redemptions
         gnosis_router = GnosisRouter()
         for market in markets_to_redeem:
             params = RedeemParams(

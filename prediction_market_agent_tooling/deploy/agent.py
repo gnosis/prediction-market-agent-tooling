@@ -656,7 +656,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                             market.get_outcome_str_from_bool(trade.outcome)
                         ]
                         amount_to_sell: USD | OutcomeToken
-                        if current_position_value_usd < trade.amount:
+                        if current_position_value_usd <= trade.amount:
                             logger.warning(
                                 f"Current value of position {trade.outcome=}, {current_position_value_usd=} is less than the desired selling amount {trade.amount=}. Selling all."
                             )

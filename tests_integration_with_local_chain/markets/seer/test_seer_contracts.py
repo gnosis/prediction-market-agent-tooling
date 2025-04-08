@@ -1,11 +1,11 @@
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import OutcomeStr, xDai, OutcomeWei
+from prediction_market_agent_tooling.gtypes import OutcomeStr, OutcomeWei, xDai
 from prediction_market_agent_tooling.markets.seer.data_models import RedeemParams
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
-    SeerMarketFactory,
     GnosisRouter,
+    SeerMarketFactory,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
@@ -44,7 +44,7 @@ def test_redeem_base(local_web3: Web3, test_keys: APIKeys) -> None:
         market=Web3.to_checksum_address(
             "0xa4b71ac2d0e17e1242e2d825e621acd18f0054ea"
         ),  # example closed YES/NO market
-        outcomeIndexes=[0, 1, 2],
+        outcome_indices=[0, 1, 2],
         amounts=[OutcomeWei(int(1e18)), OutcomeWei(int(1e18)), OutcomeWei(int(1e18))],
     )
     GnosisRouter().redeem_to_base(test_keys, params=params, web3=local_web3)

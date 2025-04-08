@@ -28,14 +28,14 @@ from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.seer.data_models import (
+    RedeemParams,
     SeerMarket,
     SeerOutcomeEnum,
-    RedeemParams,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
-    SeerMarketFactory,
     GnosisRouter,
+    SeerMarketFactory,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -50,8 +50,8 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_buy_token_amount_else_raise,
-    swap_tokens_waiting,
     get_trades_by_owner,
+    swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -216,7 +216,7 @@ class SeerAgentMarket(AgentMarket):
 
     @staticmethod
     def _get_token_balances(
-        market, address: ChecksumAddress, web3: Web3 | None = None
+        market: SeerMarket, address: ChecksumAddress, web3: Web3 | None = None
     ) -> list[OutcomeWei]:
         return [
             OutcomeWei.from_wei(
@@ -283,8 +283,8 @@ class SeerAgentMarket(AgentMarket):
         gnosis_router = GnosisRouter()
         for market in markets_to_redeem:
             params = RedeemParams(
-                market=ChecksumAddress(HexStr(market.id)),
-                outcomeIndexes=list(range(len(market.payout_numerators))),
+                market=Web3.to_checksum_address(market.id),
+                outcome_indices=list(range(len(market.payout_numerators))),
                 amounts=market_balances[market.id],
             )
             gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)

@@ -13,8 +13,8 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     OutcomeStr,
-    Web3Wei,
     OutcomeWei,
+    Web3Wei,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
@@ -194,3 +194,6 @@ class RedeemParams(BaseModel):
     market: ChecksumAddress
     outcome_indices: list[int] = Field(alias="outcomeIndexes")
     amounts: list[OutcomeWei]
+
+
+ADDRESS_ZERO

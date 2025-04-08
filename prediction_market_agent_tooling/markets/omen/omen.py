@@ -86,7 +86,10 @@ from prediction_market_agent_tooling.tools.utils import (
     calculate_sell_amount_in_collateral,
     check_not_none,
 )
-from prediction_market_agent_tooling.tools.web3_utils import get_receipt_block_timestamp
+from prediction_market_agent_tooling.tools.web3_utils import (
+    get_receipt_block_timestamp,
+    is_valid_wei,
+)
 
 OMEN_DEFAULT_REALITIO_BOND_VALUE = xDai(0.01)
 OMEN_TINY_BET_AMOUNT = USD(0.00001)
@@ -336,6 +339,11 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
+        if not all(is_valid_wei(number.value) for number in model.outcomeTokenAmounts):
+            raise ValueError(
+                f"Market {model.url} has invalid {model.outcomeTokenAmounts=}."
+            )
+
         return OmenAgentMarket(
             id=model.id,
             question=model.title,

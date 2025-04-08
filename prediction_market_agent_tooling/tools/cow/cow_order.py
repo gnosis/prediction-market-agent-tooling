@@ -23,6 +23,7 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderStatus,
     TokenAmount,
 )
+from cowdao_cowpy.subgraph.client import BaseModel
 from eth_account.signers.local import LocalAccount
 from tenacity import retry_if_not_exception_type, stop_after_attempt, wait_fixed
 from web3 import Web3
@@ -32,6 +33,11 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.utils import utcnow
+
+
+class MinimalisticToken(BaseModel):
+    sellToken: ChecksumAddress
+    buyToken: ChecksumAddress
 
 
 class OrderStatusError(Exception):
@@ -221,3 +227,15 @@ async def swap_tokens_waiting_async(
         )
 
         await asyncio.sleep(3.14)
+
+
+def get_trades_by_owner(
+    owner: ChecksumAddress,
+) -> list[MinimalisticToken]:
+    # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
+    response = httpx.get(
+        f"https://api.cow.fi/xdai/api/v1/trades?owner={owner}",
+        params={"owner": owner},
+    )
+    response.raise_for_status()
+    return [MinimalisticToken.model_validate(i) for i in response.json()]

@@ -27,10 +27,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    sDaiContract,
-    WrappedxDaiContract,
-)
 from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     SeerOutcomeEnum,
@@ -55,13 +51,11 @@ from prediction_market_agent_tooling.tools.contract import (
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_buy_token_amount_else_raise,
     swap_tokens_waiting,
+    get_trades_by_owner,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
-)
-from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
-    auto_withdraw_collateral_token,
 )
 from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
@@ -234,6 +228,31 @@ class SeerAgentMarket(AgentMarket):
         ]
 
     @staticmethod
+    def _filter_markets_in_trades(
+        api_keys: APIKeys,
+        markets: list[SeerMarket],
+    ) -> list[SeerMarket]:
+        """
+        We filter the markets using previous trades by the user so that we don't have to process all Seer markets.
+        """
+        trades_by_user = get_trades_by_owner(api_keys.bet_from_address)
+
+        traded_tokens = {t.buyToken for t in trades_by_user}.union(
+            [t.sellToken for t in trades_by_user]
+        )
+        filtered_markets = []
+        for market in markets:
+            if any(
+                [
+                    Web3.to_checksum_address(wrapped_token) in traded_tokens
+                    for wrapped_token in market.wrapped_tokens
+                ]
+            ):
+                filtered_markets.append(market)
+
+        return filtered_markets
+
+    @staticmethod
     def redeem_winnings(api_keys: APIKeys, auto_withdraw: bool = True) -> None:
         web3 = RPCConfig().get_web3()
         subgraph = SeerSubgraphHandler()
@@ -242,20 +261,21 @@ class SeerAgentMarket(AgentMarket):
         closed_markets = subgraph.get_binary_markets(
             filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST
         )
-        # ToDO - Filter the markets above by comparing these with the Cow orders the user has completed, then
-        #  match on wrapped_token.
+        filtered_markets = SeerAgentMarket._filter_markets_in_trades(
+            api_keys, closed_markets
+        )
 
         market_balances = {
             market.id: SeerAgentMarket._get_token_balances(
                 market, api_keys.bet_from_address, web3
             )
-            for market in closed_markets
+            for market in filtered_markets
         }
 
         # Filter markets that can be redeemed
         markets_to_redeem = [
             market
-            for market in closed_markets
+            for market in filtered_markets
             if SeerAgentMarket._is_redeemable(market, market_balances[market.id])
         ]
 
@@ -269,17 +289,7 @@ class SeerAgentMarket(AgentMarket):
             )
             gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
 
-        if auto_withdraw:
-            wxdai_balance = WrappedxDaiContract().balanceOf(
-                api_keys.bet_from_address, web3=web3
-            )
-            logger.info(f"Converting {wxdai_balance} wxDai into sDAI.")
-            auto_withdraw_collateral_token(
-                collateral_token_contract=sDaiContract(),
-                amount_wei=wxdai_balance,
-                api_keys=api_keys,
-                web3=web3,
-            )
+        # Auto-withdraw not implemented to reduce complexity (conversion already occurs before placing bets)
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

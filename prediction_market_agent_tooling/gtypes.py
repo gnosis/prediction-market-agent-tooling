@@ -34,7 +34,7 @@ class CollateralToken(_GenericValue[int | float | str | Decimal, float], parser=
 
     @property
     def as_wei(self) -> "Wei":
-        return Wei(Web3.to_wei(self.value, "ether"))
+        return Wei(to_wei_inc_negative(self.value))
 
 
 class OutcomeToken(_GenericValue[int | float | str | Decimal, float], parser=float):
@@ -51,7 +51,7 @@ class OutcomeToken(_GenericValue[int | float | str | Decimal, float], parser=flo
 
     @property
     def as_outcome_wei(self) -> "OutcomeWei":
-        return OutcomeWei(Web3.to_wei(self.value, "ether"))
+        return OutcomeWei(to_wei_inc_negative(self.value))
 
     @property
     def as_token(self) -> CollateralToken:
@@ -77,7 +77,7 @@ class xDai(_GenericValue[int | float | str | Decimal, float], parser=float):
 
     @property
     def as_xdai_wei(self) -> "xDaiWei":
-        return xDaiWei(Web3.to_wei(self.value, "ether"))
+        return xDaiWei(to_wei_inc_negative(self.value))
 
 
 class Mana(_GenericValue[int | float | str | Decimal, float], parser=float):
@@ -93,7 +93,7 @@ class Wei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
 
     @property
     def as_token(self) -> CollateralToken:
-        return CollateralToken(Web3.from_wei(self.value, "ether"))
+        return CollateralToken(from_wei_inc_negative(self.value))
 
 
 class OutcomeWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
@@ -107,7 +107,7 @@ class OutcomeWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
 
     @property
     def as_outcome_token(self) -> OutcomeToken:
-        return OutcomeToken(Web3.from_wei(self.value, "ether"))
+        return OutcomeToken(from_wei_inc_negative(self.value))
 
     @property
     def as_wei(self) -> Wei:
@@ -122,7 +122,7 @@ class xDaiWei(_GenericValue[Web3Wei | int | str, Web3Wei], parser=int):
 
     @property
     def as_xdai(self) -> xDai:
-        return xDai(Web3.from_wei(self.value, "ether"))
+        return xDai(from_wei_inc_negative(self.value))
 
     @property
     def as_wei(self) -> Wei:
@@ -162,3 +162,19 @@ def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:
 def int_to_hexbytes(v: int) -> HexBytes:
     # Example: 1 -> HexBytes("0x0000000000000000000000000000000000000000000000000000000000000001"). # web3-private-key-ok
     return HexBytes.fromhex(format(v, "064x"))
+
+
+def to_wei_inc_negative(value: int | float | str | Decimal) -> Web3Wei:
+    """
+    Handles conversion of a value to Wei, taking into account negative values.
+    """
+    return Web3Wei(
+        Web3.to_wei(abs(Decimal(value)), "ether") * (-1 if Decimal(value) < 0 else 1)
+    )
+
+
+def from_wei_inc_negative(value: int) -> int | Decimal:
+    """
+    Handles conversion from Wei to a float value, taking into account negative values.
+    """
+    return Web3.from_wei(abs(value), "ether") * (-1 if value < 0 else 1)

@@ -30,7 +30,7 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
 )
-from prediction_market_agent_tooling.gtypes import xDai
+from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -499,7 +499,7 @@ class DeployablePredictionAgent(DeployableAgent):
 
         for market_idx, market in enumerate(available_markets):
             logger.info(
-                f"Going to process market {market_idx+1} / {len(available_markets)}."
+                f"Going to process market {market.url}: {market_idx+1} / {len(available_markets)}."
             )
             self.before_process_market(market_type, market)
             processed_market = self.process_market(market_type, market)
@@ -648,19 +648,27 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                         )
                     case TradeType.SELL:
                         # Get actual value of the position we are going to sell, and if it's less than we wanted to sell, simply sell all of it.
-                        current_position_value = check_not_none(
+                        current_position = check_not_none(
                             market.get_position(user_id),
                             "Should exists if we are going to sell outcomes.",
-                        ).amounts_current[
+                        )
+                        current_position_value_usd = current_position.amounts_current[
                             market.get_outcome_str_from_bool(trade.outcome)
                         ]
-                        if current_position_value < trade.amount:
+                        amount_to_sell: USD | OutcomeToken
+                        if current_position_value_usd <= trade.amount:
                             logger.warning(
-                                f"Current value of position {trade.outcome=}, {current_position_value=} is less than the desired selling amount {trade.amount=}. Selling all."
+                                f"Current value of position {trade.outcome=}, {current_position_value_usd=} is less than the desired selling amount {trade.amount=}. Selling all."
                             )
+                            # In case the agent asked to sell too much, provide the amount to sell as all outcome tokens, instead of in USD, to minimze fx fluctuations when selling.
+                            amount_to_sell = current_position.amounts_ot[
+                                market.get_outcome_str_from_bool(trade.outcome)
+                            ]
+                        else:
+                            amount_to_sell = trade.amount
                         id = market.sell_tokens(
                             outcome=trade.outcome,
-                            amount=min(trade.amount, current_position_value),
+                            amount=amount_to_sell,
                         )
                     case _:
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")

@@ -107,6 +107,13 @@ def test_zero_equal() -> None:
     assert not (a != 0)
 
 
+def test_negative_values() -> None:
+    original_value = CollateralToken(-1)
+    assert original_value.value == -1
+    as_wei = original_value.as_wei
+    assert as_wei.as_token == original_value
+
+
 def test_hash() -> None:
     a = CollateralToken(1)
     b = CollateralToken(1)

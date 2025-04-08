@@ -231,6 +231,9 @@ class _GenericValue(
     def __bool__(self) -> bool:
         return bool(self.value)
 
+    def __hash__(self) -> int:  # type: ignore[override]
+        return hash(tuple(sorted(self.items())))
+
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: t.Any, handler: GetCoreSchemaHandler

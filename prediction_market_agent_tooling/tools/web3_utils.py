@@ -6,6 +6,7 @@ import base58
 import tenacity
 from eth_account import Account
 from eth_typing import URI
+from eth_utils.currency import MAX_WEI, MIN_WEI
 from pydantic.types import SecretStr
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
@@ -21,6 +22,7 @@ from prediction_market_agent_tooling.gtypes import (
     HexStr,
     IPFSCIDVersion0,
     PrivateKey,
+    Web3Wei,
     private_key_type,
     xDai,
     xDaiWei,
@@ -354,3 +356,7 @@ def get_receipt_block_timestamp(receipt_tx: TxReceipt, web3: Web3) -> int:
     block = web3.eth.get_block(block_number)
     block_timestamp: int = block["timestamp"]
     return block_timestamp
+
+
+def is_valid_wei(value: Web3Wei) -> bool:
+    return MIN_WEI <= value <= MAX_WEI

@@ -257,12 +257,16 @@ class SeerAgentMarket(AgentMarket):
 
         gnosis_router = GnosisRouter()
         for market in markets_to_redeem:
-            params = RedeemParams(
-                market=Web3.to_checksum_address(market.id),
-                outcome_indices=list(range(len(market.payout_numerators))),
-                amounts=market_balances[market.id],
-            )
-            gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
+            try:
+                params = RedeemParams(
+                    market=Web3.to_checksum_address(market.id),
+                    outcome_indices=list(range(len(market.payout_numerators))),
+                    amounts=market_balances[market.id],
+                )
+                gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
+                logger.info(f"Redeemed market {market.id.hex()}")
+            except Exception as e:
+                logger.warning(f"Failed to redeem market {market.id.hex()}, {e}")
 
         # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 

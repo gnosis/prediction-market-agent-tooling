@@ -206,28 +206,6 @@ class SeerAgentMarket(AgentMarket):
         return OmenAgentMarket.get_user_id(api_keys)
 
     @staticmethod
-    def _is_redeemable(market: SeerMarket, balances: list[OutcomeWei]) -> bool:
-        if not market.payout_reported:
-            return False
-        return any(
-            payout and balance > 0
-            for payout, balance in zip(market.payout_numerators, balances)
-        )
-
-    @staticmethod
-    def _get_outcome_token_balances(
-        market: SeerMarket, address: ChecksumAddress, web3: Web3 | None = None
-    ) -> list[OutcomeWei]:
-        return [
-            OutcomeWei.from_wei(
-                ContractERC20OnGnosisChain(
-                    address=Web3.to_checksum_address(token)
-                ).balanceOf(address, web3=web3)
-            )
-            for token in market.wrapped_tokens
-        ]
-
-    @staticmethod
     def _filter_markets_contained_in_trades(
         api_keys: APIKeys,
         markets: list[SeerMarket],
@@ -265,8 +243,8 @@ class SeerAgentMarket(AgentMarket):
         )
 
         market_balances = {
-            market.id: SeerAgentMarket._get_outcome_token_balances(
-                market, api_keys.bet_from_address, web3
+            market.id: market.get_outcome_token_balances(
+                api_keys.bet_from_address, web3
             )
             for market in filtered_markets
         }
@@ -274,7 +252,7 @@ class SeerAgentMarket(AgentMarket):
         markets_to_redeem = [
             market
             for market in filtered_markets
-            if SeerAgentMarket._is_redeemable(market, market_balances[market.id])
+            if market.is_redeemable(owner=api_keys.bet_from_address, web3=web3)
         ]
 
         gnosis_router = GnosisRouter()

@@ -1,6 +1,6 @@
 import typing as t
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -17,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
     xDaiWei,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     Resolution,
@@ -35,6 +36,7 @@ from prediction_market_agent_tooling.tools.utils import (
     should_not_happen,
     utcnow,
 )
+from prediction_market_agent_tooling.tools.web3_utils import is_valid_wei
 
 OMEN_TRUE_OUTCOME = OutcomeStr("Yes")
 OMEN_FALSE_OUTCOME = OutcomeStr("No")
@@ -234,6 +236,27 @@ class OmenMarket(BaseModel):
     creationTimestamp: int
     condition: Condition
     question: Question
+
+    @model_validator(mode="after")
+    def _model_validator(self) -> "OmenMarket":
+        if not all(is_valid_wei(number.value) for number in self.outcomeTokenAmounts):
+            # Sometimes we receive markets with outcomeTokenAmounts as `model.outcomeTokenAmounts=[OutcomeWei(24662799387878572), OutcomeWei(-24750000000000000)]`, which should be impossible.
+            # Current huntch is that it's a weird transitional status.
+            # Try to set them to zeros if market isn't open anymore (that's expected behaviour in such case),
+            # otherwise raise an error to investigate further.
+            if not self.is_open:
+                logger.warning(
+                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}, but isn't open anymore. Setting them to zeros."
+                )
+                self.outcomeTokenAmounts = [OutcomeWei(0) for _ in self.outcomes]
+                self.outcomeTokenMarginalPrices = None
+
+            else:
+                raise ValueError(
+                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}: {self=}"
+                )
+
+        return self
 
     @property
     def openingTimestamp(self) -> int:

@@ -101,7 +101,7 @@ class GnosisRouter(ContractOnGnosisChain):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         params_dict = params.model_dump(by_alias=True)
-        # We explicity set amounts since OutcomeWei gets serialized as dict.
+        # We explicity set amounts since OutcomeWei gets serialized as dict
         params_dict["amounts"] = [amount.value for amount in params.amounts]
         receipt_tx = self.send(
             api_keys=api_keys,

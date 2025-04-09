@@ -286,7 +286,7 @@ class SeerAgentMarket(AgentMarket):
             )
             gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
 
-        # GnosisRouter sends wxDAI to user, so no auto-withdraw needed.
+        # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

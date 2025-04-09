@@ -194,6 +194,3 @@ class RedeemParams(BaseModel):
     market: ChecksumAddress
     outcome_indices: list[int] = Field(alias="outcomeIndexes")
     amounts: list[OutcomeWei]
-
-
-ADDRESS_ZERO

@@ -229,6 +229,11 @@ async def swap_tokens_waiting_async(
         await asyncio.sleep(3.14)
 
 
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    after=lambda x: logger.debug(f"get_trades_by_owner failed, {x.attempt_number=}."),
+)
 def get_trades_by_owner(
     owner: ChecksumAddress,
 ) -> list[MinimalisticToken]:

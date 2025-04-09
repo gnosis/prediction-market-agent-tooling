@@ -253,7 +253,7 @@ class SeerAgentMarket(AgentMarket):
         return filtered_markets
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys, auto_withdraw: bool = True) -> None:
+    def redeem_winnings(api_keys: APIKeys) -> None:
         web3 = RPCConfig().get_web3()
         subgraph = SeerSubgraphHandler()
 
@@ -286,7 +286,7 @@ class SeerAgentMarket(AgentMarket):
             )
             gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
 
-        # Auto-withdraw not implemented to reduce complexity (conversion already occurs before placing bets)
+        # GnosisRouter sends wxDAI to user, so no auto-withdraw needed.
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

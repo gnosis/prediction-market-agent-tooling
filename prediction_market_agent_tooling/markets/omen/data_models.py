@@ -244,16 +244,16 @@ class OmenMarket(BaseModel):
             # Current huntch is that it's a weird transitional status.
             # Try to set them to zeros if market isn't open anymore (that's expected behaviour in such case),
             # otherwise raise an error to investigate further.
-            if not self.is_open:
+            if not self.is_open or not self.liquidityParameter:
                 logger.warning(
-                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}, but isn't open anymore. Setting them to zeros."
+                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}, but isn't open anymore or doesn't have any liquidity ({self.is_open=}, {self.liquidityParameter=}). Setting them to zeros."
                 )
                 self.outcomeTokenAmounts = [OutcomeWei(0) for _ in self.outcomes]
                 self.outcomeTokenMarginalPrices = None
 
             else:
                 raise ValueError(
-                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}: {self=}"
+                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}: {self.model_dump()=}"
                 )
 
         return self

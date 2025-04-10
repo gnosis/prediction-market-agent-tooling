@@ -266,7 +266,7 @@ class SeerAgentMarket(AgentMarket):
                 gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
                 logger.info(f"Redeemed market {market.id.hex()}")
             except Exception as e:
-                logger.warning(f"Failed to redeem market {market.id.hex()}, {e}")
+                logger.error(f"Failed to redeem market {market.id.hex()}, {e}")
 
         # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 

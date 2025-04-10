@@ -28,11 +28,13 @@ from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.seer.data_models import (
+    RedeemParams,
     SeerMarket,
     SeerOutcomeEnum,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
+    GnosisRouter,
     SeerMarketFactory,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
@@ -48,6 +50,7 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_buy_token_amount_else_raise,
+    get_trades_by_owner,
     swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
@@ -203,9 +206,69 @@ class SeerAgentMarket(AgentMarket):
         return OmenAgentMarket.get_user_id(api_keys)
 
     @staticmethod
+    def _filter_markets_contained_in_trades(
+        api_keys: APIKeys,
+        markets: list[SeerMarket],
+    ) -> list[SeerMarket]:
+        """
+        We filter the markets using previous trades by the user so that we don't have to process all Seer markets.
+        """
+        trades_by_user = get_trades_by_owner(api_keys.bet_from_address)
+
+        traded_tokens = {t.buyToken for t in trades_by_user}.union(
+            [t.sellToken for t in trades_by_user]
+        )
+        filtered_markets = []
+        for market in markets:
+            if any(
+                [
+                    Web3.to_checksum_address(wrapped_token) in traded_tokens
+                    for wrapped_token in market.wrapped_tokens
+                ]
+            ):
+                filtered_markets.append(market)
+
+        return filtered_markets
+
+    @staticmethod
     def redeem_winnings(api_keys: APIKeys) -> None:
-        # ToDo - implement me (https://github.com/gnosis/prediction-market-agent-tooling/issues/499)
-        pass
+        web3 = RPCConfig().get_web3()
+        subgraph = SeerSubgraphHandler()
+
+        closed_markets = subgraph.get_binary_markets(
+            filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST
+        )
+        filtered_markets = SeerAgentMarket._filter_markets_contained_in_trades(
+            api_keys, closed_markets
+        )
+
+        market_balances = {
+            market.id: market.get_outcome_token_balances(
+                api_keys.bet_from_address, web3
+            )
+            for market in filtered_markets
+        }
+
+        markets_to_redeem = [
+            market
+            for market in filtered_markets
+            if market.is_redeemable(owner=api_keys.bet_from_address, web3=web3)
+        ]
+
+        gnosis_router = GnosisRouter()
+        for market in markets_to_redeem:
+            try:
+                params = RedeemParams(
+                    market=Web3.to_checksum_address(market.id),
+                    outcome_indices=list(range(len(market.payout_numerators))),
+                    amounts=market_balances[market.id],
+                )
+                gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
+                logger.info(f"Redeemed market {market.id.hex()}")
+            except Exception as e:
+                logger.error(f"Failed to redeem market {market.id.hex()}, {e}")
+
+        # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

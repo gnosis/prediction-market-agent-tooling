@@ -13,12 +13,14 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     OutcomeStr,
+    OutcomeWei,
     Web3Wei,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerParentMarket,
 )
+from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
 
@@ -149,6 +151,27 @@ class SeerMarket(BaseModel):
             return Resolution.YES
         return Resolution.NO
 
+    def is_redeemable(self, owner: ChecksumAddress, web3: Web3 | None = None) -> bool:
+        token_balances = self.get_outcome_token_balances(owner, web3)
+        if not self.payout_reported:
+            return False
+        return any(
+            payout and balance > 0
+            for payout, balance in zip(self.payout_numerators, token_balances)
+        )
+
+    def get_outcome_token_balances(
+        self, owner: ChecksumAddress, web3: Web3 | None = None
+    ) -> list[OutcomeWei]:
+        return [
+            OutcomeWei.from_wei(
+                ContractERC20OnGnosisChain(
+                    address=Web3.to_checksum_address(token)
+                ).balanceOf(owner, web3=web3)
+            )
+            for token in self.wrapped_tokens
+        ]
+
     @property
     def is_binary(self) -> bool:
         # 3 because Seer has also third, `Invalid` outcome.
@@ -186,3 +209,10 @@ class SeerMarket(BaseModel):
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
         return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
+
+
+class RedeemParams(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    market: ChecksumAddress
+    outcome_indices: list[int] = Field(alias="outcomeIndexes")
+    amounts: list[OutcomeWei]

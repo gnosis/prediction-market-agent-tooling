@@ -239,22 +239,18 @@ class OmenMarket(BaseModel):
 
     @model_validator(mode="after")
     def _model_validator(self) -> "OmenMarket":
-        if not all(is_valid_wei(number.value) for number in self.outcomeTokenAmounts):
-            # Sometimes we receive markets with outcomeTokenAmounts as `model.outcomeTokenAmounts=[OutcomeWei(24662799387878572), OutcomeWei(-24750000000000000)]`, which should be impossible.
-            # Current huntch is that it's a weird transitional status.
-            # Try to set them to zeros if market isn't open anymore (that's expected behaviour in such case),
-            # otherwise raise an error to investigate further.
-            if not self.is_open or not self.liquidityParameter:
-                logger.warning(
-                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}, but isn't open anymore or doesn't have any liquidity ({self.is_open=}, {self.liquidityParameter=}). Setting them to zeros."
-                )
-                self.outcomeTokenAmounts = [OutcomeWei(0) for _ in self.outcomes]
-                self.outcomeTokenMarginalPrices = None
-
-            else:
-                raise ValueError(
-                    f"Market {self.url} has invalid {self.outcomeTokenAmounts=}: {self.model_dump()=}"
-                )
+        if any(number < 0 for number in self.outcomeTokenAmounts):
+            # Sometimes we receive markets with outcomeTokenAmounts as `model.outcomeTokenAmounts=[OutcomeWei(24662799387878572), OutcomeWei(-24750000000000000)]`,
+            # which should be impossible.
+            # Current huntch is that it's a weird transitional status or bug after withdrawing liquidity.
+            # Because so far, it always happened on markets with withdrawn liquidity,
+            # so we just set them to zeros, as we expect them to be.
+            logger.warning(
+                f"Market {self.url} has invalid {self.outcomeTokenAmounts=}, but isn't open anymore or doesn't have any liquidity ({self.is_open=}, {self.liquidityParameter=}). Setting them to zeros."
+            )
+            self.outcomeTokenAmounts = [OutcomeWei(0) for _ in self.outcomes]
+            self.outcomeTokenMarginalPrices = None
+            self.liquidityParameter = Wei(0)
 
         return self
 

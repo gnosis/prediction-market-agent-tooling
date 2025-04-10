@@ -115,6 +115,7 @@ def have_bet_on_market_since(
                 for b in OmenSubgraphHandler().get_bets(
                     better_address=keys.bet_from_address,
                     start_time=start_time,
+                    market_id=market.market_maker_contract_address_checksummed,
                 )
             )
             if isinstance(market, OmenAgentMarket)

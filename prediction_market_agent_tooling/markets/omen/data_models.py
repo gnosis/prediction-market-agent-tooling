@@ -246,7 +246,7 @@ class OmenMarket(BaseModel):
             # Because so far, it always happened on markets with withdrawn liquidity,
             # so we just set them to zeros, as we expect them to be.
             logger.warning(
-                f"Market {self.url} has invalid {self.outcomeTokenAmounts=}, but isn't open anymore or doesn't have any liquidity ({self.is_open=}, {self.liquidityParameter=}). Setting them to zeros."
+                f"Market {self.url} has invalid {self.outcomeTokenAmounts=}. Setting them to zeros."
             )
             self.outcomeTokenAmounts = [OutcomeWei(0) for _ in self.outcomes]
             self.outcomeTokenMarginalPrices = None

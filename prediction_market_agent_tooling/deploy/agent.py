@@ -439,7 +439,9 @@ class DeployablePredictionAgent(DeployableAgent):
         verify_market: bool = True,
     ) -> ProcessedMarket | None:
         self.update_langfuse_trace_by_market(market_type, market)
-        logger.info(f"Processing market {market.question=} from {market.url=}.")
+        logger.info(
+            f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
+        )
 
         answer: ProbabilisticAnswer | None
         if verify_market and not self.verify_market(market_type, market):

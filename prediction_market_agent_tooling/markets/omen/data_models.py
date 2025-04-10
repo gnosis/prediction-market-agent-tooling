@@ -36,7 +36,6 @@ from prediction_market_agent_tooling.tools.utils import (
     should_not_happen,
     utcnow,
 )
-from prediction_market_agent_tooling.tools.web3_utils import is_valid_wei
 
 OMEN_TRUE_OUTCOME = OutcomeStr("Yes")
 OMEN_FALSE_OUTCOME = OutcomeStr("No")

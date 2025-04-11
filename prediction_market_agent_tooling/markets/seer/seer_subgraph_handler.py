@@ -103,12 +103,13 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
         # We are only interested in binary markets of type YES/NO/Invalid.
+        # ToDo - Make sure it's OK to remove this
         or_stms = {}
-        or_stms["or"] = [
-            {"outcomes_contains": ["YES"]},
-            {"outcomes_contains": ["Yes"]},
-            {"outcomes_contains": ["yes"]},
-        ]
+        # or_stms["or"] = [
+        #     {"outcomes_contains": ["YES"]},
+        #     {"outcomes_contains": ["Yes"]},
+        #     {"outcomes_contains": ["yes"]},
+        # ]
 
         where_stms: dict[str, t.Any] = {"and": [and_stms, or_stms]}
         return where_stms
@@ -169,15 +170,18 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         )
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
-        two_category_markets = self.filter_bicategorical_markets(markets)
-        return two_category_markets
+        # ToDo - better control here
+        # two_category_markets = self.filter_bicategorical_markets(markets)
+        return markets
 
+    # ToDo - Improve methods to be more generic
     def get_binary_markets(
         self,
         filter_by: FilterBy,
         sort_by: SortBy = SortBy.NONE,
         limit: int | None = None,
         include_conditional_markets: bool = True,
+        include_categorical_markets: bool = False,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
@@ -188,6 +192,10 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             sort_by_field=sort_by_field,
             filter_by=filter_by,
         )
+
+        if include_categorical_markets:
+            return two_category_markets
+
         # Now we additionally filter markets based on YES/NO being the only outcomes.
         binary_markets = self.filter_binary_markets(two_category_markets)
         return binary_markets

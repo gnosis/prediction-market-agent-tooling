@@ -73,14 +73,18 @@ def to_boolean_outcome(value: str | bool) -> bool:
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
-class ProbabilisticAnswer(BaseModel):
-    p_yes: Probability
+class MultiOutcomeProbabilisticAnswer(BaseModel):
+    # ToDo - Validate probabilities using Pydantic model validation
+    probabilities: dict[OutcomeStr, Probability]
     confidence: float
     reasoning: str | None = None
 
-    @property
-    def p_no(self) -> Probability:
-        return Probability(1 - self.p_yes)
+
+class ProbabilisticAnswer(BaseModel):
+    # p_yes: Probability
+    probabilities_multi: dict[OutcomeStr, Probability]
+    confidence: float
+    reasoning: str | None = None
 
 
 class Position(BaseModel):
@@ -122,7 +126,8 @@ class TradeType(str, Enum):
 
 class Trade(BaseModel):
     trade_type: TradeType
-    outcome: bool
+    # outcome: bool
+    outcome: OutcomeStr
     amount: USD
 
 

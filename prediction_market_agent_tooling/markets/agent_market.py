@@ -8,7 +8,6 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
-    CollateralToken,
     OutcomeStr,
     OutcomeToken,
     Probability,
@@ -70,7 +69,8 @@ class AgentMarket(BaseModel):
     resolution: Resolution | None
     created_time: DatetimeUTC | None
     close_time: DatetimeUTC | None
-    current_p_yes: Probability
+    current_p_yes: Probability | None = None
+    probability_map: dict[OutcomeStr, Probability]
     url: str
     volume: CollateralToken | None
     fees: MarketFees

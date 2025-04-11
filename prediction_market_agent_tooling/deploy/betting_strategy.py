@@ -2,7 +2,12 @@ from abc import ABC, abstractmethod
 
 from scipy.optimize import minimize_scalar
 
-from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeToken
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    OutcomeToken,
+    OutcomeStr,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
 from prediction_market_agent_tooling.markets.data_models import (
@@ -86,6 +91,7 @@ class BettingStrategy(ABC):
         existing_position: ExistingPosition | None,
         target_position: Position,
         market: AgentMarket,
+        outcomes: list[OutcomeStr] | None = None,
     ) -> list[Trade]:
         """
         This helper method builds trades by rebalancing token allocations to each outcome.
@@ -99,8 +105,9 @@ class BettingStrategy(ABC):
         sell price is higher.
         """
         trades = []
-        for outcome_bool in [True, False]:
-            outcome = market.get_outcome_str_from_bool(outcome_bool)
+        if outcomes is None:
+            outcomes = [market.get_outcome_str_from_bool(i) for i in [True, False]]
+        for outcome in outcomes:
             prev_amount = (
                 existing_position.amounts_current[outcome]
                 if existing_position and outcome in existing_position.amounts_current
@@ -115,7 +122,7 @@ class BettingStrategy(ABC):
             trade_type = TradeType.SELL if diff_amount < 0 else TradeType.BUY
             trade = Trade(
                 amount=abs(diff_amount),
-                outcome=outcome_bool,
+                outcome=outcome,
                 trade_type=trade_type,
             )
 
@@ -161,6 +168,45 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(bet_amount={self.bet_amount})"
+
+
+class MultiCategoricalMaxAccuracyBettingStrategy(MaxAccuracyBettingStrategy):
+    @staticmethod
+    def calculate_direction(
+        market: AgentMarket, answer: ProbabilisticAnswer
+    ) -> OutcomeStr:
+        # ToDo - Refactor signature of other betting strategies
+        # We place a bet on the most likely outcome
+        most_likely_outcome = max(
+            answer.probabilities_multi, key=answer.probabilities_multi.get
+        )
+        return most_likely_outcome
+
+    def calculate_trades(
+        self,
+        existing_position: ExistingPosition | None,
+        answer: ProbabilisticAnswer,
+        market: AgentMarket,
+    ) -> list[Trade]:
+        """We place bet on only one outcome."""
+
+        # 1. get outcome we want to place a bet on (target position)
+        # 2. get existing position
+        # 3. build trades per outcome
+
+        # We place a bet on the most likely outcome
+        outcome_to_bet_on = self.calculate_direction(market, answer)
+
+        target_position = Position(
+            market_id=market.id, amounts_current={outcome_to_bet_on: self.bet_amount}
+        )
+        trades = self._build_rebalance_trades_from_positions(
+            existing_position,
+            target_position,
+            market=market,
+            outcomes=list(market.outcomes),
+        )
+        return trades
 
 
 class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):

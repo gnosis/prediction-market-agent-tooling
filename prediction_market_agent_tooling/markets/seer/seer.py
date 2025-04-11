@@ -30,7 +30,6 @@ from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
-    SeerOutcomeEnum,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
@@ -71,7 +70,7 @@ class SeerAgentMarket(AgentMarket):
     creator: HexAddress
     collateral_token_contract_address_checksummed: ChecksumAddress
     condition_id: HexBytes
-    seer_outcomes: dict[SeerOutcomeEnum, int]
+    # seer_outcomes: dict[SeerOutcomeEnum, int]
     description: str | None = (
         None  # Seer markets don't have a description, so just default to None.
     )
@@ -110,11 +109,17 @@ class SeerAgentMarket(AgentMarket):
         return get_usd_in_token(x, self.collateral_token_contract_address_checksummed)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | CollateralToken, direction: bool
+        self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
     ) -> OutcomeToken | None:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
-        outcome_token = self.get_wrapped_token_for_outcome(direction)
+        if outcome_str not in self.outcomes:
+            raise ValueError(
+                f"Outcome {outcome_str} not found in market outcomes {self.outcomes}"
+            )
+
+        outcome_token = self.get_wrapped_token_for_outcome(outcome_str)
+
         bet_amount_in_tokens = self.get_in_token(bet_amount)
 
         p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
@@ -129,13 +134,12 @@ class SeerAgentMarket(AgentMarket):
         return OutcomeToken(amount_outcome_tokens)
 
     def get_sell_value_of_outcome_token(
-        self, outcome: str, amount: OutcomeToken
+        self, outcome: OutcomeStr, amount: OutcomeToken
     ) -> CollateralToken:
         if amount == amount.zero():
             return CollateralToken.zero()
 
-        outcome_index = self.get_outcome_index(outcome=outcome)
-        wrapped_outcome_token = self.wrapped_tokens[outcome_index]
+        wrapped_outcome_token = self.get_wrapped_token_for_outcome(outcome)
 
         # We calculate how much collateral we would get back if we sold `amount` of outcome token.
         value_outcome_token_in_collateral = get_buy_token_amount_else_raise(
@@ -145,10 +149,10 @@ class SeerAgentMarket(AgentMarket):
         )
         return value_outcome_token_in_collateral.as_token
 
-    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
-        outcome_translated = SeerOutcomeEnum.from_bool(outcome)
-        idx = self.seer_outcomes[outcome_translated]
-        return OutcomeStr(self.outcomes[idx])
+    # def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+    #     outcome_translated = SeerOutcomeEnum.from_bool(outcome)
+    #     idx = self.seer_outcomes[outcome_translated]
+    #     return OutcomeStr(self.outcomes[idx])
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys) -> USD:
@@ -167,16 +171,16 @@ class SeerAgentMarket(AgentMarket):
 
         amounts_ot: dict[OutcomeStr, OutcomeToken] = {}
 
-        for outcome in [True, False]:
-            wrapped_token = self.get_wrapped_token_for_outcome(outcome)
-
+        for outcome_str, wrapped_token in zip(self.outcomes, self.wrapped_tokens):
             outcome_token_balance_wei = OutcomeWei.from_wei(
                 ContractERC20OnGnosisChain(address=wrapped_token).balanceOf(
                     for_address=Web3.to_checksum_address(user_id), web3=web3
                 )
             )
-            outcome_str = self.get_outcome_str_from_bool(outcome=outcome)
-            amounts_ot[outcome_str] = outcome_token_balance_wei.as_outcome_token
+            # outcome_str = self.get_outcome_str_from_bool(outcome=outcome)
+            amounts_ot[
+                OutcomeStr(outcome_str)
+            ] = outcome_token_balance_wei.as_outcome_token
 
         amounts_current = {
             k: self.get_token_in_usd(self.get_sell_value_of_outcome_token(k, v))
@@ -230,6 +234,10 @@ class SeerAgentMarket(AgentMarket):
 
         return filtered_markets
 
+    def get_liquidity(self) -> CollateralToken:
+        # ToDo - Implement me
+        return CollateralToken(123)
+
     @staticmethod
     def redeem_winnings(api_keys: APIKeys) -> None:
         web3 = RPCConfig().get_web3()
@@ -279,10 +287,11 @@ class SeerAgentMarket(AgentMarket):
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
     ) -> t.Optional["SeerAgentMarket"]:
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-        current_p_yes = p.current_p_yes()
-        if not current_p_yes:
+        # current_p_yes = p.current_p_yes()
+        probability_map = p.probability_map()
+        if not probability_map:
             logger.info(
-                f"p_yes for market {model.id.hex()} could not be calculated. Skipping."
+                f"probability_map for market {model.id.hex()} could not be calculated. Skipping."
             )
             return None
 
@@ -299,10 +308,12 @@ class SeerAgentMarket(AgentMarket):
             wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=None,
-            resolution=model.get_resolution_enum(),
+            # resolution=model.get_resolution_enum(),
+            resolution=None,
             volume=None,
-            current_p_yes=current_p_yes,
-            seer_outcomes=model.outcome_as_enums,
+            # current_p_yes=current_p_yes,
+            probability_map=probability_map,
+            # seer_outcomes=model.outcome_as_enums,
         )
 
     @staticmethod
@@ -312,11 +323,23 @@ class SeerAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
         markets = seer_subgraph.get_binary_markets(
-            limit=limit, sort_by=sort_by, filter_by=filter_by
+            limit=limit,
+            sort_by=sort_by,
+            filter_by=filter_by,
+            include_categorical_markets=fetch_categorical_markets,
         )
+
+        # ToDo - remove me, just for testing
+        markets = [
+            m
+            for m in markets
+            if m.id.hex().lower()
+            == "0x58ce0a7F103c405d03a7aF896b2A9b78dA36b9a8".lower()
+        ]
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
         # represents an invalid market.
@@ -331,7 +354,7 @@ class SeerAgentMarket(AgentMarket):
             is not None
         ]
 
-    def has_liquidity_for_outcome(self, outcome: bool) -> bool:
+    def has_liquidity_for_outcome(self, outcome: OutcomeStr) -> bool:
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
         pool = SeerSubgraphHandler().get_pool_by_token(
             token_address=outcome_token,
@@ -340,14 +363,16 @@ class SeerAgentMarket(AgentMarket):
         return pool is not None and pool.liquidity > 0
 
     def has_liquidity(self) -> bool:
-        # We conservatively define a market as having liquidity if it has liquidity for the `True` outcome token AND the `False` outcome token.
-        return self.has_liquidity_for_outcome(True) and self.has_liquidity_for_outcome(
-            False
+        # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
+        return all(
+            [
+                self.has_liquidity_for_outcome(outcome_str)
+                for outcome_str in self.outcomes[:-1]
+            ]
         )
 
-    def get_wrapped_token_for_outcome(self, outcome: bool) -> ChecksumAddress:
-        outcome_from_enum = SeerOutcomeEnum.from_bool(outcome)
-        outcome_idx = self.seer_outcomes[outcome_from_enum]
+    def get_wrapped_token_for_outcome(self, outcome: OutcomeStr) -> ChecksumAddress:
+        outcome_idx = self.outcomes.index(outcome)
         outcome_token = self.wrapped_tokens[outcome_idx]
         return outcome_token
 

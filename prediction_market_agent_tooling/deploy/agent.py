@@ -292,6 +292,7 @@ class DeployablePredictionAgent(DeployableAgent):
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
     trade_on_markets_created_after: DatetimeUTC | None = None
     get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
+    fetch_categorical_markets: bool = False
 
     # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
@@ -412,6 +413,7 @@ class DeployablePredictionAgent(DeployableAgent):
             sort_by=self.get_markets_sort_by,
             filter_by=FilterBy.OPEN,
             created_after=self.trade_on_markets_created_after,
+            fetch_categorical_markets=self.fetch_categorical_markets,
         )
         return available_markets
 
@@ -486,7 +488,8 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         api_keys = APIKeys()
         self.check_min_required_balance_to_operate(market_type)
-        market_type.market_class.redeem_winnings(api_keys)
+        # Fix me, uncomment
+        # market_type.market_class.redeem_winnings(api_keys)
 
     def process_markets(self, market_type: MarketType) -> None:
         """

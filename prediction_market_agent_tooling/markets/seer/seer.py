@@ -354,8 +354,11 @@ class SeerAgentMarket(AgentMarket):
             is not None
         ]
 
-    def has_liquidity_for_outcome(self, outcome: OutcomeStr) -> bool:
-        outcome_token = self.get_wrapped_token_for_outcome(outcome)
+    def get_outcome_str_from_idx(self, outcome_index: int) -> OutcomeStr:
+        return self.outcomes[self.outcome_index]
+
+    def has_liquidity_for_outcome(self, outcome_idx: int) -> bool:
+        outcome_token = self.get_wrapped_token_for_outcome(outcome_idx)
         pool = SeerSubgraphHandler().get_pool_by_token(
             token_address=outcome_token,
             collateral_address=self.collateral_token_contract_address_checksummed,
@@ -366,13 +369,12 @@ class SeerAgentMarket(AgentMarket):
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
         return all(
             [
-                self.has_liquidity_for_outcome(outcome_str)
-                for outcome_str in self.outcomes[:-1]
+                self.has_liquidity_for_outcome(outcome_idx)
+                for outcome_idx in range(len(self.outcomes[:-1]))
             ]
         )
 
-    def get_wrapped_token_for_outcome(self, outcome: OutcomeStr) -> ChecksumAddress:
-        outcome_idx = self.outcomes.index(outcome)
+    def get_wrapped_token_for_outcome(self, outcome_idx: int) -> ChecksumAddress:
         outcome_token = self.wrapped_tokens[outcome_idx]
         return outcome_token
 

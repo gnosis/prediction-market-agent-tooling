@@ -202,10 +202,10 @@ def calculate_sell_amount_in_collateral(
     if shares_to_sell == 0:
         return CollateralToken(0)
 
-    for v in [holdings, other_holdings]:
+    for v in [shares_to_sell, holdings, other_holdings]:
         if v <= 0:
             raise ValueError(
-                f"All holdings args must be greater than 0, got {[holdings, other_holdings]=}"
+                f"All share args must be greater than 0, got {[shares_to_sell, holdings, other_holdings]=}"
             )
 
     def f(r: float) -> float:

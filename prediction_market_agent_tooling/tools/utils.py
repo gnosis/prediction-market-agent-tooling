@@ -194,15 +194,19 @@ def calculate_sell_amount_in_collateral(
     fees: MarketFees,
 ) -> CollateralToken:
     """
-    Computes the amount of collateral that needs to be sold to get `shares`
-    amount of shares. Returns None if the amount can't be computed.
+    Computes the amount of collateral that needs to be sold to get `shares` amount of shares.
 
     Taken from https://github.com/protofire/omen-exchange/blob/29d0ab16bdafa5cc0d37933c1c7608a055400c73/app/src/util/tools/fpmm/trading/index.ts#L99
     Simplified for binary markets.
     """
+    if shares_to_sell == 0:
+        return CollateralToken(0)
+
     for v in [shares_to_sell, holdings, other_holdings]:
         if v <= 0:
-            raise ValueError("All share args must be greater than 0")
+            raise ValueError(
+                f"All share args must be greater than 0, got {[shares_to_sell, holdings, other_holdings]=}"
+            )
 
     def f(r: float) -> float:
         R = OutcomeToken((r + fees.absolute) / (1 - fees.bet_proportion))

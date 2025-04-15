@@ -84,4 +84,17 @@ def test_calculate_sell_amount_in_collateral_4() -> None:
             other_holdings=OutcomeToken(0),
             fees=MarketFees.get_zero_fees(),
         )
-    assert str(e.value) == "All share args must be greater than 0"
+    assert (
+        str(e.value)
+        == "All share args must be greater than 0, got [shares_to_sell, holdings, other_holdings]=[OutcomeToken(100.0), OutcomeToken(10.0), OutcomeToken(0.0)]"
+    )
+
+
+def test_calculate_sell_amount_in_collateral_5() -> None:
+    collateral = calculate_sell_amount_in_collateral(
+        shares_to_sell=OutcomeToken(0),
+        holdings=OutcomeToken(10),
+        other_holdings=OutcomeToken(15),
+        fees=MarketFees.get_zero_fees(),
+    )
+    assert collateral == 0

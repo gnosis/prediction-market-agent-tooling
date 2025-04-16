@@ -2,14 +2,18 @@ import typing as t
 from math import ceil
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    Mana,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
     get_manifold_binary_markets,
@@ -19,6 +23,7 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     MANIFOLD_BASE_URL,
     FullManifoldMarket,
+    usd_to_mana,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
     minimum_bet_to_win,
@@ -31,7 +36,6 @@ class ManifoldAgentMarket(AgentMarket):
     Manifold's market class that can be used by agents to make predictions.
     """
 
-    currency: t.ClassVar[Currency] = Currency.Mana
     base_url: t.ClassVar[str] = MANIFOLD_BASE_URL
 
     # Manifold has additional fees than `platform_absolute`, but they don't expose them in the API before placing the bet, see https://docs.manifold.markets/api.
@@ -49,19 +53,17 @@ class ManifoldAgentMarket(AgentMarket):
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
         return self.current_p_no
 
-    @classmethod
-    def get_tiny_bet_amount(cls) -> BetAmount:
-        return BetAmount(amount=1, currency=cls.currency)
+    def get_tiny_bet_amount(self) -> CollateralToken:
+        return CollateralToken(1)
 
     def get_minimum_bet_to_win(self, answer: bool, amount_to_win: float) -> Mana:
         # Manifold lowest bet is 1 Mana, so we need to ceil the result.
-        return mana_type(ceil(minimum_bet_to_win(answer, amount_to_win, self)))
+        return Mana(ceil(minimum_bet_to_win(answer, amount_to_win, self)))
 
-    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
-        if amount.currency != self.currency:
-            raise ValueError(f"Manifold bets are made in Mana. Got {amount.currency}.")
+    def place_bet(self, outcome: bool, amount: USD) -> str:
+        self.get_usd_in_token(amount)
         bet = place_bet(
-            amount=Mana(amount.amount),
+            amount=usd_to_mana(amount),
             market_id=self.id,
             outcome=outcome,
             manifold_api_key=APIKeys().manifold_api_key,

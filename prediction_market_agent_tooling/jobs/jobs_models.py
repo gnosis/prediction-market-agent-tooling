@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.deploy.betting_strategy import ProbabilisticAnswer
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import USD, Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     ProcessedTradedMarket,
@@ -19,8 +19,7 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 class SimpleJob(BaseModel):
     id: str
     job: str
-    reward: float
-    currency: str
+    reward: USD
     deadline: DatetimeUTC
 
 
@@ -38,7 +37,7 @@ class JobAgentMarket(AgentMarket, ABC):
         """Deadline for the job completion."""
 
     @abstractmethod
-    def get_reward(self, max_bond: float) -> float:
+    def get_reward(self, max_bond: USD) -> USD:
         """Reward for completing this job."""
 
     @classmethod
@@ -58,16 +57,15 @@ class JobAgentMarket(AgentMarket, ABC):
 
     @abstractmethod
     def submit_job_result(
-        self, agent_name: str, max_bond: float, result: str
+        self, agent_name: str, max_bond: USD, result: str
     ) -> ProcessedTradedMarket:
         """Submit the completed result for this job."""
 
-    def to_simple_job(self, max_bond: float) -> SimpleJob:
+    def to_simple_job(self, max_bond: USD) -> SimpleJob:
         return SimpleJob(
             id=self.id,
             job=self.job,
             reward=self.get_reward(max_bond),
-            currency=self.currency.value,
             deadline=self.deadline,
         )
 

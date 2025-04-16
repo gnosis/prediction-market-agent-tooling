@@ -7,8 +7,9 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
+    CollateralToken,
+    Wei,
     private_key_type,
-    xDai,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
@@ -21,7 +22,6 @@ from prediction_market_agent_tooling.tools.contract import (
     contract_implements_function,
     init_collateral_token_contract,
 )
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 def test_init_erc4626_erc20_contract_return_erc4626_instance(local_web3: Web3) -> None:
@@ -110,7 +110,7 @@ def test_contract_implements_function(
     reason="See https://github.com/gnosis/prediction-market-agent-tooling/issues/625"
 )
 def test_wont_retry(local_web3: Web3, accounts: list[TestAccount]) -> None:
-    value = xdai_to_wei(xDai(10))
+    value = CollateralToken(10).as_wei
     from_account = accounts[0]
     to_account = accounts[1]
 
@@ -141,3 +141,21 @@ def test_sdai_asset_balance_of(local_web3: Web3) -> None:
         )
         >= 0
     )
+
+
+def test_sdai_allowance_and_approval(
+    local_web3: Web3, test_keys: APIKeys, accounts: list[TestAccount]
+) -> None:
+    amount_wei = CollateralToken(1).as_wei
+    for_address = accounts[-1].address
+    token_contract = sDaiContract()
+    token_contract.approve(
+        api_keys=test_keys,
+        amount_wei=amount_wei,
+        for_address=for_address,
+        web3=local_web3,
+    )
+    allowance = token_contract.allowance(
+        owner=test_keys.public_key, for_address=for_address, web3=local_web3
+    )
+    assert amount_wei == Wei(allowance)

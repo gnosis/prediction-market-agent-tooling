@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.61.2"
+version = "0.63.10"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -59,6 +59,7 @@ cowdao-cowpy-kongzii = "1.0.0rc2" # Use `cowdao-cowpy` once they release latest 
 eth-keys = "^0.6.1"
 proto-plus = "^1.0.0"
 protobuf = "^5.0.0"
+types-cachetools = "^5.5.0.20240820"
 
 [tool.poetry.extras]
 openai = ["openai"]

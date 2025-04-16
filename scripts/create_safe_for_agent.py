@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.gtypes import PrivateKey, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.safe import create_safe
-from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to, xdai_to_wei
+from prediction_market_agent_tooling.tools.web3_utils import send_xdai_to
 
 
 def create_safe_for_agent(
@@ -56,7 +56,7 @@ def create_safe_for_agent(
             web3=ethereum_client.w3,
             from_private_key=PrivateKey(SecretStr(from_private_key)),
             to_address=safe_address,
-            value=xdai_to_wei(xDai(fund_amount_xdai)),
+            value=xDai(fund_amount_xdai).as_xdai_wei,
         )
 
     safe_balance = get_balances(

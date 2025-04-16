@@ -30,7 +30,7 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
 )
-from prediction_market_agent_tooling.gtypes import xDai
+from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -40,8 +40,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    ExistingPosition,
     PlacedTrade,
-    Position,
     ProbabilisticAnswer,
     Trade,
 )
@@ -65,7 +65,11 @@ from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, ob
 from prediction_market_agent_tooling.tools.tokens.main_token import (
     MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
+from prediction_market_agent_tooling.tools.utils import (
+    DatetimeUTC,
+    check_not_none,
+    utcnow,
+)
 
 MAX_AVAILABLE_MARKETS = 1000
 
@@ -435,7 +439,9 @@ class DeployablePredictionAgent(DeployableAgent):
         verify_market: bool = True,
     ) -> ProcessedMarket | None:
         self.update_langfuse_trace_by_market(market_type, market)
-        logger.info(f"Processing market {market.question=} from {market.url=}.")
+        logger.info(
+            f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
+        )
 
         answer: ProbabilisticAnswer | None
         if verify_market and not self.verify_market(market_type, market):
@@ -495,7 +501,7 @@ class DeployablePredictionAgent(DeployableAgent):
 
         for market_idx, market in enumerate(available_markets):
             logger.info(
-                f"Going to process market {market_idx+1} / {len(available_markets)}."
+                f"Going to process market {market.url}: {market_idx+1} / {len(available_markets)}."
             )
             self.before_process_market(market_type, market)
             processed_market = self.process_market(market_type, market)
@@ -582,9 +588,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         """
         user_id = market.get_user_id(api_keys=APIKeys())
 
-        total_amount = market.get_tiny_bet_amount().amount
+        total_amount = market.get_in_usd(market.get_tiny_bet_amount())
         if existing_position := market.get_position(user_id=user_id):
-            total_amount += existing_position.total_amount.amount
+            total_amount += existing_position.total_amount_current
 
         return MaxAccuracyBettingStrategy(bet_amount=total_amount)
 
@@ -592,11 +598,10 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         self,
         market: AgentMarket,
         answer: ProbabilisticAnswer,
-        existing_position: Position | None,
+        existing_position: ExistingPosition | None,
     ) -> list[Trade]:
         strategy = self.get_betting_strategy(market=market)
         trades = strategy.calculate_trades(existing_position, answer, market)
-        BettingStrategy.assert_trades_currency_match_markets(market, trades)
         return trades
 
     def before_process_market(
@@ -616,9 +621,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
             return None
 
         api_keys = APIKeys()
-        existing_position = market.get_position(
-            user_id=market.get_user_id(api_keys=api_keys)
-        )
+        user_id = market.get_user_id(api_keys=api_keys)
+
+        existing_position = market.get_position(user_id=user_id)
         trades = self.build_trades(
             market=market,
             answer=processed_market.answer,
@@ -644,8 +649,28 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                             outcome=trade.outcome, amount=trade.amount
                         )
                     case TradeType.SELL:
+                        # Get actual value of the position we are going to sell, and if it's less than we wanted to sell, simply sell all of it.
+                        current_position = check_not_none(
+                            market.get_position(user_id),
+                            "Should exists if we are going to sell outcomes.",
+                        )
+                        current_position_value_usd = current_position.amounts_current[
+                            market.get_outcome_str_from_bool(trade.outcome)
+                        ]
+                        amount_to_sell: USD | OutcomeToken
+                        if current_position_value_usd <= trade.amount:
+                            logger.warning(
+                                f"Current value of position {trade.outcome=}, {current_position_value_usd=} is less than the desired selling amount {trade.amount=}. Selling all."
+                            )
+                            # In case the agent asked to sell too much, provide the amount to sell as all outcome tokens, instead of in USD, to minimze fx fluctuations when selling.
+                            amount_to_sell = current_position.amounts_ot[
+                                market.get_outcome_str_from_bool(trade.outcome)
+                            ]
+                        else:
+                            amount_to_sell = trade.amount
                         id = market.sell_tokens(
-                            outcome=trade.outcome, amount=trade.amount
+                            outcome=trade.outcome,
+                            amount=amount_to_sell,
                         )
                     case _:
                         raise ValueError(f"Unexpected trade type {trade.trade_type}.")

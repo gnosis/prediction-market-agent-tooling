@@ -5,8 +5,8 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
-    Wei,
     xDai,
+    xDaiWei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
@@ -32,12 +32,7 @@ from prediction_market_agent_tooling.tools.tokens.main_token import (
     MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import (
-    ZERO_BYTES,
-    wei_to_xdai,
-    xdai_to_wei,
-    xdai_type,
-)
+from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
 def claim_bonds_on_realitio_questions(
@@ -93,7 +88,7 @@ def claim_bonds_on_realitio_question(
 
     history_hashes: list[HexBytes] = []
     addresses: list[ChecksumAddress] = []
-    bonds: list[Wei] = []
+    bonds: list[xDaiWei] = []
     answers: list[HexBytes] = []
 
     # Caller must provide the answer history, in reverse order.
@@ -128,7 +123,7 @@ def claim_bonds_on_realitio_question(
     # Keeping balance on Realitio is not useful, so it's recommended to just withdraw it.
     if current_balance > 0 and auto_withdraw:
         logger.info(
-            f"Withdrawing remaining balance {wei_to_xdai(current_balance)} xDai from Realitio."
+            f"Withdrawing remaining balance {current_balance.as_xdai} xDai from Realitio."
         )
         realitio_contract.withdraw(api_keys, web3=web3)
 
@@ -150,9 +145,7 @@ def finalize_markets(
         # If we don't have enough of xDai for bond, try to get it from the keeping token.
         send_keeping_token_to_eoa_xdai(
             api_keys=api_keys,
-            min_required_balance=xdai_type(
-                realitio_bond + MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES
-            ),
+            min_required_balance=realitio_bond + MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
             web3=web3,
         )
 
@@ -235,7 +228,7 @@ def omen_submit_answer_market_tx(
         question_id=market.question.id,
         answer=resolution.value,
         outcomes=market.question.outcomes,
-        bond=xdai_to_wei(bond),
+        bond=bond.as_xdai_wei,
         web3=web3,
     )
 
@@ -254,7 +247,7 @@ def omen_submit_invalid_answer_market_tx(
     realitio_contract.submit_answer_invalid(
         api_keys=api_keys,
         question_id=market.question.id,
-        bond=xdai_to_wei(bond),
+        bond=bond.as_xdai_wei,
         web3=web3,
     )
 

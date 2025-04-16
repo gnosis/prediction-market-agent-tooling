@@ -1,12 +1,12 @@
 import typing as t
 
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarket_binary_markets,
 )
@@ -24,7 +24,6 @@ class PolymarketAgentMarket(AgentMarket):
     Polymarket's market class that can be used by agents to make predictions.
     """
 
-    currency: t.ClassVar[Currency] = Currency.USDC
     base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
 
     # Based on https://docs.polymarket.com/#fees, there are currently no fees, except for transactions fees.
@@ -49,11 +48,10 @@ class PolymarketAgentMarket(AgentMarket):
             outcome_token_pool=None,
         )
 
-    @classmethod
-    def get_tiny_bet_amount(cls) -> BetAmount:
+    def get_tiny_bet_amount(self) -> CollateralToken:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
-    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
+    def place_bet(self, outcome: bool, amount: USD) -> str:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     @staticmethod

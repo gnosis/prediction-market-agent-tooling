@@ -12,22 +12,23 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
-    Probability,
-    Wei,
-    xdai_type,
+    OutcomeStr,
+    OutcomeWei,
+    Web3Wei,
 )
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.tools.cow.cow_manager import CowManager
+from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
+    SeerParentMarket,
+)
+from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei
 
 
 class CreateCategoricalMarketsParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     market_name: str = Field(..., alias="marketName")
-    outcomes: list[str]
+    outcomes: t.Sequence[OutcomeStr]
     # Only relevant for scalar markets
     question_start: str = Field(alias="questionStart", default="")
     question_end: str = Field(alias="questionEnd", default="")
@@ -41,7 +42,7 @@ class CreateCategoricalMarketsParams(BaseModel):
     lang: str
     lower_bound: int = Field(alias="lowerBound", default=0)
     upper_bound: int = Field(alias="upperBound", default=0)
-    min_bond: Wei = Field(..., alias="minBond")
+    min_bond: Web3Wei = Field(..., alias="minBond")
     opening_time: int = Field(..., alias="openingTime")
     token_names: list[str] = Field(..., alias="tokenNames")
 
@@ -84,10 +85,6 @@ class SeerOutcomeEnum(str, Enum):
             raise ValueError(f"Unknown outcome: {self}")
 
 
-class SeerParentMarket(BaseModel):
-    id: HexBytes
-
-
 SEER_BASE_URL = "https://app.seer.pm"
 
 
@@ -97,7 +94,7 @@ class SeerMarket(BaseModel):
     id: HexBytes
     creator: HexAddress
     title: str = Field(alias="marketName")
-    outcomes: list[str]
+    outcomes: t.Sequence[OutcomeStr]
     wrapped_tokens: list[HexAddress] = Field(alias="wrappedTokens")
     parent_outcome: int = Field(alias="parentOutcome")
     parent_market: t.Optional[SeerParentMarket] = Field(
@@ -110,6 +107,7 @@ class SeerMarket(BaseModel):
     has_answers: bool | None = Field(alias="hasAnswers")
     payout_reported: bool = Field(alias="payoutReported")
     payout_numerators: list[int] = Field(alias="payoutNumerators")
+    outcomes_supply: int = Field(alias="outcomesSupply")
 
     @property
     def has_valid_answer(self) -> bool:
@@ -153,6 +151,27 @@ class SeerMarket(BaseModel):
             return Resolution.YES
         return Resolution.NO
 
+    def is_redeemable(self, owner: ChecksumAddress, web3: Web3 | None = None) -> bool:
+        token_balances = self.get_outcome_token_balances(owner, web3)
+        if not self.payout_reported:
+            return False
+        return any(
+            payout and balance > 0
+            for payout, balance in zip(self.payout_numerators, token_balances)
+        )
+
+    def get_outcome_token_balances(
+        self, owner: ChecksumAddress, web3: Web3 | None = None
+    ) -> list[OutcomeWei]:
+        return [
+            OutcomeWei.from_wei(
+                ContractERC20OnGnosisChain(
+                    address=Web3.to_checksum_address(token)
+                ).balanceOf(owner, web3=web3)
+            )
+            for token in self.wrapped_tokens
+        ]
+
     @property
     def is_binary(self) -> bool:
         # 3 because Seer has also third, `Invalid` outcome.
@@ -187,63 +206,13 @@ class SeerMarket(BaseModel):
         return DatetimeUTC.to_datetime_utc(self.block_timestamp)
 
     @property
-    def current_p_yes(self) -> Probability:
-        price_data = {}
-        for idx in range(len(self.outcomes)):
-            wrapped_token = self.wrapped_tokens[idx]
-            price = self._get_price_for_token(
-                token=Web3.to_checksum_address(wrapped_token)
-            )
-            price_data[idx] = price
-
-        if sum(price_data.values()) == 0:
-            logger.warning(
-                f"Could not get p_yes for market {self.id.hex()}, all price quotes are 0."
-            )
-            return Probability(0)
-
-        yes_idx = self.outcome_as_enums[SeerOutcomeEnum.YES]
-        price_yes = price_data[yes_idx] / sum(price_data.values())
-        return Probability(price_yes)
-
-    def _get_price_for_token(self, token: ChecksumAddress) -> float:
-        collateral_exchange_amount = xdai_to_wei(xdai_type(1))
-        try:
-            quote = CowManager().get_quote(
-                collateral_token=self.collateral_token_contract_address_checksummed,
-                buy_token=token,
-                sell_amount=collateral_exchange_amount,
-            )
-        except Exception as e:
-            logger.warning(f"Could not get quote for {token=}, returning price 0. {e=}")
-            return 0
-
-        return collateral_exchange_amount / float(quote.quote.buyAmount.root)
-
-    @property
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
         return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
 
 
-class SeerToken(BaseModel):
-    id: HexBytes
-    name: str
-    symbol: str
-
-
-class SeerPool(BaseModel):
+class RedeemParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    id: HexBytes
-    liquidity: int
-    token0: SeerToken
-    token1: SeerToken
-
-
-class NewMarketEvent(BaseModel):
-    market: HexAddress
-    marketName: str
-    parentMarket: HexAddress
-    conditionId: HexBytes
-    questionId: HexBytes
-    questionsIds: list[HexBytes]
+    market: ChecksumAddress
+    outcome_indices: list[int] = Field(alias="outcomeIndexes")
+    amounts: list[OutcomeWei]

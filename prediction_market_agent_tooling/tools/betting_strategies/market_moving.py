@@ -2,19 +2,22 @@ from functools import reduce
 
 import numpy as np
 
-from prediction_market_agent_tooling.gtypes import Probability, Wei, xDai
+from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
+    OutcomeToken,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.omen.omen import (
     MarketFees,
     OmenAgentMarket,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 from prediction_market_agent_tooling.tools.utils import check_not_none
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai, xdai_to_wei
 
 
 def get_market_moving_bet(
-    yes_outcome_pool_size: float,
-    no_outcome_pool_size: float,
+    yes_outcome_pool_size: OutcomeToken,
+    no_outcome_pool_size: OutcomeToken,
     market_p_yes: float,
     target_p_yes: float,
     fees: MarketFees,
@@ -42,20 +45,21 @@ def get_market_moving_bet(
     fixed_product = yes_outcome_pool_size * no_outcome_pool_size
     bet_direction: bool = target_p_yes > market_p_yes
 
-    min_bet_amount = 0.0
-    max_bet_amount = 100 * (
+    min_bet_amount = CollateralToken(0.0)
+    max_bet_amount = (
         yes_outcome_pool_size + no_outcome_pool_size
-    )  # TODO set a better upper bound
+    ).as_token * 100  # TODO set a better upper bound
 
     # Binary search for the optimal bet amount
     for _ in range(max_iters):
         bet_amount = (min_bet_amount + max_bet_amount) / 2
-        amounts_diff = fees.get_bet_size_after_fees(bet_amount)
+        amounts_diff = fees.get_after_fees(bet_amount)
+        amounts_diff_as_ot = OutcomeToken.from_token(amounts_diff)
 
         # Initial new amounts are old amounts + equal new amounts for each outcome
-        yes_outcome_new_pool_size = yes_outcome_pool_size + amounts_diff
-        no_outcome_new_pool_size = no_outcome_pool_size + amounts_diff
-        new_amounts = {
+        yes_outcome_new_pool_size = yes_outcome_pool_size + amounts_diff_as_ot
+        no_outcome_new_pool_size = no_outcome_pool_size + amounts_diff_as_ot
+        new_amounts: dict[bool, OutcomeToken] = {
             True: yes_outcome_new_pool_size,
             False: no_outcome_new_pool_size,
         }
@@ -63,15 +67,20 @@ def get_market_moving_bet(
         # Now give away tokens at `bet_outcome_index` to restore invariant
         new_product = yes_outcome_new_pool_size * no_outcome_new_pool_size
         dx = (new_product - fixed_product) / new_amounts[not bet_direction]
-        new_amounts[bet_direction] -= dx
+        new_amounts[bet_direction] -= OutcomeToken(dx)
 
         # Check that the invariant is restored
         assert np.isclose(
-            reduce(lambda x, y: x * y, list(new_amounts.values()), 1.0),
+            reduce(lambda x, y: x * y.value, list(new_amounts.values()), 1.0),
             float(fixed_product),
         )
 
-        new_p_yes = Probability(new_amounts[False] / sum(list(new_amounts.values())))
+        new_p_yes = Probability(
+            (
+                new_amounts[False]
+                / sum(list(new_amounts.values()), start=OutcomeToken(0))
+            )
+        )
         if abs(target_p_yes - new_p_yes) < 1e-6:
             break
         elif new_p_yes > target_p_yes:
@@ -97,33 +106,31 @@ def _sanity_check_omen_market_moving_bet(
     using the adjusted outcome pool sizes to calculate the new p_yes.
     """
     buy_amount_ = market.get_contract().calcBuyAmount(
-        investment_amount=xdai_to_wei(xDai(bet_to_check.size)),
+        investment_amount=bet_to_check.size.as_wei,
         outcome_index=market.get_outcome_index(
             market.get_outcome_str_from_bool(bet_to_check.direction)
         ),
     )
-    buy_amount = float(wei_to_xdai(Wei(buy_amount_)))
+    buy_amount = buy_amount_.as_outcome_token
 
     outcome_token_pool = check_not_none(market.outcome_token_pool)
     yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
     no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
-    market_const = yes_outcome_pool_size * no_outcome_pool_size
+    market_const = yes_outcome_pool_size.value * no_outcome_pool_size.value
 
-    bet_to_check_size_after_fees = market.fees.get_bet_size_after_fees(
-        bet_to_check.size
-    )
+    bet_to_check_size_after_fees = market.fees.get_after_fees(bet_to_check.size).value
 
     # When you buy 'yes' tokens, you add your bet size to the both pools, then
     # subtract `buy_amount` from the 'yes' pool. And vice versa for 'no' tokens.
     new_yes_outcome_pool_size = (
-        yes_outcome_pool_size
+        yes_outcome_pool_size.value
         + bet_to_check_size_after_fees
-        - float(bet_to_check.direction) * buy_amount
+        - float(bet_to_check.direction) * buy_amount.value
     )
     new_no_outcome_pool_size = (
-        no_outcome_pool_size
+        no_outcome_pool_size.value
         + bet_to_check_size_after_fees
-        - float(not bet_to_check.direction) * buy_amount
+        - float(not bet_to_check.direction) * buy_amount.value
     )
     new_market_const = new_yes_outcome_pool_size * new_no_outcome_pool_size
     # Check the invariant is restored

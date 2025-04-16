@@ -5,7 +5,12 @@ from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    private_key_type,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
 )
@@ -71,7 +76,8 @@ def test_redeem_invalid_market(
     question = f"Will job X be completed in {close_in} seconds from now?"
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)
-    funds = xdai_type(10)
+    funds = USD(10)
+    funds_t = CollateralToken(funds.value)  # In this test, 1 USD = 1 Token
     fee_perc = 0.02
     finalization_wait_time_seconds = 1
     category = "cryptocurrency"
@@ -103,10 +109,10 @@ def test_redeem_invalid_market(
     assert (
         balance_after_market_creation_A < starting_balance_A
     ), "Starting balance of A should have been lowered"
-    assert agent_market.get_liquidity_in_xdai(local_web3) == funds
+    assert agent_market.get_liquidity(local_web3) == funds_t
 
     # Buy YES tokens from account B
-    bet_size = xdai_type(1)
+    bet_size = USD(1)
     binary_omen_buy_outcome_tx(
         api_keys_B,
         bet_size,
@@ -143,7 +149,7 @@ def test_redeem_invalid_market(
     omen_submit_invalid_answer_market_tx(
         api_keys_A,
         omen_market,
-        bond=xdai_type(0.001),
+        bond=xDai(0.001),
         web3=local_web3,
     )
 
@@ -185,8 +191,10 @@ def test_redeem_invalid_market(
     print(f"Account C ending difference: {account_C_difference}.")
 
     assert (
-        -bet_size < account_B_difference < 0
+        -agent_market.get_usd_in_token(bet_size)
+        < account_B_difference
+        < CollateralToken(0)
     ), "Assumption was that B will get most of the money back but would incur a loss because he bought tokens at a higher price than 0.5."
-    assert (
-        account_C_difference > 0
+    assert account_C_difference > CollateralToken(
+        0
     ), "Assumption was that C will be profitable because he was buying the cheaper tokens."

@@ -26,6 +26,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityAnswer,
     RealityQuestion,
     RealityResponse,
+    OMEN_BINARY_MARKET_OUTCOMES,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,
@@ -234,6 +235,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         }
         if not include_categorical_markets:
             where_stms["outcomeSlotCount"] = 2
+            where_stms["outcomes"] = OMEN_BINARY_MARKET_OUTCOMES
 
         where_stms["question_"] = self.get_omen_question_filters(
             question_id=question_id,
@@ -371,9 +373,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             creator_in=creator_in,
             include_categorical_markets=include_categorical_markets,
         )
-
-        if include_categorical_markets:
-            return [m for m in all_markets if m.is_binary]
 
         return all_markets
 

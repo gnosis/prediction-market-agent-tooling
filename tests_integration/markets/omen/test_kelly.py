@@ -9,6 +9,9 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    WRAPPED_XDAI_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
@@ -61,10 +64,14 @@ def test_kelly_price_impact_works_large_pool(
 def test_kelly_price_impact_works_small_pool(
     max_bet_amount: float, max_price_impact: float, p_yes: float
 ) -> None:
-    large_market = OmenSubgraphHandler().get_omen_binary_markets_simple(
-        limit=1, filter_by=FilterBy.OPEN, sort_by=SortBy.LOWEST_LIQUIDITY
+    market = OmenSubgraphHandler().get_omen_binary_markets_simple(
+        limit=1,
+        filter_by=FilterBy.OPEN,
+        sort_by=SortBy.LOWEST_LIQUIDITY,
+        # More worthy tokens (e.g. GNO) have way too low liquidity.
+        collateral_token_address_in=(WRAPPED_XDAI_CONTRACT_ADDRESS,),
     )[0]
-    omen_agent_market = OmenAgentMarket.from_data_model(large_market)
+    omen_agent_market = OmenAgentMarket.from_data_model(market)
     confidence = 1.0
     assert_price_impact_converges(
         omen_agent_market, USD(max_bet_amount), p_yes, confidence, max_price_impact

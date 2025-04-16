@@ -30,7 +30,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes, Wei
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain

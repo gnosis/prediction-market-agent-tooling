@@ -96,7 +96,7 @@ class PriceManager:
             return self.get_token_price_from_pools(token=token)
 
     @staticmethod
-    def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:
+    def pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:
         return pool.token0.id.hex().lower() == token.lower()
 
     def get_token_price_from_pools(
@@ -117,7 +117,7 @@ class PriceManager:
         # For example, in a outcomeYES (token0)/sDAI pool (token1), token1Price is the price of outcomeYES in units of sDAI.
         price = (
             pool.token1Price
-            if self._pool_token0_matches_token(token=token, pool=pool)
+            if self.pool_token0_matches_token(token=token, pool=pool)
             else pool.token0Price
         )
         return price

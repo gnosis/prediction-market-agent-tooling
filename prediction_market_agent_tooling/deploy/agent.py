@@ -657,8 +657,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                             market.get_position(user_id),
                             "Should exists if we are going to sell outcomes.",
                         )
+
                         current_position_value_usd = current_position.amounts_current[
-                            market.get_outcome_str_from_bool(trade.outcome)
+                            trade.outcome
                         ]
                         amount_to_sell: USD | OutcomeToken
                         if current_position_value_usd <= trade.amount:
@@ -666,9 +667,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                                 f"Current value of position {trade.outcome=}, {current_position_value_usd=} is less than the desired selling amount {trade.amount=}. Selling all."
                             )
                             # In case the agent asked to sell too much, provide the amount to sell as all outcome tokens, instead of in USD, to minimze fx fluctuations when selling.
-                            amount_to_sell = current_position.amounts_ot[
-                                market.get_outcome_str_from_bool(trade.outcome)
-                            ]
+                            amount_to_sell = current_position.amounts_ot[trade.outcome]
                         else:
                             amount_to_sell = trade.amount
                         id = market.sell_tokens(

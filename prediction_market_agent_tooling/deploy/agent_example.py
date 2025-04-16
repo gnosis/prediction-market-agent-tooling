@@ -1,5 +1,3 @@
-import random
-
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent import (
     DeployableTraderAgent,
@@ -9,7 +7,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     MultiCategoricalMaxAccuracyBettingStrategy,
 )
-from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.gtypes import Probability, USD
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
 from prediction_market_agent_tooling.markets.markets import MarketType
 
@@ -27,7 +25,8 @@ class DeployableCoinFlipAgent(DeployableTraderAgent):
         user_id = market.get_user_id(api_keys=APIKeys())
 
         total_amount = market.get_in_usd(market.get_tiny_bet_amount())
-        if existing_position := market.get_position(user_id=user_id):
+        existing_position = market.get_position(user_id=user_id)
+        if existing_position and existing_position.total_amount_current > USD(0):
             total_amount += existing_position.total_amount_current
 
         return MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=total_amount)
@@ -37,7 +36,9 @@ class DeployableCoinFlipAgent(DeployableTraderAgent):
 
     def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
         # decision = random.choice([True, False])
-        decision = random.choice(market.outcomes)
+        # decision = random.choice(market.outcomes)
+        # ToDo - Only testing
+        decision = market.outcomes[1]
         probabilities_multi = {decision: Probability(1.0)}
         for outcome in market.outcomes:
             if outcome != decision:

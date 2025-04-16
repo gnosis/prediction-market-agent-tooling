@@ -8,7 +8,7 @@ from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
 from cowdao_cowpy.common.constants import CowContractAddress
-from cowdao_cowpy.cow.swap import get_order_quote
+from cowdao_cowpy.cow.swap import CompletedOrder, get_order_quote, swap_tokens
 from cowdao_cowpy.order_book.api import OrderBookApi
 from cowdao_cowpy.order_book.config import Envs, OrderBookAPIConfigFactory
 from cowdao_cowpy.order_book.generated.model import (
@@ -24,15 +24,17 @@ from cowdao_cowpy.order_book.generated.model import (
     TokenAmount,
 )
 from cowdao_cowpy.subgraph.client import BaseModel
-from eth_account.signers.local import LocalAccount
 from tenacity import retry_if_not_exception_type, stop_after_attempt, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes, Wei
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.omen.cow_contracts import (
+    CowGPv2SettlementContract,
+)
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 
 class MinimalisticToken(BaseModel):
@@ -164,8 +166,6 @@ def swap_tokens_waiting(
     env: Envs = "prod",
     web3: Web3 | None = None,
 ) -> OrderMetaData:
-    account = api_keys.get_account()
-
     # Approve the CoW Swap Vault Relayer to get the sell token.
     ContractERC20OnGnosisChain(address=sell_token).approve(
         api_keys,
@@ -177,7 +177,7 @@ def swap_tokens_waiting(
     # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
     return asyncio.run(
         swap_tokens_waiting_async(
-            amount_wei, sell_token, buy_token, account, chain, env
+            amount_wei, sell_token, buy_token, api_keys, chain, env
         )
     )
 
@@ -186,20 +186,31 @@ async def swap_tokens_waiting_async(
     amount_wei: Wei,
     sell_token: ChecksumAddress,
     buy_token: ChecksumAddress,
-    account: LocalAccount,
+    api_keys: APIKeys,
     chain: Chain,
     env: Envs,
-    timeout: timedelta = timedelta(seconds=60),
+    timeout: timedelta = timedelta(seconds=120),
+    slippage_tolerance: float = 0.01,
 ) -> OrderMetaData:
+    account = api_keys.get_account()
+    safe_address = api_keys.safe_address_checksum
+
     order = await swap_tokens(
         amount=amount_wei.value,
         sell_token=sell_token,
         buy_token=buy_token,
         account=account,
+        safe_address=safe_address,
         chain=chain,
         env=env,
+        slippage_tolerance=slippage_tolerance,
     )
     logger.info(f"Order created: {order}")
+
+    if safe_address is not None:
+        logger.info(f"Safe is used. Signing the order after its creation.")
+        await sign_safe_cow_swap(api_keys, order, chain, env)
+
     start_time = utcnow()
 
     while True:
@@ -227,6 +238,30 @@ async def swap_tokens_waiting_async(
         )
 
         await asyncio.sleep(3.14)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(f"sign_safe_cow_swap failed, {x.attempt_number=}."),
+)
+async def sign_safe_cow_swap(
+    api_keys: APIKeys,
+    order: CompletedOrder,
+    chain: Chain,
+    env: Envs,
+) -> None:
+    order_book_api = get_order_book_api(env, chain)
+    posted_order = await order_book_api.get_order_by_uid(order.uid)
+    CowGPv2SettlementContract(
+        address=Web3.to_checksum_address(
+            check_not_none(posted_order.settlementContract).root
+        )
+    ).setPreSignature(
+        api_keys,
+        HexBytes(posted_order.uid.root),
+        True,
+    )
 
 
 @tenacity.retry(

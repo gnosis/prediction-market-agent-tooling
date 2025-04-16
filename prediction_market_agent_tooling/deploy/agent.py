@@ -486,7 +486,7 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         Executed before market processing loop starts.
         """
-        api_keys = APIKeys()
+
         self.check_min_required_balance_to_operate(market_type)
         # Fix me, uncomment
         # market_type.market_class.redeem_winnings(api_keys)

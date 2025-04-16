@@ -1,5 +1,6 @@
 import typing as t
 from datetime import timedelta
+from math import prod
 
 import tenacity
 from web3 import Web3
@@ -335,6 +336,43 @@ class OmenAgentMarket(AgentMarket):
         return OmenAgentMarket.from_data_model(OmenMarket.from_created_market(model))
 
     @staticmethod
+    def compute_fpmm_probabilities(balances: list[OutcomeWei]) -> list[Probability]:
+        """
+        Compute the implied probabilities in a Fixed Product Market Maker.
+
+        Args:
+            balances (List[float]): Balances of outcome tokens.
+
+        Returns:
+            List[float]: Implied probabilities for each outcome.
+        """
+        # converting to standard values for prod compatibility.
+        values_balance = [i.value for i in balances]
+        # Compute product of balances excluding each outcome
+        excluded_products = []
+        for i in range(len(values_balance)):
+            other_balances = values_balance[:i] + values_balance[i + 1 :]
+            excluded_products.append(prod(other_balances))
+
+        # Normalize to sum to 1
+        total = sum(excluded_products)
+        probabilities = [Probability(p / total) for p in excluded_products]
+
+        return probabilities
+
+    @staticmethod
+    def build_probability_map(model: OmenMarket) -> dict[OutcomeStr, Probability]:
+        # if binary market, simply build this from current_p_yes
+        if model.is_binary:
+            return {
+                OmenAgentMarket.get_outcome_str_from_bool(True): model.current_p_yes,
+                OmenAgentMarket.get_outcome_str_from_bool(False): model.current_p_no,
+            }
+
+        probs = OmenAgentMarket.compute_fpmm_probabilities(model.outcomeTokenAmounts)
+        return {outcome: prob for outcome, prob in zip(model.outcomes, probs)}
+
+    @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
         return OmenAgentMarket(
             id=model.id,
@@ -361,6 +399,7 @@ class OmenAgentMarket(AgentMarket):
                 model.outcomes[i]: model.outcomeTokenAmounts[i].as_outcome_token
                 for i in range(len(model.outcomes))
             },
+            probability_map=OmenAgentMarket.build_probability_map(model),
         )
 
     @staticmethod
@@ -370,6 +409,7 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["OmenAgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)
@@ -379,6 +419,7 @@ class OmenAgentMarket(AgentMarket):
                 filter_by=filter_by,
                 created_after=created_after,
                 excluded_questions=excluded_questions,
+                include_categorical_markets=fetch_categorical_markets,
             )
         ]
 
@@ -481,7 +522,8 @@ class OmenAgentMarket(AgentMarket):
             cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
         )
 
-    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
         return (
             OutcomeStr(OMEN_TRUE_OUTCOME) if outcome else OutcomeStr(OMEN_FALSE_OUTCOME)
         )

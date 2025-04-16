@@ -122,7 +122,7 @@ class PriceManager:
         )
         return price
 
-    def probability_map(self) -> dict[OutcomeStr, Probability]:
+    def build_probability_map(self) -> dict[OutcomeStr, Probability]:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
         price_data: dict[HexAddress, CollateralToken | None] = {}
         # we ignore the invalid outcome.

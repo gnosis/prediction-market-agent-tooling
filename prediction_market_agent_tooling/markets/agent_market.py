@@ -249,6 +249,7 @@ class AgentMarket(BaseModel):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -333,7 +334,8 @@ class AgentMarket(BaseModel):
     def has_unsuccessful_resolution(self) -> bool:
         return self.resolution in [Resolution.CANCEL, Resolution.MKT]
 
-    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_str(self, outcome_index: int) -> OutcomeStr:

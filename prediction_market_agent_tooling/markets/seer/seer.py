@@ -285,7 +285,7 @@ class SeerAgentMarket(AgentMarket):
     ) -> t.Optional["SeerAgentMarket"]:
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
         # current_p_yes = p.current_p_yes()
-        probability_map = p.probability_map()
+        probability_map = p.build_probability_map()
         if not probability_map:
             logger.info(
                 f"probability_map for market {model.id.hex()} could not be calculated. Skipping."

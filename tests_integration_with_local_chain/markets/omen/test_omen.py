@@ -525,7 +525,7 @@ def test_place_bet_with_prev_existing_positions(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.NEWEST,
-        # We need token that is tradeable completely on the local chain.
+        # We need token that is completely tradeable on the local chain.
         collateral_token_address_in=(sDaiContract().address,),
     )[0]
     omen_agent_market = OmenAgentMarket.from_data_model(market)

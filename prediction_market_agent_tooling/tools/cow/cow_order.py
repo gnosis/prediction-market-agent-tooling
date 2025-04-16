@@ -3,16 +3,12 @@ from datetime import timedelta
 
 import httpx
 import tenacity
-from cowdao_cowpy.common.chains import Chain
-from cowdao_cowpy.common.config import SupportedChainId
-from cowdao_cowpy.common.constants import CowContractAddress
-from cowdao_cowpy.cow.swap import CompletedOrder, swap_tokens
 from cowdao_cowpy import swap_tokens
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
 from cowdao_cowpy.common.constants import CowContractAddress
-from cowdao_cowpy.cow.swap import get_order_quote
+from cowdao_cowpy.cow.swap import CompletedOrder, get_order_quote, swap_tokens
 from cowdao_cowpy.order_book.api import OrderBookApi
 from cowdao_cowpy.order_book.config import Envs, OrderBookAPIConfigFactory
 from cowdao_cowpy.order_book.generated.model import (
@@ -28,16 +24,11 @@ from cowdao_cowpy.order_book.generated.model import (
     TokenAmount,
 )
 from cowdao_cowpy.subgraph.client import BaseModel
-from eth_account.signers.local import LocalAccount
 from tenacity import retry_if_not_exception_type, stop_after_attempt, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    HexBytes,
-    Wei,
-)
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     CowGPv2SettlementContract,

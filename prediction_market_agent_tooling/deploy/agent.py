@@ -577,7 +577,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
 
         if market.get_trade_balance(api_keys) < min_required_balance_to_trade:
             raise OutOfFundsError(
-                f"Minimum required balance {min_required_balance_to_trade} for agent is not met."
+                f"Minimum required balance {min_required_balance_to_trade} for agent {api_keys.bet_from_address=} is not met."
             )
 
     def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:

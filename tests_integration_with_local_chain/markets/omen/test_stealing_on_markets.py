@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import USD, private_key_type, xDai
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -102,7 +103,7 @@ def test_stealing_on_markets(
         api_keys_B,
         buy_yes_for_b,
         agent_market,
-        binary_outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )

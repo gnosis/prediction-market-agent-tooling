@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from math import prod
 
 from scipy.optimize import minimize_scalar
 
@@ -91,7 +92,6 @@ class BettingStrategy(ABC):
         existing_position: ExistingPosition | None,
         target_position: Position,
         market: AgentMarket,
-        outcomes: list[OutcomeStr] | None = None,
     ) -> list[Trade]:
         """
         This helper method builds trades by rebalancing token allocations to each outcome.
@@ -105,9 +105,7 @@ class BettingStrategy(ABC):
         sell price is higher.
         """
         trades = []
-        if outcomes is None:
-            outcomes = [market.get_outcome_str_from_bool(i) for i in [True, False]]
-        for outcome in outcomes:
+        for outcome in market.outcomes:
             prev_amount = (
                 existing_position.amounts_current[outcome]
                 if existing_position and outcome in existing_position.amounts_current
@@ -137,7 +135,7 @@ class BettingStrategy(ABC):
         return trades
 
 
-class MaxAccuracyBettingStrategy(BettingStrategy):
+class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
     def __init__(self, bet_amount: USD):
         self.bet_amount = bet_amount
 
@@ -145,37 +143,10 @@ class MaxAccuracyBettingStrategy(BettingStrategy):
     def maximum_possible_bet_amount(self) -> USD:
         return self.bet_amount
 
-    def calculate_trades(
-        self,
-        existing_position: ExistingPosition | None,
-        answer: ProbabilisticAnswer,
-        market: AgentMarket,
-    ) -> list[Trade]:
-        direction = self.calculate_direction(market.current_p_yes, answer.p_yes)
-
-        amounts = {
-            market.get_outcome_str_from_bool(direction): self.bet_amount,
-        }
-        target_position = Position(market_id=market.id, amounts_current=amounts)
-        trades = self._build_rebalance_trades_from_positions(
-            existing_position, target_position, market=market
-        )
-        return trades
-
-    @staticmethod
-    def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
-        return estimate_p_yes >= 0.5
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(bet_amount={self.bet_amount})"
-
-
-class MultiCategoricalMaxAccuracyBettingStrategy(MaxAccuracyBettingStrategy):
     @staticmethod
     def calculate_direction(
         market: AgentMarket, answer: ProbabilisticAnswer
     ) -> OutcomeStr:
-        # ToDo - Refactor signature of other betting strategies
         # We place a bet on the most likely outcome
         most_likely_outcome = max(
             answer.probabilities_multi, key=answer.probabilities_multi.get
@@ -190,32 +161,17 @@ class MultiCategoricalMaxAccuracyBettingStrategy(MaxAccuracyBettingStrategy):
     ) -> list[Trade]:
         """We place bet on only one outcome."""
 
-        # 1. get outcome we want to place a bet on (target position)
-        # 2. get existing position
-        # 3. build trades per outcome
-
-        # We place a bet on the most likely outcome
         outcome_to_bet_on = self.calculate_direction(market, answer)
 
         target_position = Position(
             market_id=market.id, amounts_current={outcome_to_bet_on: self.bet_amount}
         )
         trades = self._build_rebalance_trades_from_positions(
-            existing_position,
-            target_position,
+            existing_position=existing_position,
+            target_position=target_position,
             market=market,
-            outcomes=list(market.outcomes),
         )
         return trades
-
-
-class MaxExpectedValueBettingStrategy(MaxAccuracyBettingStrategy):
-    @staticmethod
-    def calculate_direction(market_p_yes: float, estimate_p_yes: float) -> bool:
-        # If estimate_p_yes >= market.current_p_yes, then bet TRUE, else bet FALSE.
-        # This is equivalent to saying EXPECTED_VALUE = (estimate_p_yes * num_tokens_obtained_by_betting_yes) -
-        # ((1 - estimate_p_yes) * num_tokens_obtained_by_betting_no) >= 0
-        return estimate_p_yes >= market_p_yes
 
 
 class KellyBettingStrategy(BettingStrategy):
@@ -234,14 +190,26 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         outcome_token_pool = check_not_none(market.outcome_token_pool)
+
+        # We consider only markets which have 2 outcomes, since the Kelly strategy is not yet implemented
+        # for markets with more than 2 outcomes (https://github.com/gnosis/prediction-market-agent-tooling/issues/671).
+        if len(market.outcomes) != 2:
+            message = "Cannot process markets with more than 2 outcomes."
+            logger.error(message)
+            raise ValueError(message)
+
+        # We consider the p_yes as the direction with highest probability.
+        direction = MultiCategoricalMaxAccuracyBettingStrategy.calculate_direction(
+            market, answer
+        )
+        other_direction = [i for i in market.outcomes if i != direction][0]
+        direction_to_bet_pool_size = outcome_token_pool[direction]
+        other_direction_pool_size = outcome_token_pool[other_direction]
+
         kelly_bet = get_kelly_bet_full(
-            yes_outcome_pool_size=outcome_token_pool[
-                market.get_outcome_str_from_bool(True)
-            ],
-            no_outcome_pool_size=outcome_token_pool[
-                market.get_outcome_str_from_bool(False)
-            ],
-            estimated_p_yes=answer.p_yes,
+            yes_outcome_pool_size=direction_to_bet_pool_size,
+            no_outcome_pool_size=other_direction_pool_size,
+            estimated_p_yes=answer.probabilities_multi[direction],
             max_bet=market.get_usd_in_token(self.max_bet_amount),
             confidence=answer.confidence,
             fees=market.fees,
@@ -251,38 +219,53 @@ class KellyBettingStrategy(BettingStrategy):
         if self.max_price_impact:
             # Adjust amount
             max_price_impact_bet_amount = self.calculate_bet_amount_for_price_impact(
-                market, kelly_bet
+                market, kelly_bet, direction=direction
             )
 
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
             kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
 
+        # Depending on Kelly result, we invert the bet.
         amounts = {
-            market.get_outcome_str_from_bool(
-                kelly_bet.direction
-            ): market.get_token_in_usd(kelly_bet_size),
+            direction
+            if kelly_bet.direction
+            else other_direction: market.get_token_in_usd(kelly_bet_size),
         }
+
         target_position = Position(market_id=market.id, amounts_current=amounts)
         trades = self._build_rebalance_trades_from_positions(
             existing_position, target_position, market=market
         )
         return trades
 
+    def get_outcome_prices_from_balances(
+        self, balances: list[OutcomeToken]
+    ) -> list[float]:
+        num_balances = len(balances)
+        prices = []
+
+        # Compute the product of all outcome balances except i for each i
+        for i in range(num_balances):
+            numerator = prod([balances[j].value for j in range(num_balances) if j != i])
+            prices.append(numerator)
+
+        denominator = sum(prices)
+        normalized_prices = [p / denominator for p in prices]
+
+        return normalized_prices
+
     def calculate_price_impact_for_bet_amount(
         self,
-        buy_direction: bool,
+        outcome_idx: int,
         bet_amount: CollateralToken,
-        yes: OutcomeToken,
-        no: OutcomeToken,
+        pool_balances: list[OutcomeToken],
         fees: MarketFees,
     ) -> float:
-        total_outcome_tokens = yes + no
-        expected_price = (
-            no / total_outcome_tokens if buy_direction else yes / total_outcome_tokens
-        )
+        prices = self.get_outcome_prices_from_balances(pool_balances)
+        expected_price = prices[outcome_idx]
 
         tokens_to_buy = get_buy_outcome_token_amount(
-            bet_amount, buy_direction, yes, no, fees
+            bet_amount, outcome_idx, pool_balances, fees
         )
 
         actual_price = bet_amount.value / tokens_to_buy.value
@@ -291,19 +274,18 @@ class KellyBettingStrategy(BettingStrategy):
         return price_impact
 
     def calculate_bet_amount_for_price_impact(
-        self,
-        market: AgentMarket,
-        kelly_bet: SimpleBet,
+        self, market: AgentMarket, kelly_bet: SimpleBet, direction: OutcomeStr
     ) -> CollateralToken:
         def calculate_price_impact_deviation_from_target_price_impact(
             bet_amount_usd: float,  # Needs to be float because it's used in minimize_scalar internally.
         ) -> float:
+            # ToDo - Fix arguments
+            outcome_idx = market.get_outcome_index(direction)
             price_impact = self.calculate_price_impact_for_bet_amount(
-                kelly_bet.direction,
-                market.get_usd_in_token(USD(bet_amount_usd)),
-                yes_outcome_pool_size,
-                no_outcome_pool_size,
-                market.fees,
+                outcome_idx=outcome_idx,
+                bet_amount=market.get_usd_in_token(USD(bet_amount_usd)),
+                pool_balances=pool_balances,
+                fees=market.fees,
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
 
@@ -316,17 +298,13 @@ class KellyBettingStrategy(BettingStrategy):
             )
             return kelly_bet.size
 
-        yes_outcome_pool_size = market.outcome_token_pool[
-            market.get_outcome_str_from_bool(True)
-        ]
-        no_outcome_pool_size = market.outcome_token_pool[
-            market.get_outcome_str_from_bool(False)
-        ]
+        pool_balances = [i.value for i in market.outcome_token_pool.values()]
+        total_pool_balance = sum(pool_balances)
 
         # The bounds below have been found to work heuristically.
         optimized_bet_amount = minimize_scalar(
             calculate_price_impact_deviation_from_target_price_impact,
-            bounds=(0, 1000 * (yes_outcome_pool_size + no_outcome_pool_size).value),
+            bounds=(0, 1000 * total_pool_balance),
             method="bounded",
             tol=1e-11,
             options={"maxiter": 10000},
@@ -385,8 +363,11 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
             market.get_outcome_str_from_bool(kelly_bet.direction): kelly_bet_size_usd,
         }
         target_position = Position(market_id=market.id, amounts_current=amounts)
+
         trades = self._build_rebalance_trades_from_positions(
-            existing_position, target_position, market=market
+            existing_position=existing_position,
+            target_position=target_position,
+            market=market,
         )
         return trades
 

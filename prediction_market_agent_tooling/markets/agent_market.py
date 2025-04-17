@@ -65,7 +65,7 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: t.Sequence[OutcomeStr]
-    outcome_token_pool: dict[str, OutcomeToken] | None
+    outcome_token_pool: dict[OutcomeStr, OutcomeToken] | None
     resolution: Resolution | None
     created_time: DatetimeUTC | None
     close_time: DatetimeUTC | None

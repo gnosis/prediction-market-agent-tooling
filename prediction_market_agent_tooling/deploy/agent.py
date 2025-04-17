@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     MaxAccuracyBettingStrategy,
     TradeType,
+    MultiCategoricalMaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -486,10 +487,9 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         Executed before market processing loop starts.
         """
-
+        api_keys = APIKeys()
         self.check_min_required_balance_to_operate(market_type)
-        # Fix me, uncomment
-        # market_type.market_class.redeem_winnings(api_keys)
+        market_type.market_class.redeem_winnings(api_keys)
 
     def process_markets(self, market_type: MarketType) -> None:
         """
@@ -601,7 +601,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         if existing_position := market.get_position(user_id=user_id):
             total_amount += existing_position.total_amount_current
 
-        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
+        return MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=total_amount)
 
     def build_trades(
         self,

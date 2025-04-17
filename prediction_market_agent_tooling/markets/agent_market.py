@@ -8,7 +8,6 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
-    CollateralToken,
     OutcomeStr,
     OutcomeToken,
     Probability,
@@ -66,11 +65,12 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: t.Sequence[OutcomeStr]
-    outcome_token_pool: dict[str, OutcomeToken] | None
+    outcome_token_pool: dict[OutcomeStr, OutcomeToken] | None
     resolution: Resolution | None
     created_time: DatetimeUTC | None
     close_time: DatetimeUTC | None
-    current_p_yes: Probability
+    current_p_yes: Probability | None = None
+    probability_map: dict[OutcomeStr, Probability]
     url: str
     volume: CollateralToken | None
     fees: MarketFees
@@ -228,10 +228,10 @@ class AgentMarket(BaseModel):
     def liquidate_existing_positions(self, outcome: bool) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def place_bet(self, outcome: bool, amount: USD) -> str:
+    def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def buy_tokens(self, outcome: bool, amount: USD) -> str:
+    def buy_tokens(self, outcome: OutcomeStr, amount: USD) -> str:
         return self.place_bet(outcome=outcome, amount=amount)
 
     def get_buy_token_amount(
@@ -239,7 +239,7 @@ class AgentMarket(BaseModel):
     ) -> OutcomeToken | None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def sell_tokens(self, outcome: bool, amount: USD | OutcomeToken) -> str:
+    def sell_tokens(self, outcome: OutcomeStr, amount: USD | OutcomeToken) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
@@ -249,6 +249,7 @@ class AgentMarket(BaseModel):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -333,7 +334,8 @@ class AgentMarket(BaseModel):
     def has_unsuccessful_resolution(self) -> bool:
         return self.resolution in [Resolution.CANCEL, Resolution.MKT]
 
-    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_str(self, outcome_index: int) -> OutcomeStr:
@@ -344,7 +346,7 @@ class AgentMarket(BaseModel):
                 f"Outcome index `{outcome_index}` out of range for `{self.outcomes}`: `{self.outcomes}`."
             )
 
-    def get_outcome_index(self, outcome: str) -> int:
+    def get_outcome_index(self, outcome: OutcomeStr) -> int:
         try:
             return self.outcomes.index(outcome)
         except ValueError:

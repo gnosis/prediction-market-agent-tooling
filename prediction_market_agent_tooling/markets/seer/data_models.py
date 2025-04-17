@@ -1,6 +1,4 @@
-import re
 import typing as t
-from enum import Enum
 from urllib.parse import urljoin
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -47,42 +45,43 @@ class CreateCategoricalMarketsParams(BaseModel):
     token_names: list[str] = Field(..., alias="tokenNames")
 
 
-class SeerOutcomeEnum(str, Enum):
-    YES = "yes"
-    NO = "no"
-    INVALID = "invalid"
-
-    @classmethod
-    def from_bool(cls, value: bool) -> "SeerOutcomeEnum":
-        return cls.YES if value else cls.NO
-
-    @classmethod
-    def from_string(cls, value: str) -> "SeerOutcomeEnum":
-        """Convert a string (case-insensitive) to an Outcome enum."""
-        normalized = value.strip().lower()
-        patterns = {
-            r"^yes$": cls.YES,
-            r"^no$": cls.NO,
-            r"^(invalid|invalid result)$": cls.INVALID,
-        }
-
-        # Search through patterns and return the first match
-        for pattern, outcome in patterns.items():
-            if re.search(pattern, normalized):
-                return outcome
-
-        raise ValueError(f"Could not map {value=} to an outcome.")
-
-    def to_bool(self) -> bool:
-        """Convert a SeerOutcomeEnum to a boolean value."""
-        if self == self.YES:
-            return True
-        elif self == self.NO:
-            return False
-        elif self == self.INVALID:
-            raise ValueError("Cannot convert INVALID outcome to boolean.")
-        else:
-            raise ValueError(f"Unknown outcome: {self}")
+# ToDo - delete me
+# class SeerOutcomeEnum(str, Enum):
+#     YES = "yes"
+#     NO = "no"
+#     INVALID = "invalid"
+#
+#     @classmethod
+#     def from_bool(cls, value: bool) -> "SeerOutcomeEnum":
+#         return cls.YES if value else cls.NO
+#
+#     @classmethod
+#     def from_string(cls, value: str) -> "SeerOutcomeEnum":
+#         """Convert a string (case-insensitive) to an Outcome enum."""
+#         normalized = value.strip().lower()
+#         patterns = {
+#             r"^yes$": cls.YES,
+#             r"^no$": cls.NO,
+#             r"^(invalid|invalid result)$": cls.INVALID,
+#         }
+#
+#         # Search through patterns and return the first match
+#         for pattern, outcome in patterns.items():
+#             if re.search(pattern, normalized):
+#                 return outcome
+#
+#         raise ValueError(f"Could not map {value=} to an outcome.")
+#
+#     def to_bool(self) -> bool:
+#         """Convert a SeerOutcomeEnum to a boolean value."""
+#         if self == self.YES:
+#             return True
+#         elif self == self.NO:
+#             return False
+#         elif self == self.INVALID:
+#             raise ValueError("Cannot convert INVALID outcome to boolean.")
+#         else:
+#             raise ValueError(f"Unknown outcome: {self}")
 
 
 SEER_BASE_URL = "https://app.seer.pm"
@@ -115,21 +114,21 @@ class SeerMarket(BaseModel):
         # 1. An invalid outcome AND
         # 2. Invalid payoutNumerator is 1.
 
-        try:
-            self.outcome_as_enums[SeerOutcomeEnum.INVALID]
-        except KeyError:
-            raise ValueError(
-                f"Market {self.id.hex()} has no invalid outcome. {self.outcomes}"
-            )
+        # try:
+        #     self.outcome_as_enums[SeerOutcomeEnum.INVALID]
+        # except KeyError:
+        #     raise ValueError(
+        #         f"Market {self.id.hex()} has no invalid outcome. {self.outcomes}"
+        #     )
 
         return self.payout_reported and self.payout_numerators[-1] != 1
 
-    @property
-    def outcome_as_enums(self) -> dict[SeerOutcomeEnum, int]:
-        return {
-            SeerOutcomeEnum.from_string(outcome): idx
-            for idx, outcome in enumerate(self.outcomes)
-        }
+    # @property
+    # def outcome_as_enums(self) -> dict[SeerOutcomeEnum, int]:
+    #     return {
+    #         SeerOutcomeEnum.from_string(outcome): idx
+    #         for idx, outcome in enumerate(self.outcomes)
+    #     }
 
     @property
     def is_resolved(self) -> bool:
@@ -139,17 +138,17 @@ class SeerMarket(BaseModel):
     def is_resolved_with_valid_answer(self) -> bool:
         return self.is_resolved and self.has_valid_answer
 
-    def get_resolution_enum(self) -> t.Optional[Resolution]:
-        if not self.is_resolved_with_valid_answer:
-            return None
-
-        max_idx = self.payout_numerators.index(1)
-
-        outcome: str = self.outcomes[max_idx]
-        outcome_enum = SeerOutcomeEnum.from_string(outcome)
-        if outcome_enum.to_bool():
-            return Resolution.YES
-        return Resolution.NO
+    # def get_resolution_enum(self) -> t.Optional[Resolution]:
+    #     if not self.is_resolved_with_valid_answer:
+    #         return None
+    #
+    #     max_idx = self.payout_numerators.index(1)
+    #
+    #     outcome: str = self.outcomes[max_idx]
+    #     outcome_enum = SeerOutcomeEnum.from_string(outcome)
+    #     if outcome_enum.to_bool():
+    #         return Resolution.YES
+    #     return Resolution.NO
 
     def is_redeemable(self, owner: ChecksumAddress, web3: Web3 | None = None) -> bool:
         token_balances = self.get_outcome_token_balances(owner, web3)
@@ -177,15 +176,15 @@ class SeerMarket(BaseModel):
         # 3 because Seer has also third, `Invalid` outcome.
         return len(self.outcomes) == 3
 
-    def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
-        if not self.is_binary:
-            raise ValueError(
-                f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
-            )
-
-        outcome: str = self.outcomes[answer.as_int()]
-        outcome_enum = SeerOutcomeEnum.from_string(outcome)
-        return outcome_enum.to_bool()
+    # def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
+    #     if not self.is_binary:
+    #         raise ValueError(
+    #             f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
+    #         )
+    #
+    #     outcome: str = self.outcomes[answer.as_int()]
+    #     outcome_enum = SeerOutcomeEnum.from_string(outcome)
+    #     return outcome_enum.to_bool()
 
     def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
         if self.boolean_outcome_from_answer(answer):

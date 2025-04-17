@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     MaxAccuracyBettingStrategy,
     TradeType,
+    MultiCategoricalMaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.deploy.constants import (
     MARKET_TYPE_KEY,
@@ -292,6 +293,7 @@ class DeployablePredictionAgent(DeployableAgent):
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
     trade_on_markets_created_after: DatetimeUTC | None = None
     get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
+    fetch_categorical_markets: bool = False
 
     # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
@@ -412,6 +414,7 @@ class DeployablePredictionAgent(DeployableAgent):
             sort_by=self.get_markets_sort_by,
             filter_by=FilterBy.OPEN,
             created_after=self.trade_on_markets_created_after,
+            fetch_categorical_markets=self.fetch_categorical_markets,
         )
         return available_markets
 
@@ -494,6 +497,12 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         logger.info("Start processing of markets.")
         available_markets = self.get_markets(market_type)
+        # ToDo - delete me, just for testing
+        available_markets = [
+            m
+            for m in available_markets
+            if m.id == "0x31a7e5d9b813d70fe63fa0b363f26aecee5c9f66"
+        ]
         logger.info(
             f"Fetched {len(available_markets)=} markets to process, going to process {self.bet_on_n_markets_per_run=}."
         )
@@ -592,7 +601,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         if existing_position := market.get_position(user_id=user_id):
             total_amount += existing_position.total_amount_current
 
-        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
+        return MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=total_amount)
 
     def build_trades(
         self,
@@ -654,8 +663,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                             market.get_position(user_id),
                             "Should exists if we are going to sell outcomes.",
                         )
+
                         current_position_value_usd = current_position.amounts_current[
-                            market.get_outcome_str_from_bool(trade.outcome)
+                            trade.outcome
                         ]
                         amount_to_sell: USD | OutcomeToken
                         if current_position_value_usd <= trade.amount:
@@ -663,9 +673,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                                 f"Current value of position {trade.outcome=}, {current_position_value_usd=} is less than the desired selling amount {trade.amount=}. Selling all."
                             )
                             # In case the agent asked to sell too much, provide the amount to sell as all outcome tokens, instead of in USD, to minimze fx fluctuations when selling.
-                            amount_to_sell = current_position.amounts_ot[
-                                market.get_outcome_str_from_bool(trade.outcome)
-                            ]
+                            amount_to_sell = current_position.amounts_ot[trade.outcome]
                         else:
                             amount_to_sell = trade.amount
                         id = market.sell_tokens(

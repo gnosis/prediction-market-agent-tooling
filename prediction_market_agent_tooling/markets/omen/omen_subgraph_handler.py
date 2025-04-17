@@ -17,17 +17,17 @@ from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_BINARY_MARKET_OUTCOMES,
     ContractPrediction,
     OmenBet,
     OmenMarket,
     OmenPosition,
     OmenUserPosition,
-    OutcomeStr,
     OutcomeWei,
     RealityAnswer,
     RealityQuestion,
     RealityResponse,
+    OMEN_BINARY_MARKET_OUTCOMES,
+    OmenCategoricalMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     COWContract,
@@ -221,7 +221,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         self,
         creator: HexAddress | None,
         creator_in: t.Sequence[HexAddress] | None,
-        outcomes: t.Sequence[OutcomeStr],
         created_after: DatetimeUTC | None,
         question_opened_before: DatetimeUTC | None,
         question_opened_after: DatetimeUTC | None,
@@ -239,12 +238,15 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         id_in: list[str] | None,
         collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
         category: str | None,
+        include_categorical_markets: bool = False,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
-            "outcomes": outcomes,
             "title_not": None,
             "condition_": {},
         }
+        if not include_categorical_markets:
+            where_stms["outcomeSlotCount"] = 2
+            where_stms["outcomes"] = OMEN_BINARY_MARKET_OUTCOMES
 
         where_stms["question_"] = self.get_omen_question_filters(
             question_id=question_id,
@@ -335,6 +337,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         # Enumerated values for simpler usage.
         filter_by: FilterBy,
         sort_by: SortBy,
+        include_categorical_markets: bool = False,
         # Additional filters, these can not be modified by the enums above.
         created_after: DatetimeUTC | None = None,
         excluded_questions: set[str] | None = None,  # question titles
@@ -367,7 +370,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
-        return self.get_omen_binary_markets(
+        all_markets = self.get_omen_binary_markets(
             limit=limit,
             resolved=resolved,
             question_opened_after=opened_after,
@@ -379,7 +382,10 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             collateral_token_address_in=collateral_token_address_in,
             category=category,
             creator_in=creator_in,
+            include_categorical_markets=include_categorical_markets,
         )
+
+        return all_markets
 
     def get_omen_binary_markets(
         self,
@@ -403,11 +409,11 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         id_in: list[str] | None = None,
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
-        outcomes: t.Sequence[OutcomeStr] = OMEN_BINARY_MARKET_OUTCOMES,
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
         ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
+        include_categorical_markets: bool = True,
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
@@ -415,7 +421,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         where_stms = self._build_where_statements(
             creator=creator,
             creator_in=creator_in,
-            outcomes=outcomes,
             created_after=created_after,
             question_opened_before=question_opened_before,
             question_opened_after=question_opened_after,
@@ -433,6 +438,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             liquidity_bigger_than=liquidity_bigger_than,
             collateral_token_address_in=collateral_token_address_in,
             category=category,
+            include_categorical_markets=include_categorical_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.
@@ -451,7 +457,10 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         )
 
         fields = self._get_fields_for_markets(markets)
-        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
+        pydantic_model = (
+            OmenCategoricalMarket if include_categorical_markets else OmenMarket
+        )
+        omen_markets = self.do_query(fields=fields, pydantic_model=pydantic_model)
         return omen_markets
 
     def get_omen_market_by_market_id(

@@ -1,5 +1,6 @@
 import typing as t
 from datetime import timedelta
+from math import prod
 
 import tenacity
 from web3 import Web3
@@ -43,8 +44,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
     OmenMarket,
     OmenUserPosition,
-    get_bet_outcome,
-    get_boolean_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
@@ -159,14 +158,14 @@ class OmenAgentMarket(AgentMarket):
 
     def liquidate_existing_positions(
         self,
-        bet_outcome: bool,
+        bet_outcome: OutcomeStr,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
         larger_than: OutcomeToken | None = None,
     ) -> None:
         """
         Liquidates all previously existing positions.
-        Returns the amount in collateral obtained by selling the positions.
+
         """
         api_keys = api_keys if api_keys is not None else APIKeys()
         better_address = api_keys.bet_from_address
@@ -179,10 +178,9 @@ class OmenAgentMarket(AgentMarket):
 
         for prev_position in prev_positions_for_market:
             for position_outcome, token_amount in prev_position.amounts_ot.items():
-                position_outcome_bool = get_boolean_outcome(position_outcome)
-                if position_outcome_bool != bet_outcome:
+                if position_outcome != bet_outcome:
                     self.sell_tokens(
-                        outcome=position_outcome_bool,
+                        outcome=position_outcome,
                         amount=token_amount,
                         auto_withdraw=True,
                         web3=web3,
@@ -191,7 +189,7 @@ class OmenAgentMarket(AgentMarket):
 
     def place_bet(
         self,
-        outcome: bool,
+        outcome: OutcomeStr,
         amount: USD,
         auto_deposit: bool = True,
         web3: Web3 | None = None,
@@ -205,7 +203,7 @@ class OmenAgentMarket(AgentMarket):
             api_keys=api_keys if api_keys is not None else APIKeys(),
             amount=amount,
             market=self,
-            binary_outcome=outcome,
+            outcome=outcome,
             auto_deposit=auto_deposit,
             web3=web3,
         )
@@ -225,7 +223,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     def get_sell_value_of_outcome_token(
-        self, outcome: str, amount: OutcomeToken, web3: Web3 | None = None
+        self, outcome: OutcomeStr, amount: OutcomeToken, web3: Web3 | None = None
     ) -> CollateralToken:
         """
         Market can have as collateral token GNO for example.
@@ -233,19 +231,15 @@ class OmenAgentMarket(AgentMarket):
         When selling, you need to provide the amount in GNO, which is cumbersome because you know how much shares you have, but you don't have the price of the shares in GNO.
         Use this to convert how much collateral token (GNO in our example) to sell, to get the amount of shares you want to sell.
         """
-        outcome_bool = get_boolean_outcome(outcome)
 
         pool_balance = get_conditional_tokens_balance_for_market(
             self, self.market_maker_contract_address_checksummed, web3=web3
         )
-
-        sell_str = self.outcomes[self.yes_index if outcome_bool else self.no_index]
-        other_str = self.outcomes[self.no_index if outcome_bool else self.yes_index]
-
+        outcome_idx = self.index_set_to_outcome_index(self.get_index_set(outcome))
         collateral = calculate_sell_amount_in_collateral(
             shares_to_sell=amount,
-            holdings=pool_balance[self.get_index_set(sell_str)].as_outcome_token,
-            other_holdings=pool_balance[self.get_index_set(other_str)].as_outcome_token,
+            outcome_index=outcome_idx,
+            pool_balances=[x.as_outcome_token for x in pool_balance.values()],
             fees=self.fees,
         )
 
@@ -253,7 +247,7 @@ class OmenAgentMarket(AgentMarket):
 
     def sell_tokens(
         self,
-        outcome: bool,
+        outcome: OutcomeStr,
         amount: USD | OutcomeToken,
         auto_withdraw: bool = True,
         api_keys: APIKeys | None = None,
@@ -267,7 +261,7 @@ class OmenAgentMarket(AgentMarket):
             amount=amount,
             api_keys=api_keys if api_keys is not None else APIKeys(),
             market=self,
-            binary_outcome=outcome,
+            outcome=outcome,
             auto_withdraw=auto_withdraw,
             web3=web3,
         )
@@ -335,7 +329,38 @@ class OmenAgentMarket(AgentMarket):
         return OmenAgentMarket.from_data_model(OmenMarket.from_created_market(model))
 
     @staticmethod
+    def compute_fpmm_probabilities(balances: list[OutcomeWei]) -> list[Probability]:
+        """
+        Compute the implied probabilities in a Fixed Product Market Maker.
+
+        Args:
+            balances (List[float]): Balances of outcome tokens.
+
+        Returns:
+            List[float]: Implied probabilities for each outcome.
+        """
+        # converting to standard values for prod compatibility.
+        values_balance = [i.value for i in balances]
+        # Compute product of balances excluding each outcome
+        excluded_products = []
+        for i in range(len(values_balance)):
+            other_balances = values_balance[:i] + values_balance[i + 1 :]
+            excluded_products.append(prod(other_balances))
+
+        # Normalize to sum to 1
+        total = sum(excluded_products)
+        probabilities = [Probability(p / total) for p in excluded_products]
+
+        return probabilities
+
+    @staticmethod
+    def build_probability_map(model: OmenMarket) -> dict[OutcomeStr, Probability]:
+        probs = OmenAgentMarket.compute_fpmm_probabilities(model.outcomeTokenAmounts)
+        return {outcome: prob for outcome, prob in zip(model.outcomes, probs)}
+
+    @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
+        # ToDo - Work with class OmenCategoricalMarket (use `isistance` later)
         return OmenAgentMarket(
             id=model.id,
             question=model.title,
@@ -346,7 +371,7 @@ class OmenAgentMarket(AgentMarket):
             resolution=model.get_resolution_enum(),
             created_time=model.creation_datetime,
             finalized_time=model.finalized_datetime,
-            current_p_yes=model.current_p_yes,
+            # current_p_yes=model.current_p_yes,
             condition=model.condition,
             url=model.url,
             volume=model.collateralVolume.as_token,
@@ -361,6 +386,7 @@ class OmenAgentMarket(AgentMarket):
                 model.outcomes[i]: model.outcomeTokenAmounts[i].as_outcome_token
                 for i in range(len(model.outcomes))
             },
+            probability_map=OmenAgentMarket.build_probability_map(model),
         )
 
     @staticmethod
@@ -370,6 +396,7 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["OmenAgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)
@@ -379,6 +406,7 @@ class OmenAgentMarket(AgentMarket):
                 filter_by=filter_by,
                 created_after=created_after,
                 excluded_questions=excluded_questions,
+                include_categorical_markets=fetch_categorical_markets,
             )
         ]
 
@@ -470,7 +498,7 @@ class OmenAgentMarket(AgentMarket):
             address=self.market_maker_contract_address_checksummed,
         )
 
-    def get_index_set(self, outcome: str) -> int:
+    def get_index_set(self, outcome: OutcomeStr) -> int:
         return self.get_outcome_index(outcome) + 1
 
     def index_set_to_outcome_index(cls, index_set: int) -> int:
@@ -481,7 +509,8 @@ class OmenAgentMarket(AgentMarket):
             cls.get_outcome_str(cls.index_set_to_outcome_index(index_set))
         )
 
-    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
         return (
             OutcomeStr(OMEN_TRUE_OUTCOME) if outcome else OutcomeStr(OMEN_FALSE_OUTCOME)
         )
@@ -526,11 +555,13 @@ class OmenAgentMarket(AgentMarket):
             condition_id = omen_position.position.condition_id
             omen_positions_dict.setdefault(condition_id, []).append(omen_position)
 
+        # We include categorical markets below simply because we are already filtering on condition_ids.
         omen_markets: dict[HexBytes, OmenMarket] = {
             m.condition.id: m
             for m in sgh.get_omen_binary_markets(
                 limit=None,
                 condition_id_in=list(omen_positions_dict.keys()),
+                include_categorical_markets=True,
             )
         }
 
@@ -565,7 +596,7 @@ class OmenAgentMarket(AgentMarket):
                     )
 
                 amounts_ot[outecome_str] = omen_position.totalBalance.as_outcome_token
-
+            # ToDo - Can't we call FixedProductMarketMaker.calcSellAmount(), get the collateral amount?
             amounts_current = {
                 k: market.get_token_in_usd(
                     # If the market is not open for trading anymore, then current value is equal to potential value.
@@ -594,7 +625,7 @@ class OmenAgentMarket(AgentMarket):
         return get_omen_user_url(keys.bet_from_address)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | CollateralToken, direction: bool
+        self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
     ) -> OutcomeToken:
         """
         Note: this is only valid if the market instance's token pool is
@@ -603,9 +634,8 @@ class OmenAgentMarket(AgentMarket):
         outcome_token_pool = check_not_none(self.outcome_token_pool)
         amount = get_buy_outcome_token_amount(
             investment_amount=self.get_in_token(bet_amount),
-            buy_direction=direction,
-            yes_outcome_pool_size=outcome_token_pool[OMEN_TRUE_OUTCOME],
-            no_outcome_pool_size=outcome_token_pool[OMEN_FALSE_OUTCOME],
+            outcome_index=self.get_outcome_index(outcome_str),
+            pool_balances=list(outcome_token_pool.values()),
             fees=self.fees,
         )
         return amount
@@ -712,7 +742,7 @@ def omen_buy_outcome_tx(
     api_keys: APIKeys,
     amount: USD | CollateralToken,
     market: OmenAgentMarket,
-    outcome: str,
+    outcome: OutcomeStr,
     auto_deposit: bool,
     web3: Web3 | None = None,
     slippage: float = 0.01,
@@ -768,7 +798,7 @@ def binary_omen_buy_outcome_tx(
     api_keys: APIKeys,
     amount: USD | CollateralToken,
     market: OmenAgentMarket,
-    binary_outcome: bool,
+    outcome: OutcomeStr,
     auto_deposit: bool,
     web3: Web3 | None = None,
 ) -> str:
@@ -776,7 +806,7 @@ def binary_omen_buy_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=get_bet_outcome(binary_outcome),
+        outcome=outcome,
         auto_deposit=auto_deposit,
         web3=web3,
     )
@@ -786,7 +816,7 @@ def omen_sell_outcome_tx(
     api_keys: APIKeys,
     amount: OutcomeToken | CollateralToken | USD,
     market: OmenAgentMarket,
-    outcome: str,
+    outcome: OutcomeStr,
     auto_withdraw: bool,
     web3: Web3 | None = None,
     slippage: float = 0.01,
@@ -862,7 +892,7 @@ def binary_omen_sell_outcome_tx(
     api_keys: APIKeys,
     amount: OutcomeToken | CollateralToken | USD,
     market: OmenAgentMarket,
-    binary_outcome: bool,
+    outcome: OutcomeStr,
     auto_withdraw: bool,
     web3: Web3 | None = None,
 ) -> str:
@@ -870,7 +900,7 @@ def binary_omen_sell_outcome_tx(
         api_keys=api_keys,
         amount=amount,
         market=market,
-        outcome=get_bet_outcome(binary_outcome),
+        outcome=outcome,
         auto_withdraw=auto_withdraw,
         web3=web3,
     )
@@ -1359,9 +1389,8 @@ def send_keeping_token_to_eoa_xdai(
 
 def get_buy_outcome_token_amount(
     investment_amount: CollateralToken,
-    buy_direction: bool,
-    yes_outcome_pool_size: OutcomeToken,
-    no_outcome_pool_size: OutcomeToken,
+    outcome_index: int,
+    pool_balances: list[OutcomeToken],
     fees: MarketFees,
 ) -> OutcomeToken:
     """
@@ -1369,19 +1398,24 @@ def get_buy_outcome_token_amount(
 
     Taken from https://github.com/gnosis/conditional-tokens-market-makers/blob/6814c0247c745680bb13298d4f0dd7f5b574d0db/contracts/FixedProductMarketMaker.sol#L264
     """
+    if outcome_index >= len(pool_balances):
+        raise ValueError("invalid outcome index")
+
     investment_amount_minus_fees = fees.get_after_fees(investment_amount)
     investment_amount_minus_fees_as_ot = OutcomeToken(
         investment_amount_minus_fees.value
     )
-    buy_token_pool_balance = (
-        yes_outcome_pool_size if buy_direction else no_outcome_pool_size
-    )
 
-    pool_balance = no_outcome_pool_size if buy_direction else yes_outcome_pool_size
-    denominator = pool_balance + investment_amount_minus_fees_as_ot
-    ending_outcome_balance = OutcomeToken(
-        buy_token_pool_balance * pool_balance / denominator
-    )
+    buy_token_pool_balance = pool_balances[outcome_index]
+    ending_outcome_balance = buy_token_pool_balance
+
+    # Calculate the ending balance considering all other outcomes
+    for i, pool_balance in enumerate(pool_balances):
+        if i != outcome_index:
+            denominator = pool_balance + investment_amount_minus_fees_as_ot
+            ending_outcome_balance = OutcomeToken(
+                (ending_outcome_balance * pool_balance / denominator)
+            )
 
     if ending_outcome_balance <= 0:
         raise ValueError("must have non-zero balances")
@@ -1392,3 +1426,27 @@ def get_buy_outcome_token_amount(
         - ending_outcome_balance
     )
     return result
+
+    # investment_amount_minus_fees = fees.get_after_fees(investment_amount)
+    # investment_amount_minus_fees_as_ot = OutcomeToken(
+    #     investment_amount_minus_fees.value
+    # )
+    # buy_token_pool_balance = (
+    #     yes_outcome_pool_size if buy_direction else no_outcome_pool_size
+    # )
+    #
+    # pool_balance = no_outcome_pool_size if buy_direction else yes_outcome_pool_size
+    # denominator = pool_balance + investment_amount_minus_fees_as_ot
+    # ending_outcome_balance = OutcomeToken(
+    #     buy_token_pool_balance * pool_balance / denominator
+    # )
+    #
+    # if ending_outcome_balance <= 0:
+    #     raise ValueError("must have non-zero balances")
+    #
+    # result = (
+    #     buy_token_pool_balance
+    #     + investment_amount_minus_fees_as_ot
+    #     - ending_outcome_balance
+    # )
+    # return result

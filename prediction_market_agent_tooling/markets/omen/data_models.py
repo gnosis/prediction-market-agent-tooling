@@ -487,6 +487,10 @@ class OmenMarket(BaseModel):
         )
 
 
+class OmenCategoricalMarket(OmenMarket):
+    pass
+
+
 def calculate_liquidity_parameter(
     outcome_token_amounts: list[OutcomeWei],
 ) -> Wei:

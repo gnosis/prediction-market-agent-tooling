@@ -16,6 +16,9 @@ from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import BPS_CONSTANT
 from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
 
+# max uint16 for easy prediction identification (if market does not have YES outcome)
+UINT16_MAX = 2**16 - 1  # = 65535
+
 
 def store_trades(
     market_id: str,
@@ -43,11 +46,16 @@ def store_trades(
         HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
     ]
 
+    yes_probability = traded_market.answer.get_yes_probability()
+    estimated_probability_bps = (
+        int(yes_probability * BPS_CONSTANT) if yes_probability else UINT16_MAX
+    )
+
     prediction = ContractPrediction(
         publisher=keys.bet_from_address,
         ipfs_hash=ipfs_hash_decoded,
         tx_hashes=tx_hashes,
-        estimated_probability_bps=int(traded_market.answer.p_yes * BPS_CONSTANT),
+        estimated_probability_bps=estimated_probability_bps,
     )
     tx_receipt = OmenAgentResultMappingContract().add_prediction(
         api_keys=keys,

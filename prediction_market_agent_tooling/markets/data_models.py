@@ -86,6 +86,11 @@ class ProbabilisticAnswer(BaseModel):
     confidence: float
     reasoning: str | None = None
 
+    def get_yes_probability(self) -> Probability | None:
+        return next(
+            (p for o, p in self.probabilities_multi.items() if o.upper() == "YES"), None
+        )
+
 
 class Position(BaseModel):
     market_id: str

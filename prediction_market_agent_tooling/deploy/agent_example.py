@@ -39,6 +39,7 @@ class DeployableCoinFlipAgent(DeployableTraderAgent):
         # decision = random.choice(market.outcomes)
         # ToDo - Only testing
         decision = market.outcomes[1]
+        # decision = market.outcomes[0]
         probabilities_multi = {decision: Probability(1.0)}
         for outcome in market.outcomes:
             if outcome != decision:

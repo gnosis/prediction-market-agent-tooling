@@ -497,6 +497,12 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         logger.info("Start processing of markets.")
         available_markets = self.get_markets(market_type)
+        # ToDo - delete me, just for testing
+        available_markets = [
+            m
+            for m in available_markets
+            if m.id == "0x31a7e5d9b813d70fe63fa0b363f26aecee5c9f66"
+        ]
         logger.info(
             f"Fetched {len(available_markets)=} markets to process, going to process {self.bet_on_n_markets_per_run=}."
         )

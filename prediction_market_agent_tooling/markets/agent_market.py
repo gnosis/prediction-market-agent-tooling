@@ -346,7 +346,7 @@ class AgentMarket(BaseModel):
                 f"Outcome index `{outcome_index}` out of range for `{self.outcomes}`: `{self.outcomes}`."
             )
 
-    def get_outcome_index(self, outcome: str) -> int:
+    def get_outcome_index(self, outcome: OutcomeStr) -> int:
         try:
             return self.outcomes.index(outcome)
         except ValueError:

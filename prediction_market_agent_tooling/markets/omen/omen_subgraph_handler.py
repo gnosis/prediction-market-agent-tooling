@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityQuestion,
     RealityResponse,
     OMEN_BINARY_MARKET_OUTCOMES,
+    OmenCategoricalMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,
@@ -402,7 +403,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             tuple[ChecksumAddress, ...] | None
         ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
-        include_categorical_markets: bool = False,
+        include_categorical_markets: bool = True,
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
@@ -446,7 +447,10 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         )
 
         fields = self._get_fields_for_markets(markets)
-        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
+        pydantic_model = (
+            OmenCategoricalMarket if include_categorical_markets else OmenMarket
+        )
+        omen_markets = self.do_query(fields=fields, pydantic_model=pydantic_model)
         return omen_markets
 
     def get_omen_market_by_market_id(

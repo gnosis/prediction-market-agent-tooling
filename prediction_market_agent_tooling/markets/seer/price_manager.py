@@ -122,7 +122,7 @@ class PriceManager:
 
     def build_probability_map(self) -> dict[OutcomeStr, Probability]:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
-        price_data: dict[HexAddress, CollateralToken | None] = {}
+        price_data: dict[HexAddress, CollateralToken] = {}
 
         # we ignore the invalid outcome.
         # Seer hardcodes `invalid outcome` as the latest one (https://github.com/seer-pm/demo/blob/45f4fc59fb521154f914a372b17192812f512fb3/web/src/lib/market.ts#L123).
@@ -132,16 +132,16 @@ class PriceManager:
             price = self.get_price_for_token(
                 token=Web3.to_checksum_address(wrapped_token),
             )
-            price_data[wrapped_token] = price
-
-        # Exclude outcomes which have unavailable prices.
-        price_data = {k: v for k, v in price_data.items() if v is not None}
+            if price is not None:
+                price_data[wrapped_token] = price
 
         # We normalize the prices to sum up to 1.
         normalized_prices = {}
         for outcome_token, price in price_data.items():
             old_price = price
-            new_price = Probability(price / (sum(price_data.values())))
+            new_price = Probability(
+                price / (sum(price_data.values(), start=CollateralToken.zero()))
+            )
             self._log_track_price_normalization_diff(
                 old_price=old_price.value, normalized_price=new_price
             )

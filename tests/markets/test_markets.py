@@ -25,16 +25,23 @@ def test_market_mapping_contains_all_types(market_type: MarketType) -> None:
 
 
 def test_valid_token_pool() -> None:
+    probability_map = {
+        OutcomeStr("yes"): Probability(0.5),
+        OutcomeStr("no"): Probability(0.5),
+    }
     market = AgentMarket(
         id="foo",
         question="bar",
         description=None,
-        outcomes=[OutcomeStr("yes"), OutcomeStr("no")],
-        outcome_token_pool={"yes": OutcomeToken(1.1), "no": OutcomeToken(2.0)},
+        outcomes=list(probability_map.keys()),
+        outcome_token_pool={
+            OutcomeStr("yes"): OutcomeToken(1.1),
+            OutcomeStr("yes"): OutcomeToken(2.0),
+        },
         resolution=None,
         created_time=None,
         close_time=None,
-        current_p_yes=Probability(0.5),
+        probability_map=probability_map,
         url="https://example.com",
         volume=None,
         fees=MarketFees.get_zero_fees(),
@@ -45,20 +52,27 @@ def test_valid_token_pool() -> None:
 
 
 def test_invalid_token_pool() -> None:
+    prob_map = {
+        OutcomeStr("yes"): Probability(0.5),
+        OutcomeStr("no"): Probability(0.5),
+    }
     with pytest.raises(ValueError) as e:
         AgentMarket(
             id="foo",
             question="bar",
             description=None,
-            outcomes=[OutcomeStr("yes"), OutcomeStr("no")],
-            outcome_token_pool={"baz": OutcomeToken(1.1), "qux": OutcomeToken(2.0)},
+            outcomes=list(prob_map.keys()),
+            outcome_token_pool={
+                OutcomeStr("baz"): OutcomeToken(1.1),
+                OutcomeStr("qux"): OutcomeToken(2.0),
+            },
             resolution=None,
             created_time=None,
             close_time=None,
-            current_p_yes=Probability(0.5),
             url="https://example.com",
             volume=None,
             fees=MarketFees.get_zero_fees(),
+            probability_map=prob_map,
         )
     assert "do not match outcomes" in str(e.value)
 

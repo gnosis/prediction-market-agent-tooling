@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeWei,
     Web3Wei,
 )
-from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerParentMarket,
 )
@@ -175,22 +174,6 @@ class SeerMarket(BaseModel):
     def is_binary(self) -> bool:
         # 3 because Seer has also third, `Invalid` outcome.
         return len(self.outcomes) == 3
-
-    # def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
-    #     if not self.is_binary:
-    #         raise ValueError(
-    #             f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
-    #         )
-    #
-    #     outcome: str = self.outcomes[answer.as_int()]
-    #     outcome_enum = SeerOutcomeEnum.from_string(outcome)
-    #     return outcome_enum.to_bool()
-
-    def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
-        if self.boolean_outcome_from_answer(answer):
-            return Resolution.YES
-        else:
-            return Resolution.NO
 
     @property
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:

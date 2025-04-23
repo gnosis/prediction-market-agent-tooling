@@ -201,7 +201,7 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_sell_value_of_outcome_token(
-        self, outcome: str, amount: OutcomeToken
+        self, outcome: OutcomeStr, amount: OutcomeToken
     ) -> CollateralToken:
         """
         When you hold OutcomeToken(s), it's easy to calculate how much you get at the end if you win (1 OutcomeToken will equal to 1 Token).
@@ -225,7 +225,7 @@ class AgentMarket(BaseModel):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def liquidate_existing_positions(self, outcome: bool) -> None:
+    def liquidate_existing_positions(self, outcome: OutcomeStr) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
     def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
@@ -235,7 +235,7 @@ class AgentMarket(BaseModel):
         return self.place_bet(outcome=outcome, amount=amount)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | CollateralToken, direction: bool
+        self, bet_amount: USD | CollateralToken, outcome: OutcomeStr
     ) -> OutcomeToken | None:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -352,7 +352,7 @@ class AgentMarket(BaseModel):
         except ValueError:
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
 
-    def get_token_balance(self, user_id: str, outcome: str) -> OutcomeToken:
+    def get_token_balance(self, user_id: str, outcome: OutcomeStr) -> OutcomeToken:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_position(self, user_id: str) -> ExistingPosition | None:

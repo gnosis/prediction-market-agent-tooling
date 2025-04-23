@@ -90,6 +90,10 @@ def omen_market() -> OmenMarket:
     )
 
 
+def build_prob_map_from_p_yes(p_yes: Probability) -> dict[OutcomeStr, Probability]:
+    return {OutcomeStr("Yes"): p_yes, OutcomeStr("No"): Probability(1.0 - p_yes)}
+
+
 @pytest.mark.parametrize(
     "outcome, market_p_yes, amount_to_win",
     [
@@ -110,6 +114,7 @@ def test_minimum_bet_to_win(
             creator=GANACHE_ADDRESS_NR_1,
             outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
             current_p_yes=market_p_yes,
+            probability_map=build_prob_map_from_p_yes(market_p_yes),
             collateral_token_contract_address_checksummed=WrappedxDaiContract().address,
             market_maker_contract_address_checksummed=Web3.to_checksum_address(
                 "0xf3318C420e5e30C12786C4001D600e9EE1A7eBb1"
@@ -150,6 +155,7 @@ def test_minimum_bet_to_win_manifold(
         description=None,
         outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
         current_p_yes=market_p_yes,
+        probability_map=build_prob_map_from_p_yes(market_p_yes),
         created_time=utcnow() - timedelta(days=1),
         close_time=utcnow(),
         resolution=None,
@@ -207,7 +213,7 @@ def test_sanity_check_market_moving_bet(target_p_yes: float) -> None:
     market_moving_bet = get_market_moving_bet(
         yes_outcome_pool_size=yes_outcome_pool_size,
         no_outcome_pool_size=no_outcome_pool_size,
-        market_p_yes=market.current_p_yes,
+        market_p_yes=check_not_none(market.current_p_yes),
         target_p_yes=target_p_yes,
         fees=market.fees,
     )
@@ -276,12 +282,13 @@ def test_zero_bets() -> None:
     outcome_token_pool = check_not_none(market.outcome_token_pool)
     yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
     no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
+    market_current_p_yes = check_not_none(market.current_p_yes)
 
     market_moving_bet = get_market_moving_bet(
         yes_outcome_pool_size=yes_outcome_pool_size,
         no_outcome_pool_size=no_outcome_pool_size,
-        market_p_yes=market.current_p_yes,
-        target_p_yes=market.current_p_yes,
+        market_p_yes=market_current_p_yes,
+        target_p_yes=market_current_p_yes,
         fees=market.fees,
     )
     assert np.isclose(market_moving_bet.size.value, 0.0, atol=1e-3)
@@ -289,7 +296,7 @@ def test_zero_bets() -> None:
     kelly_bet = get_kelly_bet_full(
         yes_outcome_pool_size=yes_outcome_pool_size,
         no_outcome_pool_size=no_outcome_pool_size,
-        estimated_p_yes=market.current_p_yes,
+        estimated_p_yes=market_current_p_yes,
         confidence=1.0,
         max_bet=CollateralToken(0),
         fees=market.fees,
@@ -298,8 +305,8 @@ def test_zero_bets() -> None:
 
     kelly_bet_simple = get_kelly_bet_simplified(
         max_bet=CollateralToken(100),
-        market_p_yes=market.current_p_yes,
-        estimated_p_yes=market.current_p_yes,
+        market_p_yes=market_current_p_yes,
+        estimated_p_yes=market_current_p_yes,
         confidence=1.0,
     )
     assert not kelly_bet_simple.size

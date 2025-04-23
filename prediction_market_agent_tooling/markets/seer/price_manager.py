@@ -1,6 +1,6 @@
 import typing as t
 
-from cachetools import cached
+from cachetools import cached, TTLCache
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -11,7 +11,6 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.seer.cache import FSLRUCache
 from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
 )
@@ -67,8 +66,7 @@ class PriceManager:
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
             )
 
-    # @cached(TTLCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
-    @cached(cache=FSLRUCache(maxsize=32, ttl=5 * 60 * 60), key=_make_cache_key)
+    @cached(TTLCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
     def get_price_for_token(
         self,
         token: ChecksumAddress,
@@ -125,6 +123,7 @@ class PriceManager:
     def build_probability_map(self) -> dict[OutcomeStr, Probability]:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
         price_data: dict[HexAddress, CollateralToken | None] = {}
+
         # we ignore the invalid outcome.
         # Seer hardcodes `invalid outcome` as the latest one (https://github.com/seer-pm/demo/blob/45f4fc59fb521154f914a372b17192812f512fb3/web/src/lib/market.ts#L123).
         valid_wrapped_tokens = self.seer_market.wrapped_tokens[:-1]

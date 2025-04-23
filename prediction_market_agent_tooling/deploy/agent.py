@@ -13,7 +13,6 @@ from pydantic import computed_field
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    MaxAccuracyBettingStrategy,
     TradeType,
     MultiCategoricalMaxAccuracyBettingStrategy,
 )
@@ -379,9 +378,13 @@ class DeployablePredictionAgent(DeployableAgent):
             return False
 
         # Manifold allows to bet only on markets with probability between 1 and 99.
-        if market_type == MarketType.MANIFOLD and not (1 < market.current_p_yes < 99):
-            logger.info("Manifold's market probability not in the range 1-99.")
-            return False
+        if market_type == MarketType.MANIFOLD:
+            probability_yes = market.probability_map[
+                market.get_outcome_str_from_bool(True)
+            ]
+            if not probability_yes or not 1 < probability_yes < 99:
+                logger.info("Manifold's market probability not in the range 1-99.")
+                return False
 
         # Do as a last check, as it uses paid OpenAI API.
         if not is_predictable_binary(market.question):

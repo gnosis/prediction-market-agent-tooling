@@ -102,16 +102,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if not include_conditional_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
-        # We are only interested in binary markets of type YES/NO/Invalid.
-        # ToDo - Make sure it's OK to remove this
-        or_stms = {}
-        # or_stms["or"] = [
-        #     {"outcomes_contains": ["YES"]},
-        #     {"outcomes_contains": ["Yes"]},
-        #     {"outcomes_contains": ["yes"]},
-        # ]
-
-        where_stms: dict[str, t.Any] = {"and": [and_stms, or_stms]}
+        where_stms: dict[str, t.Any] = {"and": [and_stms]}
         return where_stms
 
     def _build_sort_params(
@@ -196,9 +187,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if include_categorical_markets:
             return two_category_markets
 
-        # Now we additionally filter markets based on YES/NO being the only outcomes.
-        binary_markets = self.filter_binary_markets(two_category_markets)
-        return binary_markets
+        # Otherwise we additionally filter markets based on YES/NO being the only outcomes.
+        return self.filter_binary_markets(two_category_markets)
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
         markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())

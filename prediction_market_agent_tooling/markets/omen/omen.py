@@ -210,7 +210,7 @@ class OmenAgentMarket(AgentMarket):
 
     def buy_tokens(
         self,
-        outcome: bool,
+        outcome: OutcomeStr,
         amount: USD,
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
@@ -360,7 +360,6 @@ class OmenAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
-        # ToDo - Work with class OmenCategoricalMarket (use `isistance` later)
         return OmenAgentMarket(
             id=model.id,
             question=model.title,
@@ -516,7 +515,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     def get_token_balance(
-        self, user_id: str, outcome: str, web3: Web3 | None = None
+        self, user_id: str, outcome: OutcomeStr, web3: Web3 | None = None
     ) -> OutcomeToken:
         index_set = self.get_index_set(outcome)
         balances = get_conditional_tokens_balance_for_market(
@@ -625,7 +624,7 @@ class OmenAgentMarket(AgentMarket):
         return get_omen_user_url(keys.bet_from_address)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
+        self, bet_amount: USD | CollateralToken, outcome: OutcomeStr
     ) -> OutcomeToken:
         """
         Note: this is only valid if the market instance's token pool is
@@ -634,61 +633,25 @@ class OmenAgentMarket(AgentMarket):
         outcome_token_pool = check_not_none(self.outcome_token_pool)
         amount = get_buy_outcome_token_amount(
             investment_amount=self.get_in_token(bet_amount),
-            outcome_index=self.get_outcome_index(outcome_str),
+            outcome_index=self.get_outcome_index(outcome),
             pool_balances=list(outcome_token_pool.values()),
             fees=self.fees,
         )
         return amount
 
     def _get_buy_token_amount_from_smart_contract(
-        self, bet_amount: USD, direction: bool
+        self, bet_amount: USD, outcome: OutcomeStr
     ) -> OutcomeToken:
         bet_amount_in_tokens = get_usd_in_token(
             bet_amount, self.collateral_token_contract_address_checksummed
         )
+
         received_token_amount_wei = self.get_contract().calcBuyAmount(
             investment_amount=bet_amount_in_tokens.as_wei,
-            outcome_index=self.get_outcome_index(
-                self.get_outcome_str_from_bool(direction)
-            ),
+            outcome_index=self.get_outcome_index(outcome),
         )
         received_token_amount = received_token_amount_wei.as_outcome_token
         return received_token_amount
-
-    def get_new_p_yes(self, bet_amount: USD, direction: bool) -> Probability:
-        """
-        Calculate the new p_yes based on the bet amount and direction.
-        """
-        if not self.has_token_pool():
-            raise ValueError("Outcome token pool is required to calculate new p_yes.")
-
-        bet_amount_in_tokens = self.get_usd_in_token(bet_amount)
-        outcome_token_pool = check_not_none(self.outcome_token_pool)
-
-        yes_outcome_pool_size = outcome_token_pool[
-            self.get_outcome_str_from_bool(True)
-        ].value
-        no_outcome_pool_size = outcome_token_pool[
-            self.get_outcome_str_from_bool(False)
-        ].value
-
-        new_yes_outcome_pool_size = yes_outcome_pool_size + (
-            self.fees.get_after_fees(bet_amount_in_tokens).value
-        )
-        new_no_outcome_pool_size = no_outcome_pool_size + (
-            self.fees.get_after_fees(bet_amount_in_tokens).value
-        )
-
-        received_token_amount = self.get_buy_token_amount(bet_amount, direction).value
-        if direction:
-            new_yes_outcome_pool_size -= received_token_amount
-        else:
-            new_no_outcome_pool_size -= received_token_amount
-
-        new_p_yes = new_no_outcome_pool_size / (
-            new_yes_outcome_pool_size + new_no_outcome_pool_size
-        )
-        return Probability(new_p_yes)
 
     @staticmethod
     def get_user_balance(user_id: str) -> float:

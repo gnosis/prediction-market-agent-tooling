@@ -6,7 +6,7 @@ from eth_account import Account
 from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import USD, CollateralToken
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken, Probability
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
@@ -186,20 +186,57 @@ def test_get_positions_1() -> None:
     print(position)  # For extra test coverage
 
 
+def get_new_p_yes(
+    market: OmenAgentMarket, bet_amount: USD, direction: bool
+) -> Probability:
+    """
+    Calculate the new p_yes based on the bet amount and direction.
+    """
+    if not market.has_token_pool():
+        raise ValueError("Outcome token pool is required to calculate new p_yes.")
+
+    bet_amount_in_tokens = market.get_usd_in_token(bet_amount)
+    outcome_token_pool = check_not_none(market.outcome_token_pool)
+
+    yes_outcome_pool_size = outcome_token_pool[
+        market.get_outcome_str_from_bool(True)
+    ].value
+    no_outcome_pool_size = outcome_token_pool[
+        market.get_outcome_str_from_bool(False)
+    ].value
+
+    new_yes_outcome_pool_size = yes_outcome_pool_size + (
+        market.fees.get_after_fees(bet_amount_in_tokens).value
+    )
+    new_no_outcome_pool_size = no_outcome_pool_size + (
+        market.fees.get_after_fees(bet_amount_in_tokens).value
+    )
+    outcome_str = market.get_outcome_str_from_bool(direction)
+    received_token_amount = market.get_buy_token_amount(bet_amount, outcome_str).value
+    if direction:
+        new_yes_outcome_pool_size -= received_token_amount
+    else:
+        new_no_outcome_pool_size -= received_token_amount
+
+    new_p_yes = new_no_outcome_pool_size / (
+        new_yes_outcome_pool_size + new_no_outcome_pool_size
+    )
+    return Probability(new_p_yes)
+
+
 def test_get_new_p_yes() -> None:
     market = OmenAgentMarket.get_binary_markets(
         limit=1,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.OPEN,
     )[0]
-    assert (
-        market.get_new_p_yes(bet_amount=USD(10.0), direction=True)
-        > market.current_p_yes
-    )
-    assert (
-        market.get_new_p_yes(bet_amount=USD(11.0), direction=False)
-        < market.current_p_yes
-    )
+
+    assert get_new_p_yes(
+        market=market, bet_amount=USD(10.0), direction=True
+    ) > check_not_none(market.current_p_yes)
+    assert get_new_p_yes(
+        market=market, bet_amount=USD(11.0), direction=False
+    ) < check_not_none(market.current_p_yes)
 
     # Sanity check vs market moving bet
     target_p_yes = 0.95
@@ -209,12 +246,14 @@ def test_get_new_p_yes() -> None:
     bet = get_market_moving_bet(
         yes_outcome_pool_size=yes_outcome_pool_size,
         no_outcome_pool_size=no_outcome_pool_size,
-        market_p_yes=market.current_p_yes,
+        market_p_yes=check_not_none(market.current_p_yes),
         target_p_yes=0.95,
         fees=market.fees,
     )
-    new_p_yes = market.get_new_p_yes(
-        bet_amount=market.get_token_in_usd(bet.size), direction=bet.direction
+    new_p_yes = get_new_p_yes(
+        market=market,
+        bet_amount=market.get_token_in_usd(bet.size),
+        direction=bet.direction,
     )
     assert np.isclose(new_p_yes, target_p_yes)
 
@@ -234,13 +273,14 @@ def test_get_buy_token_amount(direction: bool) -> None:
     investment_amount = USD(5)
     buy_direction = direction
     for market in markets:
+        outcome_str = market.get_outcome_str_from_bool(direction)
         buy_amount0 = market.get_buy_token_amount(
             bet_amount=investment_amount,
-            direction=buy_direction,
+            outcome=outcome_str,
         )
         buy_amount1 = market._get_buy_token_amount_from_smart_contract(
             bet_amount=investment_amount,
-            direction=buy_direction,
+            outcome=outcome_str,
         )
         assert np.isclose(buy_amount0.value, buy_amount1.value)
 
@@ -331,8 +371,9 @@ def test_get_outcome_tokens_in_the_past() -> None:
             market_id=market_id, block_number=bet_block_number - 1
         )
     )
+
     would_get_outcome_tokens = market_before_placing_bet.get_buy_token_amount(
-        bet_amount=generic_bet.amount, direction=generic_bet.outcome
+        bet_amount=generic_bet.amount, outcome=generic_bet.outcome
     )
 
     assert would_get_outcome_tokens == selected_bet.outcomeTokensTraded.as_outcome_token

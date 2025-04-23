@@ -155,6 +155,7 @@ def calc_metrics(
         if simulated_outcome is None:
             continue
         simulated_outcomes.append(simulated_outcome)
+
         simulation_detail = SimulatedBetDetail(
             strategy=repr(strategy),
             url=bet_with_trace.trace.market.url,

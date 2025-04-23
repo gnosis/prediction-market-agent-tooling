@@ -27,7 +27,7 @@ class Resolution(str, Enum):
 class Bet(BaseModel):
     id: str
     amount: CollateralToken
-    outcome: bool
+    outcome: OutcomeStr
     created_time: DatetimeUTC
     market_question: str
     market_id: str
@@ -37,7 +37,7 @@ class Bet(BaseModel):
 
 
 class ResolvedBet(Bet):
-    market_outcome: bool
+    market_outcome: OutcomeStr
     resolved_time: DatetimeUTC
     profit: CollateralToken
 
@@ -88,7 +88,12 @@ class ProbabilisticAnswer(BaseModel):
 
     def get_yes_probability(self) -> Probability | None:
         return next(
-            (p for o, p in self.probabilities_multi.items() if o.upper() == OMEN_TRUE_OUTCOME.upper()), None
+            (
+                p
+                for o, p in self.probabilities_multi.items()
+                if o.upper() == OMEN_TRUE_OUTCOME.upper()
+            ),
+            None,
         )
 
 
@@ -154,6 +159,7 @@ class SimulatedBetDetail(BaseModel):
     url: str
     market_p_yes: float
     agent_p_yes: float
+    agent_prob_multi: dict[str, float]
     agent_conf: float
     org_bet: CollateralToken
     sim_bet: CollateralToken

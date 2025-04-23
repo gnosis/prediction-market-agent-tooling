@@ -125,6 +125,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             created_time=market.created_time,
             close_time=market.close_time,
             current_p_yes=market.current_p_yes,
+            probability_map=market.probability_map,
             url=market.url,
             volume=market.volume,
             creator=market.creator,

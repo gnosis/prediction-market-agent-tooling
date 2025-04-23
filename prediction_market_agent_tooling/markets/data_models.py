@@ -88,7 +88,7 @@ class ProbabilisticAnswer(BaseModel):
 
     def get_yes_probability(self) -> Probability | None:
         return next(
-            (p for o, p in self.probabilities_multi.items() if o.upper() == "YES"), None
+            (p for o, p in self.probabilities_multi.items() if o.upper() == OMEN_TRUE_OUTCOME.upper()), None
         )
 
 

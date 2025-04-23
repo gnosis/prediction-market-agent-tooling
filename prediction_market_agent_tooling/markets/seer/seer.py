@@ -114,7 +114,8 @@ class SeerAgentMarket(AgentMarket):
     ) -> OutcomeToken | None:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
-        outcome_token = self.get_wrapped_token_for_outcome(direction)
+        outcome_str = self.get_outcome_str_from_bool(direction)
+        outcome_token = self.get_wrapped_token_for_outcome(outcome_str)
         bet_amount_in_tokens = self.get_in_token(bet_amount)
 
         p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
@@ -168,7 +169,8 @@ class SeerAgentMarket(AgentMarket):
         amounts_ot: dict[OutcomeStr, OutcomeToken] = {}
 
         for outcome in [True, False]:
-            wrapped_token = self.get_wrapped_token_for_outcome(outcome)
+            outcome_str = self.get_outcome_str_from_bool(outcome)
+            wrapped_token = self.get_wrapped_token_for_outcome(outcome_str)
 
             outcome_token_balance_wei = OutcomeWei.from_wei(
                 ContractERC20OnGnosisChain(address=wrapped_token).balanceOf(
@@ -191,6 +193,76 @@ class SeerAgentMarket(AgentMarket):
             amounts_potential=amounts_potential,
             amounts_ot=amounts_ot,
         )
+
+    def get_outcome_str_from_idx(self, outcome_index: int) -> OutcomeStr:
+        return self.outcomes[outcome_index]
+
+    def get_liquidity_for_outcome(
+        self, outcome: OutcomeStr, web3: Web3 | None = None
+    ) -> CollateralToken:
+        """Liquidity per outcome is comprised of the balance of outcomeToken + collateralToken held by the pool itself (see https://github.com/seer-pm/demo/blob/7bfd0a062780ed6567f65714c4fc4f6e6cdf1c4f/web/netlify/functions/utils/fetchPools.ts#L35-L42)."""
+
+        outcome_token = self.get_wrapped_token_for_outcome(outcome)
+        pool = SeerSubgraphHandler().get_pool_by_token(
+            token_address=outcome_token,
+            collateral_address=self.collateral_token_contract_address_checksummed,
+        )
+        if not pool:
+            logger.info(
+                f"Could not fetch pool for token {outcome_token}, no liquidity available for outcome."
+            )
+            return CollateralToken(0)
+        p = PriceManager.build(HexBytes(HexStr(self.id)))
+        total = CollateralToken(0)
+
+        for token_address in [pool.token0.id, pool.token1.id]:
+            token_address_checksummed = Web3.to_checksum_address(token_address)
+            token_contract = ContractERC20OnGnosisChain(
+                address=token_address_checksummed
+            )
+
+            token_balance = token_contract.balance_of_in_tokens(
+                for_address=Web3.to_checksum_address(pool.id.hex()),
+                web3=web3,
+            )
+
+            # get price
+            token_price_in_sdai = (
+                p.get_token_price_from_pools(token=token_address_checksummed)
+                if token_address_checksummed
+                != self.collateral_token_contract_address_checksummed
+                else CollateralToken(1.0)
+            )
+
+            # We ignore the liquidity in outcome tokens if price unknown.
+            if token_price_in_sdai:
+                sdai_balance = token_balance * token_price_in_sdai
+                total += sdai_balance
+
+        return total
+
+    def get_liquidity(self) -> CollateralToken:
+        liquidity_in_collateral = CollateralToken(0)
+        # We ignore the invalid outcome
+        for outcome in self.outcomes[:-1]:
+            liquidity_for_outcome = self.get_liquidity_for_outcome(outcome)
+            liquidity_in_collateral += liquidity_for_outcome
+
+        return liquidity_in_collateral
+
+    def has_liquidity_for_outcome(self, outcome: OutcomeStr) -> bool:
+        liquidity = self.get_liquidity_for_outcome(outcome)
+        return liquidity > CollateralToken(0)
+
+    def has_liquidity(self) -> bool:
+        # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
+        return all(
+            [self.has_liquidity_for_outcome(outcome) for outcome in self.outcomes[:-1]]
+        )
+
+    def get_wrapped_token_for_outcome(self, outcome: OutcomeStr) -> ChecksumAddress:
+        outcome_idx = self.outcomes.index(outcome)
+        return self.wrapped_tokens[outcome_idx]
 
     def get_position(
         self, user_id: str, web3: Web3 | None = None
@@ -331,26 +403,6 @@ class SeerAgentMarket(AgentMarket):
             is not None
         ]
 
-    def has_liquidity_for_outcome(self, outcome: bool) -> bool:
-        outcome_token = self.get_wrapped_token_for_outcome(outcome)
-        pool = SeerSubgraphHandler().get_pool_by_token(
-            token_address=outcome_token,
-            collateral_address=self.collateral_token_contract_address_checksummed,
-        )
-        return pool is not None and pool.liquidity > 0
-
-    def has_liquidity(self) -> bool:
-        # We conservatively define a market as having liquidity if it has liquidity for the `True` outcome token AND the `False` outcome token.
-        return self.has_liquidity_for_outcome(True) and self.has_liquidity_for_outcome(
-            False
-        )
-
-    def get_wrapped_token_for_outcome(self, outcome: bool) -> ChecksumAddress:
-        outcome_from_enum = SeerOutcomeEnum.from_bool(outcome)
-        outcome_idx = self.seer_outcomes[outcome_from_enum]
-        outcome_token = self.wrapped_tokens[outcome_idx]
-        return outcome_token
-
     def place_bet(
         self,
         outcome: bool,
@@ -380,7 +432,8 @@ class SeerAgentMarket(AgentMarket):
                 f"Balance {collateral_balance} not enough for bet size {amount}"
             )
 
-        outcome_token = self.get_wrapped_token_for_outcome(outcome)
+        outcome_str = self.get_outcome_str_from_bool(outcome)
+        outcome_token = self.get_wrapped_token_for_outcome(outcome_str)
 
         #  Sell sDAI using token address
         order_metadata = swap_tokens_waiting(
@@ -407,7 +460,8 @@ class SeerAgentMarket(AgentMarket):
         """
         Sells the given number of shares for the given outcome in the given market.
         """
-        outcome_token = self.get_wrapped_token_for_outcome(outcome)
+        outcome_str = self.get_outcome_str_from_bool(outcome)
+        outcome_token = self.get_wrapped_token_for_outcome(outcome_str)
         api_keys = api_keys if api_keys is not None else APIKeys()
 
         token_amount = (

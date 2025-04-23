@@ -90,6 +90,7 @@ class RandomAgent(AbstractBenchmarkedAgent):
                 p_yes=Probability(p_yes),
                 confidence=confidence,
                 info_utility=None,
+                probabilities_multi={},
             ),
         )
 

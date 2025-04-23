@@ -62,10 +62,8 @@ def test_binary_market_retrieved(
 def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
     us_election_market_id = HexBytes("0xa4b71ac2d0e17e1242e2d825e621acd18f0054ea")
     market = seer_subgraph_handler_test.get_market_by_id(us_election_market_id)
-    # There must be pools for the Yes,No outcomes.
-    for outcome_enum in [SeerOutcomeEnum.YES, SeerOutcomeEnum.NO]:
-        idx = market.outcome_as_enums[outcome_enum]
-        wrapped_token = market.wrapped_tokens[idx]
+    # There must be pools for the Yes,No outcomes. We ignore the invalid outcome.
+    for wrapped_token in market.wrapped_tokens[:-1]:
         pool = seer_subgraph_handler_test.get_pool_by_token(
             token_address=Web3.to_checksum_address(wrapped_token.lower()),
             collateral_address=market.collateral_token_contract_address_checksummed,

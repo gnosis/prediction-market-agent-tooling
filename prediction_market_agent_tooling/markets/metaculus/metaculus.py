@@ -49,6 +49,7 @@ class MetaculusAgentMarket(AgentMarket):
             description=model.question.description,
             fine_print=model.question.fine_print,
             resolution_criteria=model.question.resolution_criteria,
+            probability_map={},  # ToDo - Set probability map when working with Metaculus
         )
 
     @staticmethod
@@ -109,8 +110,12 @@ class MetaculusAgentMarket(AgentMarket):
     def store_prediction(
         self, processed_market: ProcessedMarket | None, keys: APIKeys, agent_name: str
     ) -> None:
-        if processed_market is not None:
-            make_prediction(self.id, processed_market.answer.p_yes)
+        if (
+            processed_market is not None
+            and processed_market.answer.get_yes_probability() is not None
+        ):
+            yes_prob = check_not_none(processed_market.answer.get_yes_probability())
+            make_prediction(self.id, yes_prob)
             post_question_comment(
                 self.id,
                 check_not_none(

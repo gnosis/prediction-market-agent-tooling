@@ -7,6 +7,7 @@ from prediction_market_agent_tooling.gtypes import (
     CollateralToken,
     Mana,
     Probability,
+    OutcomeStr,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
@@ -45,6 +46,9 @@ class ManifoldAgentMarket(AgentMarket):
         absolute=0.25,  # For doing trades via API.
     )
 
+    # We restrict Manifold to binary markets, hence current_p_yes always defined.
+    current_p_yes: Probability
+
     def get_last_trade_p_yes(self) -> Probability:
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
         return self.current_p_yes
@@ -60,7 +64,7 @@ class ManifoldAgentMarket(AgentMarket):
         # Manifold lowest bet is 1 Mana, so we need to ceil the result.
         return Mana(ceil(minimum_bet_to_win(answer, amount_to_win, self)))
 
-    def place_bet(self, outcome: bool, amount: USD) -> str:
+    def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
         self.get_usd_in_token(amount)
         bet = place_bet(
             amount=usd_to_mana(amount),
@@ -72,6 +76,15 @@ class ManifoldAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model(model: FullManifoldMarket) -> "ManifoldAgentMarket":
+        outcome_token_pool = {o: model.pool.size_for_outcome(o) for o in model.outcomes}
+
+        prob_map = AgentMarket.build_probability_map(
+            outcomes=list(outcome_token_pool.keys()),
+            outcome_token_amounts=list(
+                [i.as_outcome_wei for i in outcome_token_pool.values()]
+            ),
+        )
+
         return ManifoldAgentMarket(
             id=model.id,
             question=model.question,
@@ -83,9 +96,8 @@ class ManifoldAgentMarket(AgentMarket):
             current_p_yes=model.probability,
             url=model.url,
             volume=model.volume,
-            outcome_token_pool={
-                o: model.pool.size_for_outcome(o) for o in model.outcomes
-            },
+            outcome_token_pool=outcome_token_pool,
+            probability_map=prob_map,
         )
 
     @staticmethod
@@ -95,6 +107,7 @@ class ManifoldAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None
         if sort_by == SortBy.CLOSING_SOONEST:

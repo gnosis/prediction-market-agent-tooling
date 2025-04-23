@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
+from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -163,8 +164,8 @@ class SimulatedBetDetail(BaseModel):
     agent_conf: float
     org_bet: CollateralToken
     sim_bet: CollateralToken
-    org_dir: bool
-    sim_dir: bool
+    org_dir: OutcomeStr
+    sim_dir: OutcomeStr
     org_profit: CollateralToken
     sim_profit: CollateralToken
     timestamp: DatetimeUTC

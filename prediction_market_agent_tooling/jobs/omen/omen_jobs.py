@@ -42,7 +42,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             self.get_token_in_usd(
                 self.get_buy_token_amount(
                     bet_amount=trade.amount,
-                    direction=trade.outcome,
+                    outcome=trade.outcome,
                 ).as_token
             )
             - trade.amount

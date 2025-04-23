@@ -89,7 +89,7 @@ def test_send_function_on_contract_tx_using_safe(
         api_keys=test_keys,
         amount=amount,
         market=omen_agent_market,
-        binary_outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )

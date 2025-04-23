@@ -92,11 +92,11 @@ class ManifoldMarket(BaseModel):
     def outcomes(self) -> t.Sequence[OutcomeStr]:
         return [OutcomeStr(o) for o in self.pool.model_fields.keys()]
 
-    def get_resolved_boolean_outcome(self) -> bool:
+    def get_resolved_outcome(self) -> OutcomeStr:
         if self.resolution == Resolution.YES:
-            return True
+            return OutcomeStr("YES")
         elif self.resolution == Resolution.NO:
-            return False
+            return OutcomeStr("NO")
         else:
             should_not_happen(f"Unexpected bet outcome string, '{self.resolution}'.")
 
@@ -197,18 +197,18 @@ class ManifoldBet(BaseModel):
     createdTime: DatetimeUTC
     outcome: Resolution
 
-    def get_resolved_boolean_outcome(self) -> bool:
+    def get_resolved_outcome(self) -> OutcomeStr:
         if self.outcome == Resolution.YES:
-            return True
+            return OutcomeStr("YES")
         elif self.outcome == Resolution.NO:
-            return False
+            return OutcomeStr("NO")
         else:
             should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
 
-    def get_profit(self, market_outcome: bool) -> CollateralToken:
+    def get_profit(self, market_outcome: OutcomeStr) -> CollateralToken:
         profit = (
             self.shares - self.amount
-            if self.get_resolved_boolean_outcome() == market_outcome
+            if self.get_resolved_outcome() == market_outcome
             else -self.amount
         )
         return profit

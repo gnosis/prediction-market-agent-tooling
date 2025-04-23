@@ -1,5 +1,6 @@
 import typing as t
 from enum import Enum
+from math import prod
 
 from eth_typing import ChecksumAddress
 from pydantic import BaseModel, field_validator, model_validator
@@ -11,6 +12,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
+    OutcomeWei,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
@@ -102,30 +104,6 @@ class AgentMarket(BaseModel):
     @property
     def current_p_no(self) -> Probability:
         return Probability(1 - self.current_p_yes)
-
-    @property
-    def yes_outcome_price(self) -> CollateralToken:
-        """
-        Price at prediction market is equal to the probability of given outcome.
-        Keep as an extra property, in case it wouldn't be true for some prediction market platform.
-        """
-        return CollateralToken(self.current_p_yes)
-
-    @property
-    def yes_outcome_price_usd(self) -> USD:
-        return self.get_token_in_usd(self.yes_outcome_price)
-
-    @property
-    def no_outcome_price(self) -> CollateralToken:
-        """
-        Price at prediction market is equal to the probability of given outcome.
-        Keep as an extra property, in case it wouldn't be true for some prediction market platform.
-        """
-        return CollateralToken(self.current_p_no)
-
-    @property
-    def no_outcome_price_usd(self) -> USD:
-        return self.get_token_in_usd(self.no_outcome_price)
 
     @property
     def probable_resolution(self) -> Resolution:
@@ -241,6 +219,38 @@ class AgentMarket(BaseModel):
 
     def sell_tokens(self, outcome: OutcomeStr, amount: USD | OutcomeToken) -> str:
         raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def compute_fpmm_probabilities(balances: list[OutcomeWei]) -> list[Probability]:
+        """
+        Compute the implied probabilities in a Fixed Product Market Maker.
+
+        Args:
+            balances (List[float]): Balances of outcome tokens.
+
+        Returns:
+            List[float]: Implied probabilities for each outcome.
+        """
+        # converting to standard values for prod compatibility.
+        values_balance = [i.value for i in balances]
+        # Compute product of balances excluding each outcome
+        excluded_products = []
+        for i in range(len(values_balance)):
+            other_balances = values_balance[:i] + values_balance[i + 1 :]
+            excluded_products.append(prod(other_balances))
+
+        # Normalize to sum to 1
+        total = sum(excluded_products)
+        probabilities = [Probability(p / total) for p in excluded_products]
+
+        return probabilities
+
+    @staticmethod
+    def build_probability_map(
+        outcome_token_amounts: list[OutcomeWei], outcomes: list[OutcomeStr]
+    ) -> dict[OutcomeStr, Probability]:
+        probs = AgentMarket.compute_fpmm_probabilities(outcome_token_amounts)
+        return {outcome: prob for outcome, prob in zip(outcomes, probs)}
 
     @staticmethod
     def get_binary_markets(
@@ -387,7 +397,7 @@ class AgentMarket(BaseModel):
     def has_token_pool(self) -> bool:
         return self.outcome_token_pool is not None
 
-    def get_pool_tokens(self, outcome: str) -> OutcomeToken:
+    def get_pool_tokens(self, outcome: OutcomeStr) -> OutcomeToken:
         if not self.outcome_token_pool:
             raise ValueError("Outcome token pool is not available.")
 

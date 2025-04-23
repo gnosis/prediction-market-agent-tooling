@@ -1,6 +1,5 @@
 import typing as t
 from datetime import timedelta
-from math import prod
 
 import tenacity
 from web3 import Web3
@@ -329,36 +328,6 @@ class OmenAgentMarket(AgentMarket):
         return OmenAgentMarket.from_data_model(OmenMarket.from_created_market(model))
 
     @staticmethod
-    def compute_fpmm_probabilities(balances: list[OutcomeWei]) -> list[Probability]:
-        """
-        Compute the implied probabilities in a Fixed Product Market Maker.
-
-        Args:
-            balances (List[float]): Balances of outcome tokens.
-
-        Returns:
-            List[float]: Implied probabilities for each outcome.
-        """
-        # converting to standard values for prod compatibility.
-        values_balance = [i.value for i in balances]
-        # Compute product of balances excluding each outcome
-        excluded_products = []
-        for i in range(len(values_balance)):
-            other_balances = values_balance[:i] + values_balance[i + 1 :]
-            excluded_products.append(prod(other_balances))
-
-        # Normalize to sum to 1
-        total = sum(excluded_products)
-        probabilities = [Probability(p / total) for p in excluded_products]
-
-        return probabilities
-
-    @staticmethod
-    def build_probability_map(model: OmenMarket) -> dict[OutcomeStr, Probability]:
-        probs = OmenAgentMarket.compute_fpmm_probabilities(model.outcomeTokenAmounts)
-        return {outcome: prob for outcome, prob in zip(model.outcomes, probs)}
-
-    @staticmethod
     def from_data_model(model: OmenMarket) -> "OmenAgentMarket":
         return OmenAgentMarket(
             id=model.id,
@@ -385,7 +354,10 @@ class OmenAgentMarket(AgentMarket):
                 model.outcomes[i]: model.outcomeTokenAmounts[i].as_outcome_token
                 for i in range(len(model.outcomes))
             },
-            probability_map=OmenAgentMarket.build_probability_map(model),
+            probability_map=AgentMarket.build_probability_map(
+                outcome_token_amounts=model.outcomeTokenAmounts,
+                outcomes=list(model.outcomes),
+            ),
         )
 
     @staticmethod

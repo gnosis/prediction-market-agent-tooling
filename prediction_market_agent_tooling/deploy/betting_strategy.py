@@ -149,8 +149,9 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
     ) -> OutcomeStr:
         # We place a bet on the most likely outcome
         most_likely_outcome = max(
-            answer.probabilities_multi, key=answer.probabilities_multi.get
-        )
+            answer.probabilities_multi.items(),
+            key=lambda item: item[1],
+        )[0]
         return most_likely_outcome
 
     def calculate_trades(
@@ -257,7 +258,7 @@ class KellyBettingStrategy(BettingStrategy):
         self,
         outcome_idx: int,
         bet_amount: CollateralToken,
-        pool_balances: list[OutcomeToken],
+        pool_balances: list[float],
         fees: MarketFees,
     ) -> float:
         prices = self.get_outcome_prices_from_balances(pool_balances)

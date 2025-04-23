@@ -4,6 +4,7 @@ import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.tools.utils import utcnow
 from tests.utils import RUN_PAID_TESTS
@@ -18,11 +19,11 @@ def test_match_bet_ids_with_get_subgraph_bets() -> None:
     )[0]
     now = utcnow()
     id0 = market.buy_tokens(
-        outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         amount=market.get_token_in_usd(market.get_tiny_bet_amount()),
     )
     id1 = market.buy_tokens(
-        outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         amount=market.get_token_in_usd(market.get_tiny_bet_amount()),
     )
     assert id0 != id1

@@ -333,7 +333,7 @@ def test_omen_buy_and_sell_outcome(
     assert balances.xdai.value > bet_amount.value
 
     buy_id = market.place_bet(
-        outcome=outcome,
+        outcome=outcome_str,
         amount=bet_amount,
         web3=local_web3,
         api_keys=test_keys,
@@ -344,7 +344,7 @@ def test_omen_buy_and_sell_outcome(
     assert get_market_outcome_tokens() > 0
 
     sell_id = market.sell_tokens(
-        outcome=outcome,
+        outcome=outcome_str,
         amount=outcome_tokens,
         web3=local_web3,
         api_keys=test_keys,
@@ -468,7 +468,7 @@ def test_place_bet_with_autodeposit(
     )
 
     market.place_bet(
-        outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         amount=bet_amount,
         auto_deposit=True,
         web3=local_web3,
@@ -528,7 +528,9 @@ def test_place_bet_with_prev_existing_positions(
 
     # Place a bet using a standard account (from .env)
     bet_amount = USD(1)
-    omen_agent_market.place_bet(True, bet_amount, web3=local_web3, api_keys=test_keys)
+    omen_agent_market.place_bet(
+        OMEN_TRUE_OUTCOME, bet_amount, web3=local_web3, api_keys=test_keys
+    )
 
     conditional_token = OmenConditionalTokenContract()
     conditional_tokens_contract = local_web3.eth.contract(
@@ -569,7 +571,7 @@ def test_place_bet_with_prev_existing_positions(
     ):
         # We now want to sell the recently opened position.
         omen_agent_market.liquidate_existing_positions(
-            False, web3=local_web3, api_keys=test_keys
+            OMEN_FALSE_OUTCOME, web3=local_web3, api_keys=test_keys
         )
 
     position_balance_after_sell = get_position_balance_by_position_id(

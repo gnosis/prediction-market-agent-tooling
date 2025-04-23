@@ -1,6 +1,6 @@
 import typing as t
 
-from prediction_market_agent_tooling.gtypes import USD, CollateralToken
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeStr
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -46,12 +46,13 @@ class PolymarketAgentMarket(AgentMarket):
             url=model.url,
             volume=None,
             outcome_token_pool=None,
+            probability_map={},  # ToDo - Implement when fixing Polymarket
         )
 
     def get_tiny_bet_amount(self) -> CollateralToken:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
-    def place_bet(self, outcome: bool, amount: USD) -> str:
+    def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     @staticmethod
@@ -61,6 +62,7 @@ class PolymarketAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         if sort_by != SortBy.NONE:
             raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")

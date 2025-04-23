@@ -9,6 +9,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     ProcessedTradedMarket,
 )
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_TRUE_OUTCOME,
+    OMEN_FALSE_OUTCOME,
+)
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     FilterBy,
     SortBy,
@@ -72,5 +76,10 @@ class JobAgentMarket(AgentMarket, ABC):
     def get_job_answer(self, result: str) -> ProbabilisticAnswer:
         # Just return 100% yes with 100% confidence, because we assume the job is completed correctly.
         return ProbabilisticAnswer(
-            p_yes=Probability(1.0), confidence=1.0, reasoning=result
+            probabilities_multi={
+                OMEN_TRUE_OUTCOME: Probability(1.0),
+                OMEN_FALSE_OUTCOME: Probability(0.0),
+            },
+            confidence=1.0,
+            reasoning=result,
         )

@@ -26,6 +26,7 @@ from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
     private_key_type,
+    OutcomeStr,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     ResolvedBet,
@@ -63,7 +64,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 class SimulatedOutcome(BaseModel):
     size: CollateralToken
-    direction: bool
+    direction: OutcomeStr
     correct: bool
     profit: CollateralToken
 
@@ -71,7 +72,7 @@ class SimulatedOutcome(BaseModel):
 def get_outcome_for_trace(
     strategy: BettingStrategy,
     trace: ProcessMarketTrace,
-    market_outcome: bool,
+    market_outcome: OutcomeStr,
     actual_placed_bet: ResolvedBet,
     tx_block_cache: TransactionBlockCache,
 ) -> SimulatedOutcome | None:

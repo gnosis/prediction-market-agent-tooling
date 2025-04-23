@@ -47,8 +47,8 @@ def test_valid_token_pool() -> None:
         fees=MarketFees.get_zero_fees(),
     )
     assert market.has_token_pool() is True
-    assert market.get_pool_tokens("yes") == OutcomeToken(1.1)
-    assert market.get_pool_tokens("no") == OutcomeToken(2.0)
+    assert market.get_pool_tokens(OutcomeStr("yes")) == OutcomeToken(1.1)
+    assert market.get_pool_tokens(OutcomeStr("no")) == OutcomeToken(2.0)
 
 
 def test_invalid_token_pool() -> None:

@@ -195,7 +195,6 @@ class KellyBettingStrategy(BettingStrategy):
         # for markets with more than 2 outcomes (https://github.com/gnosis/prediction-market-agent-tooling/issues/671).
         if len(market.outcomes) != 2:
             message = "Cannot process markets with more than 2 outcomes."
-            logger.error(message)
             raise ValueError(message)
 
         # We consider the p_yes as the direction with highest probability.

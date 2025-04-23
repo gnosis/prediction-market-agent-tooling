@@ -172,7 +172,7 @@ def swap_tokens_waiting(
         for_address=for_address,
         web3=web3,
     )
-    if Wei(current_allowance) < amount_wei:
+    if current_allowance < amount_wei:
         ContractERC20OnGnosisChain(address=sell_token).approve(
             api_keys,
             for_address=for_address,

@@ -50,7 +50,7 @@ def test_kelly_price_impact_calculation2() -> None:
 def test_kelly_price_impact_works_large_pool(
     max_bet_amount: float, max_price_impact: float, p_yes: float
 ) -> None:
-    large_market = OmenSubgraphHandler().get_omen_markets_simple(
+    large_market = OmenSubgraphHandler().get_omen_binary_markets_simple(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,

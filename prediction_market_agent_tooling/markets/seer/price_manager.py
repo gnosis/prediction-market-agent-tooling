@@ -1,6 +1,6 @@
 import typing as t
 
-from cachetools import TTLCache, cached
+from cachetools import cached
 from eth_typing import HexAddress
 from web3 import Web3
 
@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
 )
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.seer.cache import FSLRUCache
 from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     SeerOutcomeEnum,
@@ -91,7 +92,7 @@ class PriceManager:
         else:
             return None
 
-    @cached(TTLCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
+    @cached(cache=FSLRUCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
     def get_price_for_token(
         self,
         token: ChecksumAddress,

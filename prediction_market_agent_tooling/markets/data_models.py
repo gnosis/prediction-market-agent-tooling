@@ -83,6 +83,12 @@ class ProbabilisticAnswer(BaseModel):
         return Probability(1 - self.p_yes)
 
 
+class MultiProbabilisticAnswer(BaseModel):
+    probabilities_multi: dict[OutcomeStr, Probability]
+    confidence: float
+    reasoning: str | None = None
+
+
 class Position(BaseModel):
     market_id: str
     # This is for how much we could buy or sell the position right now.

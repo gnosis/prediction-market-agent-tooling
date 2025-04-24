@@ -28,6 +28,9 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
+from prediction_market_agent_tooling.markets.seer.MultiSeerAgentMarket import (
+    MultiSeerAgentMarket,
+)
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
@@ -43,6 +46,7 @@ class MarketType(str, Enum):
     POLYMARKET = "polymarket"
     METACULUS = "metaculus"
     SEER = "seer"
+    SEER_MULTI = "seer-multi"
 
     @property
     def market_class(self) -> type[AgentMarket]:
@@ -67,6 +71,7 @@ MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.POLYMARKET: PolymarketAgentMarket,
     MarketType.METACULUS: MetaculusAgentMarket,
     MarketType.SEER: SeerAgentMarket,
+    MarketType.SEER_MULTI: MultiSeerAgentMarket,
 }
 
 JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {

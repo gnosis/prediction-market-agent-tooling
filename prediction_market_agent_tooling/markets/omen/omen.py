@@ -23,9 +23,9 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
-    ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
+    ProcessedMarket,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
 from prediction_market_agent_tooling.markets.data_models import (

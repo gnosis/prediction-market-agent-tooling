@@ -1,4 +1,5 @@
 import typing as t
+from typing import Mapping
 
 from eth_pydantic_types import HexStr
 from eth_typing import ChecksumAddress
@@ -15,16 +16,19 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     OutcomeWei,
     xDai,
+    Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
+    ProcessedMarket,
 )
-from prediction_market_agent_tooling.markets.data_models import ExistingPosition
+from prediction_market_agent_tooling.markets.data_models import (
+    ExistingPosition,
+)
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -75,6 +79,8 @@ class SeerAgentMarket(AgentMarket):
     description: str | None = (
         None  # Seer markets don't have a description, so just default to None.
     )
+    outcomes_supply: int
+    probability_map: Mapping[OutcomeStr, float]
 
     def get_collateral_token_contract(
         self, web3: Web3 | None = None
@@ -351,12 +357,17 @@ class SeerAgentMarket(AgentMarket):
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
     ) -> t.Optional["SeerAgentMarket"]:
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-        current_p_yes = p.current_p_yes()
-        if not current_p_yes:
+        # current_p_yes = p.current_p_yes()
+        probability_map = p.build_probability_map()
+        if not probability_map:
             logger.info(
                 f"p_yes for market {model.id.hex()} could not be calculated. Skipping."
             )
             return None
+
+        seer_outcomes = {}
+        if model.is_binary:
+            seer_outcomes = model.outcome_as_enums
 
         return SeerAgentMarket(
             id=model.id.hex(),
@@ -371,11 +382,42 @@ class SeerAgentMarket(AgentMarket):
             wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=None,
-            resolution=model.get_resolution_enum(),
+            outcomes_supply=model.outcomes_supply,
+            # resolution=model.get_resolution_enum(),
+            resolution=None,
             volume=None,
-            current_p_yes=current_p_yes,
-            seer_outcomes=model.outcome_as_enums,
+            current_p_yes=Probability(-1),
+            probability_map=probability_map,
+            seer_outcomes=seer_outcomes,
         )
+
+    @staticmethod
+    def get_categorical_markets(
+        limit: int,
+        sort_by: SortBy,
+        filter_by: FilterBy = FilterBy.OPEN,
+        include_conditional_markets: bool = False,
+    ) -> t.Sequence["SeerAgentMarket"]:
+        seer_subgraph = SeerSubgraphHandler()
+        markets = seer_subgraph.get_categorical_markets(
+            limit=limit,
+            filter_by=filter_by,
+            sort_by=sort_by,
+            include_conditional_markets=include_conditional_markets,
+        )
+
+        # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
+        # represents an invalid market.
+        return [
+            market
+            for m in markets
+            if (
+                market := SeerAgentMarket.from_data_model_with_subgraph(
+                    model=m, seer_subgraph=seer_subgraph
+                )
+            )
+            is not None
+        ]
 
     @staticmethod
     def get_binary_markets(
@@ -387,7 +429,9 @@ class SeerAgentMarket(AgentMarket):
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
         markets = seer_subgraph.get_binary_markets(
-            limit=limit, sort_by=sort_by, filter_by=filter_by
+            limit=limit,
+            sort_by=sort_by,
+            filter_by=filter_by,
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

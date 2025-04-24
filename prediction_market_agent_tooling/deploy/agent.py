@@ -277,11 +277,6 @@ def {entrypoint_function_name}(request) -> str:
         return f"{self.__class__.__name__.lower()}-{market_type}-{utcnow().strftime('%Y-%m-%d--%H-%M-%S')}"
 
 
-T = t.TypeVar(
-    "T",
-)
-
-
 class DeployablePredictionAgent(DeployableAgent):
     """
     Subclass this class to create your own prediction market agent.
@@ -339,14 +334,14 @@ class DeployablePredictionAgent(DeployableAgent):
         )
 
     def update_langfuse_trace_by_processed_market(
-        self, market_type: MarketType, answer: ProbabilisticAnswer | None
+        self, market_type: MarketType, processed_market: ProcessedMarket | None
     ) -> None:
         self.langfuse_update_current_trace(
             tags=[
                 self.AGENT_TAG,
                 (
                     AnsweredEnum.ANSWERED
-                    if answer is not None
+                    if processed_market is not None
                     else AnsweredEnum.NOT_ANSWERED
                 ),
                 market_type.value,
@@ -442,7 +437,7 @@ class DeployablePredictionAgent(DeployableAgent):
         market_type: MarketType,
         market: AgentMarket,
         verify_market: bool = True,
-    ) -> ProbabilisticAnswer | None:
+    ) -> ProcessedMarket | None:
         self.update_langfuse_trace_by_market(market_type, market)
         logger.info(
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
@@ -456,11 +451,15 @@ class DeployablePredictionAgent(DeployableAgent):
             logger.info(f"Answering market '{market.question}'.")
             answer = self.answer_binary_market(market)
 
-        self.update_langfuse_trace_by_processed_market(market_type, answer)
+        processed_market = (
+            ProcessedMarket(answer=answer) if answer is not None else None
+        )
+
+        self.update_langfuse_trace_by_processed_market(market_type, processed_market)
         logger.info(
             f"Processed market {market.question=} from {market.url=} with {answer=}."
         )
-        return answer
+        return processed_market
 
     def after_process_market(
         self,
@@ -548,7 +547,6 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         MarketType.MANIFOLD,
         MarketType.POLYMARKET,
         MarketType.SEER,
-        MarketType.SEER_MULTI,
     ]
 
     def __init__(
@@ -618,8 +616,8 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         market: AgentMarket,
         verify_market: bool = True,
     ) -> ProcessedTradedMarket | None:
-        processed_answer = super().process_market(market_type, market, verify_market)
-        if processed_answer is None:
+        processed_market = super().process_market(market_type, market, verify_market)
+        if processed_market is None:
             return None
 
         api_keys = APIKeys()
@@ -628,7 +626,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         existing_position = market.get_position(user_id=user_id)
         trades = self.build_trades(
             market=market,
-            answer=processed_answer,
+            answer=processed_market.answer,
             existing_position=existing_position,
         )
 
@@ -683,7 +681,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                 )
 
         traded_market = ProcessedTradedMarket(
-            answer=processed_answer, trades=placed_trades
+            answer=processed_market.answer, trades=placed_trades
         )
         logger.info(f"Traded market {market.question=} from {market.url=}.")
         return traded_market

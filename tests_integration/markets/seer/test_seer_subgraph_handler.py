@@ -15,9 +15,7 @@ BINARY_CONDITIONAL_MARKET_ID = HexBytes("0xbc82402814f7db8736980c0debb01df6aad88
 
 
 def test_get_all_seer_markets(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    markets = seer_subgraph_handler_test.get_bicategorical_markets(
-        filter_by=FilterBy.NONE
-    )
+    markets = seer_subgraph_handler_test.get_markets(filter_by=FilterBy.NONE)
     assert len(markets) > 1
 
 
@@ -31,7 +29,7 @@ def test_get_seer_market_by_id(seer_subgraph_handler_test: SeerSubgraphHandler) 
 def test_conditional_market_not_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
-    markets = seer_subgraph_handler_test.get_bicategorical_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         include_conditional_markets=False, filter_by=FilterBy.NONE
     )
     market_ids = [m.id for m in markets]
@@ -41,7 +39,7 @@ def test_conditional_market_not_retrieved(
 def test_conditional_market_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
-    markets = seer_subgraph_handler_test.get_bicategorical_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         include_conditional_markets=True, filter_by=FilterBy.NONE
     )
     market_ids = [m.id for m in markets]

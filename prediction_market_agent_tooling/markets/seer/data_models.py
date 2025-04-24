@@ -175,7 +175,9 @@ class SeerMarket(BaseModel):
     @property
     def is_binary(self) -> bool:
         # 3 because Seer has also third, `Invalid` outcome.
-        return len(self.outcomes) == 3
+        return len(self.outcomes) == 3 and {"yes", "no"}.issubset(
+            {o.lower() for o in self.outcomes}
+        )
 
     def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
         if not self.is_binary:

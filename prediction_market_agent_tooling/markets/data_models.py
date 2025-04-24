@@ -83,10 +83,10 @@ class ProbabilisticAnswer(BaseModel):
         return Probability(1 - self.p_yes)
 
 
-class MultiProbabilisticAnswer(BaseModel):
+class MultiProbabilisticAnswer(ProbabilisticAnswer):
     probabilities_multi: dict[OutcomeStr, Probability]
-    confidence: float
-    reasoning: str | None = None
+    # ToDo - Not optimal but at least keeps methods compatible.
+    p_yes: Probability = Probability(-1)
 
 
 class Position(BaseModel):

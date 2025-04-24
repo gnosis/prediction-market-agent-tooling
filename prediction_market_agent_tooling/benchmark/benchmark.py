@@ -1,6 +1,7 @@
 import concurrent.futures
 import os
 import typing as t
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -396,7 +397,7 @@ class Benchmarker:
             ]
             markets_summary[f"{agent} p_yes"] = [
                 (
-                    f"{p.outcome_prediction.p_yes:.2f} [{p.outcome_prediction.probable_resolution.value}]"
+                    f"{p.outcome_prediction.probabilities_multi} [{p.outcome_prediction.probable_resolution.value}]"
                     if p.is_predictable
                     and p.outcome_prediction  # Is answerable and answered
                     else (
@@ -420,19 +421,25 @@ class Benchmarker:
         return markets_summary
 
     def get_markets_results(self) -> dict[str, list[str | float]]:
+        outcome_counts: dict[Resolution, int] = defaultdict(int)
+        total_markets = len(self.markets)
+
+        for market in self.markets:
+            resolution = market.probable_resolution
+            outcome_counts[resolution] += 1
+
+        proportions = {
+            outcome: count / total_markets for outcome, count in outcome_counts.items()
+        }
         return {
-            "Number of markets": [len(self.markets)],
+            "Number of markets": [total_markets],
             "Proportion resolved": [
-                sum(1 for m in self.markets if m.is_resolved()) / len(self.markets)
+                sum(1 for m in self.markets if m.is_resolved()) / total_markets
             ],
-            "Proportion YES": [
-                sum(1 for m in self.markets if m.probable_resolution == Resolution.YES)
-                / len(self.markets)
-            ],
-            "Proportion NO": [
-                sum(1 for m in self.markets if m.probable_resolution == Resolution.NO)
-                / len(self.markets)
-            ],
+            **{
+                f"Proportion {outcome}": [proportions.get(outcome, 0)]
+                for outcome in outcome_counts
+            },
         }
 
     def generate_markdown_report(self) -> str:

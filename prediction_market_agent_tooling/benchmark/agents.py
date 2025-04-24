@@ -100,15 +100,17 @@ class RandomAgent(AbstractBenchmarkedAgent):
 
 class FixedAgent(AbstractBenchmarkedAgent):
     def __init__(
-        self, fixed_answer: bool, agent_name: str, max_workers: int | None = None
+        self, fixed_answer_idx: int, agent_name: str, max_workers: int | None = None
     ):
         super().__init__(agent_name, max_workers)
-        self.fixed_answer = fixed_answer
+        self.fixed_answer_idx = fixed_answer_idx
 
     def predict(self, market_question: str) -> Prediction:
-        p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
+        p_yes, confidence = 1.0 if self.fixed_answer_idx else 0.0, 1.0
+        # We simply select a fixed probability for the first outcome.
         return Prediction(
             outcome_prediction=OutcomePrediction(
+                probabilities_multi={},
                 confidence=confidence,
                 info_utility=None,
             ),

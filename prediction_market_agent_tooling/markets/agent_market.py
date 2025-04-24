@@ -112,6 +112,44 @@ class AgentMarket(BaseModel):
             outcome = get_most_probable_outcome(self.probability_map)
             return Resolution(outcome=outcome, invalid=False)
 
+    def get_last_trade_p_yes(self) -> Probability | None:
+        """
+        Get the last trade price for the YES outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
+        Could be None if no trades were made.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def get_last_trade_p_no(self) -> Probability | None:
+        """
+        Get the last trade price for the NO outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
+        Could be None if no trades were made.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def get_last_trade_yes_outcome_price(self) -> CollateralToken | None:
+        # Price on prediction markets are, by definition, equal to the probability of an outcome.
+        # Just making it explicit in this function.
+        if last_trade_p_yes := self.get_last_trade_p_yes():
+            return CollateralToken(last_trade_p_yes)
+        return None
+
+    def get_last_trade_yes_outcome_price_usd(self) -> USD | None:
+        if last_trade_yes_outcome_price := self.get_last_trade_yes_outcome_price():
+            return self.get_token_in_usd(last_trade_yes_outcome_price)
+        return None
+
+    def get_last_trade_no_outcome_price(self) -> CollateralToken | None:
+        # Price on prediction markets are, by definition, equal to the probability of an outcome.
+        # Just making it explicit in this function.
+        if last_trade_p_no := self.get_last_trade_p_no():
+            return CollateralToken(last_trade_p_no)
+        return None
+
+    def get_last_trade_no_outcome_price_usd(self) -> USD | None:
+        if last_trade_no_outcome_price := self.get_last_trade_no_outcome_price():
+            return self.get_token_in_usd(last_trade_no_outcome_price)
+        return None
+
     def get_liquidatable_amount(self) -> OutcomeToken:
         tiny_amount = self.get_tiny_bet_amount()
         return OutcomeToken.from_token(tiny_amount / 10)

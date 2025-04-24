@@ -70,7 +70,6 @@ def test_benchmark_run(
                 volume=None,
                 url="url",
                 question="Will GNO go up?",
-                current_p_yes=Probability(0.1),
                 outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
                 close_time=utcnow() + timedelta(hours=48),
                 resolution=None,
@@ -133,7 +132,6 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         prediction = bm.Prediction(
             outcome_prediction=OutcomePrediction(
                 info_utility=0.3333,
-                p_yes=Probability(0.00001),
                 confidence=0.22222,
             ),
         )

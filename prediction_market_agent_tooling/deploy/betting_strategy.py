@@ -227,14 +227,15 @@ class KellyBettingStrategy(BettingStrategy):
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
             kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
 
-        # Depending on Kelly result, we invert the bet.
-        amounts = {
-            direction
-            if kelly_bet.direction
-            else other_direction: market.get_token_in_usd(kelly_bet_size),
-        }
-
-        target_position = Position(market_id=market.id, amounts_current=amounts)
+        # If Kelly amount is negative, we can't determine what bet we should place, hence we return
+        # an empty target position.
+        if kelly_bet.size < 0:
+            target_position = Position(market_id=market.id, amounts_current={})
+        else:
+            amounts = {
+                direction: market.get_token_in_usd(kelly_bet_size),
+            }
+            target_position = Position(market_id=market.id, amounts_current=amounts)
         trades = self._build_rebalance_trades_from_positions(
             existing_position, target_position, market=market
         )
@@ -375,7 +376,7 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         kelly_bet_size_usd = market.get_token_in_usd(kelly_bet.size)
 
         amounts = {
-            kelly_bet.direction: kelly_bet_size_usd,
+            outcome: kelly_bet_size_usd,
         }
         target_position = Position(market_id=market.id, amounts_current=amounts)
 

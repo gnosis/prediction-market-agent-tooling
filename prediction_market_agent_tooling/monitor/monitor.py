@@ -285,6 +285,10 @@ def monitor_brier_score(resolved_markets: t.Sequence[AgentMarket]) -> None:
     """
     st.subheader("Brier Score (0-2, lower is better)")
 
+    # ToDo
+    #  Brier score can be generalized as
+    #  brier_score = sum(forecast[outcome] - actual[outcome]) ** 2)
+
     # We need to use `get_last_trade_p_yes` instead of `current_p_yes` because, for resolved markets, the probabilities can be fixed to 0 and 1 (for example, on Omen).
     # And for the brier score, we need the true market prediction, not its resolution after the outcome is known.
     # If no trades were made, take it as 0.5 because the platform didn't provide any valuable information.

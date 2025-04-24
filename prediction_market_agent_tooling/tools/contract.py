@@ -212,11 +212,11 @@ class ContractERC20BaseClass(ContractBaseClass):
         owner: ChecksumAddress,
         for_address: ChecksumAddress,
         web3: Web3 | None = None,
-    ) -> int:
+    ) -> Wei:
         allowance_for_user: int = self.call(
             "allowance", function_params=[owner, for_address], web3=web3
         )
-        return allowance_for_user
+        return Wei(allowance_for_user)
 
     def approve(
         self,

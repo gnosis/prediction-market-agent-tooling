@@ -7,6 +7,7 @@ from pydantic import BaseModel, field_validator, model_validator
 from pydantic_core.core_schema import FieldValidationInfo
 from web3 import Web3
 
+from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
@@ -28,7 +29,6 @@ from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
-    should_not_happen,
     utcnow,
 )
 
@@ -71,7 +71,7 @@ class AgentMarket(BaseModel):
     resolution: Resolution | None
     created_time: DatetimeUTC | None
     close_time: DatetimeUTC | None
-    current_p_yes: Probability | None = None
+
     probability_map: dict[OutcomeStr, Probability]
     url: str
     volume: CollateralToken | None
@@ -102,10 +102,6 @@ class AgentMarket(BaseModel):
         return data
 
     @property
-    def current_p_no(self) -> Probability:
-        return Probability(1 - self.current_p_yes)
-
-    @property
     def probable_resolution(self) -> Resolution:
         if self.is_resolved():
             if self.has_successful_resolution():
@@ -113,54 +109,8 @@ class AgentMarket(BaseModel):
             else:
                 raise ValueError(f"Unknown resolution: {self.resolution}")
         else:
-            return Resolution.YES if self.current_p_yes > 0.5 else Resolution.NO
-
-    @property
-    def boolean_outcome(self) -> bool:
-        if self.resolution:
-            if self.resolution == Resolution.YES:
-                return True
-            elif self.resolution == Resolution.NO:
-                return False
-        should_not_happen(f"Market {self.id} does not have a successful resolution.")
-
-    def get_last_trade_p_yes(self) -> Probability | None:
-        """
-        Get the last trade price for the YES outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
-        Could be None if no trades were made.
-        """
-        raise NotImplementedError("Subclasses must implement this method")
-
-    def get_last_trade_p_no(self) -> Probability | None:
-        """
-        Get the last trade price for the NO outcome. This can be different from the current p_yes, for example if market is closed and it's probabilities are fixed to 0 and 1.
-        Could be None if no trades were made.
-        """
-        raise NotImplementedError("Subclasses must implement this method")
-
-    def get_last_trade_yes_outcome_price(self) -> CollateralToken | None:
-        # Price on prediction markets are, by definition, equal to the probability of an outcome.
-        # Just making it explicit in this function.
-        if last_trade_p_yes := self.get_last_trade_p_yes():
-            return CollateralToken(last_trade_p_yes)
-        return None
-
-    def get_last_trade_yes_outcome_price_usd(self) -> USD | None:
-        if last_trade_yes_outcome_price := self.get_last_trade_yes_outcome_price():
-            return self.get_token_in_usd(last_trade_yes_outcome_price)
-        return None
-
-    def get_last_trade_no_outcome_price(self) -> CollateralToken | None:
-        # Price on prediction markets are, by definition, equal to the probability of an outcome.
-        # Just making it explicit in this function.
-        if last_trade_p_no := self.get_last_trade_p_no():
-            return CollateralToken(last_trade_p_no)
-        return None
-
-    def get_last_trade_no_outcome_price_usd(self) -> USD | None:
-        if last_trade_no_outcome_price := self.get_last_trade_no_outcome_price():
-            return self.get_token_in_usd(last_trade_no_outcome_price)
-        return None
+            outcome = get_most_probable_outcome(self.probability_map)
+            return Resolution(outcome=outcome, invalid=False)
 
     def get_liquidatable_amount(self) -> OutcomeToken:
         tiny_amount = self.get_tiny_bet_amount()
@@ -339,10 +289,14 @@ class AgentMarket(BaseModel):
         return self.get_liquidity() > 0
 
     def has_successful_resolution(self) -> bool:
-        return self.resolution in [Resolution.YES, Resolution.NO]
+        return (
+            self.resolution is not None
+            and self.resolution.outcome is not None
+            and not self.resolution.invalid
+        )
 
     def has_unsuccessful_resolution(self) -> bool:
-        return self.resolution in [Resolution.CANCEL, Resolution.MKT]
+        return self.resolution is not None and self.resolution.invalid
 
     @staticmethod
     def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:

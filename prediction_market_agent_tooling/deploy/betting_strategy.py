@@ -3,11 +3,12 @@ from math import prod
 
 from scipy.optimize import minimize_scalar
 
+from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
-    OutcomeToken,
     OutcomeStr,
+    OutcomeToken,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
@@ -23,6 +24,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet_full,
+    get_kelly_bet_simplified,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -238,15 +240,13 @@ class KellyBettingStrategy(BettingStrategy):
         )
         return trades
 
-    def get_outcome_prices_from_balances(
-        self, balances: list[OutcomeToken]
-    ) -> list[float]:
+    def get_outcome_prices_from_balances(self, balances: list[float]) -> list[float]:
         num_balances = len(balances)
         prices = []
 
         # Compute the product of all outcome balances except i for each i
         for i in range(num_balances):
-            numerator = prod([balances[j].value for j in range(num_balances) if j != i])
+            numerator = prod([balances[j] for j in range(num_balances) if j != i])
             prices.append(numerator)
 
         denominator = sum(prices)
@@ -265,7 +265,7 @@ class KellyBettingStrategy(BettingStrategy):
         expected_price = prices[outcome_idx]
 
         tokens_to_buy = get_buy_outcome_token_amount(
-            bet_amount, outcome_idx, pool_balances, fees
+            bet_amount, outcome_idx, [OutcomeToken(i) for i in pool_balances], fees
         )
 
         actual_price = bet_amount.value / tokens_to_buy.value
@@ -279,7 +279,6 @@ class KellyBettingStrategy(BettingStrategy):
         def calculate_price_impact_deviation_from_target_price_impact(
             bet_amount_usd: float,  # Needs to be float because it's used in minimize_scalar internally.
         ) -> float:
-            # ToDo - Fix arguments
             outcome_idx = market.get_outcome_index(direction)
             price_impact = self.calculate_price_impact_for_bet_amount(
                 outcome_idx=outcome_idx,
@@ -341,26 +340,42 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         adjusted_bet_amount_token = market.get_usd_in_token(adjusted_bet_amount_usd)
         outcome_token_pool = check_not_none(market.outcome_token_pool)
 
-        # Fixed direction of bet, only use Kelly to adjust the bet size based on market's outcome pool size.
-        estimated_p_yes = float(answer.p_yes > 0.5)
-        confidence = 1.0
+        outcome = get_most_probable_outcome(answer.probabilities_multi)
 
-        kelly_bet = get_kelly_bet_full(
-            yes_outcome_pool_size=outcome_token_pool[
-                market.get_outcome_str_from_bool(True)
-            ],
-            no_outcome_pool_size=outcome_token_pool[
-                market.get_outcome_str_from_bool(False)
-            ],
-            estimated_p_yes=estimated_p_yes,
-            max_bet=adjusted_bet_amount_token,
-            confidence=confidence,
-            fees=market.fees,
-        )
+        if len(market.outcomes) == 2:
+            # use Kelly full
+
+            # Fixed direction of bet, only use Kelly to adjust the bet size based on market's outcome pool size.
+            estimated_p_yes = (
+                1.0 if outcome == market.get_outcome_str_from_bool(True) else 0.0
+            )
+
+            kelly_bet = get_kelly_bet_full(
+                yes_outcome_pool_size=outcome_token_pool[
+                    market.get_outcome_str_from_bool(True)
+                ],
+                no_outcome_pool_size=outcome_token_pool[
+                    market.get_outcome_str_from_bool(False)
+                ],
+                estimated_p_yes=estimated_p_yes,
+                max_bet=adjusted_bet_amount_token,
+                confidence=1.0,
+                fees=market.fees,
+            )
+
+        else:
+            # use Kelly simple, since Kelly full only supports 2 outcomes
+            kelly_bet = get_kelly_bet_simplified(
+                max_bet=adjusted_bet_amount_token,
+                market_p_yes=market.probability_map[outcome],
+                estimated_p_yes=answer.probabilities_multi[outcome],
+                confidence=answer.confidence,
+            )
+
         kelly_bet_size_usd = market.get_token_in_usd(kelly_bet.size)
 
         amounts = {
-            market.get_outcome_str_from_bool(kelly_bet.direction): kelly_bet_size_usd,
+            kelly_bet.direction: kelly_bet_size_usd,
         }
         target_position = Position(market_id=market.id, amounts_current=amounts)
 

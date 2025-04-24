@@ -39,7 +39,6 @@ class MetaculusAgentMarket(AgentMarket):
             question=model.title,
             outcomes=[],
             resolution=None,
-            current_p_yes=model.p_yes,
             created_time=model.created_at,
             close_time=model.scheduled_close_time,
             url=model.page_url,

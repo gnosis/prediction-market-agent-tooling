@@ -5,7 +5,6 @@ from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
-from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -87,7 +86,6 @@ class RandomAgent(AbstractBenchmarkedAgent):
         p_yes, confidence = random.random(), random.random()
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                p_yes=Probability(p_yes),
                 confidence=confidence,
                 info_utility=None,
                 probabilities_multi={},
@@ -111,7 +109,6 @@ class FixedAgent(AbstractBenchmarkedAgent):
         p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                p_yes=Probability(p_yes),
                 confidence=confidence,
                 info_utility=None,
             ),

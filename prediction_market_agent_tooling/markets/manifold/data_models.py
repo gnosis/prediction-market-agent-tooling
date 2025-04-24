@@ -93,18 +93,18 @@ class ManifoldMarket(BaseModel):
         return [OutcomeStr(o) for o in self.pool.model_fields.keys()]
 
     def get_resolved_outcome(self) -> OutcomeStr:
-        if self.resolution == Resolution.YES:
-            return OutcomeStr("YES")
-        elif self.resolution == Resolution.NO:
-            return OutcomeStr("NO")
+        if self.resolution and self.resolution.outcome:
+            return self.resolution.outcome
         else:
-            should_not_happen(f"Unexpected bet outcome string, '{self.resolution}'.")
+            raise ValueError(f"Market is not resolved. Resolution {self.resolution=}")
 
     def is_resolved_non_cancelled(self) -> bool:
         return (
             self.isResolved
             and self.resolutionTime is not None
-            and self.resolution not in [Resolution.CANCEL, Resolution.MKT]
+            and self.resolution is not None
+            and self.resolution.outcome is not None
+            and not self.resolution.invalid
         )
 
     def __repr__(self) -> str:
@@ -198,12 +198,10 @@ class ManifoldBet(BaseModel):
     outcome: Resolution
 
     def get_resolved_outcome(self) -> OutcomeStr:
-        if self.outcome == Resolution.YES:
-            return OutcomeStr("YES")
-        elif self.outcome == Resolution.NO:
-            return OutcomeStr("NO")
+        if self.outcome.outcome:
+            return self.outcome.outcome
         else:
-            should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
+            raise ValueError(f"Bet {self.id} is not resolved. {self.outcome=}")
 
     def get_profit(self, market_outcome: OutcomeStr) -> CollateralToken:
         profit = (

@@ -107,9 +107,7 @@ def _sanity_check_omen_market_moving_bet(
     """
     buy_amount_ = market.get_contract().calcBuyAmount(
         investment_amount=bet_to_check.size.as_wei,
-        outcome_index=market.get_outcome_index(
-            market.get_outcome_str_from_bool(bet_to_check.direction)
-        ),
+        outcome_index=market.get_outcome_index(bet_to_check.direction),
     )
     buy_amount = buy_amount_.as_outcome_token
 

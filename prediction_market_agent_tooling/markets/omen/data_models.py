@@ -1,5 +1,6 @@
 import typing as t
 
+from jsonschema.benchmarks.const_vs_enum import invalid
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from web3 import Web3
 
@@ -399,18 +400,16 @@ class OmenMarket(BaseModel):
     def is_binary(self) -> bool:
         return len(self.outcomes) == 2
 
-    def outcome_from_answer(self, answer: HexBytes) -> OutcomeStr:
-        if not self.is_binary:
-            raise ValueError(
-                f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
-            )
+    def outcome_from_answer(self, answer: HexBytes) -> OutcomeStr | None:
+        if answer == INVALID_ANSWER_HEX_BYTES:
+            return None
         return self.outcomes[answer.as_int()]
 
     def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
-        if self.outcome_from_answer(answer):
-            return Resolution.YES
-        else:
-            return Resolution.NO
+        if outcome := self.outcome_from_answer(answer):
+            return Resolution.from_answer(outcome)
+
+        return Resolution(outcome=None, invalid=True)
 
     def get_resolution_enum(self) -> t.Optional[Resolution]:
         if not self.is_resolved_with_valid_answer:

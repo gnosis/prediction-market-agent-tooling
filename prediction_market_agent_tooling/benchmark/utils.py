@@ -3,10 +3,18 @@ import typing as t
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import (
     ProbabilisticAnswer,
     Resolution,
 )
+
+
+def get_most_probable_outcome(
+    probability_map: dict[OutcomeStr, Probability]
+) -> OutcomeStr:
+    """Returns most probable outcome. If tied, returns first."""
+    return max(probability_map, key=lambda k: float(probability_map[k]))
 
 
 class OutcomePrediction(ProbabilisticAnswer):
@@ -14,7 +22,8 @@ class OutcomePrediction(ProbabilisticAnswer):
 
     @property
     def probable_resolution(self) -> Resolution:
-        return Resolution.YES if self.p_yes > 0.5 else Resolution.NO
+        outcome = get_most_probable_outcome(self.probabilities_multi)
+        return Resolution(outcome=outcome, invalid=False)
 
 
 class Prediction(BaseModel):

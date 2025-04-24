@@ -53,10 +53,6 @@ class ManifoldAgentMarket(AgentMarket):
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
         return self.current_p_yes
 
-    def get_last_trade_p_no(self) -> Probability:
-        """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
-        return self.current_p_no
-
     def get_tiny_bet_amount(self) -> CollateralToken:
         return CollateralToken(1)
 

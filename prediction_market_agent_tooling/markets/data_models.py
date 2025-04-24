@@ -14,15 +14,17 @@ from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_O
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
-class Resolution(str, Enum):
-    YES = "YES"
-    NO = "NO"
-    CANCEL = "CANCEL"
-    MKT = "MKT"
+class Resolution(BaseModel):
+    outcome: OutcomeStr | None
+    invalid: bool
+    # YES = "YES"
+    # NO = "NO"
+    # CANCEL = "CANCEL"
+    # MKT = "MKT"
 
     @staticmethod
-    def from_bool(value: bool) -> "Resolution":
-        return Resolution.YES if value else Resolution.NO
+    def from_answer(answer: OutcomeStr) -> "Resolution":
+        return Resolution(outcome=answer, invalid=False)
 
 
 class Bet(BaseModel):

@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import CollateralToken
+from prediction_market_agent_tooling.gtypes import CollateralToken, OutcomeStr
 
 
 class SimpleBet(BaseModel):
-    direction: bool
+    direction: OutcomeStr
     size: CollateralToken

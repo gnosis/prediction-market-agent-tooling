@@ -1,19 +1,17 @@
 import typing as t
 
-from cachetools import cached, TTLCache
+from cachetools import TTLCache, cached
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
-    Probability,
     HexAddress,
     OutcomeStr,
+    Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.seer.data_models import (
-    SeerMarket,
-)
+from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )

@@ -43,17 +43,17 @@ def test_claim_bonds() -> None:
 
     # Add multiple answers
     bond = xDai(0.00001).as_xdai_wei
-    answers = [outcomes[0], outcomes[1], outcomes[0], outcomes[1]]
-    for answer in answers:
+    outcome_idxs = [0, 1, 0, 1]
+
+    for idx in outcome_idxs:
         realitio_contract.submit_answer(
             api_keys=api_keys,
             question_id=question_event.question_id,
-            answer=answer,
-            outcomes=outcomes,
+            outcome_index=idx,
             bond=bond,
         )
         bond *= 2
-        logger.info(f"Answered with: {answer}")
+        logger.info(f"Answered with: {outcomes[idx]}")
         time.sleep(2)  # Give it a moment to settle on chain.
 
     time.sleep(timeout.total_seconds() + 2)  # Wait for the question to be finalized.

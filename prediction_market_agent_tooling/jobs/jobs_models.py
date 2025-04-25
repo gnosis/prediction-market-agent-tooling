@@ -10,8 +10,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     ProcessedTradedMarket,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OMEN_TRUE_OUTCOME,
     OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     FilterBy,

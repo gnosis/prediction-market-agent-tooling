@@ -17,8 +17,10 @@ from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_BINARY_MARKET_OUTCOMES,
     ContractPrediction,
     OmenBet,
+    OmenCategoricalMarket,
     OmenMarket,
     OmenPosition,
     OmenUserPosition,
@@ -26,8 +28,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityAnswer,
     RealityQuestion,
     RealityResponse,
-    OMEN_BINARY_MARKET_OUTCOMES,
-    OmenCategoricalMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenThumbnailMapping,

@@ -1,7 +1,4 @@
-from prediction_market_agent_tooling.gtypes import (
-    CollateralToken,
-    OutcomeToken,
-)
+from prediction_market_agent_tooling.gtypes import CollateralToken, OutcomeToken
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
 

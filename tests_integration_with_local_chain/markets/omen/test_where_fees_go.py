@@ -168,7 +168,7 @@ def test_where_fees_go(
     omen_submit_answer_market_tx(
         api_keys_A,
         omen_market,
-        Resolution.from_bool(buyer_binary_outcome),
+        Resolution(outcome=buyer_binary_outcome, invalid=False),
         bond=xDai(0.001),
         web3=local_web3,
     )

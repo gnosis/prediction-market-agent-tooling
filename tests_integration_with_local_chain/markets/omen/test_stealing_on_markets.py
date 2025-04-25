@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import USD, private_key_type, xDai
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
@@ -129,7 +130,7 @@ def test_stealing_on_markets(
             api_keys_B,
             buy_yes_for_b,
             agent_market,
-            binary_outcome=True,
+            outcome=OMEN_TRUE_OUTCOME,
             auto_deposit=True,
             web3=local_web3,
         )
@@ -139,7 +140,7 @@ def test_stealing_on_markets(
             api_keys_B,
             sell_yes_for_b,
             agent_market,
-            binary_outcome=True,
+            outcome=OMEN_TRUE_OUTCOME,
             auto_withdraw=True,
             web3=local_web3,
         )
@@ -159,7 +160,7 @@ def test_stealing_on_markets(
     omen_submit_answer_market_tx(
         api_keys_A,
         omen_market,
-        Resolution.NO,
+        Resolution(outcome=OMEN_FALSE_OUTCOME, invalid=False),
         bond=xDai(0.001),
         web3=local_web3,
     )

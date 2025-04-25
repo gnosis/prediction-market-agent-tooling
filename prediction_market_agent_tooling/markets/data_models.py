@@ -160,9 +160,10 @@ class PlacedTrade(Trade):
 class SimulatedBetDetail(BaseModel):
     strategy: str
     url: str
-    market_p_yes: float
-    agent_p_yes: float
-    agent_prob_multi: dict[str, float]
+    # market_p_yes: float
+    market_prob_multi: dict[OutcomeStr, Probability]
+    # agent_p_yes: float
+    agent_prob_multi: dict[OutcomeStr, Probability]
     agent_conf: float
     org_bet: CollateralToken
     sim_bet: CollateralToken
@@ -187,6 +188,4 @@ class SimulatedLifetimeDetail(BaseModel):
     total_simulated_profit: CollateralToken
     roi: float
     simulated_roi: float
-    sharpe_output_original: SharpeOutput
-    sharpe_output_simulation: SharpeOutput
     maximize: float

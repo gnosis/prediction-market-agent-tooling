@@ -1,6 +1,5 @@
 import typing as t
 
-from jsonschema.benchmarks.const_vs_enum import invalid
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from web3 import Web3
 

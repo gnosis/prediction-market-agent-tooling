@@ -108,7 +108,7 @@ def test_create_bet_withdraw_resolve_market(
         api_keys=test_keys,
         amount=USD(0.001),
         market=agent_market,
-        binary_outcome=False,
+        outcome=OMEN_FALSE_OUTCOME,
         auto_deposit=True,
     )
 
@@ -124,8 +124,7 @@ def test_create_bet_withdraw_resolve_market(
     OmenRealitioContract().submit_answer(
         api_keys=test_keys,
         question_id=market.question.id,
-        answer=OMEN_FALSE_OUTCOME,
-        outcomes=market.question.outcomes,
+        outcome_index=market.question.outcomes.index(OMEN_FALSE_OUTCOME),
         bond=xDai(0.001).as_xdai_wei,
     )
 

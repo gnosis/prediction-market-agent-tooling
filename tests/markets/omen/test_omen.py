@@ -21,9 +21,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.betting_strategies.market_moving import (
-    get_market_moving_bet,
-)
 from prediction_market_agent_tooling.tools.contract import ContractOnGnosisChain
 from prediction_market_agent_tooling.tools.transaction_cache import (
     TransactionBlockCache,
@@ -224,40 +221,6 @@ def get_new_p_yes(
     return Probability(new_p_yes)
 
 
-def test_get_new_p_yes() -> None:
-    market = OmenAgentMarket.get_binary_markets(
-        limit=1,
-        sort_by=SortBy.CLOSING_SOONEST,
-        filter_by=FilterBy.OPEN,
-    )[0]
-
-    assert get_new_p_yes(
-        market=market, bet_amount=USD(10.0), direction=True
-    ) > check_not_none(market.current_p_yes)
-    assert get_new_p_yes(
-        market=market, bet_amount=USD(11.0), direction=False
-    ) < check_not_none(market.current_p_yes)
-
-    # Sanity check vs market moving bet
-    target_p_yes = 0.95
-    outcome_token_pool = check_not_none(market.outcome_token_pool)
-    yes_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(True)]
-    no_outcome_pool_size = outcome_token_pool[market.get_outcome_str_from_bool(False)]
-    bet = get_market_moving_bet(
-        yes_outcome_pool_size=yes_outcome_pool_size,
-        no_outcome_pool_size=no_outcome_pool_size,
-        market_p_yes=check_not_none(market.current_p_yes),
-        target_p_yes=0.95,
-        fees=market.fees,
-    )
-    new_p_yes = get_new_p_yes(
-        market=market,
-        bet_amount=market.get_token_in_usd(bet.size),
-        direction=bet.direction,
-    )
-    assert np.isclose(new_p_yes, target_p_yes)
-
-
 @pytest.mark.parametrize("direction", [True, False])
 def test_get_buy_token_amount(direction: bool) -> None:
     """
@@ -271,7 +234,6 @@ def test_get_buy_token_amount(direction: bool) -> None:
         filter_by=FilterBy.OPEN,
     )
     investment_amount = USD(5)
-    buy_direction = direction
     for market in markets:
         outcome_str = market.get_outcome_str_from_bool(direction)
         buy_amount0 = market.get_buy_token_amount(

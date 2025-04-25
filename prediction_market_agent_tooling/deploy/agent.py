@@ -10,8 +10,8 @@ from pydantic import computed_field
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    TradeType,
     MultiCategoricalMaxAccuracyBettingStrategy,
+    TradeType,
 )
 from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,

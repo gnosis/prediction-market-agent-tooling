@@ -23,7 +23,10 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
         return bm.Prediction(
             is_predictable=True,
             outcome_prediction=OutcomePrediction(
-                p_yes=Probability(0.6),
+                probabilities_multi={
+                    OutcomeStr("Yes"): Probability(0.6),
+                    OutcomeStr("No"): Probability(0.4),
+                },
                 confidence=0.8,
                 info_utility=0.9,
             ),
@@ -54,7 +57,7 @@ def dummy_agent_no_prediction() -> DummyAgentNoPrediction:
 def test_agent_prediction(dummy_agent: DummyAgent) -> None:
     prediction = dummy_agent.check_and_predict(market_question="Will GNO go up?")
     assert prediction.outcome_prediction is not None
-    assert prediction.outcome_prediction.p_yes == 0.6
+    assert prediction.outcome_prediction.probabilities_multi[OutcomeStr("Yes")] == 0.6
     assert prediction.outcome_prediction.confidence == 0.8
     assert prediction.outcome_prediction.info_utility == 0.9
 
@@ -71,6 +74,10 @@ def test_benchmark_run(
                 url="url",
                 question="Will GNO go up?",
                 outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
+                probability_map={
+                    OutcomeStr("Yes"): Probability(0.1),
+                    OutcomeStr("No"): Probability(0.9),
+                },
                 close_time=utcnow() + timedelta(hours=48),
                 resolution=None,
                 created_time=utcnow() - timedelta(hours=48),
@@ -89,7 +96,10 @@ def test_cache() -> None:
             "bar": {
                 "foo": bm.Prediction(
                     outcome_prediction=OutcomePrediction(
-                        p_yes=Probability(0.6),
+                        probabilities_multi={
+                            OutcomeStr("Yes"): Probability(0.6),
+                            OutcomeStr("No"): Probability(0.4),
+                        },
                         confidence=0.8,
                         info_utility=0.9,
                     )
@@ -116,10 +126,13 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
                 volume=None,
                 url="url",
                 question="Will GNO go up?",
-                current_p_yes=Probability(0.1),
+                probability_map={
+                    OutcomeStr("Yes"): Probability(0.1),
+                    OutcomeStr("No"): Probability(0.9),
+                },
                 outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
                 close_time=utcnow(),
-                resolution=Resolution.NO,
+                resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
                 created_time=utcnow() - timedelta(hours=48),
                 outcome_token_pool=None,
             )
@@ -131,8 +144,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         )
         prediction = bm.Prediction(
             outcome_prediction=OutcomePrediction(
-                info_utility=0.3333,
-                confidence=0.22222,
+                info_utility=0.3333, confidence=0.22222, probabilities_multi={}
             ),
         )
         assert prediction.outcome_prediction is not None  # Makes mypy happy.
@@ -147,8 +159,8 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         assert first_benchmark_prediction is not None
         assert first_benchmark_prediction.outcome_prediction is not None
         assert (
-            first_benchmark_prediction.outcome_prediction.p_yes
-            == prediction.outcome_prediction.p_yes
+            first_benchmark_prediction.outcome_prediction.probabilities_multi
+            == prediction.outcome_prediction.probabilities_multi
         )
         benchmarker.predictions.save(cache_path)
 
@@ -163,15 +175,15 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         assert another_benchmark_prediction is not None
         assert another_benchmark_prediction.outcome_prediction is not None
         assert (
-            another_benchmark_prediction.outcome_prediction.p_yes
-            == prediction.outcome_prediction.p_yes
+            another_benchmark_prediction.outcome_prediction.probabilities_multi
+            == prediction.outcome_prediction.probabilities_multi
         )
         another_benchmarker.run_agents()
 
         # Observe that the cached result is still the same
         assert (
-            another_benchmark_prediction.outcome_prediction.p_yes
-            == prediction.outcome_prediction.p_yes
+            another_benchmark_prediction.outcome_prediction.probabilities_multi
+            == prediction.outcome_prediction.probabilities_multi
         )
 
 
@@ -183,11 +195,14 @@ def test_benchmarker_cancelled_markets() -> None:
             volume=None,
             url="url",
             question="Will GNO go up?",
-            current_p_yes=Probability(0.1),
+            probability_map={
+                OutcomeStr("Yes"): Probability(0.1),
+                OutcomeStr("No"): Probability(0.9),
+            },
             outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
-            resolution=Resolution.CANCEL,
+            resolution=Resolution(outcome=None, invalid=True),
             outcome_token_pool=None,
         )
     ]
@@ -210,75 +225,78 @@ def test_market_probable_resolution() -> None:
             volume=None,
             url="url",
             question="Will GNO go up?",
-            current_p_yes=Probability(0.1),
+            probability_map={
+                OutcomeStr("Yes"): Probability(0.1),
+                OutcomeStr("No"): Probability(0.9),
+            },
             outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
             close_time=utcnow(),
             created_time=utcnow() - timedelta(hours=48),
-            resolution=Resolution.CANCEL,
+            resolution=Resolution(outcome=None, invalid=True),
             outcome_token_pool=None,
         ).probable_resolution
     assert "Unknown resolution" in str(e)
-    assert (
-        PolymarketAgentMarket(
-            description=None,
-            id="1",
-            volume=None,
-            url="url",
-            question="Will GNO go up?",
-            current_p_yes=Probability(0.8),
-            outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
-            close_time=utcnow(),
-            created_time=utcnow() - timedelta(hours=48),
-            resolution=Resolution.YES,
-            outcome_token_pool=None,
-        ).probable_resolution
-        == Resolution.YES
-    )
-    assert (
-        PolymarketAgentMarket(
-            description=None,
-            id="1",
-            volume=None,
-            url="url",
-            question="Will GNO go up?",
-            current_p_yes=Probability(0.1),
-            outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
-            close_time=utcnow(),
-            resolution=Resolution.NO,
-            created_time=utcnow() - timedelta(hours=48),
-            outcome_token_pool=None,
-        ).probable_resolution
-        == Resolution.NO
-    )
-    assert (
-        PolymarketAgentMarket(
-            description=None,
-            id="1",
-            volume=None,
-            url="url",
-            question="Will GNO go up?",
-            current_p_yes=Probability(0.1),
-            outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
-            close_time=utcnow(),
-            resolution=Resolution.NO,
-            created_time=utcnow() - timedelta(hours=48),
-            outcome_token_pool=None,
-        ).probable_resolution
-        == Resolution.NO
-    )
-    assert (
-        PolymarketAgentMarket(
-            description=None,
-            id="1",
-            volume=None,
-            url="url",
-            question="Will GNO go up?",
-            current_p_yes=Probability(0.8),
-            outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
-            close_time=utcnow(),
-            resolution=Resolution.YES,
-            created_time=utcnow() - timedelta(hours=48),
-            outcome_token_pool=None,
-        ).probable_resolution
-        == Resolution.YES
-    )
+    assert PolymarketAgentMarket(
+        description=None,
+        id="1",
+        volume=None,
+        url="url",
+        question="Will GNO go up?",
+        probability_map={
+            OutcomeStr("Yes"): Probability(0.8),
+            OutcomeStr("No"): Probability(0.2),
+        },
+        outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
+        close_time=utcnow(),
+        created_time=utcnow() - timedelta(hours=48),
+        resolution=Resolution(outcome=OutcomeStr("Yes"), invalid=False),
+        outcome_token_pool=None,
+    ).probable_resolution == Resolution(outcome=OutcomeStr("Yes"), invalid=False)
+    assert PolymarketAgentMarket(
+        description=None,
+        id="1",
+        volume=None,
+        url="url",
+        question="Will GNO go up?",
+        probability_map={
+            OutcomeStr("Yes"): Probability(0.1),
+            OutcomeStr("No"): Probability(0.9),
+        },
+        outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
+        close_time=utcnow(),
+        resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
+        created_time=utcnow() - timedelta(hours=48),
+        outcome_token_pool=None,
+    ).probable_resolution == Resolution(outcome=OutcomeStr("No"), invalid=False)
+    assert PolymarketAgentMarket(
+        description=None,
+        id="1",
+        volume=None,
+        url="url",
+        question="Will GNO go up?",
+        probability_map={
+            OutcomeStr("Yes"): Probability(0.1),
+            OutcomeStr("No"): Probability(0.9),
+        },
+        outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
+        close_time=utcnow(),
+        resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
+        created_time=utcnow() - timedelta(hours=48),
+        outcome_token_pool=None,
+    ).probable_resolution == Resolution(outcome=OutcomeStr("No"), invalid=False)
+    assert PolymarketAgentMarket(
+        description=None,
+        id="1",
+        volume=None,
+        url="url",
+        question="Will GNO go up?",
+        probability_map={
+            OutcomeStr("Yes"): Probability(0.8),
+            OutcomeStr("No"): Probability(0.2),
+        },
+        outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
+        close_time=utcnow(),
+        resolution=Resolution(outcome=OutcomeStr("Yes"), invalid=False),
+        created_time=utcnow() - timedelta(hours=48),
+        outcome_token_pool=None,
+    ).probable_resolution == Resolution(outcome=OutcomeStr("Yes"), invalid=False)

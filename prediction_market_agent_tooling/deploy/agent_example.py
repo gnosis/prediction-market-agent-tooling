@@ -7,7 +7,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
     MultiCategoricalMaxAccuracyBettingStrategy,
 )
-from prediction_market_agent_tooling.gtypes import Probability, USD
+from prediction_market_agent_tooling.gtypes import USD, Probability
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
 from prediction_market_agent_tooling.markets.markets import MarketType
 

@@ -216,10 +216,8 @@ class Benchmarker:
         # Get common outcomes between prediction and market
         common_outcomes = set(pred_probs.keys()) & set(market_probs.keys())
 
-        # Calculate squared errors for each outcome
         errors = [
-            (pred_probs[outcome] - market_probs[outcome]) ** 2
-            for outcome in common_outcomes
+            (pred_probs[outcome] - market_probs[outcome]) for outcome in common_outcomes
         ]
 
         return errors
@@ -229,7 +227,7 @@ class Benchmarker:
         errors = Benchmarker.calculate_errors_between_prediction_and_market(
             prediction, market
         )
-        squared_errors = sum(errors, 0.0)
+        squared_errors = sum([err**2 for err in errors], 0.0)
         return squared_errors
 
     def _compute_mean_confidence(

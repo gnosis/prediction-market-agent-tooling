@@ -12,8 +12,8 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
-    Probability,
     OutcomeWei,
+    Probability,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     USD,

@@ -13,8 +13,8 @@ def test_calculate_sell_amount_in_collateral_0() -> None:
     # share is 0.5
     collateral = calculate_sell_amount_in_collateral(
         shares_to_sell=OutcomeToken(1),
-        holdings=OutcomeToken(1000000000000 - 1),
-        other_holdings=OutcomeToken(1000000000000),
+        outcome_index=0,
+        pool_balances=[OutcomeToken(1000000000000 - 1), OutcomeToken(1000000000000)],
         fees=MarketFees.get_zero_fees(),
     )
     assert np.isclose(collateral.value, 0.5)
@@ -24,8 +24,8 @@ def test_calculate_sell_amount_in_collateral_1() -> None:
     # Sanity check that shares have near-zero value with this ratio
     near_zero_collateral = calculate_sell_amount_in_collateral(
         shares_to_sell=OutcomeToken(1),
-        holdings=OutcomeToken(10000000000000),
-        other_holdings=OutcomeToken(1),
+        outcome_index=1,
+        pool_balances=[OutcomeToken(1), OutcomeToken(10000000000000)],
         fees=MarketFees.get_zero_fees(),
     )
     assert np.isclose(near_zero_collateral.value, 0)
@@ -33,8 +33,8 @@ def test_calculate_sell_amount_in_collateral_1() -> None:
     # Sanity check that shares have near-one value with this ratio
     near_zero_collateral = calculate_sell_amount_in_collateral(
         shares_to_sell=OutcomeToken(1),
-        holdings=OutcomeToken(1),
-        other_holdings=OutcomeToken(10000000000000),
+        outcome_index=0,
+        pool_balances=[OutcomeToken(1), OutcomeToken(10000000000000)],
         fees=MarketFees.get_zero_fees(),
     )
     assert np.isclose(near_zero_collateral.value, 1)
@@ -46,8 +46,8 @@ def test_calculate_sell_amount_in_collateral_2() -> None:
         fees = MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee)
         return calculate_sell_amount_in_collateral(
             shares_to_sell=OutcomeToken(2.5),
-            holdings=OutcomeToken(10),
-            other_holdings=OutcomeToken(3),
+            outcome_index=0,
+            pool_balances=[OutcomeToken(10), OutcomeToken(3)],
             fees=fees,
         ).value
 
@@ -62,8 +62,8 @@ def test_calculate_sell_amount_in_collateral_3() -> None:
         fees = MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee)
         return calculate_sell_amount_in_collateral(
             shares_to_sell=OutcomeToken(2.5),
-            holdings=OutcomeToken(10),
-            other_holdings=OutcomeToken(3),
+            outcome_index=0,
+            pool_balances=[OutcomeToken(10), OutcomeToken(3)],
             fees=fees,
         ).value
 
@@ -80,8 +80,8 @@ def test_calculate_sell_amount_in_collateral_4() -> None:
     with pytest.raises(ValueError) as e:
         collateral = calculate_sell_amount_in_collateral(
             shares_to_sell=OutcomeToken(100),
-            holdings=OutcomeToken(10),
-            other_holdings=OutcomeToken(0),
+            outcome_index=0,
+            pool_balances=[OutcomeToken(10), OutcomeToken(0)],
             fees=MarketFees.get_zero_fees(),
         )
     assert str(e.value) == "All share args must be greater than 0"

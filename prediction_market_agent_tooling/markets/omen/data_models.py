@@ -474,8 +474,7 @@ class OmenMarket(BaseModel):
         )
 
 
-class OmenCategoricalMarket(OmenMarket):
-    pass
+
 
 
 def calculate_liquidity_parameter(
@@ -567,7 +566,7 @@ class OmenBet(BaseModel):
 
     def get_profit(self) -> CollateralToken:
         bet_amount = self.collateral_amount_token
-        # ToDo - Check if resolved
+
 
         if not self.fpmm.has_valid_answer:
             return CollateralToken(0)

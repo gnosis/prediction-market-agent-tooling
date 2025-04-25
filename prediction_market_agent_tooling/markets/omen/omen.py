@@ -1318,7 +1318,7 @@ def send_keeping_token_to_eoa_xdai(
 
     else:
         raise OutOfFundsError(
-            f"Current wxDai balance ({current_balances_eoa=}, {current_balances_betting=}) is less than the required minimum wxDai to withdraw {need_to_withdraw}."
+            f"Current wxDai balance ({current_balances_eoa=} for {api_keys.public_key=}, {current_balances_betting=} for {api_keys.bet_from_address=}) is less than the required minimum wxDai to withdraw {need_to_withdraw}."
         )
 
 

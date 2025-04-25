@@ -70,7 +70,6 @@ class SeerAgentMarket(AgentMarket):
     creator: HexAddress
     collateral_token_contract_address_checksummed: ChecksumAddress
     condition_id: HexBytes
-    # seer_outcomes: dict[SeerOutcomeEnum, int]
     description: str | None = (
         None  # Seer markets don't have a description, so just default to None.
     )
@@ -150,10 +149,7 @@ class SeerAgentMarket(AgentMarket):
         )
         return value_outcome_token_in_collateral.as_token
 
-    # def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
-    #     outcome_translated = SeerOutcomeEnum.from_bool(outcome)
-    #     idx = self.seer_outcomes[outcome_translated]
-    #     return OutcomeStr(self.outcomes[idx])
+
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys) -> USD:
@@ -178,7 +174,7 @@ class SeerAgentMarket(AgentMarket):
                     for_address=Web3.to_checksum_address(user_id), web3=web3
                 )
             )
-            # outcome_str = self.get_outcome_str_from_bool(outcome=outcome)
+
             amounts_ot[
                 OutcomeStr(outcome_str)
             ] = outcome_token_balance_wei.as_outcome_token
@@ -306,12 +302,12 @@ class SeerAgentMarket(AgentMarket):
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=None,
             outcomes_supply=model.outcomes_supply,
-            # resolution=model.get_resolution_enum(),
+
             resolution=None,
             volume=None,
-            # current_p_yes=current_p_yes,
+
             probability_map=probability_map,
-            # seer_outcomes=model.outcome_as_enums,
+
         )
 
     @staticmethod

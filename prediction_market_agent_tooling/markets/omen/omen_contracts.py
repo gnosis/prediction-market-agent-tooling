@@ -435,6 +435,24 @@ class WETHContract(ContractERC20OnGnosisChain):
     )
 
 
+class EUReContract(ContractERC20OnGnosisChain):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0xcB444e90D8198415266c6a2724b7900fb12FC56E"
+    )
+
+
+class SAFEContract(ContractERC20OnGnosisChain):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x4d18815D14fe5c3304e87B3FA18318baa5c23820"
+    )
+
+
+class COWContract(ContractERC20OnGnosisChain):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x177127622c4A00F3d409B75571e12cB3c8973d3c"
+    )
+
+
 class WrappedxDaiContract(ContractDepositableWrapperERC20OnGnosisChain):
     address: ChecksumAddress = WRAPPED_XDAI_CONTRACT_ADDRESS
 

@@ -93,8 +93,8 @@ def test_calculate_sell_amount_in_collateral_4() -> None:
 def test_calculate_sell_amount_in_collateral_5() -> None:
     collateral = calculate_sell_amount_in_collateral(
         shares_to_sell=OutcomeToken(0),
-        holdings=OutcomeToken(10),
-        other_holdings=OutcomeToken(15),
+        outcome_index=0,
+        pool_balances=[OutcomeToken(10), OutcomeToken(15)],
         fees=MarketFees.get_zero_fees(),
     )
     assert collateral == 0

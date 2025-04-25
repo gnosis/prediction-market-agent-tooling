@@ -474,9 +474,6 @@ class OmenMarket(BaseModel):
         )
 
 
-
-
-
 def calculate_liquidity_parameter(
     outcome_token_amounts: list[OutcomeWei],
 ) -> Wei:
@@ -566,7 +563,6 @@ class OmenBet(BaseModel):
 
     def get_profit(self) -> CollateralToken:
         bet_amount = self.collateral_amount_token
-
 
         if not self.fpmm.has_valid_answer:
             return CollateralToken(0)

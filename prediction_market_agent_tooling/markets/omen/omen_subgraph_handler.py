@@ -20,7 +20,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
     ContractPrediction,
     OmenBet,
-    OmenCategoricalMarket,
     OmenMarket,
     OmenPosition,
     OmenUserPosition,
@@ -457,10 +456,8 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         )
 
         fields = self._get_fields_for_markets(markets)
-        pydantic_model = (
-            OmenCategoricalMarket if include_categorical_markets else OmenMarket
-        )
-        omen_markets = self.do_query(fields=fields, pydantic_model=pydantic_model)
+
+        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
         return omen_markets
 
     def get_omen_market_by_market_id(

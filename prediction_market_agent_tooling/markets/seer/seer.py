@@ -149,8 +149,6 @@ class SeerAgentMarket(AgentMarket):
         )
         return value_outcome_token_in_collateral.as_token
 
-
-
     @staticmethod
     def get_trade_balance(api_keys: APIKeys) -> USD:
         return OmenAgentMarket.get_trade_balance(api_keys=api_keys)
@@ -302,12 +300,9 @@ class SeerAgentMarket(AgentMarket):
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=None,
             outcomes_supply=model.outcomes_supply,
-
             resolution=None,
             volume=None,
-
             probability_map=probability_map,
-
         )
 
     @staticmethod

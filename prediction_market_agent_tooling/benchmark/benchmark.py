@@ -73,13 +73,13 @@ class Benchmarker:
             "MSE for `p_yes`": self._compute_mse,
             "Mean confidence": self._compute_mean_confidence,
             "% within +-0.05": lambda predictions, markets: self._compute_percentage_within_range(
-                predictions, markets, tolerance=0.05
+                predictions, markets, average_error_tolerance=0.05
             ),
             "% within +-0.1": lambda predictions, markets: self._compute_percentage_within_range(
-                predictions, markets, tolerance=0.1
+                predictions, markets, average_error_tolerance=0.1
             ),
             "% within +-0.2": lambda predictions, markets: self._compute_percentage_within_range(
-                predictions, markets, tolerance=0.2
+                predictions, markets, average_error_tolerance=0.2
             ),
             "% correct outcome": self._compute_correct_outcome_percentage,
             "% precision for `yes`": lambda predictions, markets: self._compute_precision_and_recall_percentages(
@@ -127,8 +127,7 @@ class Benchmarker:
         return self.predictions.get_prediction(agent_name=agent_name, question=question)
 
     def run_agents(self, enable_timing: bool = True) -> None:
-        agent: AbstractBenchmarkedAgent  # Fix for mypy issue with tqdm.
-        for agent in tqdm(self.registered_agents, desc="Running agents"):
+        for agent in self.registered_agents:
             # Filter out cached predictions
             markets_to_run = [
                 m
@@ -199,20 +198,44 @@ class Benchmarker:
         )
         if not predictions:
             return None
-        mse = sum(
-            [
-                (check_not_none(p.outcome_prediction).p_yes - m.current_p_yes) ** 2
-                for p, m in zip(predictions, markets)
-            ]
-        ) / len(predictions)
-        return mse
+
+        total_squared_errors = 0.0
+        for prediction, market in zip(predictions, markets):
+            squared_errors = self.calculate_squared_errors(prediction, market)
+            total_squared_errors += squared_errors
+
+        return total_squared_errors
+
+    @staticmethod
+    def calculate_errors_between_prediction_and_market(
+        prediction: Prediction, market: AgentMarket
+    ) -> list[float]:
+        pred_probs = check_not_none(prediction.outcome_prediction).probabilities_multi
+        market_probs = market.probability_map
+
+        # Get common outcomes between prediction and market
+        common_outcomes = set(pred_probs.keys()) & set(market_probs.keys())
+
+        # Calculate squared errors for each outcome
+        errors = [
+            (pred_probs[outcome] - market_probs[outcome]) ** 2
+            for outcome in common_outcomes
+        ]
+
+        return errors
+
+    @staticmethod
+    def calculate_squared_errors(prediction: Prediction, market: AgentMarket) -> float:
+        errors = Benchmarker.calculate_errors_between_prediction_and_market(
+            prediction, market
+        )
+        squared_errors = sum(errors, 0.0)
+        return squared_errors
 
     def _compute_mean_confidence(
         self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
     ) -> float | None:
-        predictions, markets = self.filter_predictions_for_answered(
-            predictions, markets
-        )
+        predictions, _ = self.filter_predictions_for_answered(predictions, markets)
         if not predictions:
             return None
         mean_confidence = sum(
@@ -245,7 +268,7 @@ class Benchmarker:
         self,
         predictions: t.List[Prediction],
         markets: t.Sequence[AgentMarket],
-        tolerance: float = 0.05,
+        average_error_tolerance: float = 0.05,
     ) -> float | None:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -253,15 +276,13 @@ class Benchmarker:
         if not predictions:
             return None
 
-        within_range_count = 0
-        for p, m in zip(predictions, markets):
-            if (
-                abs(check_not_none(p.outcome_prediction).p_yes - m.current_p_yes)
-                <= tolerance
-            ):
-                within_range_count += 1
+        predictions_within_range = 0.0
+        for prediction, market in zip(predictions, markets):
+            squared_errors = self.calculate_squared_errors(prediction, market)
+            if squared_errors <= (average_error_tolerance**2):
+                predictions_within_range += 1
 
-        return (100 * within_range_count) / len(predictions)
+        return (100 * predictions_within_range) / len(predictions)
 
     def _compute_correct_outcome_percentage(
         self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
@@ -295,25 +316,31 @@ class Benchmarker:
             return None, None
 
         ground_truth = [
-            (1 if m.probable_resolution == Resolution.YES else 0) for m in markets
+            m.probable_resolution.outcome if m.probable_resolution else None
+            for m in markets
         ]
         y_pred = [
-            (
-                1
-                if check_not_none(p.outcome_prediction).probable_resolution
-                == Resolution.YES
-                else 0
-            )
+            p.outcome_prediction.probable_resolution.outcome
+            if p.outcome_prediction is not None
+            else None
             for p in predictions
         ]
 
-        precision = precision_score(
-            ground_truth, y_pred, pos_label=pos_label, zero_division=0.0
-        )
-        recall = recall_score(
-            ground_truth, y_pred, pos_label=pos_label, zero_division=0.0
-        )
+        # Filter out None values
+        valid_indices = [
+            i
+            for i, (gt, pred) in enumerate(zip(ground_truth, y_pred))
+            if gt is not None and pred is not None
+        ]
+        if not valid_indices:
+            return None, None
 
+        ground_truth = [ground_truth[i] for i in valid_indices]
+        y_pred = [y_pred[i] for i in valid_indices]
+        precision = precision_score(
+            ground_truth, y_pred, average="micro", zero_division=0.0
+        )
+        recall = recall_score(ground_truth, y_pred, average="micro", zero_division=0.0)
         return precision * 100, recall * 100
 
     def _compute_confidence_p_yes_error_correlation(
@@ -325,10 +352,12 @@ class Benchmarker:
         if not predictions:
             return None
 
-        p_yes_errors = [
-            abs(check_not_none(p.outcome_prediction).p_yes - m.current_p_yes)
-            for p, m in zip(predictions, markets)
-        ]
+        p_yes_errors = []
+        for p, m in zip(predictions, markets):
+            errors = self.calculate_errors_between_prediction_and_market(p, m)
+            mean_error = sum([abs(i) for i in errors]) / len(errors)
+            p_yes_errors.append(mean_error)
+
         confidences = [
             check_not_none(p.outcome_prediction).confidence for p in predictions
         ]
@@ -397,7 +426,7 @@ class Benchmarker:
             ]
             markets_summary[f"{agent} p_yes"] = [
                 (
-                    f"{p.outcome_prediction.probabilities_multi} [{p.outcome_prediction.probable_resolution.value}]"
+                    f"{p.outcome_prediction.probabilities_multi} [{p.outcome_prediction.probable_resolution}]"
                     if p.is_predictable
                     and p.outcome_prediction  # Is answerable and answered
                     else (
@@ -415,8 +444,8 @@ class Benchmarker:
                 )
                 for p in agent_predictions
             ]
-        markets_summary[f"reference p_yes"] = [
-            f"{m.current_p_yes:.2f} [{m.probable_resolution}]" for m in self.markets
+        markets_summary[f"reference probability_map"] = [
+            f"{m.probability_map} [{m.probable_resolution}]" for m in self.markets
         ]
         return markets_summary
 

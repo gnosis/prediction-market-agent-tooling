@@ -1,7 +1,4 @@
 import getpass
-import inspect
-import os
-import tempfile
 import time
 import typing as t
 from datetime import timedelta
@@ -16,16 +13,6 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     TradeType,
     MultiCategoricalMaxAccuracyBettingStrategy,
 )
-from prediction_market_agent_tooling.deploy.constants import (
-    MARKET_TYPE_KEY,
-    REPOSITORY_KEY,
-)
-from prediction_market_agent_tooling.deploy.gcp.deploy import (
-    deploy_to_gcp,
-    run_deployed_gcp_function,
-    schedule_deployed_gcp_function,
-)
-from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
@@ -51,9 +38,6 @@ from prediction_market_agent_tooling.markets.markets import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     send_keeping_token_to_eoa_xdai,
-)
-from prediction_market_agent_tooling.monitor.monitor_app import (
-    MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
 from prediction_market_agent_tooling.tools.custom_exceptions import (
     CantPayForGasError,
@@ -184,88 +168,6 @@ class DeployableAgent:
         while run_time is None or time.time() - start_time < run_time:
             self.run(market_type=market_type)
             time.sleep(sleep_time)
-
-    def deploy_gcp(
-        self,
-        repository: str,
-        market_type: MarketType,
-        api_keys: APIKeys,
-        memory: int,
-        labels: dict[str, str] | None = None,
-        env_vars: dict[str, str] | None = None,
-        secrets: dict[str, str] | None = None,
-        cron_schedule: str | None = None,
-        gcp_fname: str | None = None,
-        start_time: DatetimeUTC | None = None,
-        timeout: int = 180,
-    ) -> None:
-        """
-        Deploy the agent as GCP Function.
-        """
-        path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
-
-        entrypoint_function_name = "main"
-        entrypoint_template = f"""
-from {path_to_agent_file.replace("/", ".").replace(".py", "")} import *
-import functions_framework
-from prediction_market_agent_tooling.markets.markets import MarketType
-
-@functions_framework.http
-def {entrypoint_function_name}(request) -> str:
-    {self.__class__.__name__}().run(market_type={market_type.__class__.__name__}.{market_type.name})
-    return "Success"
-"""
-
-        gcp_fname = gcp_fname or self.get_gcloud_fname(market_type)
-
-        # For labels, only hyphens (-), underscores (_), lowercase characters, and numbers are allowed in values.
-        labels = (labels or {}) | {
-            MARKET_TYPE_KEY: market_type.value,
-        }
-        env_vars = (env_vars or {}) | {
-            REPOSITORY_KEY: repository,
-        }
-        secrets = secrets or {}
-
-        env_vars |= api_keys.model_dump_public()
-        secrets |= api_keys.model_dump_secrets()
-
-        monitor_agent = MARKET_TYPE_TO_DEPLOYED_AGENT[market_type].from_api_keys(
-            name=gcp_fname,
-            start_time=start_time or utcnow(),
-            api_keys=api_keys,
-        )
-        env_vars |= monitor_agent.model_dump_prefixed()
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
-            f.write(entrypoint_template)
-            f.flush()
-
-            fname = deploy_to_gcp(
-                gcp_fname=gcp_fname,
-                requirements_file=None,
-                extra_deps=[repository],
-                function_file=f.name,
-                labels=labels,
-                env_vars=env_vars,
-                secrets=secrets,
-                memory=memory,
-                entrypoint_function_name=entrypoint_function_name,
-                timeout=timeout,
-            )
-
-        # Check that the function is deployed
-        if not gcp_function_is_active(fname):
-            raise RuntimeError("Failed to deploy the function")
-
-        # Run the function
-        response = run_deployed_gcp_function(fname)
-        if not response.ok:
-            raise RuntimeError("Failed to run the deployed function")
-
-        # Schedule the function
-        if cron_schedule:
-            schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
 
     def run(self, market_type: MarketType) -> None:
         """

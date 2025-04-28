@@ -1,0 +1,14 @@
+Index: run_all_ci_checks.sh
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/run_all_ci_checks.sh b/run_all_ci_checks.sh
+new file mode 100644
+--- /dev/null	(date 1744812656456)
++++ b/run_all_ci_checks.sh	(date 1744812656456)
+@@ -0,0 +1,4 @@
++poetry run isort --profile black .
++poetry run black .
++poetry run autoflake --in-place --remove-all-unused-imports --remove-unused-variables --recursive .
++poetry run mypy

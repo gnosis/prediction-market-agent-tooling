@@ -1,0 +1,3 @@
+diff --git a/run_all.sh b/run_all_checks.sh
+rename from run_all.sh
+rename to run_all_checks.sh

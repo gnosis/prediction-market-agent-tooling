@@ -10,7 +10,6 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
-from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -91,11 +90,7 @@ class ProbabilisticAnswer(BaseModel):
 
     def get_yes_probability(self) -> Probability | None:
         return next(
-            (
-                p
-                for o, p in self.probabilities_multi.items()
-                if o.upper() == OMEN_TRUE_OUTCOME.upper()
-            ),
+            (p for o, p in self.probabilities_multi.items() if o.upper() == "YES"),
             None,
         )
 

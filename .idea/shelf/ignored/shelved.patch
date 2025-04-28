@@ -1,0 +1,134 @@
+Index: prediction_market_agent_tooling/markets/seer/seer.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import typing as t\n\nfrom eth_typing import ChecksumAddress\nfrom web3 import Web3\nfrom web3.types import TxReceipt\n\nfrom prediction_market_agent_tooling.config import APIKeys\nfrom prediction_market_agent_tooling.gtypes import xDai, xdai_type\nfrom prediction_market_agent_tooling.loggers import logger\nfrom prediction_market_agent_tooling.markets.agent_market import (\n    AgentMarket,\n    FilterBy,\n    SortBy,\n)\nfrom prediction_market_agent_tooling.markets.data_models import BetAmount, Currency\nfrom prediction_market_agent_tooling.markets.omen.omen_contracts import sDaiContract\nfrom prediction_market_agent_tooling.markets.seer.data_models import (\n    NewMarketEvent,\n    get_bet_outcome,\n)\nfrom prediction_market_agent_tooling.markets.seer.seer_contracts import (\n    SeerMarketFactory,\n)\nfrom prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (\n    SeerSubgraphHandler,\n)\nfrom prediction_market_agent_tooling.tools.balances import get_balances\nfrom prediction_market_agent_tooling.tools.contract import (\n    auto_deposit_collateral_token,\n    init_collateral_token_contract,\n    to_gnosis_chain_contract,\n)\nfrom prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting\nfrom prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC\nfrom prediction_market_agent_tooling.tools.web3_utils import xdai_to_wei\n\n\nclass SeerAgentMarket(AgentMarket):\n    def place_bet(\n        self,\n        outcome: bool,\n        amount: BetAmount,\n        auto_deposit: bool = True,\n        web3: Web3 | None = None,\n        api_keys: APIKeys | None = None,\n        **kwargs: t.Any,\n    ) -> str:\n        return \"\"\n        # if not self.can_be_traded():\n        #     raise ValueError(\n        #         f\"Market {self.id} is not open for trading. Cannot place bet.\"\n        #     )\n        # if amount.currency != self.currency:\n        #     raise ValueError(f\"Omen bets are made in xDai. Got {amount.currency}.\")\n        # amount_xdai = xDai(amount.amount)\n        #\n        # if auto_deposit:\n        #     auto_deposit_collateral_token(\n        #         collateral_token_contract, amount_wei, api_keys, web3\n        #     )\n        #\n        # return binary_omen_buy_outcome_tx(\n        #     api_keys=api_keys if api_keys is not None else APIKeys(),\n        #     amount=amount_xdai,\n        #     market=self,\n        #     binary_outcome=outcome,\n        #     auto_deposit=auto_deposit,\n        #     web3=web3,\n        # )\n\n\ndef seer_create_market_tx(\n    api_keys: APIKeys,\n    initial_funds: xDai,\n    question: str,\n    opening_time: DatetimeUTC,\n    language: str,\n    outcomes: list[str],\n    auto_deposit: bool,\n    category: str,\n    min_bond_xdai: xDai,\n    web3: Web3 | None = None,\n) -> ChecksumAddress:\n    web3 = web3 or SeerMarketFactory.get_web3()  # Default to Gnosis web3.\n    initial_funds_wei = xdai_to_wei(initial_funds)\n\n    factory_contract = SeerMarketFactory()\n    collateral_token_address = factory_contract.collateral_token(web3=web3)\n    collateral_token_contract = to_gnosis_chain_contract(\n        init_collateral_token_contract(collateral_token_address, web3)\n    )\n\n    if auto_deposit:\n        auto_deposit_collateral_token(\n            collateral_token_contract=collateral_token_contract,\n            api_keys=api_keys,\n            amount_wei=initial_funds_wei,\n            web3=web3,\n        )\n\n    # In case of ERC4626, obtained (for example) sDai out of xDai could be lower than the `amount_wei`, so we need to handle it.\n    initial_funds_in_shares = collateral_token_contract.get_in_shares(\n        amount=initial_funds_wei, web3=web3\n    )\n\n    # Approve the market maker to withdraw our collateral token.\n    collateral_token_contract.approve(\n        api_keys=api_keys,\n        for_address=factory_contract.address,\n        amount_wei=initial_funds_in_shares,\n        web3=web3,\n    )\n\n    # Create the market.\n    params = factory_contract.build_market_params(\n        market_question=question,\n        outcomes=outcomes,\n        opening_time=opening_time,\n        language=language,\n        category=category,\n        min_bond_xdai=min_bond_xdai,\n    )\n    tx_receipt = factory_contract.create_categorical_market(\n        api_keys=api_keys, params=params, web3=web3\n    )\n\n    # ToDo - Add liquidity to market on Swapr (https://github.com/gnosis/prediction-market-agent-tooling/issues/497)\n    market_address = extract_market_address_from_tx(\n        factory_contract=factory_contract, tx_receipt=tx_receipt, web3=web3\n    )\n    return market_address\n\n\ndef extract_market_address_from_tx(\n    factory_contract: SeerMarketFactory, tx_receipt: TxReceipt, web3: Web3\n) -> ChecksumAddress:\n    \"\"\"We extract the newly created market from the NewMarket event emitted in the transaction.\"\"\"\n    event_logs = (\n        factory_contract.get_web3_contract(web3=web3)\n        .events.NewMarket()\n        .process_receipt(tx_receipt)\n    )\n    new_market_event = NewMarketEvent(**event_logs[0][\"args\"])\n    return Web3.to_checksum_address(new_market_event.market)\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/prediction_market_agent_tooling/markets/seer/seer.py b/prediction_market_agent_tooling/markets/seer/seer.py
+--- a/prediction_market_agent_tooling/markets/seer/seer.py	(revision c4ca55188d2d2a75fbe23d37ea304da5461db99f)
++++ b/prediction_market_agent_tooling/markets/seer/seer.py	(date 1738961141750)
+@@ -36,6 +36,27 @@
+ 
+ 
+ class SeerAgentMarket(AgentMarket):
++    currency = Currency.sDai
++    wrapped_tokens: list[ChecksumAddress]
++
++    @staticmethod
++    def get_binary_markets(
++        limit: int,
++        sort_by: SortBy,
++        filter_by: FilterBy = FilterBy.OPEN,
++        created_after: t.Optional[DatetimeUTC] = None,
++        excluded_questions: set[str] | None = None,
++    ) -> t.Sequence["SeerAgentMarket"]:
++        return [
++            SeerAgentMarket.from_data_model(m)
++            for m in SeerSubgraphHandler().get_binary_markets(
++                limit=limit,
++                sort_by=sort_by,
++                filter_by=filter_by,
++                created_after=created_after,
++            )
++        ]
++
+     def place_bet(
+         self,
+         outcome: bool,
+@@ -45,28 +66,49 @@
+         api_keys: APIKeys | None = None,
+         **kwargs: t.Any,
+     ) -> str:
+-        return ""
+-        # if not self.can_be_traded():
+-        #     raise ValueError(
+-        #         f"Market {self.id} is not open for trading. Cannot place bet."
+-        #     )
+-        # if amount.currency != self.currency:
+-        #     raise ValueError(f"Omen bets are made in xDai. Got {amount.currency}.")
+-        # amount_xdai = xDai(amount.amount)
+-        #
+-        # if auto_deposit:
+-        #     auto_deposit_collateral_token(
+-        #         collateral_token_contract, amount_wei, api_keys, web3
+-        #     )
+-        #
+-        # return binary_omen_buy_outcome_tx(
+-        #     api_keys=api_keys if api_keys is not None else APIKeys(),
+-        #     amount=amount_xdai,
+-        #     market=self,
+-        #     binary_outcome=outcome,
+-        #     auto_deposit=auto_deposit,
+-        #     web3=web3,
+-        # )
++        if not self.can_be_traded():
++            raise ValueError(
++                f"Market {self.id} is not open for trading. Cannot place bet."
++            )
++
++        if amount.currency != self.currency:
++            raise ValueError(f"Seer bets are made in xDai. Got {amount.currency}.")
++
++        # We require that amount is given in sDAI.
++        collateral_balance = get_balances(address=api_keys.bet_from_address, web3=web3)
++        if collateral_balance.sdai < amount.amount:
++            raise ValueError(
++                f"Balance {collateral_balance.sdai} not enough for bet size {amount.amount}"
++            )
++
++        collateral_contract = sDaiContract()
++
++        if auto_deposit:
++            # We convert the deposit amount (in sDai) to assets in order to convert.
++            asset_amount = collateral_contract.convertToAssets(
++                xdai_to_wei(xdai_type(amount.amount))
++            )
++            auto_deposit_collateral_token(
++                collateral_contract, asset_amount, api_keys, web3
++            )
++
++        # ToDo
++        #  Match outcome index with outcomes
++        # Get the index of the outcome we want to buy.
++        outcome_index: int = self.get_outcome_index(get_bet_outcome(outcome))
++        #  From wrapped tokens, get token address
++        outcome_token = self.wrapped_tokens[outcome_index]
++        #  Sell sDAI using token address
++        swap_result = swap_tokens_waiting(
++            amount=xdai_type(amount.amount),
++            sell_token=collateral_contract.address,
++            buy_token=Web3.to_checksum_address(outcome_token),
++            api_keys=api_keys,
++            web3=web3,
++        )
++        logger.info(
++            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Swap result {swap_result}"
++        )
+ 
+ 
+ def seer_create_market_tx(
+Index: prediction_market_agent_tooling/markets/seer/data_models.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import typing as t\n\nfrom eth_typing import HexAddress\nfrom pydantic import BaseModel, ConfigDict, Field\nfrom web3.constants import ADDRESS_ZERO\n\nfrom prediction_market_agent_tooling.gtypes import HexBytes, Wei\n\n\nclass CreateCategoricalMarketsParams(BaseModel):\n    model_config = ConfigDict(populate_by_name=True)\n\n    market_name: str = Field(..., alias=\"marketName\")\n    outcomes: list[str]\n    # Only relevant for scalar markets\n    question_start: str = Field(alias=\"questionStart\", default=\"\")\n    question_end: str = Field(alias=\"questionEnd\", default=\"\")\n    outcome_type: str = Field(alias=\"outcomeType\", default=\"\")\n\n    # Not needed for non-conditional markets.\n    parent_outcome: int = Field(alias=\"parentOutcome\", default=0)\n    parent_market: HexAddress = Field(alias=\"parentMarket\", default=ADDRESS_ZERO)\n\n    category: str\n    lang: str\n    lower_bound: int = Field(alias=\"lowerBound\", default=0)\n    upper_bound: int = Field(alias=\"upperBound\", default=0)\n    min_bond: Wei = Field(..., alias=\"minBond\")\n    opening_time: int = Field(..., alias=\"openingTime\")\n    token_names: list[str] = Field(..., alias=\"tokenNames\")\n\n\nclass SeerParentMarket(BaseModel):\n    id: HexBytes\n\n\nclass SeerMarket(BaseModel):\n    model_config = ConfigDict(populate_by_name=True)\n\n    id: HexBytes\n    title: str = Field(alias=\"marketName\")\n    outcomes: list[str]\n    wrapped_tokens: list[HexBytes] = Field(alias=\"wrappedTokens\")\n    parent_outcome: int = Field(alias=\"parentOutcome\")\n    parent_market: t.Optional[SeerParentMarket] = Field(\n        alias=\"parentMarket\", default=None\n    )\n\n\nclass SeerToken(BaseModel):\n    id: HexBytes\n    name: str\n    symbol: str\n\n\nclass SeerPool(BaseModel):\n    model_config = ConfigDict(populate_by_name=True)\n    id: HexBytes\n    liquidity: int\n    token0: SeerToken\n    token1: SeerToken\n\n\nclass NewMarketEvent(BaseModel):\n    market: HexAddress\n    marketName: str\n    parentMarket: HexAddress\n    conditionId: HexBytes\n    questionId: HexBytes\n    questionsIds: list[HexBytes]\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/prediction_market_agent_tooling/markets/seer/data_models.py b/prediction_market_agent_tooling/markets/seer/data_models.py
+--- a/prediction_market_agent_tooling/markets/seer/data_models.py	(revision c4ca55188d2d2a75fbe23d37ea304da5461db99f)
++++ b/prediction_market_agent_tooling/markets/seer/data_models.py	(date 1738961141748)
+@@ -6,6 +6,13 @@
+ 
+ from prediction_market_agent_tooling.gtypes import HexBytes, Wei
+ 
++SEER_TRUE_OUTCOME = "Yes"
++SEER_FALSE_OUTCOME = "No"
++
++
++def get_bet_outcome(binary_outcome: bool) -> str:
++    return SEER_TRUE_OUTCOME if binary_outcome else SEER_FALSE_OUTCOME
++
+ 
+ class CreateCategoricalMarketsParams(BaseModel):
+     model_config = ConfigDict(populate_by_name=True)

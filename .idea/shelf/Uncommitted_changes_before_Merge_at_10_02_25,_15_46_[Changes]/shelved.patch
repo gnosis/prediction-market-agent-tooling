@@ -1,0 +1,17 @@
+Index: scripts/run_coinflip.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/scripts/run_coinflip.py b/scripts/run_coinflip.py
+new file mode 100644
+--- /dev/null	(date 1739213169392)
++++ b/scripts/run_coinflip.py	(date 1739213169392)
+@@ -0,0 +1,7 @@
++from prediction_market_agent_tooling.deploy.agent_example import DeployableCoinFlipAgent
++from prediction_market_agent_tooling.markets.markets import MarketType
++
++if __name__ == "__main__":
++    agent = DeployableCoinFlipAgent()
++    agent.run(market_type=MarketType.SEER)
++    print("done")

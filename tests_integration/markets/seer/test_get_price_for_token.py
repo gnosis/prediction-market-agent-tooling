@@ -12,7 +12,10 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 
 def test_get_price_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
     market = seer_subgraph_handler_test.get_binary_markets(
-        filter_by=FilterBy.OPEN, sort_by=SortBy.HIGHEST_LIQUIDITY, limit=1
+        filter_by=FilterBy.OPEN,
+        sort_by=SortBy.HIGHEST_LIQUIDITY,
+        limit=1,
+        include_categorical_markets=True,
     )[0]
 
     with patch(

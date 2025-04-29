@@ -8,7 +8,10 @@ from prediction_market_agent_tooling.tools.utils import check_not_none
 
 def test_get_liquidity(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
     liquid_market = seer_subgraph_handler_test.get_binary_markets(
-        limit=1, sort_by=SortBy.HIGHEST_LIQUIDITY, filter_by=FilterBy.OPEN
+        limit=1,
+        sort_by=SortBy.HIGHEST_LIQUIDITY,
+        filter_by=FilterBy.OPEN,
+        include_categorical_markets=True,
     )[0]
     # We expect outcomes to have been minted
     agent_market = check_not_none(

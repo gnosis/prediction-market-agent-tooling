@@ -100,9 +100,8 @@ def test_binary_markets_retrieved(
     filter_by: FilterBy,
     sort_by: SortBy,
 ) -> None:
-    # test method get_binary_markets
     markets = seer_subgraph_handler_test.get_binary_markets(
-        limit=1, sort_by=sort_by, filter_by=filter_by
+        limit=1, sort_by=sort_by, filter_by=filter_by, include_categorical_markets=True
     )
     # We expect at least 1 market for the given filter
     assert markets

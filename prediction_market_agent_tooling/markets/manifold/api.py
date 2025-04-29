@@ -5,7 +5,7 @@ import tenacity
 
 from prediction_market_agent_tooling.gtypes import Mana, OutcomeStr, SecretStr
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import ResolvedBet, Resolution
+from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     FullManifoldMarket,
     ManifoldBet,

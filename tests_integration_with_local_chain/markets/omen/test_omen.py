@@ -26,8 +26,8 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
     ContractPrediction,
-    get_bet_outcome,
     OmenMarket,
+    get_bet_outcome,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -49,8 +49,8 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     sDaiContract,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
-    OmenSubgraphHandler,
     SAFE_COLLATERAL_TOKENS_ADDRESSES,
+    OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes

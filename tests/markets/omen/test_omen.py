@@ -3,24 +3,24 @@ import sys
 import numpy as np
 import pytest
 from eth_account import Account
-from eth_typing import HexAddress, HexStr, ChecksumAddress
+from eth_typing import ChecksumAddress, HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import USD, CollateralToken, Probability
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
+    OmenBet,
+    OmenMarket,
     OutcomeWei,
     calculate_marginal_prices,
-    OmenMarket,
-    OmenBet,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     get_binary_market_p_yes_history,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
-    OmenSubgraphHandler,
     SAFE_COLLATERAL_TOKENS_ADDRESSES,
+    OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.contract import ContractOnGnosisChain
 from prediction_market_agent_tooling.tools.transaction_cache import (

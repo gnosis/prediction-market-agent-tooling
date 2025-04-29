@@ -9,10 +9,7 @@ from sklearn.metrics import precision_score, recall_score
 from tqdm import tqdm
 
 from prediction_market_agent_tooling.benchmark.agents import AbstractBenchmarkedAgent
-from prediction_market_agent_tooling.benchmark.utils import (
-    Prediction,
-    PredictionsCache,
-)
+from prediction_market_agent_tooling.benchmark.utils import Prediction, PredictionsCache
 from prediction_market_agent_tooling.gtypes import OutcomeStr
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.tools.costs import openai_costs

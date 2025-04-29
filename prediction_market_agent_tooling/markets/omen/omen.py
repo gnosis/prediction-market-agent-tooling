@@ -611,7 +611,7 @@ class OmenAgentMarket(AgentMarket):
         amount = get_buy_outcome_token_amount(
             investment_amount=self.get_in_token(bet_amount),
             outcome_index=self.get_outcome_index(outcome),
-            pool_balances=list(outcome_token_pool.values()),
+            pool_balances=[outcome_token_pool[x] for x in self.outcomes],
             fees=self.fees,
         )
         return amount

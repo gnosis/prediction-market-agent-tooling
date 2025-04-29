@@ -503,7 +503,8 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         user_id = market.get_user_id(api_keys=APIKeys())
 
         total_amount = market.get_in_usd(market.get_tiny_bet_amount())
-        if existing_position := market.get_position(user_id=user_id):
+        existing_position = market.get_position(user_id=user_id)
+        if existing_position and existing_position.total_amount_current > USD(0):
             total_amount += existing_position.total_amount_current
 
         return MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=total_amount)

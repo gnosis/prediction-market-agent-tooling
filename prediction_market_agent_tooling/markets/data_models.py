@@ -16,10 +16,6 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 class Resolution(BaseModel):
     outcome: OutcomeStr | None
     invalid: bool
-    # YES = "YES"
-    # NO = "NO"
-    # CANCEL = "CANCEL"
-    # MKT = "MKT"
 
     @staticmethod
     def from_answer(answer: OutcomeStr) -> "Resolution":

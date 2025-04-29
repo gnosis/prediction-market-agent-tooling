@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import httpx
 import tenacity
+from cachetools import TTLCache, cached
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
@@ -133,6 +134,7 @@ def get_quote(
         raise
 
 
+@cached(TTLCache(maxsize=100, ttl=5 * 60))
 def get_buy_token_amount_else_raise(
     sell_amount: Wei,
     sell_token: ChecksumAddress,

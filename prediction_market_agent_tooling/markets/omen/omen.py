@@ -1,7 +1,9 @@
 import typing as t
+from collections import defaultdict
 from datetime import timedelta
 
 import tenacity
+from tqdm import tqdm
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -57,7 +59,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     build_parent_collection_id,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
-    SAFE_COLLATERAL_TOKENS_ADDRESSES,
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
@@ -521,10 +522,12 @@ class OmenAgentMarket(AgentMarket):
         )
 
         # Sort positions and corresponding markets by condition_id
-        omen_positions_dict: dict[HexBytes, list[OmenUserPosition]] = {}
+        omen_positions_dict: dict[HexBytes, list[OmenUserPosition]] = defaultdict(list)
+
         for omen_position in omen_positions:
-            condition_id = omen_position.position.condition_id
-            omen_positions_dict.setdefault(condition_id, []).append(omen_position)
+            omen_positions_dict[omen_position.position.condition_id].append(
+                omen_position
+            )
 
         # We include categorical markets below simply because we are already filtering on condition_ids.
         omen_markets: dict[HexBytes, OmenMarket] = {
@@ -546,7 +549,9 @@ class OmenAgentMarket(AgentMarket):
             )
 
         positions = []
-        for condition_id, omen_positions in omen_positions_dict.items():
+        for condition_id, omen_positions in tqdm(
+            omen_positions_dict.items(), mininterval=3
+        ):
             market = cls.from_data_model(omen_markets[condition_id])
 
             # Skip markets that cannot be traded if `liquid_only`` is True.
@@ -567,7 +572,7 @@ class OmenAgentMarket(AgentMarket):
                     )
 
                 amounts_ot[outecome_str] = omen_position.totalBalance.as_outcome_token
-            # ToDo - Can't we call FixedProductMarketMaker.calcSellAmount(), get the collateral amount?
+
             amounts_current = {
                 k: market.get_token_in_usd(
                     # If the market is not open for trading anymore, then current value is equal to potential value.
@@ -650,22 +655,6 @@ class OmenAgentMarket(AgentMarket):
 
 def get_omen_user_url(address: ChecksumAddress) -> str:
     return f"https://gnosisscan.io/address/{address}"
-
-
-def pick_binary_market(
-    sort_by: SortBy = SortBy.CLOSING_SOONEST,
-    filter_by: FilterBy = FilterBy.OPEN,
-    collateral_token_address_in: (
-        tuple[ChecksumAddress, ...] | None
-    ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
-) -> OmenMarket:
-    subgraph_handler = OmenSubgraphHandler()
-    return subgraph_handler.get_omen_binary_markets_simple(
-        limit=1,
-        sort_by=sort_by,
-        filter_by=filter_by,
-        collateral_token_address_in=collateral_token_address_in,
-    )[0]
 
 
 @tenacity.retry(

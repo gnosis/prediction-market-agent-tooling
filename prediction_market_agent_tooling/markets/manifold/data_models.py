@@ -1,7 +1,7 @@
 import typing as t
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.manifold.utils import validate_resolution
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
@@ -107,6 +108,10 @@ class ManifoldMarket(BaseModel):
             and not self.resolution.invalid
         )
 
+    @field_validator("resolution", mode="before")
+    def validate_resolution(cls, v: t.Any) -> Resolution:
+        return validate_resolution(v)
+
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
 
@@ -196,6 +201,10 @@ class ManifoldBet(BaseModel):
     fills: t.Optional[list[ManifoldBetFills]] = None
     createdTime: DatetimeUTC
     outcome: Resolution
+
+    @field_validator("outcome", mode="before")
+    def validate_resolution(cls, v: t.Any) -> Resolution:
+        return validate_resolution(v)
 
     def get_resolved_outcome(self) -> OutcomeStr:
         if self.outcome.outcome:

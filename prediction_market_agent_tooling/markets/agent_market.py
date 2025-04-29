@@ -219,6 +219,9 @@ class AgentMarket(BaseModel):
         Returns:
             List[float]: Implied probabilities for each outcome.
         """
+        if all(x.value == 0 for x in balances):
+            return [Probability(0.0)] * len(balances)
+
         # converting to standard values for prod compatibility.
         values_balance = [i.value for i in balances]
         # Compute product of balances excluding each outcome

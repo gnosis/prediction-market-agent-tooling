@@ -3,23 +3,24 @@ import sys
 import numpy as np
 import pytest
 from eth_account import Account
-from eth_typing import HexAddress, HexStr
+from eth_typing import HexAddress, HexStr, ChecksumAddress
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import USD, CollateralToken, Probability
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
-    OmenBet,
     OutcomeWei,
     calculate_marginal_prices,
+    OmenMarket,
+    OmenBet,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     get_binary_market_p_yes_history,
-    pick_binary_market,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
+    SAFE_COLLATERAL_TOKENS_ADDRESSES,
 )
 from prediction_market_agent_tooling.tools.contract import ContractOnGnosisChain
 from prediction_market_agent_tooling.tools.transaction_cache import (
@@ -133,7 +134,7 @@ def test_get_positions_1() -> None:
     """
     # Pick a user that has active positions
     user_address = Web3.to_checksum_address(
-        "0x2DD9f5678484C1F59F97eD334725858b938B4102"
+        "0xf758C18402ddEf2d231911C4C326Aa46510788f0"
     )
     positions = OmenAgentMarket.get_positions(user_id=user_address)
     liquid_positions = OmenAgentMarket.get_positions(
@@ -151,16 +152,19 @@ def test_get_positions_1() -> None:
     large_positions = OmenAgentMarket.get_positions(
         user_id=user_address, larger_than=min_amount_position.total_amount_ot
     )
+    # conflicting positions
+    # 1 - ExistingPosition(market_id='0x3cab82a2cce239bd4ad3b0620be32b4409fd74c0', amounts_current={'No': USD(1.2833016323746e-05)}, amounts_potential={'No': USD(1.2833016323746e-05)}, amounts_ot={'No': OutcomeToken(1.2833016323746e-05)})
+    # 2 (min from above) - ExistingPosition(market_id='0x626002415eef1117ba0257fc4d2f70753550bbb3', amounts_current={'No': USD(1.4388460783717888e-05)}, amounts_potential={'No': USD(1.4388460783717888e-05)}, amounts_ot={'No': OutcomeToken(1.2249484218406e-05)})
     # Check that the smallest position has been filtered out
     assert all(position.market_id != min_position_id for position in large_positions)
-    assert all(
-        position.total_amount_current > min_amount_position.total_amount_current
-        for position in large_positions
-    )
-    assert all(
-        position.total_amount_potential > min_amount_position.total_amount_potential
-        for position in large_positions
-    )
+    # assert all(
+    #     position.total_amount_current > min_amount_position.total_amount_current
+    #     for position in large_positions
+    # )
+    # assert all(
+    #     position.total_amount_potential > min_amount_position.total_amount_potential
+    #     for position in large_positions
+    # )
     assert all(
         position.total_amount_ot > min_amount_position.total_amount_ot
         for position in large_positions
@@ -273,7 +277,7 @@ def test_get_most_recent_trade_datetime() -> None:
     Tests that `get_most_recent_trade_datetime` returns the correct datetime
     from all possible trade datetimes.
     """
-    market = OmenAgentMarket.from_data_model(pick_binary_market())
+
     user_id = Web3.to_checksum_address(
         "0x2DD9f5678484C1F59F97eD334725858b938B4102"
     )  # A user with trade history
@@ -339,3 +343,20 @@ def test_get_outcome_tokens_in_the_past() -> None:
     )
 
     assert would_get_outcome_tokens == selected_bet.outcomeTokensTraded.as_outcome_token
+
+
+def pick_binary_market(
+    sort_by: SortBy = SortBy.CLOSING_SOONEST,
+    filter_by: FilterBy = FilterBy.OPEN,
+    collateral_token_address_in: (
+        tuple[ChecksumAddress, ...] | None
+    ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
+) -> OmenMarket:
+    subgraph_handler = OmenSubgraphHandler()
+    return subgraph_handler.get_omen_binary_markets_simple(
+        limit=1,
+        sort_by=sort_by,
+        filter_by=filter_by,
+        collateral_token_address_in=collateral_token_address_in,
+        include_categorical_markets=False,
+    )[0]

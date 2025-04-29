@@ -36,7 +36,7 @@ def test_valid_token_pool() -> None:
         outcomes=list(probability_map.keys()),
         outcome_token_pool={
             OutcomeStr("yes"): OutcomeToken(1.1),
-            OutcomeStr("yes"): OutcomeToken(2.0),
+            OutcomeStr("no"): OutcomeToken(2.0),
         },
         resolution=None,
         created_time=None,

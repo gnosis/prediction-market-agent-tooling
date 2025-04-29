@@ -5,7 +5,7 @@ import tenacity
 
 from prediction_market_agent_tooling.gtypes import Mana, OutcomeStr, SecretStr
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import ResolvedBet
+from prediction_market_agent_tooling.markets.data_models import ResolvedBet, Resolution
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     FullManifoldMarket,
     ManifoldBet,
@@ -224,3 +224,14 @@ def get_market_positions(market_id: str, user_id: str) -> list[ManifoldContractM
     return response_list_to_model(
         requests.get(url, params=params), ManifoldContractMetric
     )
+
+
+def find_resolution_on_manifold(question: str, n: int = 100) -> Resolution | None:
+    # Even with exact-match search, Manifold doesn't return it as the first result, increase `n` if you can't find market that you know exists.
+    manifold_markets = get_manifold_binary_markets(
+        n, term=question, filter_=None, sort=None
+    )
+    for manifold_market in manifold_markets:
+        if manifold_market.question == question:
+            return manifold_market.resolution
+    return None

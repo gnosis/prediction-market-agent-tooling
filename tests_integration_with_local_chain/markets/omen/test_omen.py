@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
     ContractPrediction,
     get_bet_outcome,
+    OmenMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -35,7 +36,6 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     omen_fund_market_tx,
     omen_redeem_full_position_tx,
     omen_remove_fund_market_tx,
-    pick_binary_market,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
@@ -50,6 +50,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
+    SAFE_COLLATERAL_TOKENS_ADDRESSES,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -298,6 +299,23 @@ def test_omen_fund_and_remove_fund_market(
     )
 
 
+def pick_binary_market(
+    subgraph_handler: OmenSubgraphHandler,
+    sort_by: SortBy = SortBy.CLOSING_SOONEST,
+    filter_by: FilterBy = FilterBy.OPEN,
+    collateral_token_address_in: (
+        tuple[ChecksumAddress, ...] | None
+    ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
+) -> OmenMarket:
+    return subgraph_handler.get_omen_binary_markets_simple(
+        limit=1,
+        sort_by=sort_by,
+        filter_by=filter_by,
+        collateral_token_address_in=collateral_token_address_in,
+        include_categorical_markets=False,
+    )[0]
+
+
 @pytest.mark.parametrize(
     "collateral_token_address",
     [
@@ -306,22 +324,25 @@ def test_omen_fund_and_remove_fund_market(
     ],
 )
 def test_omen_buy_and_sell_outcome(
+    omen_subgraph_handler: OmenSubgraphHandler,
     collateral_token_address: ChecksumAddress,
     local_web3: Web3,
     test_keys: APIKeys,
 ) -> None:
-    # Tests both buying and selling, so we are back at the square one in the wallet (minues fees).
+    # Tests both buying and selling, so we are back at the square one in the wallet (minus fees).
     # You can double check your address at https://gnosisscan.io/ afterwards.
-    market = OmenAgentMarket.from_data_model(
-        pick_binary_market(collateral_token_address_in=(collateral_token_address,))
+    market = pick_binary_market(
+        collateral_token_address_in=(collateral_token_address,),
+        subgraph_handler=omen_subgraph_handler,
     )
+    agent_market = OmenAgentMarket.from_data_model(market)
     print(market.url)
     outcome = True
     outcome_str = get_bet_outcome(outcome)
     bet_amount = USD(0.4)
 
     def get_market_outcome_tokens() -> OutcomeToken:
-        return market.get_token_balance(
+        return agent_market.get_token_balance(
             user_id=test_keys.bet_from_address,
             outcome=outcome_str,
             web3=local_web3,
@@ -331,7 +352,7 @@ def test_omen_buy_and_sell_outcome(
     balances = get_balances(address=test_keys.bet_from_address, web3=local_web3)
     assert balances.xdai.value > bet_amount.value
 
-    buy_id = market.place_bet(
+    buy_id = agent_market.place_bet(
         outcome=outcome_str,
         amount=bet_amount,
         web3=local_web3,
@@ -342,7 +363,7 @@ def test_omen_buy_and_sell_outcome(
     outcome_tokens = get_market_outcome_tokens()
     assert get_market_outcome_tokens() > 0
 
-    sell_id = market.sell_tokens(
+    sell_id = agent_market.sell_tokens(
         outcome=outcome_str,
         amount=outcome_tokens,
         web3=local_web3,

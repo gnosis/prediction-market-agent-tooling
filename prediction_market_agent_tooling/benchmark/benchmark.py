@@ -12,8 +12,8 @@ from prediction_market_agent_tooling.benchmark.agents import AbstractBenchmarked
 from prediction_market_agent_tooling.benchmark.utils import (
     Prediction,
     PredictionsCache,
-    Resolution,
 )
+from prediction_market_agent_tooling.gtypes import OutcomeStr
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.tools.costs import openai_costs
 from prediction_market_agent_tooling.tools.utils import (
@@ -448,12 +448,13 @@ class Benchmarker:
         return markets_summary
 
     def get_markets_results(self) -> dict[str, list[str | float]]:
-        outcome_counts: dict[Resolution, int] = defaultdict(int)
+        outcome_counts: dict[OutcomeStr, int] = defaultdict(int)
         total_markets = len(self.markets)
 
         for market in self.markets:
             resolution = market.probable_resolution
-            outcome_counts[resolution] += 1
+            if resolution.outcome:
+                outcome_counts[resolution.outcome] += 1
 
         proportions = {
             outcome: count / total_markets for outcome, count in outcome_counts.items()

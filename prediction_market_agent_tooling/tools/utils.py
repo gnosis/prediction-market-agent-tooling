@@ -235,8 +235,8 @@ def calculate_sell_amount_in_collateral(
     Simplified for binary markets.
     """
 
-    if shares_to_sell <= 0:
-        raise ValueError("shares_to_sell must be greater than 0")
+    if shares_to_sell == 0:
+        return CollateralToken(0)
 
     if not (0 <= outcome_index < len(pool_balances)):
         raise IndexError("Invalid outcome index")

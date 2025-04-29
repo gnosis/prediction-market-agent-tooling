@@ -10,7 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.manifold.utils import (
+from prediction_market_agent_tooling.markets.manifold.api import (
     find_resolution_on_manifold,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType

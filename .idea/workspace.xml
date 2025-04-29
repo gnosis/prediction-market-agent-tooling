@@ -4,9 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="44b3213b-1710-45be-970e-db1170d0ffb5" name="Changes" comment="Bumped PMAT">
-      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/data_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/data_models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/tools/image_gen/image_gen.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/tools/image_gen/image_gen.py" afterDir="false" />
+    <list default="true" id="44b3213b-1710-45be-970e-db1170d0ffb5" name="Changes" comment="Fixing mypy">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/benchmark/benchmark.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/benchmark/benchmark.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/agent_market.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/agent_market.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/manifold/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/manifold/api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/manifold/data_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/manifold/data_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/manifold/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/manifold/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen_resolving.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen_resolving.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/tools/cow/cow_order.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/tools/cow/cow_order.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prediction_market_agent_tooling/tools/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/prediction_market_agent_tooling/tools/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/markets/omen/test_omen.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/markets/omen/test_omen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/markets/test_markets.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/markets/test_markets.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_betting_strategy.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_betting_strategy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/tools/test_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/tools/test_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests_integration_with_local_chain/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests_integration_with_local_chain/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests_integration_with_local_chain/markets/omen/test_omen.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests_integration_with_local_chain/markets/omen/test_omen.py" afterDir="false" />
     </list>
     <list id="8aa15f37-d1c1-475c-82a8-3b9d4c47cf2b" name="ignored" comment="ignored">
       <change afterPath="$PROJECT_DIR$/run_all_ci_checks.sh" afterDir="false" />
@@ -73,7 +87,7 @@
     "Python tests.pytest for test_attack_dos.test_dos.executor": "Debug",
     "Python tests.pytest for test_betting_strategies.test_zero_bets.executor": "Run",
     "Python tests.pytest for test_betting_strategy.test_answer_decision.executor": "Run",
-    "Python tests.pytest for test_betting_strategy.test_rebalance.executor": "Debug",
+    "Python tests.pytest for test_betting_strategy.test_rebalance.executor": "Run",
     "Python tests.pytest for test_contract.test_contract_implements_function.executor": "Debug",
     "Python tests.pytest for test_contract.test_init_erc4626_erc20_contract_return_erc20_instance.executor": "Run",
     "Python tests.pytest for test_contract.test_init_erc4626_erc20_contract_return_erc4626_instance.executor": "Run",
@@ -110,6 +124,7 @@
     "Python tests.pytest for test_local_chain.test_now_failed.executor": "Run",
     "Python tests.pytest for test_local_chain.test_send_xdai.executor": "Debug",
     "Python tests.pytest for test_manifold.test_manifold_bets.executor": "Run",
+    "Python tests.pytest for test_manifold.test_manifold_markets.executor": "Run",
     "Python tests.pytest for test_markets.executor": "Run",
     "Python tests.pytest for test_markets.test_dummy (1).executor": "Run",
     "Python tests.pytest for test_markets.test_dummy.executor": "Run",
@@ -118,16 +133,23 @@
     "Python tests.pytest for test_markets.test_dummy2.executor": "Run",
     "Python tests.pytest for test_markets.test_get_markets.executor": "Run",
     "Python tests.pytest for test_markets.test_get_pool_tokens.executor": "Run",
+    "Python tests.pytest for test_markets.test_omen_pick_binary_market.executor": "Run",
     "Python tests.pytest for test_markets.test_valid_token_pool.executor": "Run",
     "Python tests.pytest for test_monitor.test_monitor_market.executor": "Run",
-    "Python tests.pytest for test_omen.executor": "Run",
+    "Python tests.pytest for test_omen 123.executor": "Debug",
+    "Python tests.pytest for test_omen.executor": "Debug",
     "Python tests.pytest for test_omen.test_add_prediction_with_empty_ipfs_hash.executor": "Run",
     "Python tests.pytest for test_omen.test_add_predictions.executor": "Run",
+    "Python tests.pytest for test_omen.test_balance_for_user_in_market.executor": "Debug",
     "Python tests.pytest for test_omen.test_deposit_and_withdraw_wxdai.executor": "Run",
     "Python tests.pytest for test_omen.test_dummy.executor": "Run",
     "Python tests.pytest for test_omen.test_dummy2.executor": "Debug",
-    "Python tests.pytest for test_omen.test_get_positions_1.executor": "Run",
-    "Python tests.pytest for test_omen.test_omen_buy_and_sell_outcome.executor": "Run",
+    "Python tests.pytest for test_omen.test_get_binary_market (1).executor": "Run",
+    "Python tests.pytest for test_omen.test_get_binary_market.executor": "Run",
+    "Python tests.pytest for test_omen.test_get_positions_1 (1).executor": "Debug",
+    "Python tests.pytest for test_omen.test_get_positions_1.executor": "Debug",
+    "Python tests.pytest for test_omen.test_get_positions_1111.executor": "Debug",
+    "Python tests.pytest for test_omen.test_omen_buy_and_sell_outcome.executor": "Debug",
     "Python tests.pytest for test_omen.test_place_bet_with_autodeposit.executor": "Run",
     "Python tests.pytest for test_omen.test_place_bet_with_prev_existing_positions.executor": "Debug",
     "Python tests.pytest for test_omen.test_positions_value (1).executor": "Run",
@@ -167,8 +189,11 @@
     "Python tests.pytest for test_simple_treasury.test_required_nft_balance.executor": "Debug",
     "Python tests.pytest for test_simple_treasury.test_withdraw.executor": "Run",
     "Python tests.pytest for test_stealing_on_markets.test_stealing_on_markets.executor": "Debug",
+    "Python tests.pytest for test_utils.test_calculate_sell_amount_in_collateral_4.executor": "Debug",
+    "Python tests.pytest for test_utils.test_calculate_sell_amount_in_collateral_5.executor": "Run",
     "Python tests.pytest for tests.markets.omen.test_omen.test_get_positions_1.executor": "Debug",
     "Python tests.pytest for tests.markets.test_markets.test_get_markets.executor": "Debug",
+    "Python tests.pytest for tests.tools.test_utils.executor": "Run",
     "Python tests.pytest for tests_integration.markets.omen.test_kelly.test_kelly_price_impact_works_small_pool.executor": "Debug",
     "Python tests.pytest for tests_integration.markets.seer.test_seer_subgraph_handler.test_get_all_seer_markets.executor": "Debug",
     "Python tests.pytest for tests_integration.tests_local_chain.markets.omen.test_local_chain.test_connect_local_chain.executor": "Run",
@@ -250,54 +275,54 @@
     </key>
   </component>
   <component name="RunManager" selected="Python tests.pytest in tests">
-    <configuration name="pytest for test_betting_strategy.test_answer_decision" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+    <configuration name="pytest for test_betting_strategy.test_rebalance" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
       <module name="prediction-market-agent-tooling" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_keywords" value="&quot;&quot;" />
       <option name="_new_parameters" value="&quot;&quot;" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;test_betting_strategy.test_answer_decision&quot;" />
+      <option name="_new_target" value="&quot;test_betting_strategy.test_rebalance&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="pytest for test_real_deployment.test_real_deployment_omen" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+    <configuration name="pytest for test_manifold.test_manifold_bets" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
       <module name="prediction-market-agent-tooling" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="_new_keywords" value="&quot;&quot;" />
-      <option name="_new_parameters" value="&quot;&quot;" />
-      <option name="_new_additionalArguments" value="&quot;-p no:ape_test -vvv -s&quot;" />
-      <option name="_new_target" value="&quot;test_real_deployment.test_real_deployment_omen&quot;" />
-      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
-      <method v="2" />
-    </configuration>
-    <configuration name="pytest for test_seer_contracts.test_redeem_base" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
-      <module name="prediction-market-agent-tooling" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests/markets" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_keywords" value="&quot;&quot;" />
       <option name="_new_parameters" value="&quot;&quot;" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;test_seer_contracts.test_redeem_base&quot;" />
+      <option name="_new_target" value="&quot;test_manifold.test_manifold_bets&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest for test_manifold.test_manifold_markets" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="prediction-market-agent-tooling" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests/markets" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_manifold.test_manifold_markets&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
@@ -318,21 +343,21 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="pytest for test_seer_subgraph_handler.test_get_binary_markets_newest" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+    <configuration name="pytest in test_manifold.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
       <module name="prediction-market-agent-tooling" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests/markets" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_keywords" value="&quot;&quot;" />
       <option name="_new_parameters" value="&quot;&quot;" />
-      <option name="_new_additionalArguments" value="&quot;-vvv --disable-isolation -s&quot;" />
-      <option name="_new_target" value="&quot;test_seer_subgraph_handler.test_get_binary_markets_newest&quot;" />
-      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/tests/markets/test_manifold.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
       <method v="2" />
     </configuration>
     <configuration name="pytest in tests" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
@@ -341,7 +366,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -373,19 +398,19 @@
     <list>
       <item itemvalue="Python tests.pytest for test_seer_subgraph_handler.test_binary_market_retrieved (1)" />
       <item itemvalue="Python tests.pytest in tests_integration_with_local_chain" />
+      <item itemvalue="Python tests.pytest for test_betting_strategy.test_rebalance" />
+      <item itemvalue="Python tests.pytest for test_manifold.test_manifold_bets" />
+      <item itemvalue="Python tests.pytest for test_manifold.test_manifold_markets" />
+      <item itemvalue="Python tests.pytest in test_manifold.py" />
       <item itemvalue="Python tests.pytest in tests" />
-      <item itemvalue="Python tests.pytest for test_betting_strategy.test_answer_decision" />
-      <item itemvalue="Python tests.pytest for test_real_deployment.test_real_deployment_omen" />
-      <item itemvalue="Python tests.pytest for test_seer_contracts.test_redeem_base" />
-      <item itemvalue="Python tests.pytest for test_seer_subgraph_handler.test_get_binary_markets_newest" />
     </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python tests.pytest in tests" />
-        <item itemvalue="Python tests.pytest for test_betting_strategy.test_answer_decision" />
-        <item itemvalue="Python tests.pytest for test_seer_subgraph_handler.test_get_binary_markets_newest" />
-        <item itemvalue="Python tests.pytest for test_seer_contracts.test_redeem_base" />
-        <item itemvalue="Python tests.pytest for test_real_deployment.test_real_deployment_omen" />
+        <item itemvalue="Python tests.pytest for test_manifold.test_manifold_bets" />
+        <item itemvalue="Python tests.pytest in test_manifold.py" />
+        <item itemvalue="Python tests.pytest for test_manifold.test_manifold_markets" />
+        <item itemvalue="Python tests.pytest for test_betting_strategy.test_rebalance" />
       </list>
     </recent_temporary>
   </component>
@@ -405,14 +430,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1719831159599</updated>
-    </task>
-    <task id="LOCAL-00414" summary="Added get_sell_value_of_outcome_token">
-      <option name="closed" value="true" />
-      <created>1743618467736</created>
-      <option name="number" value="00414" />
-      <option name="presentableId" value="LOCAL-00414" />
-      <option name="project" value="LOCAL" />
-      <updated>1743618467736</updated>
     </task>
     <task id="LOCAL-00415" summary="Refactor sell_value">
       <option name="closed" value="true" />
@@ -798,7 +815,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745617144134</updated>
     </task>
-    <option name="localTasksCounter" value="463" />
+    <task id="LOCAL-00463" summary="Fixing mypy">
+      <option name="closed" value="true" />
+      <created>1745844410496</created>
+      <option name="number" value="00463" />
+      <option name="presentableId" value="LOCAL-00463" />
+      <option name="project" value="LOCAL" />
+      <updated>1745844410496</updated>
+    </task>
+    <option name="localTasksCounter" value="464" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -902,7 +927,6 @@
     <MESSAGE value="fix test, missing collateral token" />
     <MESSAGE value="Fixing seer calling approve too many times" />
     <MESSAGE value="PR comments" />
-    <MESSAGE value="Fixing mypy" />
     <MESSAGE value="Fixing mypy (2)" />
     <MESSAGE value="Fixing mypy (3)" />
     <MESSAGE value="Fixing mypy (4)" />
@@ -914,7 +938,8 @@
     <MESSAGE value="ignored" />
     <MESSAGE value="After merge" />
     <MESSAGE value="Bumped PMAT" />
-    <option name="LAST_COMMIT_MESSAGE" value="Bumped PMAT" />
+    <MESSAGE value="Fixing mypy" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixing mypy" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -956,7 +981,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>372</line>
+          <line>373</line>
           <option name="timeStamp" value="371" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -977,17 +1002,17 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>707</line>
+          <line>696</line>
           <option name="timeStamp" value="404" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>739</line>
+          <line>728</line>
           <option name="timeStamp" value="405" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>200</line>
+          <line>201</line>
           <option name="timeStamp" value="407" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -1012,42 +1037,42 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>728</line>
+          <line>717</line>
           <option name="timeStamp" value="441" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>769</line>
+          <line>758</line>
           <option name="timeStamp" value="446" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>168</line>
+          <line>169</line>
           <option name="timeStamp" value="448" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>765</line>
+          <line>754</line>
           <option name="timeStamp" value="449" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>790</line>
+          <line>779</line>
           <option name="timeStamp" value="450" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>807</line>
+          <line>796</line>
           <option name="timeStamp" value="451" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>814</line>
+          <line>803</line>
           <option name="timeStamp" value="452" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/markets/omen/omen.py</url>
-          <line>822</line>
+          <line>811</line>
           <option name="timeStamp" value="453" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -1059,6 +1084,106 @@
           <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/deploy/betting_strategy.py</url>
           <line>255</line>
           <option name="timeStamp" value="457" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/tools/test_utils.py</url>
+          <line>86</line>
+          <option name="timeStamp" value="458" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/omen/test_omen.py</url>
+          <line>103</line>
+          <option name="timeStamp" value="459" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/omen/test_omen.py</url>
+          <line>104</line>
+          <option name="timeStamp" value="460" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests_integration_with_local_chain/markets/omen/test_omen.py</url>
+          <line>333</line>
+          <option name="timeStamp" value="466" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests_integration_with_local_chain/markets/omen/test_omen.py</url>
+          <line>338</line>
+          <option name="timeStamp" value="467" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests_integration_with_local_chain/markets/omen/test_omen.py</url>
+          <line>309</line>
+          <option name="timeStamp" value="469" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests_integration_with_local_chain/markets/omen/test_omen.py</url>
+          <line>354</line>
+          <option name="timeStamp" value="470" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/omen/test_omen.py</url>
+          <line>138</line>
+          <option name="timeStamp" value="473" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/omen/test_omen.py</url>
+          <line>139</line>
+          <option name="timeStamp" value="474" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/omen/test_omen.py</url>
+          <line>151</line>
+          <option name="timeStamp" value="479" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/tools/cow/cow_order.py</url>
+          <line>144</line>
+          <option name="timeStamp" value="492" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/tools/tokens/usd.py</url>
+          <line>51</line>
+          <option name="timeStamp" value="496" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/omen/test_omen.py</url>
+          <line>158</line>
+          <option name="timeStamp" value="499" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/omen/test_omen.py</url>
+          <line>167</line>
+          <option name="timeStamp" value="500" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/test_markets.py</url>
+          <line>31</line>
+          <option name="timeStamp" value="501" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/deploy/betting_strategy.py</url>
+          <line>109</line>
+          <option name="timeStamp" value="502" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/test_betting_strategy.py</url>
+          <line>67</line>
+          <option name="timeStamp" value="503" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/prediction_market_agent_tooling/tools/utils.py</url>
+          <line>168</line>
+          <option name="timeStamp" value="510" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/test_manifold.py</url>
+          <line>49</line>
+          <option name="timeStamp" value="511" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/markets/test_manifold.py</url>
+          <line>55</line>
+          <option name="timeStamp" value="512" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

@@ -71,17 +71,10 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         return [m for m in markets if len(m.outcomes) == 3]
 
     @staticmethod
-    def filter_binary_markets(markets: list[SeerMarket]) -> list[SeerMarket]:
-        return [
-            market
-            for market in markets
-            if {"yes", "no"}.issubset({o.lower() for o in market.outcomes})
-        ]
-
-    @staticmethod
     def _build_where_statements(
         filter_by: FilterBy,
         include_conditional_markets: bool = False,
+        include_categorical_markets: bool = True,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -102,7 +95,19 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if not include_conditional_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
-        where_stms: dict[str, t.Any] = {"and": [and_stms]}
+        # We are only interested in binary markets of type YES/NO/Invalid.
+        yes_stms, no_stms = {}, {}
+        if not include_categorical_markets:
+            # Create single OR conditions with all variations
+            yes_stms["or"] = [
+                {"outcomes_contains": [variation]}
+                for variation in ["yes", "Yes", "YES"]
+            ]
+            no_stms["or"] = [
+                {"outcomes_contains": [variation]} for variation in ["no", "No", "NO"]
+            ]
+
+        where_stms: dict[str, t.Any] = {"and": [and_stms, yes_stms, no_stms]}
         return where_stms
 
     def _build_sort_params(
@@ -131,18 +136,22 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         return sort_direction, sort_by_field
 
-    def get_bicategorical_markets(
+    def get_binary_markets(
         self,
         filter_by: FilterBy,
+        sort_by: SortBy = SortBy.NONE,
         limit: int | None = None,
-        sort_by_field: FieldPath | None = None,
-        sort_direction: str | None = None,
         include_conditional_markets: bool = True,
+        include_categorical_markets: bool = True,
     ) -> list[SeerMarket]:
+        sort_direction, sort_by_field = self._build_sort_params(sort_by)
+
         """Returns markets that contain 2 categories plus an invalid outcome."""
         # Binary markets on Seer contain 3 outcomes: OutcomeA, outcomeB and an Invalid option.
         where_stms = self._build_where_statements(
-            filter_by=filter_by, include_conditional_markets=include_conditional_markets
+            filter_by=filter_by,
+            include_conditional_markets=include_conditional_markets,
+            include_categorical_markets=include_categorical_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.
@@ -164,31 +173,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         # ToDo - better control here
         # two_category_markets = self.filter_bicategorical_markets(markets)
         return markets
-
-    # ToDo - Improve methods to be more generic
-    def get_binary_markets(
-        self,
-        filter_by: FilterBy,
-        sort_by: SortBy = SortBy.NONE,
-        limit: int | None = None,
-        include_conditional_markets: bool = True,
-        include_categorical_markets: bool = False,
-    ) -> list[SeerMarket]:
-        sort_direction, sort_by_field = self._build_sort_params(sort_by)
-
-        two_category_markets = self.get_bicategorical_markets(
-            limit=limit,
-            include_conditional_markets=include_conditional_markets,
-            sort_direction=sort_direction,
-            sort_by_field=sort_by_field,
-            filter_by=filter_by,
-        )
-
-        if include_categorical_markets:
-            return two_category_markets
-
-        # Otherwise we additionally filter markets based on YES/NO being the only outcomes.
-        return self.filter_binary_markets(two_category_markets)
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
         markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())

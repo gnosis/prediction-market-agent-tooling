@@ -11,7 +11,6 @@ def test_get_liquidity(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
-        include_categorical_markets=True,
     )[0]
     # We expect outcomes to have been minted
     agent_market = check_not_none(

@@ -18,7 +18,10 @@ def test_seer_place_bet(
 ) -> None:
     # We fetch the market with the highest liquidity because we expect quotes to be available for all outcome tokens.
     markets = SeerSubgraphHandler().get_binary_markets(
-        filter_by=FilterBy.OPEN, limit=1, sort_by=SortBy.HIGHEST_LIQUIDITY
+        filter_by=FilterBy.OPEN,
+        limit=1,
+        sort_by=SortBy.HIGHEST_LIQUIDITY,
+        include_categorical_markets=True,
     )
     market_data_model = markets[0]
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(

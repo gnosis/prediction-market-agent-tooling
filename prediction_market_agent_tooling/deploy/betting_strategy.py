@@ -177,6 +177,27 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
         return trades
 
 
+class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy):
+    @staticmethod
+    def calculate_direction(
+        market: AgentMarket, answer: ProbabilisticAnswer
+    ) -> OutcomeStr:
+        # We place a bet on the most likely outcome
+        # most_likely_outcome = max(
+        #     answer.probabilities.items(),
+        #     key=lambda item: item[1],
+        # )[0]
+        # return most_likely_outcome
+
+        # ToDo - Implement return estimate_p_yes >= market_p_yes
+        #  Find a prob that has > market
+        # If estimate_p_yes >= market.current_p_yes, then bet TRUE, else bet FALSE.
+        # This is equivalent to saying EXPECTED_VALUE = (estimate_p_yes * num_tokens_obtained_by_betting_yes) -
+        # ((1 - estimate_p_yes) * num_tokens_obtained_by_betting_no) >= 0
+        # answer.probabilities, market.probabilities
+        return estimate_p_yes >= market_p_yes
+
+
 class KellyBettingStrategy(BettingStrategy):
     def __init__(self, max_bet_amount: USD, max_price_impact: float | None = None):
         self.max_bet_amount = max_bet_amount

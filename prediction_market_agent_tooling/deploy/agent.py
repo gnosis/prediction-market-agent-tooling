@@ -299,11 +299,19 @@ class DeployablePredictionAgent(DeployableAgent):
 
         return True
 
+    def answer_categorical_market(self, market: AgentMarket) -> ProbabilisticAnswer:
+        raise NotImplementedError("This method must be implemented by the subclass")
+
     def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
         """
-        Answer the binary market. This method must be implemented by the subclass.
+        Answer the binary market.
+
+        If this method is not overridden by the subclass, it will fall back to using
+        answer_categorical_market(). Therefore, subclasses only need to implement
+        answer_categorical_market() if they want to handle both types of markets.
         """
-        raise NotImplementedError("This method must be implemented by the subclass")
+
+        return self.answer_categorical_market(market)
 
     def get_markets(
         self,
@@ -340,6 +348,23 @@ class DeployablePredictionAgent(DeployableAgent):
                     multiplier=3,
                 )
 
+    def build_answer(
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        verify_market: bool = True,
+    ) -> ProbabilisticAnswer | None:
+        answer: ProbabilisticAnswer | None
+        if verify_market and not self.verify_market(market_type, market):
+            logger.info(f"Market '{market.question}' doesn't meet the criteria.")
+            return None
+
+        logger.info(f"Answering market '{market.question}'.")
+        if not market.is_binary:
+            return self.answer_categorical_market(market)
+
+        return self.answer_binary_market(market)
+
     def process_market(
         self,
         market_type: MarketType,
@@ -351,13 +376,9 @@ class DeployablePredictionAgent(DeployableAgent):
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
         )
 
-        answer: ProbabilisticAnswer | None
-        if verify_market and not self.verify_market(market_type, market):
-            logger.info(f"Market '{market.question}' doesn't meet the criteria.")
-            answer = None
-        else:
-            logger.info(f"Answering market '{market.question}'.")
-            answer = self.answer_binary_market(market)
+        answer = self.build_answer(
+            market=market, market_type=market_type, verify_market=verify_market
+        )
 
         processed_market = (
             ProcessedMarket(answer=answer) if answer is not None else None

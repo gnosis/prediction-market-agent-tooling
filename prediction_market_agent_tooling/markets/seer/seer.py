@@ -322,14 +322,6 @@ class SeerAgentMarket(AgentMarket):
             include_categorical_markets=fetch_categorical_markets,
         )
 
-        # ToDo - remove me, just for testing
-        markets = [
-            m
-            for m in markets
-            if m.id.hex().lower()
-            == "0x58ce0a7F103c405d03a7aF896b2A9b78dA36b9a8".lower()
-        ]
-
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
         # represents an invalid market.
         return [

@@ -116,6 +116,24 @@ class AgentMarket(BaseModel):
         return data
 
     @property
+    def is_binary(self) -> bool:
+        # 3 outcomes can also be binary if 3rd outcome is invalid (Seer)
+        if len(self.outcomes) not in [2, 3]:
+            return False
+
+        lowercase_outcomes = [str(outcome).lower() for outcome in self.outcomes]
+
+        has_yes = "yes" in lowercase_outcomes
+        has_no = "no" in lowercase_outcomes
+
+        if len(lowercase_outcomes) == 3:
+            invalid_outcome = lowercase_outcomes[-1]
+            has_invalid = "invalid" in invalid_outcome
+            return has_yes and has_no and has_invalid
+
+        return has_yes and has_no
+
+    @property
     def probable_resolution(self) -> Resolution:
         if self.is_resolved():
             if self.has_successful_resolution():

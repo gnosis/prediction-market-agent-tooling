@@ -16,7 +16,7 @@ class DeployableCoinFlipAgent(DeployableTraderAgent):
     def verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:
         return True
 
-    def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
+    def answer_categorical_market(self, market: AgentMarket) -> ProbabilisticAnswer:
         decision = random.choice(market.outcomes)
         probabilities_multi = {decision: Probability(1.0)}
         for outcome in market.outcomes:

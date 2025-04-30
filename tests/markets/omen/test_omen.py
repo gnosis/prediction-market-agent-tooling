@@ -6,7 +6,7 @@ from eth_account import Account
 from eth_typing import ChecksumAddress, HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import USD, CollateralToken, Probability
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
@@ -177,44 +177,6 @@ def test_get_positions_1() -> None:
         assert token_balance == position.amounts_ot[outcome_str]
 
     print(position)  # For extra test coverage
-
-
-def get_new_p_yes(
-    market: OmenAgentMarket, bet_amount: USD, direction: bool
-) -> Probability:
-    """
-    Calculate the new p_yes based on the bet amount and direction.
-    """
-    if not market.has_token_pool():
-        raise ValueError("Outcome token pool is required to calculate new p_yes.")
-
-    bet_amount_in_tokens = market.get_usd_in_token(bet_amount)
-    outcome_token_pool = check_not_none(market.outcome_token_pool)
-
-    yes_outcome_pool_size = outcome_token_pool[
-        market.get_outcome_str_from_bool(True)
-    ].value
-    no_outcome_pool_size = outcome_token_pool[
-        market.get_outcome_str_from_bool(False)
-    ].value
-
-    new_yes_outcome_pool_size = yes_outcome_pool_size + (
-        market.fees.get_after_fees(bet_amount_in_tokens).value
-    )
-    new_no_outcome_pool_size = no_outcome_pool_size + (
-        market.fees.get_after_fees(bet_amount_in_tokens).value
-    )
-    outcome_str = market.get_outcome_str_from_bool(direction)
-    received_token_amount = market.get_buy_token_amount(bet_amount, outcome_str).value
-    if direction:
-        new_yes_outcome_pool_size -= received_token_amount
-    else:
-        new_no_outcome_pool_size -= received_token_amount
-
-    new_p_yes = new_no_outcome_pool_size / (
-        new_yes_outcome_pool_size + new_no_outcome_pool_size
-    )
-    return Probability(new_p_yes)
 
 
 @pytest.mark.parametrize("direction", [True, False])

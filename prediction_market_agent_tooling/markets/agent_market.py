@@ -77,6 +77,20 @@ class AgentMarket(BaseModel):
     volume: CollateralToken | None
     fees: MarketFees
 
+    @field_validator("probabilities")
+    def validate_probabilities(
+        cls,
+        probs: dict[OutcomeStr, Probability],
+        info: FieldValidationInfo,
+    ) -> dict[OutcomeStr, Probability]:
+        outcomes: t.Sequence[OutcomeStr] = check_not_none(info.data.get("outcomes"))
+        if set(probs.keys()) != set(outcomes):
+            raise ValueError("Keys of `probabilities` must match `outcomes` exactly.")
+        total = float(sum(probs.values()))
+        if not 0.999 <= total <= 1.001:
+            raise ValueError(f"Probabilities must sum to 1, got {total}.")
+        return probs
+
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(
         cls,

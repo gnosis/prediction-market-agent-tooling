@@ -83,7 +83,7 @@ class AbstractBenchmarkedAgent:
 
 class RandomAgent(AbstractBenchmarkedAgent):
     def predict(self, market_question: str) -> Prediction:
-        _, confidence = random.random(), random.random()
+        confidence = random.random()
         return Prediction(
             outcome_prediction=OutcomePrediction(
                 confidence=confidence,

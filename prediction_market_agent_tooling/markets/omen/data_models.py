@@ -418,7 +418,9 @@ class OmenMarket(BaseModel):
         )
 
     def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
-        if self.boolean_outcome_from_answer(answer):
+        if answer == INVALID_ANSWER_HEX_BYTES:
+            return Resolution.CANCEL
+        elif self.boolean_outcome_from_answer(answer):
             return Resolution.YES
         else:
             return Resolution.NO

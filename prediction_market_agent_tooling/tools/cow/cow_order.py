@@ -3,7 +3,6 @@ from datetime import timedelta
 
 import httpx
 import tenacity
-from cowdao_cowpy import swap_tokens
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
@@ -166,13 +165,20 @@ def swap_tokens_waiting(
     env: Envs = "prod",
     web3: Web3 | None = None,
 ) -> OrderMetaData:
-    # Approve the CoW Swap Vault Relayer to get the sell token.
-    ContractERC20OnGnosisChain(address=sell_token).approve(
-        api_keys,
-        Web3.to_checksum_address(CowContractAddress.VAULT_RELAYER.value),
-        amount_wei=amount_wei,
+    # Approve the CoW Swap Vault Relayer to get the sell token only if allowance not sufficient.
+    for_address = Web3.to_checksum_address(CowContractAddress.VAULT_RELAYER.value)
+    current_allowance = ContractERC20OnGnosisChain(address=sell_token).allowance(
+        owner=api_keys.bet_from_address,
+        for_address=for_address,
         web3=web3,
     )
+    if current_allowance < amount_wei:
+        ContractERC20OnGnosisChain(address=sell_token).approve(
+            api_keys,
+            for_address=for_address,
+            amount_wei=amount_wei,
+            web3=web3,
+        )
 
     # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
     return asyncio.run(

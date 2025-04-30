@@ -41,7 +41,7 @@ def test_valid_token_pool() -> None:
         resolution=None,
         created_time=None,
         close_time=None,
-        probability_map=probability_map,
+        probabilities=probability_map,
         url="https://example.com",
         volume=None,
         fees=MarketFees.get_zero_fees(),
@@ -72,7 +72,7 @@ def test_invalid_token_pool() -> None:
             url="https://example.com",
             volume=None,
             fees=MarketFees.get_zero_fees(),
-            probability_map=prob_map,
+            probabilities=prob_map,
         )
     assert "do not match outcomes" in str(e.value)
 

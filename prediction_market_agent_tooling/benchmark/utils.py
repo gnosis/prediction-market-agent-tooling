@@ -22,7 +22,7 @@ class OutcomePrediction(ProbabilisticAnswer):
 
     @property
     def probable_resolution(self) -> Resolution:
-        outcome = get_most_probable_outcome(self.probabilities_multi)
+        outcome = get_most_probable_outcome(self.probabilities)
         return Resolution(outcome=outcome, invalid=False)
 
 

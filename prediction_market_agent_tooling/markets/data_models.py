@@ -80,13 +80,13 @@ class MultiOutcomeProbabilisticAnswer(BaseModel):
 
 class ProbabilisticAnswer(BaseModel):
     # p_yes: Probability
-    probabilities_multi: dict[OutcomeStr, Probability]
+    probabilities: dict[OutcomeStr, Probability]
     confidence: float
     reasoning: str | None = None
 
     def get_yes_probability(self) -> Probability | None:
         return next(
-            (p for o, p in self.probabilities_multi.items() if o.upper() == "YES"),
+            (p for o, p in self.probabilities.items() if o.upper() == "YES"),
             None,
         )
 

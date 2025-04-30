@@ -44,45 +44,6 @@ class CreateCategoricalMarketsParams(BaseModel):
     token_names: list[str] = Field(..., alias="tokenNames")
 
 
-# ToDo - delete me
-# class SeerOutcomeEnum(str, Enum):
-#     YES = "yes"
-#     NO = "no"
-#     INVALID = "invalid"
-#
-#     @classmethod
-#     def from_bool(cls, value: bool) -> "SeerOutcomeEnum":
-#         return cls.YES if value else cls.NO
-#
-#     @classmethod
-#     def from_string(cls, value: str) -> "SeerOutcomeEnum":
-#         """Convert a string (case-insensitive) to an Outcome enum."""
-#         normalized = value.strip().lower()
-#         patterns = {
-#             r"^yes$": cls.YES,
-#             r"^no$": cls.NO,
-#             r"^(invalid|invalid result)$": cls.INVALID,
-#         }
-#
-#         # Search through patterns and return the first match
-#         for pattern, outcome in patterns.items():
-#             if re.search(pattern, normalized):
-#                 return outcome
-#
-#         raise ValueError(f"Could not map {value=} to an outcome.")
-#
-#     def to_bool(self) -> bool:
-#         """Convert a SeerOutcomeEnum to a boolean value."""
-#         if self == self.YES:
-#             return True
-#         elif self == self.NO:
-#             return False
-#         elif self == self.INVALID:
-#             raise ValueError("Cannot convert INVALID outcome to boolean.")
-#         else:
-#             raise ValueError(f"Unknown outcome: {self}")
-
-
 SEER_BASE_URL = "https://app.seer.pm"
 
 

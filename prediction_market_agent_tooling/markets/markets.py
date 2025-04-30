@@ -69,6 +69,7 @@ MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.SEER: SeerAgentMarket,
 }
 
+
 JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {
     MarketType.OMEN: OmenJobAgentMarket,
 }

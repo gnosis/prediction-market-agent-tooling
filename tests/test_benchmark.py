@@ -23,7 +23,7 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
         return bm.Prediction(
             is_predictable=True,
             outcome_prediction=OutcomePrediction(
-                probabilities_multi={
+                probabilities={
                     OutcomeStr("Yes"): Probability(0.6),
                     OutcomeStr("No"): Probability(0.4),
                 },
@@ -57,7 +57,7 @@ def dummy_agent_no_prediction() -> DummyAgentNoPrediction:
 def test_agent_prediction(dummy_agent: DummyAgent) -> None:
     prediction = dummy_agent.check_and_predict(market_question="Will GNO go up?")
     assert prediction.outcome_prediction is not None
-    assert prediction.outcome_prediction.probabilities_multi[OutcomeStr("Yes")] == 0.6
+    assert prediction.outcome_prediction.probabilities[OutcomeStr("Yes")] == 0.6
     assert prediction.outcome_prediction.confidence == 0.8
     assert prediction.outcome_prediction.info_utility == 0.9
 
@@ -74,7 +74,7 @@ def test_benchmark_run(
                 url="url",
                 question="Will GNO go up?",
                 outcomes=[OutcomeStr("Yes"), OutcomeStr("No")],
-                probability_map={
+                probabilities={
                     OutcomeStr("Yes"): Probability(0.1),
                     OutcomeStr("No"): Probability(0.9),
                 },
@@ -96,7 +96,7 @@ def test_cache() -> None:
             "bar": {
                 "foo": bm.Prediction(
                     outcome_prediction=OutcomePrediction(
-                        probabilities_multi={
+                        probabilities={
                             OutcomeStr("Yes"): Probability(0.6),
                             OutcomeStr("No"): Probability(0.4),
                         },
@@ -126,7 +126,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
                 volume=None,
                 url="url",
                 question="Will GNO go up?",
-                probability_map={
+                probabilities={
                     OutcomeStr("Yes"): Probability(0.1),
                     OutcomeStr("No"): Probability(0.9),
                 },
@@ -144,7 +144,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         )
         prediction = bm.Prediction(
             outcome_prediction=OutcomePrediction(
-                info_utility=0.3333, confidence=0.22222, probabilities_multi={}
+                info_utility=0.3333, confidence=0.22222, probabilities={}
             ),
         )
         assert prediction.outcome_prediction is not None  # Makes mypy happy.
@@ -159,8 +159,8 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         assert first_benchmark_prediction is not None
         assert first_benchmark_prediction.outcome_prediction is not None
         assert (
-            first_benchmark_prediction.outcome_prediction.probabilities_multi
-            == prediction.outcome_prediction.probabilities_multi
+            first_benchmark_prediction.outcome_prediction.probabilities
+            == prediction.outcome_prediction.probabilities
         )
         benchmarker.predictions.save(cache_path)
 
@@ -175,15 +175,15 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
         assert another_benchmark_prediction is not None
         assert another_benchmark_prediction.outcome_prediction is not None
         assert (
-            another_benchmark_prediction.outcome_prediction.probabilities_multi
-            == prediction.outcome_prediction.probabilities_multi
+            another_benchmark_prediction.outcome_prediction.probabilities
+            == prediction.outcome_prediction.probabilities
         )
         another_benchmarker.run_agents()
 
         # Observe that the cached result is still the same
         assert (
-            another_benchmark_prediction.outcome_prediction.probabilities_multi
-            == prediction.outcome_prediction.probabilities_multi
+            another_benchmark_prediction.outcome_prediction.probabilities
+            == prediction.outcome_prediction.probabilities
         )
 
 
@@ -195,7 +195,7 @@ def test_benchmarker_cancelled_markets() -> None:
             volume=None,
             url="url",
             question="Will GNO go up?",
-            probability_map={
+            probabilities={
                 OutcomeStr("Yes"): Probability(0.1),
                 OutcomeStr("No"): Probability(0.9),
             },
@@ -225,7 +225,7 @@ def test_market_probable_resolution() -> None:
             volume=None,
             url="url",
             question="Will GNO go up?",
-            probability_map={
+            probabilities={
                 OutcomeStr("Yes"): Probability(0.1),
                 OutcomeStr("No"): Probability(0.9),
             },
@@ -242,7 +242,7 @@ def test_market_probable_resolution() -> None:
         volume=None,
         url="url",
         question="Will GNO go up?",
-        probability_map={
+        probabilities={
             OutcomeStr("Yes"): Probability(0.8),
             OutcomeStr("No"): Probability(0.2),
         },
@@ -258,7 +258,7 @@ def test_market_probable_resolution() -> None:
         volume=None,
         url="url",
         question="Will GNO go up?",
-        probability_map={
+        probabilities={
             OutcomeStr("Yes"): Probability(0.1),
             OutcomeStr("No"): Probability(0.9),
         },
@@ -274,7 +274,7 @@ def test_market_probable_resolution() -> None:
         volume=None,
         url="url",
         question="Will GNO go up?",
-        probability_map={
+        probabilities={
             OutcomeStr("Yes"): Probability(0.1),
             OutcomeStr("No"): Probability(0.9),
         },
@@ -290,7 +290,7 @@ def test_market_probable_resolution() -> None:
         volume=None,
         url="url",
         question="Will GNO go up?",
-        probability_map={
+        probabilities={
             OutcomeStr("Yes"): Probability(0.8),
             OutcomeStr("No"): Probability(0.2),
         },

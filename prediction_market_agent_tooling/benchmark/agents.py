@@ -83,12 +83,12 @@ class AbstractBenchmarkedAgent:
 
 class RandomAgent(AbstractBenchmarkedAgent):
     def predict(self, market_question: str) -> Prediction:
-        p_yes, confidence = random.random(), random.random()
+        _, confidence = random.random(), random.random()
         return Prediction(
             outcome_prediction=OutcomePrediction(
                 confidence=confidence,
                 info_utility=None,
-                probabilities_multi={},
+                probabilities={},
             ),
         )
 
@@ -110,7 +110,7 @@ class FixedAgent(AbstractBenchmarkedAgent):
         # We simply select a fixed probability for the first outcome.
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                probabilities_multi={},
+                probabilities={},
                 confidence=confidence,
                 info_utility=None,
             ),

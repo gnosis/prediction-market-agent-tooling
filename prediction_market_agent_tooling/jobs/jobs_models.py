@@ -76,7 +76,7 @@ class JobAgentMarket(AgentMarket, ABC):
     def get_job_answer(self, result: str) -> ProbabilisticAnswer:
         # Just return 100% yes with 100% confidence, because we assume the job is completed correctly.
         return ProbabilisticAnswer(
-            probabilities_multi={
+            probabilities={
                 OMEN_TRUE_OUTCOME: Probability(1.0),
                 OMEN_FALSE_OUTCOME: Probability(0.0),
             },

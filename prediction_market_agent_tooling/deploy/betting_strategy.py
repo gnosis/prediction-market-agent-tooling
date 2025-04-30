@@ -151,7 +151,7 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
     ) -> OutcomeStr:
         # We place a bet on the most likely outcome
         most_likely_outcome = max(
-            answer.probabilities_multi.items(),
+            answer.probabilities.items(),
             key=lambda item: item[1],
         )[0]
         return most_likely_outcome
@@ -211,7 +211,7 @@ class KellyBettingStrategy(BettingStrategy):
         kelly_bet = get_kelly_bet_full(
             yes_outcome_pool_size=direction_to_bet_pool_size,
             no_outcome_pool_size=other_direction_pool_size,
-            estimated_p_yes=answer.probabilities_multi[direction],
+            estimated_p_yes=answer.probabilities[direction],
             max_bet=market.get_usd_in_token(self.max_bet_amount),
             confidence=answer.confidence,
             fees=market.fees,
@@ -341,7 +341,7 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         adjusted_bet_amount_token = market.get_usd_in_token(adjusted_bet_amount_usd)
         outcome_token_pool = check_not_none(market.outcome_token_pool)
 
-        outcome = get_most_probable_outcome(answer.probabilities_multi)
+        outcome = get_most_probable_outcome(answer.probabilities)
 
         if len(market.outcomes) == 2:
             # use Kelly full
@@ -368,8 +368,8 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
             # use Kelly simple, since Kelly full only supports 2 outcomes
             kelly_bet = get_kelly_bet_simplified(
                 max_bet=adjusted_bet_amount_token,
-                market_p_yes=market.probability_map[outcome],
-                estimated_p_yes=answer.probabilities_multi[outcome],
+                market_p_yes=market.probabilities[outcome],
+                estimated_p_yes=answer.probabilities[outcome],
                 confidence=answer.confidence,
             )
 

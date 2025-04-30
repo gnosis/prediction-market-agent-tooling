@@ -157,14 +157,6 @@ def test_get_positions_1() -> None:
     # 2 (min from above) - ExistingPosition(market_id='0x626002415eef1117ba0257fc4d2f70753550bbb3', amounts_current={'No': USD(1.4388460783717888e-05)}, amounts_potential={'No': USD(1.4388460783717888e-05)}, amounts_ot={'No': OutcomeToken(1.2249484218406e-05)})
     # Check that the smallest position has been filtered out
     assert all(position.market_id != min_position_id for position in large_positions)
-    # assert all(
-    #     position.total_amount_current > min_amount_position.total_amount_current
-    #     for position in large_positions
-    # )
-    # assert all(
-    #     position.total_amount_potential > min_amount_position.total_amount_potential
-    #     for position in large_positions
-    # )
     assert all(
         position.total_amount_ot > min_amount_position.total_amount_ot
         for position in large_positions

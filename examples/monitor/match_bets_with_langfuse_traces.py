@@ -79,7 +79,7 @@ def get_outcome_for_trace(
         trades = strategy.calculate_trades(
             existing_position=None,
             answer=ProbabilisticAnswer(
-                probabilities_multi=answer.probabilities_multi,
+                probabilities=answer.probabilities,
                 confidence=answer.confidence,
             ),
             market=market,
@@ -156,8 +156,8 @@ def calc_metrics(
         simulation_detail = SimulatedBetDetail(
             strategy=repr(strategy),
             url=bet_with_trace.trace.market.url,
-            market_prob_multi=bet_with_trace.trace.market.probability_map,
-            agent_prob_multi=bet_with_trace.trace.answer.probabilities_multi,
+            market_prob_multi=bet_with_trace.trace.market.probabilities,
+            agent_prob_multi=bet_with_trace.trace.answer.probabilities,
             agent_conf=round(bet_with_trace.trace.answer.confidence, 4),
             org_bet=round(bet_with_trace.bet.amount, 4),
             sim_bet=round(simulated_outcome.size, 4),
@@ -171,7 +171,7 @@ def calc_metrics(
 
     sum_squared_errors = 0.0
     for bet_with_trace in bets:
-        predicted_probs = bet_with_trace.trace.answer.probabilities_multi
+        predicted_probs = bet_with_trace.trace.answer.probabilities
 
         # Create actual outcome vector (1 for winning outcome, 0 for others)
         actual_outcome = bet_with_trace.bet.market_outcome

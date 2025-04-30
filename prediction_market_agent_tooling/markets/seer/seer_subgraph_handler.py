@@ -170,8 +170,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         )
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
-        # ToDo - better control here
-        # two_category_markets = self.filter_bicategorical_markets(markets)
         return markets
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:

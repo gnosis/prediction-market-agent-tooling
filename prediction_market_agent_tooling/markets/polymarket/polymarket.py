@@ -45,7 +45,7 @@ class PolymarketAgentMarket(AgentMarket):
             url=model.url,
             volume=None,
             outcome_token_pool=None,
-            probability_map={},  # ToDo - Implement when fixing Polymarket
+            probabilities={},  # ToDo - Implement when fixing Polymarket
         )
 
     def get_tiny_bet_amount(self) -> CollateralToken:

@@ -84,7 +84,7 @@ class ManifoldAgentMarket(AgentMarket):
             url=model.url,
             volume=model.volume,
             outcome_token_pool=outcome_token_pool,
-            probability_map=prob_map,
+            probabilities=prob_map,
         )
 
     @staticmethod

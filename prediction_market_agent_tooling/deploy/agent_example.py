@@ -23,7 +23,7 @@ class DeployableCoinFlipAgent(DeployableTraderAgent):
             if outcome != decision:
                 probabilities_multi[outcome] = Probability(0.0)
         return ProbabilisticAnswer(
-            probabilities_multi=probabilities_multi,
+            probabilities=probabilities_multi,
             confidence=0.5,
             reasoning="I flipped a coin to decide.",
         )

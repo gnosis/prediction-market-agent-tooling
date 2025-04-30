@@ -355,7 +355,7 @@ class OmenAgentMarket(AgentMarket):
                 model.outcomes[i]: model.outcomeTokenAmounts[i].as_outcome_token
                 for i in range(len(model.outcomes))
             },
-            probability_map=AgentMarket.build_probability_map(
+            probabilities=AgentMarket.build_probability_map(
                 outcome_token_amounts=model.outcomeTokenAmounts,
                 outcomes=list(model.outcomes),
             ),

@@ -281,7 +281,7 @@ class DeployablePredictionAgent(DeployableAgent):
 
         # Manifold allows to bet only on markets with probability between 1 and 99.
         if market_type == MarketType.MANIFOLD:
-            probability_yes = market.probability_map[
+            probability_yes = market.probabilities[
                 market.get_outcome_str_from_bool(True)
             ]
             if not probability_yes or not 1 < probability_yes < 99:

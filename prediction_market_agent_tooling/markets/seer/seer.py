@@ -302,7 +302,7 @@ class SeerAgentMarket(AgentMarket):
             outcomes_supply=model.outcomes_supply,
             resolution=None,
             volume=None,
-            probability_map=probability_map,
+            probabilities=probability_map,
         )
 
     @staticmethod

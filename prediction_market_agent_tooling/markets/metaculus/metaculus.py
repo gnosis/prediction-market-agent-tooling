@@ -48,7 +48,7 @@ class MetaculusAgentMarket(AgentMarket):
             description=model.question.description,
             fine_print=model.question.fine_print,
             resolution_criteria=model.question.resolution_criteria,
-            probability_map={},  # ToDo - Set probability map when working with Metaculus
+            probabilities={},  # ToDo - Set probability map when working with Metaculus
         )
 
     @staticmethod

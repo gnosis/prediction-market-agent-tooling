@@ -72,7 +72,7 @@ class AgentMarket(BaseModel):
     created_time: DatetimeUTC | None
     close_time: DatetimeUTC | None
 
-    probability_map: dict[OutcomeStr, Probability]
+    probabilities: dict[OutcomeStr, Probability]
     url: str
     volume: CollateralToken | None
     fees: MarketFees
@@ -109,7 +109,7 @@ class AgentMarket(BaseModel):
             else:
                 raise ValueError(f"Unknown resolution: {self.resolution}")
         else:
-            outcome = get_most_probable_outcome(self.probability_map)
+            outcome = get_most_probable_outcome(self.probabilities)
             return Resolution(outcome=outcome, invalid=False)
 
     def get_last_trade_p_yes(self) -> Probability | None:
@@ -232,6 +232,8 @@ class AgentMarket(BaseModel):
 
         # Normalize to sum to 1
         total = sum(excluded_products)
+        if total == 0:
+            return [Probability(0.0)] * len(balances)
         probabilities = [Probability(p / total) for p in excluded_products]
 
         return probabilities

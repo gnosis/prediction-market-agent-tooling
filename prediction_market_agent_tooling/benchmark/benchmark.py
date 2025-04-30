@@ -80,22 +80,22 @@ class Benchmarker:
             ),
             "% correct outcome": self._compute_correct_outcome_percentage,
             "% precision for `yes`": lambda predictions, markets: self._compute_precision_and_recall_percentages(
-                predictions, markets, pos_label=1
+                predictions, markets
             )[
                 0
             ],
             "% precision for `no`": lambda predictions, markets: self._compute_precision_and_recall_percentages(
-                predictions, markets, pos_label=0
+                predictions, markets
             )[
                 0
             ],
             "% recall for `yes`": lambda predictions, markets: self._compute_precision_and_recall_percentages(
-                predictions, markets, pos_label=1
+                predictions, markets
             )[
                 1
             ],
             "% recall for `no`": lambda predictions, markets: self._compute_precision_and_recall_percentages(
-                predictions, markets, pos_label=0
+                predictions, markets
             )[
                 1
             ],
@@ -124,7 +124,8 @@ class Benchmarker:
         return self.predictions.get_prediction(agent_name=agent_name, question=question)
 
     def run_agents(self, enable_timing: bool = True) -> None:
-        for agent in self.registered_agents:
+        agent: AbstractBenchmarkedAgent  # Fix for mypy issue with tqdm.
+        for agent in tqdm(self.registered_agents, desc="Running agents"):
             # Filter out cached predictions
             markets_to_run = [
                 m
@@ -207,8 +208,8 @@ class Benchmarker:
     def calculate_errors_between_prediction_and_market(
         prediction: Prediction, market: AgentMarket
     ) -> list[float]:
-        pred_probs = check_not_none(prediction.outcome_prediction).probabilities_multi
-        market_probs = market.probability_map
+        pred_probs = check_not_none(prediction.outcome_prediction).probabilities
+        market_probs = market.probabilities
 
         # Get common outcomes between prediction and market
         common_outcomes = set(pred_probs.keys()) & set(market_probs.keys())
@@ -302,7 +303,6 @@ class Benchmarker:
         self,
         predictions: t.List[Prediction],
         markets: t.Sequence[AgentMarket],
-        pos_label: int,
     ) -> tuple[float | None, float | None]:
         predictions, markets = self.filter_predictions_for_answered(
             predictions, markets
@@ -421,7 +421,7 @@ class Benchmarker:
             ]
             markets_summary[f"{agent} p_yes"] = [
                 (
-                    f"{p.outcome_prediction.probabilities_multi} [{p.outcome_prediction.probable_resolution}]"
+                    f"{p.outcome_prediction.probabilities} [{p.outcome_prediction.probable_resolution}]"
                     if p.is_predictable
                     and p.outcome_prediction  # Is answerable and answered
                     else (
@@ -440,7 +440,7 @@ class Benchmarker:
                 for p in agent_predictions
             ]
         markets_summary[f"reference probability_map"] = [
-            f"{m.probability_map} [{m.probable_resolution}]" for m in self.markets
+            f"{m.probabilities} [{m.probable_resolution}]" for m in self.markets
         ]
         return markets_summary
 

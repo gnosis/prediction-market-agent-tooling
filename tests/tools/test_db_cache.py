@@ -322,3 +322,55 @@ def test_postgres_cache_ignored_arg_names_and_types(
     assert (
         call_count == 2
     ), "The function should only be called twice due to caching with ignored keys/types"
+
+
+def test_postgres_cache_pydantic_union_none_1(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
+    def just_return() -> TestOutputModel | None:
+        nonlocal call_count
+        call_count += 1
+        return TestOutputModel(result=6)
+
+    assert just_return() == TestOutputModel(result=6)
+    assert just_return() == TestOutputModel(result=6)
+    assert call_count == 1, "The function should only be called once due to caching"
+
+
+def test_postgres_cache_pydantic_union_none_2(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
+    def just_return() -> TestOutputModel | None:
+        nonlocal call_count
+        call_count += 1
+        return None
+
+    assert just_return() is None
+    assert just_return() is None
+    assert call_count == 1, "The function should only be called once due to caching"
+
+
+def test_postgres_cache_pydantic_union_none_3(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(
+        api_keys=session_keys_with_postgresql_proc_and_enabled_cache, cache_none=False
+    )
+    def just_return() -> TestOutputModel | None:
+        nonlocal call_count
+        call_count += 1
+        return None
+
+    assert just_return() is None
+    assert just_return() is None
+    assert (
+        call_count == 2
+    ), "The function should only be called once due to cache disabled"

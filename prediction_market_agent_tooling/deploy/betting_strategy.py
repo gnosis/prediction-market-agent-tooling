@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.gtypes import (
     CollateralToken,
     OutcomeStr,
     OutcomeToken,
+    Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
@@ -195,7 +196,7 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
         best_outcome = None
         best_ev = float("-inf")
         for outcome in market.outcomes:
-            if market.probabilities[outcome] == 0:
+            if market.probabilities[outcome] == Probability(0.0):
                 # avoid division by 0
                 continue
             ev = answer.probabilities[outcome] / market.probabilities[outcome]

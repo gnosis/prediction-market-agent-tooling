@@ -98,7 +98,7 @@ def get_kelly_bet_full(
     check_is_valid_probability(confidence)
 
     if max_bet == 0:
-        return SimpleBet(size=CollateralToken(0))
+        return SimpleBet(size=CollateralToken(0), direction=True)
 
     x = yes_outcome_pool_size.value
     y = no_outcome_pool_size.value

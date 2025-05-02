@@ -1,0 +1,306 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "contract IHubV2",
+        "name": "_hub",
+        "type": "address"
+      },
+      {
+        "internalType": "contract INameRegistry",
+        "name": "_nameRegistry",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_masterCopyERC20Demurrage",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_masterCopyERC20Inflation",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "code",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesAmountOverflow",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesErrorAddressUintArgs",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesErrorNoArgs",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesErrorOneAddressArg",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "providedId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "code",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesIdMustBeDerivedFromAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "code",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesInvalidCirclesId",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "parameter",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "code",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesInvalidParameter",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CirclesProxyAlreadyInitialized",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "code",
+        "type": "uint8"
+      }
+    ],
+    "name": "CirclesReentrancyGuard",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "avatar",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "erc20Wrapper",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "enum CirclesType",
+        "name": "circlesType",
+        "type": "uint8"
+      }
+    ],
+    "name": "ERC20WrapperDeployed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "contract Proxy",
+        "name": "proxy",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "masterCopy",
+        "type": "address"
+      }
+    ],
+    "name": "ProxyCreation",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "ERC20_WRAPPER_SETUP_CALLPREFIX",
+    "outputs": [
+      {
+        "internalType": "bytes4",
+        "name": "",
+        "type": "bytes4"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_avatar",
+        "type": "address"
+      },
+      {
+        "internalType": "enum CirclesType",
+        "name": "_circlesType",
+        "type": "uint8"
+      }
+    ],
+    "name": "ensureERC20",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "enum CirclesType",
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "erc20Circles",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "hub",
+    "outputs": [
+      {
+        "internalType": "contract IHubV2",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "masterCopyERC20Wrapper",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "nameRegistry",
+    "outputs": [
+      {
+        "internalType": "contract INameRegistry",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

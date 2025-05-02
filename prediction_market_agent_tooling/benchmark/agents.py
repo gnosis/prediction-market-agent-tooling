@@ -107,7 +107,6 @@ class FixedAgent(AbstractBenchmarkedAgent):
 
     def predict(self, market_question: str) -> Prediction:
         p_yes, confidence = 1.0 if self.fixed_answer_idx else 0.0, 1.0
-        # We simply select a fixed probability for the first outcome.
         return Prediction(
             outcome_prediction=OutcomePrediction(
                 probabilities={},

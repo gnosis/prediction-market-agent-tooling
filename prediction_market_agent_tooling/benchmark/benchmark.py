@@ -439,7 +439,7 @@ class Benchmarker:
                 )
                 for p in agent_predictions
             ]
-        markets_summary[f"reference probability_map"] = [
+        markets_summary[f"reference probabilities"] = [
             f"{m.probabilities} [{m.probable_resolution}]" for m in self.markets
         ]
         return markets_summary

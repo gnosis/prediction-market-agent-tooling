@@ -130,7 +130,7 @@ class FixedAgent(AbstractBenchmarkedAgent):
             1.0
         )
 
-        # We simply select a fixed probability for the first outcome.
+
         return Prediction(
             outcome_prediction=OutcomePrediction(
                 probabilities=probabilities,

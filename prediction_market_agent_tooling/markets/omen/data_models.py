@@ -177,7 +177,7 @@ class OmenPosition(BaseModel):
         return Web3.to_checksum_address(self.collateralTokenAddress)
 
     def get_collateral_token_contract(
-        self, web3: Web3 | None
+        self, web3: Web3 | None = None
     ) -> ContractERC20OnGnosisChain:
         web3 = web3 or ContractERC20OnGnosisChain.get_web3()
         return to_gnosis_chain_contract(
@@ -860,3 +860,12 @@ class IPFSAgentResult(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+
+
+class PayoutRedemptionEvent(BaseModel):
+    redeemer: HexAddress
+    collateralToken: HexAddress
+    parentCollectionId: HexBytes
+    conditionId: HexBytes
+    indexSets: list[int]
+    payout: Wei

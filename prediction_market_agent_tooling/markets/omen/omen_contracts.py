@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     ContractPrediction,
     FPMMFundingAddedEvent,
     OmenFixedProductMarketMakerCreationEvent,
+    PayoutRedemptionEvent,
     RealitioLogNewQuestionEvent,
     format_realitio_question,
 )
@@ -194,8 +195,8 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         index_sets: t.List[int],
         parent_collection_id: HexStr = build_parent_collection_id(),
         web3: Web3 | None = None,
-    ) -> TxReceipt:
-        return self.send(
+    ) -> PayoutRedemptionEvent:
+        receipt_tx = self.send(
             api_keys=api_keys,
             function_name="redeemPositions",
             function_params=[
@@ -206,6 +207,13 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
             ],
             web3=web3,
         )
+        redeem_event_logs = (
+            self.get_web3_contract(web3=web3)
+            .events.PayoutRedemption()
+            .process_receipt(receipt_tx)
+        )
+        redeem_event = PayoutRedemptionEvent(**redeem_event_logs[0]["args"])
+        return redeem_event
 
     def getOutcomeSlotCount(
         self, condition_id: HexBytes, web3: Web3 | None = None

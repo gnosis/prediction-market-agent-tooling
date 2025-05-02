@@ -5,6 +5,8 @@ from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
+from prediction_market_agent_tooling.gtypes import Probability, OutcomeStr
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -19,23 +21,23 @@ class AbstractBenchmarkedAgent:
         self.agent_name = agent_name
         self.max_workers = max_workers  # Limit the number of workers that can run this worker in parallel threads
 
-    def is_predictable(self, market_question: str) -> bool:
+    def is_predictable(self, market: AgentMarket) -> bool:
         """
         Override if the agent can decide to not predict the question, before doing the hard work.
         """
         return True
 
-    def predict(self, market_question: str) -> Prediction:
+    def predict(self, market: AgentMarket) -> Prediction:
         """
         Predict the outcome of the market question.
         """
         raise NotImplementedError
 
-    def check_and_predict(self, market_question: str) -> Prediction:
-        is_predictable = self.is_predictable(market_question=market_question)
+    def check_and_predict(self, market: AgentMarket) -> Prediction:
+        is_predictable = self.is_predictable(market=market)
         if not is_predictable:
             return Prediction(is_predictable=is_predictable)
-        return self.predict(market_question=market_question)
+        return self.predict(market=market)
 
     def is_predictable_restricted(
         self,
@@ -51,7 +53,7 @@ class AbstractBenchmarkedAgent:
 
     def predict_restricted(
         self,
-        market_question: str,
+        market: AgentMarket,
         time_restriction_up_to: DatetimeUTC,
     ) -> Prediction:
         """
@@ -63,39 +65,56 @@ class AbstractBenchmarkedAgent:
 
     def check_and_predict_restricted(
         self,
-        market_question: str,
+        market: AgentMarket,
         time_restriction_up_to: DatetimeUTC,
     ) -> Prediction:
         """
         Data used must be restricted to the time_restriction_up_to.
         """
         is_predictable = self.is_predictable_restricted(
-            market_question=market_question,
+            market_question=market.question,
             time_restriction_up_to=time_restriction_up_to,
         )
         if not is_predictable:
             return Prediction(is_predictable=is_predictable)
         return self.predict_restricted(
-            market_question=market_question,
+            market=market,
             time_restriction_up_to=time_restriction_up_to,
         )
 
 
 class RandomAgent(AbstractBenchmarkedAgent):
-    def predict(self, market_question: str) -> Prediction:
+    @staticmethod
+    def generate_random_numbers_with_sum(
+        count: int, target_sum: float = 1.0
+    ) -> list[float]:
+        values = [random.random() for _ in range(count)]
+        return [v * (target_sum / sum(values)) for v in values]
+
+    def predict(self, market: AgentMarket) -> Prediction:
         confidence = random.random()
+        # generate a random probability for each outcome.
+
+        random_values = self.generate_random_numbers_with_sum(
+            count=len(market.outcomes)
+        )
+        probabilities = {
+            outcome: Probability(v)
+            for outcome, v in zip(market.outcomes, random_values)
+        }
+
         return Prediction(
             outcome_prediction=OutcomePrediction(
                 confidence=confidence,
                 info_utility=None,
-                probabilities={},
+                probabilities=probabilities,
             ),
         )
 
     def predict_restricted(
-        self, market_question: str, time_restriction_up_to: DatetimeUTC
+        self, market: AgentMarket, time_restriction_up_to: DatetimeUTC
     ) -> Prediction:
-        return self.predict(market_question)
+        return self.predict(market)
 
 
 class FixedAgent(AbstractBenchmarkedAgent):
@@ -105,18 +124,22 @@ class FixedAgent(AbstractBenchmarkedAgent):
         super().__init__(agent_name, max_workers)
         self.fixed_answer_idx = fixed_answer_idx
 
-    def predict(self, market_question: str) -> Prediction:
-        p_yes, confidence = 1.0 if self.fixed_answer_idx else 0.0, 1.0
+    def predict(self, market: AgentMarket) -> Prediction:
+        probabilities = {o: Probability(0.0) for o in market.outcomes}
+        probabilities[OutcomeStr(market.outcomes[self.fixed_answer_idx])] = Probability(
+            1.0
+        )
+
         # We simply select a fixed probability for the first outcome.
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                probabilities={},
-                confidence=confidence,
+                probabilities=probabilities,
+                confidence=1.0,
                 info_utility=None,
             ),
         )
 
     def predict_restricted(
-        self, market_question: str, time_restriction_up_to: DatetimeUTC
+        self, market: AgentMarket, time_restriction_up_to: DatetimeUTC
     ) -> Prediction:
-        return self.predict(market_question)
+        return self.predict(market)

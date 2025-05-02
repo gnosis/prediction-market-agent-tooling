@@ -1,5 +1,6 @@
 import tempfile
 from datetime import timedelta
+from unittest.mock import Mock
 
 import pytest
 
@@ -9,6 +10,11 @@ from prediction_market_agent_tooling.benchmark.utils import (
     Resolution,
 )
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_TRUE_OUTCOME,
+    OMEN_FALSE_OUTCOME,
+)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
@@ -19,13 +25,13 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
     def __init__(self) -> None:
         super().__init__(agent_name="dummy")
 
-    def check_and_predict(self, market_question: str) -> bm.Prediction:
+    def check_and_predict(self, market: AgentMarket) -> bm.Prediction:
         return bm.Prediction(
             is_predictable=True,
             outcome_prediction=OutcomePrediction(
                 probabilities={
-                    OutcomeStr("Yes"): Probability(0.6),
-                    OutcomeStr("No"): Probability(0.4),
+                    OMEN_TRUE_OUTCOME: Probability(0.6),
+                    OMEN_FALSE_OUTCOME: Probability(0.4),
                 },
                 confidence=0.8,
                 info_utility=0.9,
@@ -42,7 +48,7 @@ class DummyAgentNoPrediction(bm.AbstractBenchmarkedAgent):
     def __init__(self) -> None:
         super().__init__(agent_name="dummy_no_prediction")
 
-    def check_and_predict(self, market_question: str) -> bm.Prediction:
+    def check_and_predict(self, market: AgentMarket) -> bm.Prediction:
         return bm.Prediction(
             is_predictable=False,
             outcome_prediction=None,
@@ -55,7 +61,9 @@ def dummy_agent_no_prediction() -> DummyAgentNoPrediction:
 
 
 def test_agent_prediction(dummy_agent: DummyAgent) -> None:
-    prediction = dummy_agent.check_and_predict(market_question="Will GNO go up?")
+    market = Mock(AgentMarket, wraps=AgentMarket)
+    market.question = "Will GNO go up?"
+    prediction = dummy_agent.check_and_predict(market=market)
     assert prediction.outcome_prediction is not None
     assert prediction.outcome_prediction.probabilities[OutcomeStr("Yes")] == 0.6
     assert prediction.outcome_prediction.confidence == 0.8

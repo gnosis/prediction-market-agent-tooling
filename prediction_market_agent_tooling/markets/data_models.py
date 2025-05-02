@@ -71,13 +71,6 @@ def to_boolean_outcome(value: str | bool) -> bool:
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
-class MultiOutcomeProbabilisticAnswer(BaseModel):
-    # ToDo - Validate probabilities using Pydantic model validation
-    probabilities: dict[OutcomeStr, Probability]
-    confidence: float
-    reasoning: str | None = None
-
-
 class ProbabilisticAnswer(BaseModel):
     # p_yes: Probability
     probabilities: dict[OutcomeStr, Probability]

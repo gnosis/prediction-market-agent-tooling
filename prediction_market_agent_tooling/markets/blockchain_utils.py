@@ -31,6 +31,10 @@ def store_trades(
         logger.warning(f"No prediction for market {market_id}, not storing anything.")
         return None
 
+    yes_probability = traded_market.answer.get_yes_probability()
+    if not yes_probability:
+        logger.info("Skipping this since no yes_probability available.")
+        return None
     reasoning = traded_market.answer.reasoning if traded_market.answer.reasoning else ""
 
     ipfs_hash_decoded = HexBytes(HASH_ZERO)
@@ -46,10 +50,7 @@ def store_trades(
         HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
     ]
 
-    yes_probability = traded_market.answer.get_yes_probability()
-    estimated_probability_bps = (
-        int(yes_probability * BPS_CONSTANT) if yes_probability else UINT16_MAX
-    )
+    estimated_probability_bps = int(yes_probability * BPS_CONSTANT)
 
     prediction = ContractPrediction(
         publisher=keys.bet_from_address,

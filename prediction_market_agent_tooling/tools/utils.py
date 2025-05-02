@@ -188,39 +188,6 @@ def prob_uncertainty(prob: Probability) -> float:
     return float(entropy([prob, 1 - prob], base=2))
 
 
-def calculate_sell_amount_in_collateral_old(
-    shares_to_sell: OutcomeToken,
-    holdings: OutcomeToken,
-    other_holdings: OutcomeToken,
-    fees: MarketFees,
-) -> CollateralToken:
-    """
-    Computes the amount of collateral that needs to be sold to get `shares` amount of shares.
-
-    Taken from https://github.com/protofire/omen-exchange/blob/29d0ab16bdafa5cc0d37933c1c7608a055400c73/app/src/util/tools/fpmm/trading/index.ts#L99
-    Simplified for binary markets.
-    """
-    if shares_to_sell == 0:
-        return CollateralToken(0)
-
-    for v in [shares_to_sell, holdings, other_holdings]:
-        if v <= 0:
-            raise ValueError(
-                f"All share args must be greater than 0, got {[shares_to_sell, holdings, other_holdings]=}"
-            )
-
-    def f(r: float) -> float:
-        R = OutcomeToken((r + fees.absolute) / (1 - fees.bet_proportion))
-        first_term = other_holdings - R
-        second_term = holdings + shares_to_sell - R
-        third_term = holdings * other_holdings
-        return ((first_term * second_term) - third_term).value
-
-    amount_to_sell = newton(f, 0)
-    return CollateralToken(float(amount_to_sell) * 0.999999)  # Avoid rounding errors
-    # CollateralToken(1.2120045751808528e-05)
-
-
 def calculate_sell_amount_in_collateral(
     shares_to_sell: OutcomeToken,
     outcome_index: int,
@@ -248,8 +215,6 @@ def calculate_sell_amount_in_collateral(
     other_holdings = [v for i, v in enumerate(pool_balances) if i != outcome_index]
 
     def f(r: float) -> float:
-        # ToDo - compare formula below with TS and Python prev version
-        # R = OutcomeToken((r + fees.absolute) / (1 - fees.total_fee_absolute_value(r)))
         R = (r + fees.absolute) / (1 - fees.bet_proportion)
 
         # First term: product of (h_i - R) for i != outcome_index

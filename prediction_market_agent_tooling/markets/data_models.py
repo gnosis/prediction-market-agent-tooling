@@ -72,7 +72,6 @@ Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
 class ProbabilisticAnswer(BaseModel):
-    # p_yes: Probability
     probabilities: dict[OutcomeStr, Probability]
     confidence: float
     reasoning: str | None = None

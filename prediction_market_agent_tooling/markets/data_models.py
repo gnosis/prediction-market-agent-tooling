@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
+from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -78,7 +79,11 @@ class ProbabilisticAnswer(BaseModel):
 
     def get_yes_probability(self) -> Probability | None:
         return next(
-            (p for o, p in self.probabilities.items() if o.upper() == "YES"),
+            (
+                p
+                for o, p in self.probabilities.items()
+                if o.capitalize() == OMEN_TRUE_OUTCOME
+            ),
             None,
         )
 
@@ -122,7 +127,6 @@ class TradeType(str, Enum):
 
 class Trade(BaseModel):
     trade_type: TradeType
-    # outcome: bool
     outcome: OutcomeStr
     amount: USD
 
@@ -143,9 +147,7 @@ class PlacedTrade(Trade):
 class SimulatedBetDetail(BaseModel):
     strategy: str
     url: str
-    # market_p_yes: float
     market_prob_multi: dict[OutcomeStr, Probability]
-    # agent_p_yes: float
     agent_prob_multi: dict[OutcomeStr, Probability]
     agent_conf: float
     org_bet: CollateralToken

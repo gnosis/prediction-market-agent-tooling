@@ -49,7 +49,8 @@ class BettingStrategy(ABC):
     def maximum_possible_bet_amount(self) -> USD:
         raise NotImplementedError("Subclass should implement this.")
 
-    def build_zero_usd_amount(self) -> USD:
+    @staticmethod
+    def build_zero_usd_amount() -> USD:
         return USD(0)
 
     @staticmethod
@@ -182,20 +183,32 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
     def calculate_direction(
         market: AgentMarket, answer: ProbabilisticAnswer
     ) -> OutcomeStr:
-        # We place a bet on the most likely outcome
-        # most_likely_outcome = max(
-        #     answer.probabilities.items(),
-        #     key=lambda item: item[1],
-        # )[0]
-        # return most_likely_outcome
+        """
+        Returns the index of the outcome with the highest expected value.
+        """
+        missing_outcomes = set(market.outcomes) - set(answer.probabilities.keys())
+        if missing_outcomes:
+            raise ValueError(
+                f"Outcomes {missing_outcomes} not found in answer probabilities {answer.probabilities}"
+            )
 
-        # ToDo - Implement return estimate_p_yes >= market_p_yes
-        #  Find a prob that has > market
-        # If estimate_p_yes >= market.current_p_yes, then bet TRUE, else bet FALSE.
-        # This is equivalent to saying EXPECTED_VALUE = (estimate_p_yes * num_tokens_obtained_by_betting_yes) -
-        # ((1 - estimate_p_yes) * num_tokens_obtained_by_betting_no) >= 0
-        # answer.probabilities, market.probabilities
-        return estimate_p_yes >= market_p_yes
+        best_outcome = None
+        best_ev = float("-inf")
+        for outcome in market.outcomes:
+            if market.probabilities[outcome] == 0:
+                # avoid division by 0
+                continue
+            ev = answer.probabilities[outcome] / market.probabilities[outcome]
+            if ev > best_ev:
+                best_ev = ev
+                best_outcome = outcome
+
+        if best_outcome is None:
+            raise ValueError(
+                "Cannot determine best outcome - all market probabilities are zero"
+            )
+
+        return best_outcome
 
 
 class KellyBettingStrategy(BettingStrategy):
@@ -214,29 +227,36 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         outcome_token_pool = check_not_none(market.outcome_token_pool)
-
-        # We consider only markets which have 2 outcomes, since the Kelly strategy is not yet implemented
-        # for markets with more than 2 outcomes (https://github.com/gnosis/prediction-market-agent-tooling/issues/671).
-        if len(market.outcomes) != 2:
-            message = "Cannot process markets with more than 2 outcomes."
-            raise ValueError(message)
-
         # We consider the p_yes as the direction with highest probability.
         direction = MultiCategoricalMaxAccuracyBettingStrategy.calculate_direction(
             market, answer
         )
+        # We get the first direction which is != direction.
         other_direction = [i for i in market.outcomes if i != direction][0]
-        direction_to_bet_pool_size = outcome_token_pool[direction]
-        other_direction_pool_size = outcome_token_pool[other_direction]
+        if "invalid" in other_direction.lower():
+            raise ValueError("Invalid outcome found as opposite direction. Exitting.")
 
-        kelly_bet = get_kelly_bet_full(
-            yes_outcome_pool_size=direction_to_bet_pool_size,
-            no_outcome_pool_size=other_direction_pool_size,
-            estimated_p_yes=answer.probabilities[direction],
-            max_bet=market.get_usd_in_token(self.max_bet_amount),
-            confidence=answer.confidence,
-            fees=market.fees,
-        )
+        if not market.is_binary:
+            # use Kelly simple, since Kelly full only supports 2 outcomes
+            kelly_bet = get_kelly_bet_simplified(
+                max_bet=market.get_usd_in_token(self.max_bet_amount),
+                market_p_yes=market.probabilities[direction],
+                estimated_p_yes=answer.probabilities[direction],
+                confidence=answer.confidence,
+            )
+        else:
+            # We consider only binary markets, since the Kelly strategy is not yet implemented
+            # for markets with more than 2 outcomes (https://github.com/gnosis/prediction-market-agent-tooling/issues/671).
+            direction_to_bet_pool_size = outcome_token_pool[direction]
+            other_direction_pool_size = outcome_token_pool[other_direction]
+            kelly_bet = get_kelly_bet_full(
+                yes_outcome_pool_size=direction_to_bet_pool_size,
+                no_outcome_pool_size=other_direction_pool_size,
+                estimated_p_yes=answer.probabilities[direction],
+                max_bet=market.get_usd_in_token(self.max_bet_amount),
+                confidence=answer.confidence,
+                fees=market.fees,
+            )
 
         kelly_bet_size = kelly_bet.size
         if self.max_price_impact:
@@ -248,15 +268,11 @@ class KellyBettingStrategy(BettingStrategy):
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
             kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
 
-        # If Kelly amount is negative, we can't determine what bet we should place, hence we return
-        # an empty target position.
-        if kelly_bet.size < 0:
-            target_position = Position(market_id=market.id, amounts_current={})
-        else:
-            amounts = {
-                direction: market.get_token_in_usd(kelly_bet_size),
-            }
-            target_position = Position(market_id=market.id, amounts_current=amounts)
+        bet_outcome = direction if kelly_bet.direction else other_direction
+        amounts = {
+            bet_outcome: market.get_token_in_usd(kelly_bet_size),
+        }
+        target_position = Position(market_id=market.id, amounts_current=amounts)
         trades = self._build_rebalance_trades_from_positions(
             existing_position, target_position, market=market
         )
@@ -364,7 +380,7 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
 
         outcome = get_most_probable_outcome(answer.probabilities)
 
-        if len(market.outcomes) == 2:
+        if market.is_binary:
             # use Kelly full
 
             # Fixed direction of bet, only use Kelly to adjust the bet size based on market's outcome pool size.

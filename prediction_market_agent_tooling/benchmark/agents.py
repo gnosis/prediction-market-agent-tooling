@@ -5,7 +5,7 @@ from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
-from prediction_market_agent_tooling.gtypes import Probability, OutcomeStr
+from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
@@ -129,7 +129,6 @@ class FixedAgent(AbstractBenchmarkedAgent):
         probabilities[OutcomeStr(market.outcomes[self.fixed_answer_idx])] = Probability(
             1.0
         )
-
 
         return Prediction(
             outcome_prediction=OutcomePrediction(

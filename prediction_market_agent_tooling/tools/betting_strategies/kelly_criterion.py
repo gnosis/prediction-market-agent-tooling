@@ -37,8 +37,10 @@ def get_kelly_bet_simplified(
     check_is_valid_probability(confidence)
 
     if estimated_p_yes > market_p_yes:
+        bet_direction = True
         market_prob = market_p_yes
     else:
+        bet_direction = False
         market_prob = 1 - market_p_yes
 
     # Handle the case where market_prob is 0
@@ -52,8 +54,7 @@ def get_kelly_bet_simplified(
     # Ensure bet size is non-negative does not exceed the wallet balance
     bet_size = CollateralToken(min(kelly_fraction * max_bet.value, max_bet.value))
 
-    # We always keep the same bet outcome but let Kelly dictate the bet size.
-    return SimpleBet(size=bet_size)
+    return SimpleBet(direction=bet_direction, size=bet_size)
 
 
 def get_kelly_bet_full(
@@ -144,5 +145,6 @@ def get_kelly_bet_full(
 
     # Clip the bet size to max_bet to account for rounding errors.
     return SimpleBet(
+        direction=kelly_bet_amount > 0,
         size=CollateralToken(min(max_bet.value, abs(kelly_bet_amount))),
     )

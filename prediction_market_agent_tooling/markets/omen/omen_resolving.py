@@ -179,7 +179,6 @@ def finalize_markets(
                 web3=web3,
             )
 
-        # elif resolution in (Resolution.YES, Resolution.NO):
         else:
             logger.info(f"Found resolution {resolution=} for {market.url=}")
             omen_submit_answer_market_tx(

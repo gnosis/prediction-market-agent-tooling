@@ -509,19 +509,23 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                 f"Minimum required balance {min_required_balance_to_trade} for agent {api_keys.bet_from_address=} is not met."
             )
 
-    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
-        """
-        Override this method to customize betting strategy of your agent.
-
-        Given the market and prediction, agent uses this method to calculate optimal outcome and bet size.
-        """
+    @staticmethod
+    def get_total_amount_to_bet(market: AgentMarket) -> USD:
         user_id = market.get_user_id(api_keys=APIKeys())
 
         total_amount = market.get_in_usd(market.get_tiny_bet_amount())
         existing_position = market.get_position(user_id=user_id)
         if existing_position and existing_position.total_amount_current > USD(0):
             total_amount += existing_position.total_amount_current
+        return total_amount
 
+    def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
+        """
+        Override this method to customize betting strategy of your agent.
+
+        Given the market and prediction, agent uses this method to calculate optimal outcome and bet size.
+        """
+        total_amount = self.get_total_amount_to_bet(market)
         return MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=total_amount)
 
     def build_trades(

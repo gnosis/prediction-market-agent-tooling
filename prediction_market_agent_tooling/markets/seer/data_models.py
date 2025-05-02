@@ -74,21 +74,7 @@ class SeerMarket(BaseModel):
         # 1. An invalid outcome AND
         # 2. Invalid payoutNumerator is 1.
 
-        # try:
-        #     self.outcome_as_enums[SeerOutcomeEnum.INVALID]
-        # except KeyError:
-        #     raise ValueError(
-        #         f"Market {self.id.hex()} has no invalid outcome. {self.outcomes}"
-        #     )
-
         return self.payout_reported and self.payout_numerators[-1] != 1
-
-    # @property
-    # def outcome_as_enums(self) -> dict[SeerOutcomeEnum, int]:
-    #     return {
-    #         SeerOutcomeEnum.from_string(outcome): idx
-    #         for idx, outcome in enumerate(self.outcomes)
-    #     }
 
     @property
     def is_resolved(self) -> bool:
@@ -97,18 +83,6 @@ class SeerMarket(BaseModel):
     @property
     def is_resolved_with_valid_answer(self) -> bool:
         return self.is_resolved and self.has_valid_answer
-
-    # def get_resolution_enum(self) -> t.Optional[Resolution]:
-    #     if not self.is_resolved_with_valid_answer:
-    #         return None
-    #
-    #     max_idx = self.payout_numerators.index(1)
-    #
-    #     outcome: str = self.outcomes[max_idx]
-    #     outcome_enum = SeerOutcomeEnum.from_string(outcome)
-    #     if outcome_enum.to_bool():
-    #         return Resolution.YES
-    #     return Resolution.NO
 
     def is_redeemable(self, owner: ChecksumAddress, web3: Web3 | None = None) -> bool:
         token_balances = self.get_outcome_token_balances(owner, web3)

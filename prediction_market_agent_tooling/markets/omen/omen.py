@@ -1350,27 +1350,3 @@ def get_buy_outcome_token_amount(
         - ending_outcome_balance
     )
     return result
-
-    # investment_amount_minus_fees = fees.get_after_fees(investment_amount)
-    # investment_amount_minus_fees_as_ot = OutcomeToken(
-    #     investment_amount_minus_fees.value
-    # )
-    # buy_token_pool_balance = (
-    #     yes_outcome_pool_size if buy_direction else no_outcome_pool_size
-    # )
-    #
-    # pool_balance = no_outcome_pool_size if buy_direction else yes_outcome_pool_size
-    # denominator = pool_balance + investment_amount_minus_fees_as_ot
-    # ending_outcome_balance = OutcomeToken(
-    #     buy_token_pool_balance * pool_balance / denominator
-    # )
-    #
-    # if ending_outcome_balance <= 0:
-    #     raise ValueError("must have non-zero balances")
-    #
-    # result = (
-    #     buy_token_pool_balance
-    #     + investment_amount_minus_fees_as_ot
-    #     - ending_outcome_balance
-    # )
-    # return result

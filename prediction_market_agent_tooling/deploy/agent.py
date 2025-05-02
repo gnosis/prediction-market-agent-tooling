@@ -354,7 +354,6 @@ class DeployablePredictionAgent(DeployableAgent):
         market: AgentMarket,
         verify_market: bool = True,
     ) -> ProbabilisticAnswer | None:
-        answer: ProbabilisticAnswer | None
         if verify_market and not self.verify_market(market_type, market):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
             return None

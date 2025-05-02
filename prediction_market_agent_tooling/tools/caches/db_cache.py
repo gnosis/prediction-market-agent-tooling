@@ -3,6 +3,7 @@ import inspect
 import json
 from datetime import timedelta
 from functools import wraps
+from types import UnionType
 from typing import (
     Any,
     Callable,
@@ -276,6 +277,17 @@ def convert_cached_output_to_pydantic(return_type: Any, data: Any) -> Any:
                 ): convert_cached_output_to_pydantic(value_type, v)
                 for k, v in data.items()
             }
+        # If the origin is a union and one of the unions is basemodel, convert it to it.
+        elif (
+            origin is UnionType
+            and (
+                base_model_from_args := next(
+                    (x for x in args if issubclass(x, BaseModel)), None
+                )
+            )
+            is not None
+        ):
+            return base_model_from_args.model_validate(data)
         else:
             # If the origin is not a dictionary, return the data as is
             return data

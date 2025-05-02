@@ -510,17 +510,23 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
     def get_user_positions(
         self,
-        better_address: ChecksumAddress,
+        better_address: ChecksumAddress | None = None,
+        user_position_id_in: list[HexBytes] | None = None,
         position_id_in: list[HexBytes] | None = None,
         total_balance_bigger_than: OutcomeWei | None = None,
     ) -> list[OmenUserPosition]:
         where_stms: dict[str, t.Any] = {
-            "user": better_address.lower(),
             "position_": {},
         }
 
+        if better_address is not None:
+            where_stms["user"] = better_address.lower()
+
         if total_balance_bigger_than is not None:
             where_stms["totalBalance_gt"] = total_balance_bigger_than
+
+        if user_position_id_in is not None:
+            where_stms["id_in"] = [x.hex() for x in user_position_id_in]
 
         if position_id_in is not None:
             where_stms["position_"]["positionId_in"] = [x.hex() for x in position_id_in]

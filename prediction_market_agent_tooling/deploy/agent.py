@@ -322,7 +322,7 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
-        available_markets = cls.get_binary_markets(
+        available_markets = cls.get_markets(
             limit=self.n_markets_to_fetch,
             sort_by=self.get_markets_sort_by,
             filter_by=FilterBy.OPEN,

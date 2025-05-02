@@ -116,7 +116,7 @@ from prediction_market_agent_tooling.markets.agent_market import SortBy
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 
 # Place a bet on the market closing soonest
-market = OmenAgentMarket.get_binary_markets(limit=1, sort_by=SortBy.CLOSING_SOONEST)[0]
+market = OmenAgentMarket.get_markets(limit=1, sort_by=SortBy.CLOSING_SOONEST)[0]
 market.place_bet(outcome=True, amount=market.get_bet_amount(0.1))
 
 # View your positions

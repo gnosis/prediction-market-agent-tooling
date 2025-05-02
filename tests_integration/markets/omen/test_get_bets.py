@@ -12,7 +12,7 @@ from tests.utils import RUN_PAID_TESTS
 
 @pytest.mark.skipif(not RUN_PAID_TESTS, reason="This test costs money to run.")
 def test_match_bet_ids_with_get_subgraph_bets() -> None:
-    market = OmenAgentMarket.get_binary_markets(
+    market = OmenAgentMarket.get_markets(
         limit=1,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.OPEN,

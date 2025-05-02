@@ -84,7 +84,7 @@ def test_market_liquidity() -> None:
     Get open markets sorted by 'closing soonest'. Verify that liquidity is
     greater than 0
     """
-    markets = OmenAgentMarket.get_binary_markets(
+    markets = OmenAgentMarket.get_markets(
         limit=10,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.OPEN,
@@ -186,7 +186,7 @@ def test_get_buy_token_amount(direction: bool) -> None:
     'live' market (i.e. where the token pool matches that of the current smart
     contract state)
     """
-    markets = OmenAgentMarket.get_binary_markets(
+    markets = OmenAgentMarket.get_markets(
         limit=10,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.OPEN,

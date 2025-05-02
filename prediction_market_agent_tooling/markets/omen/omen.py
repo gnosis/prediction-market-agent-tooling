@@ -362,7 +362,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_binary_markets(
+    def get_markets(
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,

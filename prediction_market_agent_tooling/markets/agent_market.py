@@ -278,7 +278,7 @@ class AgentMarket(BaseModel):
         return {outcome: prob for outcome, prob in zip(outcomes, probs)}
 
     @staticmethod
-    def get_binary_markets(
+    def get_markets(
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,

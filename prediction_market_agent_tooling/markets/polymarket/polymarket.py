@@ -55,7 +55,7 @@ class PolymarketAgentMarket(AgentMarket):
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     @staticmethod
-    def get_binary_markets(
+    def get_markets(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,

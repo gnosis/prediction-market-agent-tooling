@@ -94,7 +94,7 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
         MarketType.METACULUS,
         MarketType.POLYMARKET,
     ]
-    market = market_type.market_class.get_binary_markets(
+    market = market_type.market_class.get_markets(
         limit=1,
         sort_by=SortBy.NONE,
         filter_by=FilterBy.OPEN,
@@ -122,7 +122,7 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
 )
 def test_get_markets(market_type: MarketType) -> None:
     limit = 100
-    markets = market_type.market_class.get_binary_markets(
+    markets = market_type.market_class.get_markets(
         limit=limit, sort_by=SortBy.NONE, filter_by=FilterBy.OPEN
     )
     assert len(markets) <= limit

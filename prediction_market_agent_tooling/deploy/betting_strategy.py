@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from math import prod
+from typing import Sequence
 
 from scipy.optimize import minimize_scalar
 
@@ -161,6 +162,16 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
         )[0]
         return most_likely_outcome
 
+    @staticmethod
+    def get_other_direction(
+        outcomes: Sequence[OutcomeStr], direction: OutcomeStr
+    ) -> OutcomeStr:
+        # We get the first direction which is != direction.
+        other_direction = [i for i in outcomes if i != direction][0]
+        if INVALID_OUTCOME_LOWERCASE_IDENTIFIER in other_direction.lower():
+            raise ValueError("Invalid outcome found as opposite direction. Exitting.")
+        return other_direction
+
     def calculate_trades(
         self,
         existing_position: ExistingPosition | None,
@@ -224,28 +235,26 @@ class KellyBettingStrategy(BettingStrategy):
     def maximum_possible_bet_amount(self) -> USD:
         return self.max_bet_amount
 
-    def calculate_trades(
-        self,
-        existing_position: ExistingPosition | None,
-        answer: ProbabilisticAnswer,
+    @staticmethod
+    def get_kelly_bet(
         market: AgentMarket,
-    ) -> list[Trade]:
-        outcome_token_pool = check_not_none(market.outcome_token_pool)
-        # We consider the p_yes as the direction with highest probability.
-        direction = MultiCategoricalMaxAccuracyBettingStrategy.calculate_direction(
-            market, answer
+        max_bet_amount: USD,
+        direction: OutcomeStr,
+        other_direction: OutcomeStr,
+        answer: ProbabilisticAnswer,
+        override_p_yes: float | None = None,
+    ) -> SimpleBet:
+        estimated_p_yes = (
+            answer.probabilities[direction] if not override_p_yes else override_p_yes
         )
-        # We get the first direction which is != direction.
-        other_direction = [i for i in market.outcomes if i != direction][0]
-        if INVALID_OUTCOME_LOWERCASE_IDENTIFIER in other_direction.lower():
-            raise ValueError("Invalid outcome found as opposite direction. Exitting.")
 
+        outcome_token_pool = check_not_none(market.outcome_token_pool)
         if not market.is_binary:
             # use Kelly simple, since Kelly full only supports 2 outcomes
             kelly_bet = get_kelly_bet_simplified(
-                max_bet=market.get_usd_in_token(self.max_bet_amount),
+                max_bet=market.get_usd_in_token(max_bet_amount),
                 market_p_yes=market.probabilities[direction],
-                estimated_p_yes=answer.probabilities[direction],
+                estimated_p_yes=estimated_p_yes,
                 confidence=answer.confidence,
             )
         else:
@@ -256,11 +265,35 @@ class KellyBettingStrategy(BettingStrategy):
             kelly_bet = get_kelly_bet_full(
                 yes_outcome_pool_size=direction_to_bet_pool_size,
                 no_outcome_pool_size=other_direction_pool_size,
-                estimated_p_yes=answer.probabilities[direction],
-                max_bet=market.get_usd_in_token(self.max_bet_amount),
+                estimated_p_yes=estimated_p_yes,
+                max_bet=market.get_usd_in_token(max_bet_amount),
                 confidence=answer.confidence,
                 fees=market.fees,
             )
+        return kelly_bet
+
+    def calculate_trades(
+        self,
+        existing_position: ExistingPosition | None,
+        answer: ProbabilisticAnswer,
+        market: AgentMarket,
+    ) -> list[Trade]:
+        # We consider the p_yes as the direction with highest probability.
+        direction = MultiCategoricalMaxAccuracyBettingStrategy.calculate_direction(
+            market, answer
+        )
+        # We get the first direction which is != direction.
+        other_direction = [i for i in market.outcomes if i != direction][0]
+        if INVALID_OUTCOME_LOWERCASE_IDENTIFIER in other_direction.lower():
+            raise ValueError("Invalid outcome found as opposite direction. Exitting.")
+
+        kelly_bet = self.get_kelly_bet(
+            market=market,
+            max_bet_amount=self.max_bet_amount,
+            direction=direction,
+            other_direction=other_direction,
+            answer=answer,
+        )
 
         kelly_bet_size = kelly_bet.size
         if self.max_price_impact:
@@ -379,40 +412,30 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         adjusted_bet_amount_usd = self.adjust_bet_amount(existing_position, market)
-        adjusted_bet_amount_token = market.get_usd_in_token(adjusted_bet_amount_usd)
-        outcome_token_pool = check_not_none(market.outcome_token_pool)
 
         outcome = get_most_probable_outcome(answer.probabilities)
 
-        if market.is_binary:
-            # use Kelly full
-
-            # Fixed direction of bet, only use Kelly to adjust the bet size based on market's outcome pool size.
-            estimated_p_yes = (
-                1.0 if outcome == market.get_outcome_str_from_bool(True) else 0.0
+        direction = MultiCategoricalMaxAccuracyBettingStrategy.calculate_direction(
+            market, answer
+        )
+        # We get the first direction which is != direction.
+        other_direction = (
+            MultiCategoricalMaxAccuracyBettingStrategy.get_other_direction(
+                outcomes=market.outcomes, direction=direction
             )
+        )
 
-            kelly_bet = get_kelly_bet_full(
-                yes_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(True)
-                ],
-                no_outcome_pool_size=outcome_token_pool[
-                    market.get_outcome_str_from_bool(False)
-                ],
-                estimated_p_yes=estimated_p_yes,
-                max_bet=adjusted_bet_amount_token,
-                confidence=1.0,
-                fees=market.fees,
-            )
+        # We ignore the direction nudge given by Kelly, hence we assume we have a perfect prediction.
+        estimated_p_yes = 1.0
 
-        else:
-            # use Kelly simple, since Kelly full only supports 2 outcomes
-            kelly_bet = get_kelly_bet_simplified(
-                max_bet=adjusted_bet_amount_token,
-                market_p_yes=market.probabilities[outcome],
-                estimated_p_yes=answer.probabilities[outcome],
-                confidence=answer.confidence,
-            )
+        kelly_bet = KellyBettingStrategy.get_kelly_bet(
+            market=market,
+            max_bet_amount=adjusted_bet_amount_usd,
+            direction=direction,
+            other_direction=other_direction,
+            answer=answer,
+            override_p_yes=estimated_p_yes,
+        )
 
         kelly_bet_size_usd = market.get_token_in_usd(kelly_bet.size)
 

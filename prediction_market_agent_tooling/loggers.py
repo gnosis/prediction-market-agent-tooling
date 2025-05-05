@@ -2,12 +2,12 @@ import builtins
 import logging
 import sys
 import typing as t
-import warnings
 from enum import Enum
-from pythonjsonlogger import jsonlogger
 
+import typer.main
 from loguru import logger
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pythonjsonlogger import jsonlogger
 
 
 class LogFormat(str, Enum):
@@ -79,6 +79,7 @@ def patch_logger() -> None:
         handler = _CustomJsonFormatter.get_handler()
         print_logging = print_using_logger_info
         sys.excepthook = _handle_exception
+        typer.main.except_hook = _handle_exception  # type: ignore # Monkey patching, it's messy but it works.
 
     elif config.LOG_FORMAT == LogFormat.DEFAULT:
         handler = None

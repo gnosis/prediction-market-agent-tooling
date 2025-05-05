@@ -12,8 +12,8 @@ from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
     OutcomeStr,
-    OutcomeToken,
     Probability,
+    OutcomeWei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
@@ -333,14 +333,14 @@ class KellyBettingStrategy(BettingStrategy):
         self,
         outcome_idx: int,
         bet_amount: CollateralToken,
-        pool_balances: list[float],
+        pool_balances: list[OutcomeWei],
         fees: MarketFees,
     ) -> float:
-        prices = self.get_outcome_prices_from_balances(pool_balances)
+        prices = AgentMarket.compute_fpmm_probabilities(pool_balances)
         expected_price = prices[outcome_idx]
 
         tokens_to_buy = get_buy_outcome_token_amount(
-            bet_amount, outcome_idx, [OutcomeToken(i) for i in pool_balances], fees
+            bet_amount, outcome_idx, [i.as_outcome_token for i in pool_balances], fees
         )
 
         actual_price = bet_amount.value / tokens_to_buy.value
@@ -372,8 +372,9 @@ class KellyBettingStrategy(BettingStrategy):
             )
             return kelly_bet.size
 
-        pool_balances = [i.value for i in market.outcome_token_pool.values()]
-        total_pool_balance = sum(pool_balances)
+        pool_balances = [i.as_outcome_wei for i in market.outcome_token_pool.values()]
+        # stay float for compatibility with `minimize_scalar`
+        total_pool_balance = sum([i.value for i in market.outcome_token_pool.values()])
 
         # The bounds below have been found to work heuristically.
         optimized_bet_amount = minimize_scalar(

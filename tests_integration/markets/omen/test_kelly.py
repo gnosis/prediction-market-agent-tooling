@@ -121,7 +121,10 @@ def assert_price_impact_converges(
     )
     price_impact = kelly.calculate_price_impact_for_bet_amount(
         outcome_idx=outcome_idx,
-        pool_balances=[yes_outcome_pool_size.value, no_outcome_pool_size.value],
+        pool_balances=[
+            yes_outcome_pool_size.as_outcome_wei,
+            no_outcome_pool_size.as_outcome_wei,
+        ],
         bet_amount=max_price_impact_bet_amount,
         fees=omen_agent_market.fees,
     )
@@ -137,7 +140,7 @@ def assert_price_impact(
     no: OutcomeToken,
     kelly: KellyBettingStrategy,
 ) -> None:
-    pool_balances = [yes.value, no.value]
+    pool_balances = [yes.as_outcome_wei, no.as_outcome_wei]
     outcome_idx = 0 if buy_direction else 1
     price_impact = kelly.calculate_price_impact_for_bet_amount(
         outcome_idx=outcome_idx,

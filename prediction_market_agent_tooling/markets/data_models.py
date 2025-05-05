@@ -3,6 +3,9 @@ from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, computed_field
 
+from prediction_market_agent_tooling.deploy.constants import (
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
+)
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
@@ -10,7 +13,6 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
-from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -82,7 +84,7 @@ class ProbabilisticAnswer(BaseModel):
             (
                 p
                 for o, p in self.probabilities.items()
-                if o.capitalize() == OMEN_TRUE_OUTCOME
+                if o.lower() == YES_OUTCOME_LOWERCASE_IDENTIFIER
             ),
             None,
         )

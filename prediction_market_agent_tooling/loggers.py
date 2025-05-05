@@ -63,12 +63,12 @@ def _handle_exception(
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
-def patch_logger() -> None:
+def patch_logger(force_patch: bool = False) -> None:
     """
     Function to patch loggers according to the deployed environment.
     Patches Loguru's logger, Python's default logger, warnings library and also monkey-patch print function as many libraries just use it.
     """
-    if not getattr(logger, "_patched", False):
+    if force_patch or not getattr(logger, "_patched", False):
         logger._patched = True  # type: ignore[attr-defined] # Hacky way to store a flag on the logger object, to not patch it multiple times.
     else:
         return

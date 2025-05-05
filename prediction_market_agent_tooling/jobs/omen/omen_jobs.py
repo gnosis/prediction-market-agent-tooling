@@ -56,7 +56,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
     ) -> t.Sequence["OmenJobAgentMarket"]:
-        markets = OmenSubgraphHandler().get_omen_binary_markets_simple(
+        markets = OmenSubgraphHandler().get_omen_markets_simple(
             limit=limit,
             filter_by=filter_by,
             sort_by=sort_by,

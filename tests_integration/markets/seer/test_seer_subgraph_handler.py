@@ -14,7 +14,7 @@ BINARY_CONDITIONAL_MARKET_ID = HexBytes("0xbc82402814f7db8736980c0debb01df6aad88
 
 
 def test_get_all_seer_markets(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    markets = seer_subgraph_handler_test.get_binary_markets(filter_by=FilterBy.NONE)
+    markets = seer_subgraph_handler_test.get_markets(filter_by=FilterBy.NONE)
     assert len(markets) > 1
 
 
@@ -28,7 +28,7 @@ def test_get_seer_market_by_id(seer_subgraph_handler_test: SeerSubgraphHandler) 
 def test_conditional_market_not_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
-    markets = seer_subgraph_handler_test.get_binary_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         include_conditional_markets=False, filter_by=FilterBy.NONE
     )
     market_ids = [m.id for m in markets]
@@ -38,7 +38,7 @@ def test_conditional_market_not_retrieved(
 def test_conditional_market_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
-    markets = seer_subgraph_handler_test.get_binary_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         include_conditional_markets=True, filter_by=FilterBy.NONE
     )
     market_ids = [m.id for m in markets]
@@ -48,7 +48,7 @@ def test_conditional_market_retrieved(
 def test_binary_market_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
-    markets = seer_subgraph_handler_test.get_binary_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         include_conditional_markets=True, filter_by=FilterBy.NONE
     )
     market_ids = [m.id for m in markets]
@@ -76,7 +76,7 @@ def test_get_binary_markets_newest_open(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     # test method get_binary_markets
-    markets = seer_subgraph_handler_test.get_binary_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         sort_by=SortBy.NEWEST, filter_by=FilterBy.OPEN
     )
     # We expect at least 1 open markets
@@ -98,7 +98,7 @@ def test_binary_markets_retrieved(
     filter_by: FilterBy,
     sort_by: SortBy,
 ) -> None:
-    markets = seer_subgraph_handler_test.get_binary_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         limit=1, sort_by=sort_by, filter_by=filter_by, include_categorical_markets=True
     )
     # We expect at least 1 market for the given filter

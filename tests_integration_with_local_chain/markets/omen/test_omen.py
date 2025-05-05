@@ -262,7 +262,7 @@ def test_omen_fund_and_remove_fund_market(
 ) -> None:
     # You can double check your address at https://gnosisscan.io/ afterwards or at the market's address.
     market = OmenAgentMarket.from_data_model(
-        OmenSubgraphHandler().get_omen_binary_markets_simple(
+        OmenSubgraphHandler().get_omen_markets_simple(
             limit=1,
             filter_by=FilterBy.OPEN,
             sort_by=SortBy.NEWEST,
@@ -307,7 +307,7 @@ def pick_binary_market(
         tuple[ChecksumAddress, ...] | None
     ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
 ) -> OmenMarket:
-    return subgraph_handler.get_omen_binary_markets_simple(
+    return subgraph_handler.get_omen_markets_simple(
         limit=1,
         sort_by=sort_by,
         filter_by=filter_by,
@@ -428,7 +428,7 @@ def test_place_bet_with_autodeposit(
     test_keys: APIKeys,
 ) -> None:
     market = OmenAgentMarket.from_data_model(
-        OmenSubgraphHandler().get_omen_binary_markets_simple(
+        OmenSubgraphHandler().get_omen_markets_simple(
             limit=1,
             filter_by=FilterBy.OPEN,
             sort_by=SortBy.NEWEST,
@@ -541,7 +541,7 @@ def test_place_bet_with_prev_existing_positions(
 ) -> None:
     # Fetch an open binary market.
     sh = OmenSubgraphHandler()
-    market = sh.get_omen_binary_markets_simple(
+    market = sh.get_omen_markets_simple(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.NEWEST,

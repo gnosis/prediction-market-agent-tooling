@@ -372,7 +372,7 @@ class OmenAgentMarket(AgentMarket):
     ) -> t.Sequence["OmenAgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)
-            for m in OmenSubgraphHandler().get_omen_binary_markets_simple(
+            for m in OmenSubgraphHandler().get_omen_markets_simple(
                 limit=limit,
                 sort_by=sort_by,
                 filter_by=filter_by,
@@ -532,7 +532,7 @@ class OmenAgentMarket(AgentMarket):
         # We include categorical markets below simply because we are already filtering on condition_ids.
         omen_markets: dict[HexBytes, OmenMarket] = {
             m.condition.id: m
-            for m in sgh.get_omen_binary_markets(
+            for m in sgh.get_omen_markets(
                 limit=None,
                 condition_id_in=list(omen_positions_dict.keys()),
                 include_categorical_markets=True,

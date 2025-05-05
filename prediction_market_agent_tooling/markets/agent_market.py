@@ -9,6 +9,11 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.constants import (
+    INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    NO_OUTCOME_LOWERCASE_IDENTIFIER,
+)
 from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
@@ -123,12 +128,12 @@ class AgentMarket(BaseModel):
 
         lowercase_outcomes = [str(outcome).lower() for outcome in self.outcomes]
 
-        has_yes = "yes" in lowercase_outcomes
-        has_no = "no" in lowercase_outcomes
+        has_yes = YES_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
+        has_no = NO_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
 
         if len(lowercase_outcomes) == 3:
             invalid_outcome = lowercase_outcomes[-1]
-            has_invalid = "invalid" in invalid_outcome
+            has_invalid = INVALID_OUTCOME_LOWERCASE_IDENTIFIER in invalid_outcome
             return has_yes and has_no and has_invalid
 
         return has_yes and has_no

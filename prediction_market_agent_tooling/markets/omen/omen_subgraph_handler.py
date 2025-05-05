@@ -330,7 +330,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         return sort_direction, sort_by_field
 
-    def get_omen_binary_markets_simple(
+    def get_omen_markets_simple(
         self,
         limit: t.Optional[int],
         # Enumerated values for simpler usage.
@@ -347,7 +347,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         creator_in: t.Sequence[HexAddress] | None = None,
     ) -> t.List[OmenMarket]:
         """
-        Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
+        Simplified `get_omen_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
         """
         # These values need to be set according to the filter_by value, so they can not be passed as arguments.
         resolved: bool | None = None
@@ -369,7 +369,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
-        all_markets = self.get_omen_binary_markets(
+        all_markets = self.get_omen_markets(
             limit=limit,
             resolved=resolved,
             question_opened_after=opened_after,
@@ -386,7 +386,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         return all_markets
 
-    def get_omen_binary_markets(
+    def get_omen_markets(
         self,
         limit: t.Optional[int],
         creator: HexAddress | None = None,
@@ -415,7 +415,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         include_categorical_markets: bool = True,
     ) -> t.List[OmenMarket]:
         """
-        Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
+        Complete method to fetch Omen  markets with various filters, use `get_omen_markets_simple` for simplified version that uses FilterBy and SortBy enums.
         """
         where_stms = self._build_where_statements(
             creator=creator,
@@ -920,7 +920,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         unique_condition_ids: list[HexBytes] = list(
             set(sum([u.position.conditionIds for u in user_positions], []))
         )
-        markets = self.get_omen_binary_markets(
+        markets = self.get_omen_markets(
             limit=sys.maxsize, condition_id_in=unique_condition_ids
         )
         return markets
@@ -930,7 +930,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
     ) -> OmenMarket:
         """Markets and user positions are uniquely connected via condition_ids"""
         condition_ids = user_position.position.conditionIds
-        markets = self.get_omen_binary_markets(limit=1, condition_id_in=condition_ids)
+        markets = self.get_omen_markets(limit=1, condition_id_in=condition_ids)
         if len(markets) != 1:
             raise ValueError(
                 f"Incorrect number of markets fetched {len(markets)}, expected 1."

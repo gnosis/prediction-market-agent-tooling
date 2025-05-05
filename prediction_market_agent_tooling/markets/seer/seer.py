@@ -234,7 +234,7 @@ class SeerAgentMarket(AgentMarket):
         web3 = RPCConfig().get_web3()
         subgraph = SeerSubgraphHandler()
 
-        closed_markets = subgraph.get_binary_markets(
+        closed_markets = subgraph.get_markets(
             filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST
         )
         filtered_markets = SeerAgentMarket._filter_markets_contained_in_trades(
@@ -315,7 +315,7 @@ class SeerAgentMarket(AgentMarket):
         fetch_categorical_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
-        markets = seer_subgraph.get_binary_markets(
+        markets = seer_subgraph.get_markets(
             limit=limit,
             sort_by=sort_by,
             filter_by=filter_by,

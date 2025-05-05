@@ -5,6 +5,10 @@ from typing import Any
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
+from prediction_market_agent_tooling.deploy.constants import (
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    NO_OUTCOME_LOWERCASE_IDENTIFIER,
+)
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
@@ -101,10 +105,19 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             # Create single OR conditions with all variations
             yes_stms["or"] = [
                 {"outcomes_contains": [variation]}
-                for variation in ["yes", "Yes", "YES"]
+                for variation in [
+                    YES_OUTCOME_LOWERCASE_IDENTIFIER,
+                    YES_OUTCOME_LOWERCASE_IDENTIFIER.capitalize(),
+                    YES_OUTCOME_LOWERCASE_IDENTIFIER.upper(),
+                ]
             ]
             no_stms["or"] = [
-                {"outcomes_contains": [variation]} for variation in ["no", "No", "NO"]
+                {"outcomes_contains": [variation]}
+                for variation in [
+                    NO_OUTCOME_LOWERCASE_IDENTIFIER,
+                    NO_OUTCOME_LOWERCASE_IDENTIFIER.capitalize(),
+                    NO_OUTCOME_LOWERCASE_IDENTIFIER.upper(),
+                ]
             ]
 
         where_stms: dict[str, t.Any] = {"and": [and_stms, yes_stms, no_stms]}
@@ -136,7 +149,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         return sort_direction, sort_by_field
 
-    def get_binary_markets(
+    def get_markets(
         self,
         filter_by: FilterBy,
         sort_by: SortBy = SortBy.NONE,

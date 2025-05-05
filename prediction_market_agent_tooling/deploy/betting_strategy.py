@@ -4,6 +4,9 @@ from math import prod
 from scipy.optimize import minimize_scalar
 
 from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
+from prediction_market_agent_tooling.deploy.constants import (
+    INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
+)
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
@@ -234,7 +237,7 @@ class KellyBettingStrategy(BettingStrategy):
         )
         # We get the first direction which is != direction.
         other_direction = [i for i in market.outcomes if i != direction][0]
-        if "invalid" in other_direction.lower():
+        if INVALID_OUTCOME_LOWERCASE_IDENTIFIER in other_direction.lower():
             raise ValueError("Invalid outcome found as opposite direction. Exitting.")
 
         if not market.is_binary:

@@ -39,7 +39,7 @@ def test_omen_pick_binary_market() -> None:
 
 def test_p_yes() -> None:
     # Find a market with outcomeTokenMarginalPrices and verify that p_yes is correct.
-    for m in OmenSubgraphHandler().get_omen_binary_markets_simple(
+    for m in OmenSubgraphHandler().get_omen_markets_simple(
         limit=200,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
@@ -63,7 +63,7 @@ def test_omen_market_close_time() -> None:
     time_now = utcnow()
     markets = [
         OmenAgentMarket.from_data_model(m)
-        for m in OmenSubgraphHandler().get_omen_binary_markets_simple(
+        for m in OmenSubgraphHandler().get_omen_markets_simple(
             limit=100,
             sort_by=SortBy.CLOSING_SOONEST,
             filter_by=FilterBy.OPEN,
@@ -307,7 +307,7 @@ def pick_binary_market(
     ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
 ) -> OmenMarket:
     subgraph_handler = OmenSubgraphHandler()
-    return subgraph_handler.get_omen_binary_markets_simple(
+    return subgraph_handler.get_omen_markets_simple(
         limit=1,
         sort_by=sort_by,
         filter_by=filter_by,

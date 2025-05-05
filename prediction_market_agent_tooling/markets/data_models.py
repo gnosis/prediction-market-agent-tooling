@@ -149,7 +149,7 @@ class PlacedTrade(Trade):
 class SimulatedBetDetail(BaseModel):
     strategy: str
     url: str
-    market_prob_multi: dict[OutcomeStr, Probability]
+    probabilities: dict[OutcomeStr, Probability]
     agent_prob_multi: dict[OutcomeStr, Probability]
     agent_conf: float
     org_bet: CollateralToken

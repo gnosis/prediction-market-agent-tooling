@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from math import prod
 from typing import Sequence
 
 from scipy.optimize import minimize_scalar
@@ -314,20 +313,6 @@ class KellyBettingStrategy(BettingStrategy):
             existing_position, target_position, market=market
         )
         return trades
-
-    def get_outcome_prices_from_balances(self, balances: list[float]) -> list[float]:
-        num_balances = len(balances)
-        prices = []
-
-        # Compute the product of all outcome balances except i for each i
-        for i in range(num_balances):
-            numerator = prod([balances[j] for j in range(num_balances) if j != i])
-            prices.append(numerator)
-
-        denominator = sum(prices)
-        normalized_prices = [p / denominator for p in prices]
-
-        return normalized_prices
 
     def calculate_price_impact_for_bet_amount(
         self,

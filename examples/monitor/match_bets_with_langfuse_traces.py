@@ -156,7 +156,7 @@ def calc_metrics(
         simulation_detail = SimulatedBetDetail(
             strategy=repr(strategy),
             url=bet_with_trace.trace.market.url,
-            market_prob_multi=bet_with_trace.trace.market.probabilities,
+            probabilities=bet_with_trace.trace.market.probabilities,
             agent_prob_multi=bet_with_trace.trace.answer.probabilities,
             agent_conf=round(bet_with_trace.trace.answer.confidence, 4),
             org_bet=round(bet_with_trace.bet.amount, 4),

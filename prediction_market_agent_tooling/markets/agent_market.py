@@ -121,7 +121,7 @@ class AgentMarket(BaseModel):
         if len(self.outcomes) not in [2, 3]:
             return False
 
-        lowercase_outcomes = [str(outcome).lower() for outcome in self.outcomes]
+        lowercase_outcomes = [outcome.lower() for outcome in self.outcomes]
 
         has_yes = "yes" in lowercase_outcomes
         has_no = "no" in lowercase_outcomes

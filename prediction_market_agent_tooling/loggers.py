@@ -129,8 +129,7 @@ def print_using_logger_info(
     end: str = "\n",
     **kwargs: t.Any,
 ) -> None:
-    message = sep.join(map(str, values)) + end
-    logger.info(message)
+    logger.info(sep.join(map(str, values)) + end)
 
 
 patch_logger()

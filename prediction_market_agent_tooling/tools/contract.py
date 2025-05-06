@@ -60,7 +60,6 @@ class ContractBaseClass(BaseModel):
     """
 
     CHAIN_ID: t.ClassVar[ChainID]
-    CHAIN_RPC_URL: t.ClassVar[str]
 
     abi: ABI
     address: ChecksumAddress
@@ -165,7 +164,7 @@ class ContractBaseClass(BaseModel):
 
     @classmethod
     def get_web3(cls) -> Web3:
-        return Web3(Web3.HTTPProvider(cls.CHAIN_RPC_URL))
+        return RPCConfig().get_web3()
 
 
 class ContractProxyBaseClass(ContractBaseClass):
@@ -501,7 +500,6 @@ class ContractOnGnosisChain(ContractBaseClass):
     """
 
     CHAIN_ID = RPCConfig().chain_id
-    CHAIN_RPC_URL = RPCConfig().gnosis_rpc_url
 
 
 class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):

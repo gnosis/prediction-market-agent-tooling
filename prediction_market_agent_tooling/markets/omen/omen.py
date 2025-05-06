@@ -1071,25 +1071,22 @@ def omen_redeem_full_position_tx(
         logger.debug("Market not yet resolved, not possible to claim")
         return
 
-    original_balance = collateral_token_contract.balanceOf(from_address, web3=web3)
-    conditional_token_contract.redeemPositions(
+    redeem_event = conditional_token_contract.redeemPositions(
         api_keys=api_keys,
         collateral_token_address=market.collateral_token_contract_address_checksummed,
         condition_id=market.condition.id,
         index_sets=market.condition.index_sets,
         web3=web3,
     )
-    new_balance = collateral_token_contract.balanceOf(from_address, web3=web3)
-    balance_diff = new_balance - original_balance
 
     logger.info(
-        f"Redeemed {balance_diff.as_token} {collateral_token_contract.symbol_cached(web3=web3)} from market {market.question=} ({market.url})."
+        f"Redeemed {redeem_event.payout.as_token} {collateral_token_contract.symbol_cached(web3=web3)} from market {market.question=} ({market.url})."
     )
 
     if auto_withdraw:
         auto_withdraw_collateral_token(
             collateral_token_contract=collateral_token_contract,
-            amount_wei=balance_diff,
+            amount_wei=redeem_event.payout,
             api_keys=api_keys,
             web3=web3,
         )
@@ -1231,25 +1228,22 @@ def redeem_from_all_user_positions(
             user_position.position.get_collateral_token_contract(web3=web3)
         )
 
-        original_balance = collateral_token_contract.balanceOf(public_key, web3=web3)
-        conditional_token_contract.redeemPositions(
+        redeem_event = conditional_token_contract.redeemPositions(
             api_keys=api_keys,
             collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
             condition_id=condition_id,
             index_sets=user_position.position.indexSets,
             web3=web3,
         )
-        new_balance = collateral_token_contract.balanceOf(public_key, web3=web3)
-        balance_diff = new_balance - original_balance
 
         logger.info(
-            f"Redeemed {balance_diff.as_token} {collateral_token_contract.symbol_cached(web3=web3)} from position {user_position.id=}."
+            f"Redeemed {redeem_event.payout.as_token} {collateral_token_contract.symbol_cached(web3=web3)} from position {user_position.id=}."
         )
 
         if auto_withdraw:
             auto_withdraw_collateral_token(
                 collateral_token_contract=collateral_token_contract,
-                amount_wei=balance_diff,
+                amount_wei=redeem_event.payout,
                 api_keys=api_keys,
                 web3=web3,
             )

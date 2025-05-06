@@ -33,6 +33,8 @@ class LogConfig(BaseSettings):
 
 
 class _CustomJsonFormatter(jsonlogger.JsonFormatter):
+    MAX_MESSAGE_LENGTH = 50_000
+
     def add_fields(
         self,
         log_record: dict[str, t.Any],
@@ -44,6 +46,12 @@ class _CustomJsonFormatter(jsonlogger.JsonFormatter):
         if log_record.get("levelname"):
             log_record["level"] = log_record["levelname"]
             log_record["severity"] = log_record["levelname"]
+
+        message = str(log_record.get("message", ""))
+        if message and len(message) > self.MAX_MESSAGE_LENGTH:
+            log_record["message"] = (
+                message[: self.MAX_MESSAGE_LENGTH] + " . . . TRUNCATED . . ."
+            )
 
     @staticmethod
     def get_handler() -> logging.StreamHandler:  # type: ignore # Seems correct, but mypy doesn't like it.
@@ -78,6 +86,8 @@ def patch_logger(force_patch: bool = False) -> None:
     if config.LOG_FORMAT == LogFormat.GCP:
         handler = _CustomJsonFormatter.get_handler()
         print_logging = print_using_logger_info
+
+        # Patch raised exceptions.
         sys.excepthook = _handle_exception
         typer.main.except_hook = _handle_exception  # type: ignore # Monkey patching, it's messy but it works.
 

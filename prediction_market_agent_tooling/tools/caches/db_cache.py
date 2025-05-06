@@ -28,6 +28,8 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 from prediction_market_agent_tooling.tools.utils import utcnow
 
+DB_CACHE_LOG_PREFIX = "[db-cache]"
+
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
 
 
@@ -54,8 +56,7 @@ def db_cache(
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
-) -> Callable[[FunctionT], FunctionT]:
-    ...
+) -> Callable[[FunctionT], FunctionT]: ...
 
 
 @overload
@@ -68,8 +69,7 @@ def db_cache(
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
-) -> FunctionT:
-    ...
+) -> FunctionT: ...
 
 
 def db_cache(
@@ -173,7 +173,7 @@ def db_cache(
         if cached_result:
             logger.info(
                 # Keep the special [case-hit] identifier so we can easily track it in GCP.
-                f"[cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
+                f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
             )
             if is_pydantic_model:
                 # If the output contains any Pydantic models, we need to initialise them.
@@ -184,7 +184,7 @@ def db_cache(
                 except ValueError as e:
                     # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
                     logger.warning(
-                        f"Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
+                        f"{DB_CACHE_LOG_PREFIX} [cache-miss] Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
                     )
                     cached_result = None
             else:
@@ -194,7 +194,7 @@ def db_cache(
         computed_result = func(*args, **kwargs)
         # Keep the special [case-miss] identifier so we can easily track it in GCP.
         logger.info(
-            f"[cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
+            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
         )
 
         # If postgres access was specified, save it.
@@ -212,16 +212,18 @@ def db_cache(
                 with DBManager(
                     api_keys.sqlalchemy_db_url.get_secret_value()
                 ).get_session() as session:
-                    logger.info(f"Saving {cache_entry} into database.")
+                    logger.info(
+                        f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database."
+                    )
                     session.add(cache_entry)
                     session.commit()
             except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
                 (logger.error if log_error_on_unsavable_data else logger.warning)(
-                    f"Failed to save {cache_entry} into database, ignoring, because: {e}"
+                    f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring, because: {e}"
                 )
             except Exception:
                 logger.exception(
-                    f"Failed to save {cache_entry} into database, ignoring."
+                    f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring."
                 )
 
         return computed_result

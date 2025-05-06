@@ -434,7 +434,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
 class MetriSuperGroup(ContractERC20OnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
-        METRI_SUPER_GROUP_CONTRACT_ADDRESS
+        "0x7147A7405fCFe5CFa30c6d5363f9f357a317d082"
     )
 
 

@@ -195,7 +195,6 @@ class DeployablePredictionAgent(DeployableAgent):
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
     trade_on_markets_created_after: DatetimeUTC | None = None
     get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
-    fetch_categorical_markets: bool = False
 
     # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
@@ -316,6 +315,16 @@ class DeployablePredictionAgent(DeployableAgent):
         raise NotImplementedError(
             "Either this method, or answer_categorical_market, must be implemented by the subclass."
         )
+
+    @property
+    def fetch_categorical_markets(self) -> bool:
+        # Check if the subclass has implemented the answer_categorical_market method, if yes, fetch categorical markets as well.
+        if (
+            self.answer_categorical_market.__func__  # type: ignore[attr-defined] # This works just fine, but mypy doesn't know about it for some reason.
+            is not DeployablePredictionAgent.answer_categorical_market
+        ):
+            return True
+        return False
 
     def get_markets(
         self,

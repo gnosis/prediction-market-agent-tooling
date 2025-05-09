@@ -10,7 +10,6 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 
 
 class DeployableCoinFlipAgent(DeployableTraderAgent):
-    fetch_categorical_markets = True
     get_markets_sort_by = SortBy.HIGHEST_LIQUIDITY
 
     def verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:

@@ -80,6 +80,10 @@ class ProbabilisticAnswer(BaseModel):
     confidence: float
     reasoning: str | None = None
 
+    @property
+    def p_no(self) -> Probability:
+        return Probability(1 - self.p_yes)
+
 
 class CategoricalProbabilisticAnswer(BaseModel):
     probabilities: dict[OutcomeStr, Probability]

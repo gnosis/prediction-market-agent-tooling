@@ -166,7 +166,7 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
         outcomes: Sequence[OutcomeStr], direction: OutcomeStr
     ) -> OutcomeStr:
         # We get the first direction which is != direction.
-        other_direction = [i for i in outcomes if i != direction][0]
+        other_direction = [i for i in outcomes if i.lower() != direction.lower()][0]
         if INVALID_OUTCOME_LOWERCASE_IDENTIFIER in other_direction.lower():
             raise ValueError("Invalid outcome found as opposite direction. Exitting.")
         return other_direction
@@ -247,7 +247,6 @@ class KellyBettingStrategy(BettingStrategy):
             answer.probabilities[direction] if not override_p_yes else override_p_yes
         )
 
-        outcome_token_pool = check_not_none(market.outcome_token_pool)
         if not market.is_binary:
             # use Kelly simple, since Kelly full only supports 2 outcomes
             kelly_bet = get_kelly_bet_simplified(
@@ -259,8 +258,12 @@ class KellyBettingStrategy(BettingStrategy):
         else:
             # We consider only binary markets, since the Kelly strategy is not yet implemented
             # for markets with more than 2 outcomes (https://github.com/gnosis/prediction-market-agent-tooling/issues/671).
-            direction_to_bet_pool_size = outcome_token_pool[direction]
-            other_direction_pool_size = outcome_token_pool[other_direction]
+            direction_to_bet_pool_size = market.get_outcome_token_pool_by_outcome(
+                direction
+            )
+            other_direction_pool_size = market.get_outcome_token_pool_by_outcome(
+                other_direction
+            )
             kelly_bet = get_kelly_bet_full(
                 yes_outcome_pool_size=direction_to_bet_pool_size,
                 no_outcome_pool_size=other_direction_pool_size,

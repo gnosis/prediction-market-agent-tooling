@@ -150,6 +150,16 @@ class AgentMarket(BaseModel):
         return has_yes and has_no
 
     @property
+    def p_yes_outcome_else_none(self) -> Probability | None:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return probs_lowercase.get(YES_OUTCOME_LOWERCASE_IDENTIFIER)
+
+    @property
+    def p_no_outcome_else_none(self) -> Probability | None:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return probs_lowercase.get(NO_OUTCOME_LOWERCASE_IDENTIFIER)
+
+    @property
     def probable_resolution(self) -> Resolution:
         if self.is_resolved():
             if self.has_successful_resolution():

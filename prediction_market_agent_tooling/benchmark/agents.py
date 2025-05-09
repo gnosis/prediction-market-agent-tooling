@@ -5,7 +5,7 @@ from prediction_market_agent_tooling.benchmark.utils import (
     OutcomePrediction,
     Prediction,
 )
-from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
+from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
@@ -84,30 +84,14 @@ class AbstractBenchmarkedAgent:
 
 
 class RandomAgent(AbstractBenchmarkedAgent):
-    @staticmethod
-    def generate_random_numbers_with_sum(
-        count: int, target_sum: float = 1.0
-    ) -> list[float]:
-        values = [random.random() for _ in range(count)]
-        return [v * (target_sum / sum(values)) for v in values]
-
     def predict(self, market: AgentMarket) -> Prediction:
-        confidence = random.random()
-        # generate a random probability for each outcome.
-
-        random_values = self.generate_random_numbers_with_sum(
-            count=len(market.outcomes)
-        )
-        probabilities = {
-            outcome: Probability(v)
-            for outcome, v in zip(market.outcomes, random_values)
-        }
+        p_yes, confidence = random.random(), random.random()
 
         return Prediction(
             outcome_prediction=OutcomePrediction(
                 confidence=confidence,
                 info_utility=None,
-                probabilities=probabilities,
+                p_yes=Probability(p_yes),
             ),
         )
 
@@ -119,21 +103,18 @@ class RandomAgent(AbstractBenchmarkedAgent):
 
 class FixedAgent(AbstractBenchmarkedAgent):
     def __init__(
-        self, fixed_answer_idx: int, agent_name: str, max_workers: int | None = None
+        self, fixed_answer: bool, agent_name: str, max_workers: int | None = None
     ):
         super().__init__(agent_name, max_workers)
-        self.fixed_answer_idx = fixed_answer_idx
+        self.fixed_answer = fixed_answer
 
     def predict(self, market: AgentMarket) -> Prediction:
-        probabilities = {o: Probability(0.0) for o in market.outcomes}
-        probabilities[OutcomeStr(market.outcomes[self.fixed_answer_idx])] = Probability(
-            1.0
-        )
+        p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
 
         return Prediction(
             outcome_prediction=OutcomePrediction(
-                probabilities=probabilities,
-                confidence=1.0,
+                p_yes=Probability(p_yes),
+                confidence=confidence,
                 info_utility=None,
             ),
         )

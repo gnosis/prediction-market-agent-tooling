@@ -4,6 +4,8 @@ import time
 import typing as t
 from contextlib import contextmanager
 
+import eth_abi
+from eth_abi.exceptions import DecodingError
 from pydantic import BaseModel, field_validator
 from web3 import Web3
 from web3.constants import CHECKSUM_ADDRESSS_ZERO
@@ -20,6 +22,7 @@ from prediction_market_agent_tooling.gtypes import (
     TxReceipt,
     Wei,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
@@ -583,16 +586,6 @@ class DebuggingContract(ContractOnGnosisChain):
         )
 
 
-def contract_exposes_balanceOf(web3: Web3, address: ChecksumAddress) -> bool:
-    """This is a fallback check for contracts that implement some proxies but are indeed ERC20-compatible."""
-    try:
-        contract = ContractERC20OnGnosisChain(address=address)
-        contract.balanceOf(for_address=CHECKSUM_ADDRESSS_ZERO, web3=web3)
-        return True
-    except Exception:
-        return False
-
-
 def contract_implements_function(
     contract_address: ChecksumAddress,
     function_name: str,
@@ -601,27 +594,64 @@ def contract_implements_function(
     look_for_proxy_contract: bool = True,
 ) -> bool:
     function_signature = f"{function_name}({','.join(function_arg_types or [])})"
-    function_hash = web3.keccak(text=function_signature)[0:4].hex()[2:]
+    function_selector = web3.keccak(text=function_signature)[0:4].hex()[2:]
+    # 1. Check directly in bytecode
+    bytecode = web3.eth.get_code(contract_address).hex()
+    if function_selector in bytecode:
+        return True
     contract_code = web3.eth.get_code(contract_address).hex()
-    implements = function_hash in contract_code
-    if (
-        not implements
-        and look_for_proxy_contract
-        and contract_implements_function(
+    implements = function_selector in contract_code
+
+    # If not found directly and we should check proxies
+    if not implements and look_for_proxy_contract:
+        # Case 1: Check if it's a standard proxy (has implementation() function)
+        if contract_implements_function(
             contract_address, "implementation", web3, look_for_proxy_contract=False
-        )
-    ):
-        implementation_address = ContractProxyOnGnosisChain(
-            address=contract_address
-        ).implementation()
-        implements = contract_implements_function(
-            implementation_address,
+        ):
+            # Get the implementation address and check the function there
+            implementation_address = ContractProxyOnGnosisChain(
+                address=contract_address
+            ).implementation()
+            implements = contract_implements_function(
+                implementation_address,
+                function_name=function_name,
+                web3=web3,
+                function_arg_types=function_arg_types,
+                look_for_proxy_contract=False,
+            )
+        else:
+            # Case 2: Check if it's a minimal proxy contract
+            implements = minimal_proxy_implements_function(
+                contract_address=contract_address,
+                function_name=function_name,
+                web3=web3,
+                function_arg_types=function_arg_types,
+            )
+
+    return implements
+
+
+def minimal_proxy_implements_function(
+    contract_address: ChecksumAddress,
+    function_name: str,
+    web3: Web3,
+    function_arg_types: list[str] | None = None,
+) -> bool:
+    try:
+        # Read storage slot 0 which should contain the implementation address in minimal proxies
+        raw_slot_0 = web3.eth.get_storage_at(contract_address, 0)
+        singleton_address = eth_abi.decode(["address"], raw_slot_0)[0]
+        # Recurse into singleton
+        return contract_implements_function(
+            Web3.to_checksum_address(singleton_address),
             function_name=function_name,
             web3=web3,
             function_arg_types=function_arg_types,
             look_for_proxy_contract=False,
         )
-    return implements
+    except DecodingError:
+        logger.info(f"Error decoding contract address for singleton")
+        return False
 
 
 def init_collateral_token_contract(
@@ -648,7 +678,7 @@ def init_collateral_token_contract(
         "balanceOf",
         web3=web3,
         function_arg_types=["address"],
-    ) or contract_exposes_balanceOf(web3=web3, address=address):
+    ):
         return ContractERC20BaseClass(address=address)
 
     else:

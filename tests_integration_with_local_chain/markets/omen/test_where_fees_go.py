@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -140,12 +141,12 @@ def test_where_fees_go(
     # Buy YES tokens from account C
     # Buy for a lot more than given liquidity, to be a loser because of the fees.
     buy_yes_for_c = funds * USD(10)
-    buyer_binary_outcome = True
+    buyer_binary_outcome = OMEN_TRUE_OUTCOME
     binary_omen_buy_outcome_tx(
         api_keys_C,
         buy_yes_for_c,
         agent_market,
-        binary_outcome=buyer_binary_outcome,
+        outcome=buyer_binary_outcome,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -167,7 +168,7 @@ def test_where_fees_go(
     omen_submit_answer_market_tx(
         api_keys_A,
         omen_market,
-        Resolution.from_bool(buyer_binary_outcome),
+        Resolution(outcome=buyer_binary_outcome, invalid=False),
         bond=xDai(0.001),
         web3=local_web3,
     )

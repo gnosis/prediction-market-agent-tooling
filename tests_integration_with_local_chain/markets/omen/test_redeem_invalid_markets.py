@@ -13,6 +13,8 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -117,7 +119,7 @@ def test_redeem_invalid_market(
         api_keys_B,
         bet_size,
         agent_market,
-        binary_outcome=False,
+        outcome=OMEN_FALSE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -131,7 +133,7 @@ def test_redeem_invalid_market(
         api_keys_C,
         bet_size,
         agent_market,
-        binary_outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )

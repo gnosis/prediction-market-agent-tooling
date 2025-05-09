@@ -39,7 +39,6 @@ class MetaculusAgentMarket(AgentMarket):
             question=model.title,
             outcomes=[],
             resolution=None,
-            current_p_yes=model.p_yes,
             created_time=model.created_at,
             close_time=model.scheduled_close_time,
             url=model.page_url,
@@ -49,10 +48,11 @@ class MetaculusAgentMarket(AgentMarket):
             description=model.question.description,
             fine_print=model.question.fine_print,
             resolution_criteria=model.question.resolution_criteria,
+            probabilities={},  # ToDo - Set probability map when working with Metaculus
         )
 
     @staticmethod
-    def get_binary_markets(
+    def get_markets(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
@@ -109,8 +109,12 @@ class MetaculusAgentMarket(AgentMarket):
     def store_prediction(
         self, processed_market: ProcessedMarket | None, keys: APIKeys, agent_name: str
     ) -> None:
-        if processed_market is not None:
-            make_prediction(self.id, processed_market.answer.p_yes)
+        if (
+            processed_market is not None
+            and processed_market.answer.get_yes_probability() is not None
+        ):
+            yes_prob = check_not_none(processed_market.answer.get_yes_probability())
+            make_prediction(self.id, yes_prob)
             post_question_comment(
                 self.id,
                 check_not_none(

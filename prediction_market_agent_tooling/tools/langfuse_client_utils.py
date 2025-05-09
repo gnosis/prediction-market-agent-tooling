@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     PlacedTrade,
-    ProbabilisticAnswer,
+    CategoricalProbabilisticAnswer,
     ResolvedBet,
     TradeType,
 )
@@ -22,7 +22,7 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 class ProcessMarketTrace(BaseModel):
     timestamp: int
     market: OmenAgentMarket
-    answer: ProbabilisticAnswer
+    answer: CategoricalProbabilisticAnswer
     trades: list[PlacedTrade]
 
     @property
@@ -118,10 +118,10 @@ def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket | Non
         return None
 
 
-def trace_to_answer(trace: TraceWithDetails) -> ProbabilisticAnswer:
+def trace_to_answer(trace: TraceWithDetails) -> CategoricalProbabilisticAnswer:
     assert trace.output is not None, "Trace output is None"
     assert trace.output["answer"] is not None, "Trace output result is None"
-    return ProbabilisticAnswer.model_validate(trace.output["answer"])
+    return CategoricalProbabilisticAnswer.model_validate(trace.output["answer"])
 
 
 def trace_to_trades(trace: TraceWithDetails) -> list[PlacedTrade]:

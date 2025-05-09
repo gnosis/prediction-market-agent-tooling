@@ -63,7 +63,7 @@ def get_boolean_outcome(outcome_str: str) -> bool:
     raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
 
 
-def get_bet_outcome(binary_outcome: bool) -> str:
+def get_bet_outcome(binary_outcome: bool) -> OutcomeStr:
     return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
 
 
@@ -399,31 +399,16 @@ class OmenMarket(BaseModel):
     def is_binary(self) -> bool:
         return len(self.outcomes) == 2
 
-    def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
-        if not self.is_binary:
-            raise ValueError(
-                f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
-            )
-        outcome: str = self.outcomes[answer.as_int()]
-        return get_boolean_outcome(outcome)
-
-    @property
-    def boolean_outcome(self) -> bool:
-        if not self.is_resolved_with_valid_answer:
-            raise ValueError(f"Bet with title {self.title} is not resolved.")
-        return self.boolean_outcome_from_answer(
-            check_not_none(
-                self.currentAnswer, "Can not be None if `is_resolved_with_valid_answer`"
-            )
-        )
+    def outcome_from_answer(self, answer: HexBytes) -> OutcomeStr | None:
+        if answer == INVALID_ANSWER_HEX_BYTES:
+            return None
+        return self.outcomes[answer.as_int()]
 
     def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
-        if answer == INVALID_ANSWER_HEX_BYTES:
-            return Resolution.CANCEL
-        elif self.boolean_outcome_from_answer(answer):
-            return Resolution.YES
-        else:
-            return Resolution.NO
+        if outcome := self.outcome_from_answer(answer):
+            return Resolution.from_answer(outcome)
+
+        return Resolution(outcome=None, invalid=True)
 
     def get_resolution_enum(self) -> t.Optional[Resolution]:
         if not self.is_resolved_with_valid_answer:
@@ -562,10 +547,6 @@ class OmenBet(BaseModel):
         return DatetimeUTC.to_datetime_utc(self.creationTimestamp)
 
     @property
-    def boolean_outcome(self) -> bool:
-        return get_boolean_outcome(self.fpmm.outcomes[self.outcomeIndex])
-
-    @property
     def old_probability(self) -> Probability:
         # Old marginal price is the probability of the outcome before placing this bet.
         return Probability(float(self.oldOutcomeTokenMarginalPrice))
@@ -582,9 +563,13 @@ class OmenBet(BaseModel):
 
     def get_profit(self) -> CollateralToken:
         bet_amount = self.collateral_amount_token
+
+        if not self.fpmm.has_valid_answer:
+            return CollateralToken(0)
+
         profit = (
             self.outcomeTokensTraded.as_outcome_token.as_token - bet_amount
-            if self.boolean_outcome == self.fpmm.boolean_outcome
+            if self.outcomeIndex == self.fpmm.answer_index
             else -bet_amount
         )
         return profit
@@ -594,7 +579,7 @@ class OmenBet(BaseModel):
             id=str(self.transactionHash),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=self.collateral_amount_token,
-            outcome=self.boolean_outcome,
+            outcome=self.fpmm.outcomes[self.outcomeIndex],
             created_time=self.creation_datetime,
             market_question=self.title,
             market_id=self.fpmm.id,
@@ -610,11 +595,11 @@ class OmenBet(BaseModel):
             id=self.transactionHash.hex(),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=self.collateral_amount_token,
-            outcome=self.boolean_outcome,
+            outcome=self.fpmm.outcomes[self.outcomeIndex],
             created_time=self.creation_datetime,
             market_question=self.title,
             market_id=self.fpmm.id,
-            market_outcome=self.fpmm.boolean_outcome,
+            market_outcome=self.fpmm.outcomes[self.outcomeIndex],
             resolved_time=check_not_none(self.fpmm.finalized_datetime),
             profit=self.get_profit(),
         )

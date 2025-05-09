@@ -22,7 +22,7 @@ def main(
     """
     keys = APIKeys(BET_FROM_PRIVATE_KEY=private_key_type(private_key))
 
-    markets = OmenSubgraphHandler().get_omen_binary_markets(
+    markets = OmenSubgraphHandler().get_omen_markets(
         limit=None,
         creator=keys.bet_from_address,
         liquidity_bigger_than=Wei(0),

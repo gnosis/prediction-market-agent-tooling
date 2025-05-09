@@ -60,6 +60,7 @@ eth-keys = "^0.6.1"
 proto-plus = "^1.0.0"
 protobuf = "^5.0.0"
 types-cachetools = "^5.5.0.20240820"
+python-json-logger = "^3.3.0"
 
 [tool.poetry.extras]
 openai = ["openai"]

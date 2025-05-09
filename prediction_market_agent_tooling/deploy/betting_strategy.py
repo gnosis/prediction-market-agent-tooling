@@ -19,7 +19,7 @@ from prediction_market_agent_tooling.markets.agent_market import AgentMarket, Ma
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
     Position,
-    ProbabilisticAnswer,
+    CategoricalProbabilisticAnswer,
     Trade,
     TradeType,
 )
@@ -43,7 +43,7 @@ class BettingStrategy(ABC):
     def calculate_trades(
         self,
         existing_position: ExistingPosition | None,
-        answer: ProbabilisticAnswer,
+        answer: CategoricalProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
         raise NotImplementedError("Subclass should implement this.")
@@ -152,7 +152,7 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
 
     @staticmethod
     def calculate_direction(
-        market: AgentMarket, answer: ProbabilisticAnswer
+        market: AgentMarket, answer: CategoricalProbabilisticAnswer
     ) -> OutcomeStr:
         # We place a bet on the most likely outcome
         most_likely_outcome = max(
@@ -174,7 +174,7 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
     def calculate_trades(
         self,
         existing_position: ExistingPosition | None,
-        answer: ProbabilisticAnswer,
+        answer: CategoricalProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
         """We place bet on only one outcome."""
@@ -195,7 +195,7 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
 class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy):
     @staticmethod
     def calculate_direction(
-        market: AgentMarket, answer: ProbabilisticAnswer
+        market: AgentMarket, answer: CategoricalProbabilisticAnswer
     ) -> OutcomeStr:
         """
         Returns the index of the outcome with the highest expected value.
@@ -240,7 +240,7 @@ class KellyBettingStrategy(BettingStrategy):
         max_bet_amount: USD,
         direction: OutcomeStr,
         other_direction: OutcomeStr,
-        answer: ProbabilisticAnswer,
+        answer: CategoricalProbabilisticAnswer,
         override_p_yes: float | None = None,
     ) -> SimpleBet:
         estimated_p_yes = (
@@ -274,7 +274,7 @@ class KellyBettingStrategy(BettingStrategy):
     def calculate_trades(
         self,
         existing_position: ExistingPosition | None,
-        answer: ProbabilisticAnswer,
+        answer: CategoricalProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
         # We consider the p_yes as the direction with highest probability.
@@ -394,7 +394,7 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
     def calculate_trades(
         self,
         existing_position: ExistingPosition | None,
-        answer: ProbabilisticAnswer,
+        answer: CategoricalProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
         adjusted_bet_amount_usd = self.adjust_bet_amount(existing_position, market)

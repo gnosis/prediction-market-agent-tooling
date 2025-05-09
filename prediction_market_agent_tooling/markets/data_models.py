@@ -5,6 +5,7 @@ from pydantic import BaseModel, BeforeValidator, computed_field
 
 from prediction_market_agent_tooling.deploy.constants import (
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    NO_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -75,9 +76,30 @@ Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
 class ProbabilisticAnswer(BaseModel):
+    p_yes: Probability
+    confidence: float
+    reasoning: str | None = None
+
+
+class CategoricalProbabilisticAnswer(BaseModel):
     probabilities: dict[OutcomeStr, Probability]
     confidence: float
     reasoning: str | None = None
+
+    @staticmethod
+    def from_probabilistic_answer(
+        answer: ProbabilisticAnswer,
+    ) -> "CategoricalProbabilisticAnswer":
+        return CategoricalProbabilisticAnswer(
+            probabilities={
+                OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER): answer.p_yes,
+                OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER): Probability(
+                    1 - answer.p_yes
+                ),
+            },
+            confidence=answer.confidence,
+            reasoning=answer.reasoning,
+        )
 
     def get_yes_probability(self) -> Probability | None:
         return next(

@@ -115,6 +115,14 @@ class AgentMarket(BaseModel):
                 )
         return outcome_token_pool
 
+    def get_outcome_token_pool_by_outcome(self, outcome: OutcomeStr) -> OutcomeToken:
+        if self.outcome_token_pool is None or not self.outcome_token_pool:
+            return OutcomeToken(0)
+
+        # We look up by index to avoid having to deal with case sensitivity issues.
+        outcome_idx = self.get_outcome_index(outcome)
+        return list(self.outcome_token_pool.values())[outcome_idx]
+
     @model_validator(mode="before")
     def handle_legacy_fee(cls, data: dict[str, t.Any]) -> dict[str, t.Any]:
         # Backward compatibility for older `AgentMarket` without `fees`.
@@ -394,8 +402,9 @@ class AgentMarket(BaseModel):
             )
 
     def get_outcome_index(self, outcome: OutcomeStr) -> int:
+        outcomes_lowercase = [o.lower() for o in self.outcomes]
         try:
-            return self.outcomes.index(outcome)
+            return outcomes_lowercase.index(outcome.lower())
         except ValueError:
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
 

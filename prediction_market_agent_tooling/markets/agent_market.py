@@ -96,7 +96,7 @@ class AgentMarket(BaseModel):
         if not 0.999 <= total <= 1.001:
             # We simply log a warning because for some use-cases (e.g. existing positions), the
             # markets might be already closed hence no reliable outcome token prices exist anymore.
-            logger.warning(f"Probabilities for market {cls.id=} do not sum to 1.")
+            logger.warning(f"Probabilities for market {info.data=} do not sum to 1.")
         return probs
 
     @field_validator("outcome_token_pool")

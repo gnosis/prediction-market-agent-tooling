@@ -29,6 +29,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
     PlacedTrade,
+    CategoricalProbabilisticAnswer,
     ProbabilisticAnswer,
     Trade,
 )
@@ -299,7 +300,9 @@ class DeployablePredictionAgent(DeployableAgent):
 
         return True
 
-    def answer_categorical_market(self, market: AgentMarket) -> ProbabilisticAnswer:
+    def answer_categorical_market(
+        self, market: AgentMarket
+    ) -> CategoricalProbabilisticAnswer | None:
         raise NotImplementedError("This method must be implemented by the subclass")
 
     def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
@@ -310,8 +313,9 @@ class DeployablePredictionAgent(DeployableAgent):
         answer_categorical_market(). Therefore, subclasses only need to implement
         answer_categorical_market() if they want to handle both types of markets.
         """
-
-        return self.answer_categorical_market(market)
+        raise NotImplementedError(
+            "Either this method, or answer_categorical_market, must be implemented by the subclass."
+        )
 
     def get_markets(
         self,
@@ -353,16 +357,29 @@ class DeployablePredictionAgent(DeployableAgent):
         market_type: MarketType,
         market: AgentMarket,
         verify_market: bool = True,
-    ) -> ProbabilisticAnswer | None:
+    ) -> CategoricalProbabilisticAnswer | None:
         if verify_market and not self.verify_market(market_type, market):
             logger.info(f"Market '{market.question}' doesn't meet the criteria.")
             return None
 
         logger.info(f"Answering market '{market.question}'.")
-        if not market.is_binary:
-            return self.answer_categorical_market(market)
 
-        return self.answer_binary_market(market)
+        if market.is_binary:
+            try:
+                binary_answer = self.answer_binary_market(market)
+                return (
+                    CategoricalProbabilisticAnswer.from_probabilistic_answer(
+                        binary_answer
+                    )
+                    if binary_answer is not None
+                    else None
+                )
+            except NotImplementedError:
+                logger.info(
+                    "answer_binary_market() not implemented, falling back to answer_categorical_market()"
+                )
+
+        return self.answer_categorical_market(market)
 
     def process_market(
         self,
@@ -531,7 +548,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
     def build_trades(
         self,
         market: AgentMarket,
-        answer: ProbabilisticAnswer,
+        answer: CategoricalProbabilisticAnswer,
         existing_position: ExistingPosition | None,
     ) -> list[Trade]:
         strategy = self.get_betting_strategy(market=market)

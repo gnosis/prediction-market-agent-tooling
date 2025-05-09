@@ -26,7 +26,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     CollateralToken,
     ExistingPosition,
     PlacedTrade,
-    ProbabilisticAnswer,
+    CategoricalProbabilisticAnswer,
     Resolution,
     ResolvedBet,
 )
@@ -39,7 +39,7 @@ from prediction_market_agent_tooling.tools.utils import (
 
 
 class ProcessedMarket(BaseModel):
-    answer: ProbabilisticAnswer
+    answer: CategoricalProbabilisticAnswer
 
 
 class ProcessedTradedMarket(ProcessedMarket):

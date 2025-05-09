@@ -18,7 +18,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     KellyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MultiCategoricalMaxAccuracyBettingStrategy,
-    ProbabilisticAnswer,
+    CategoricalProbabilisticAnswer,
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -78,7 +78,7 @@ def get_outcome_for_trace(
     try:
         trades = strategy.calculate_trades(
             existing_position=None,
-            answer=ProbabilisticAnswer(
+            answer=CategoricalProbabilisticAnswer(
                 probabilities=answer.probabilities,
                 confidence=answer.confidence,
             ),

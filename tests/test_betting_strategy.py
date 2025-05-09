@@ -21,7 +21,7 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
-    ProbabilisticAnswer,
+    CategoricalProbabilisticAnswer,
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -51,7 +51,9 @@ def test_answer_decision(
     prob_multi: dict[OutcomeStr, Probability], expected_direction: OutcomeStr
 ) -> None:
     betting_strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(0.1))
-    mock_answer = ProbabilisticAnswer(probabilities=prob_multi, confidence=1.0)
+    mock_answer = CategoricalProbabilisticAnswer(
+        probabilities=prob_multi, confidence=1.0
+    )
     direction = betting_strategy.calculate_direction(
         market=Mock(AgentMarket), answer=mock_answer
     )
@@ -87,7 +89,7 @@ def test_rebalance() -> None:
     buy_token_amount = OutcomeToken(10)
     bet_amount = USD(tiny_amount.value) + mock_existing_position.total_amount_current
     strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=bet_amount)
-    mock_answer = ProbabilisticAnswer(
+    mock_answer = CategoricalProbabilisticAnswer(
         probabilities={
             OMEN_TRUE_OUTCOME: Probability(0.9),
             OMEN_FALSE_OUTCOME: Probability(0.1),
@@ -177,7 +179,7 @@ def test_attacking_market(
         },
         fees=MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee),
     )
-    answer = ProbabilisticAnswer(
+    answer = CategoricalProbabilisticAnswer(
         probabilities={
             OMEN_TRUE_OUTCOME: Probability(0.9),
             OMEN_FALSE_OUTCOME: Probability(0.1),

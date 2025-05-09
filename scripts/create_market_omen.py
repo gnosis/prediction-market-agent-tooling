@@ -39,7 +39,7 @@ def main(
         --question "Will GNO reach $500 by the end of the 2024?" \
         --closing-time "2024-12-31T23:59:59" \
         --category cryptocurrency \
-        --initial-funds 0.01 \
+        --initial-funds-usd 0.01 \
         --from-private-key your-private-key
     ```
     """

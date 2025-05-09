@@ -5,8 +5,8 @@ from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import (
-    CategoricalProbabilisticAnswer,
     Resolution,
+    ProbabilisticAnswer,
 )
 
 
@@ -17,7 +17,7 @@ def get_most_probable_outcome(
     return max(probability_map, key=lambda k: float(probability_map[k]))
 
 
-class OutcomePrediction(CategoricalProbabilisticAnswer):
+class OutcomePrediction(ProbabilisticAnswer):
     info_utility: t.Optional[float]
 
     @property

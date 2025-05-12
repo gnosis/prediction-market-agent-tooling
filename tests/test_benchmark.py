@@ -11,6 +11,10 @@ from prediction_market_agent_tooling.benchmark.utils import (
 )
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.data_models import (
+    ProbabilisticAnswer,
+    CategoricalProbabilisticAnswer,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -28,13 +32,12 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
     def check_and_predict(self, market: AgentMarket) -> bm.Prediction:
         return bm.Prediction(
             is_predictable=True,
-            outcome_prediction=OutcomePrediction(
+            outcome_prediction=ProbabilisticAnswer(
                 probabilities={
                     OMEN_TRUE_OUTCOME: Probability(0.6),
                     OMEN_FALSE_OUTCOME: Probability(0.4),
                 },
                 confidence=0.8,
-                info_utility=0.9,
             ),
         )
 
@@ -67,7 +70,6 @@ def test_agent_prediction(dummy_agent: DummyAgent) -> None:
     assert prediction.outcome_prediction is not None
     assert prediction.outcome_prediction.probabilities[OutcomeStr("Yes")] == 0.6
     assert prediction.outcome_prediction.confidence == 0.8
-    assert prediction.outcome_prediction.info_utility == 0.9
 
 
 def test_benchmark_run(
@@ -103,13 +105,13 @@ def test_cache() -> None:
         predictions={
             "bar": {
                 "foo": bm.Prediction(
-                    outcome_prediction=OutcomePrediction(
+                    outcome_prediction=CategoricalProbabilisticAnswer(
                         probabilities={
                             OutcomeStr("Yes"): Probability(0.6),
                             OutcomeStr("No"): Probability(0.4),
                         },
+                        reasoning="",
                         confidence=0.8,
-                        info_utility=0.9,
                     )
                 )
             }

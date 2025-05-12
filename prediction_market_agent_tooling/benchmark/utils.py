@@ -4,10 +4,7 @@ import typing as t
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
-from prediction_market_agent_tooling.markets.data_models import (
-    Resolution,
-    ProbabilisticAnswer,
-)
+from prediction_market_agent_tooling.markets.data_models import ProbabilisticAnswer
 
 
 def get_most_probable_outcome(
@@ -17,17 +14,9 @@ def get_most_probable_outcome(
     return max(probability_map, key=lambda k: float(probability_map[k]))
 
 
-class OutcomePrediction(ProbabilisticAnswer):
-    info_utility: t.Optional[float]
-
-    @property
-    def probable_resolution(self) -> Resolution:
-        return Resolution(outcome=True) if self.p_yes > 0.5 else Resolution.NO
-
-
 class Prediction(BaseModel):
     is_predictable: bool = True
-    outcome_prediction: t.Optional[OutcomePrediction] = None
+    outcome_prediction: t.Optional[ProbabilisticAnswer] = None
 
     time: t.Optional[float] = None
     cost: t.Optional[float] = None

@@ -84,11 +84,28 @@ class ProbabilisticAnswer(BaseModel):
     def p_no(self) -> Probability:
         return Probability(1 - self.p_yes)
 
+    @property
+    def probable_resolution(self) -> Resolution:
+        return (
+            Resolution(outcome=YES_OUTCOME_LOWERCASE_IDENTIFIER, invalid=False)
+            if self.p_yes > 0.5
+            else Resolution(outcome=NO_OUTCOME_LOWERCASE_IDENTIFIER, invalid=False)
+        )
+
 
 class CategoricalProbabilisticAnswer(BaseModel):
     probabilities: dict[OutcomeStr, Probability]
     confidence: float
     reasoning: str | None = None
+
+    @property
+    def probable_resolution(self) -> Resolution:
+        # ToDo - Abstract into method
+        most_likely_outcome = max(
+            self.probabilities.items(),
+            key=lambda item: item[1],
+        )[0]
+        return Resolution(outcome=most_likely_outcome, invalid=False)
 
     @staticmethod
     def from_probabilistic_answer(

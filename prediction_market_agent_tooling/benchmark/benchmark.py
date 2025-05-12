@@ -100,7 +100,6 @@ class Benchmarker:
                 1
             ],
             "confidence/p_yes error correlation": self._compute_confidence_p_yes_error_correlation,
-            "Mean info_utility": self._compute_mean_info_utility,
             "Proportion answerable": self._compute_ratio_evaluated_as_answerable,
             "Proportion answered": self._compute_ratio_answered,
             "Mean cost ($)": self._compute_mean_cost,
@@ -238,27 +237,6 @@ class Benchmarker:
             [check_not_none(p.outcome_prediction).confidence for p in predictions]
         ) / len(predictions)
         return mean_confidence
-
-    def _compute_mean_info_utility(
-        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
-    ) -> float | None:
-        predictions, markets = self.filter_predictions_for_answered(
-            predictions, markets
-        )
-        predictions_with_info_utility = [
-            p
-            for p in predictions
-            if check_not_none(p.outcome_prediction).info_utility is not None
-        ]
-        if not predictions_with_info_utility:
-            return None
-        mean_info_utility = sum(
-            [
-                check_not_none(check_not_none(p.outcome_prediction).info_utility)
-                for p in predictions_with_info_utility
-            ]
-        ) / len(predictions_with_info_utility)
-        return mean_info_utility
 
     def _compute_percentage_within_range(
         self,

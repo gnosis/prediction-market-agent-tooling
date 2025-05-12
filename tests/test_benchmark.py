@@ -1,12 +1,10 @@
 import tempfile
 from datetime import timedelta
-from unittest.mock import Mock
 
 import pytest
 
 import prediction_market_agent_tooling.benchmark.benchmark as bm
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
     Resolution,
@@ -25,7 +23,7 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
     def __init__(self) -> None:
         super().__init__(agent_name="dummy")
 
-    def check_and_predict(self, market: AgentMarket) -> bm.Prediction:
+    def check_and_predict(self, market_question: str) -> bm.Prediction:
         return bm.Prediction(
             is_predictable=True,
             outcome_prediction=CategoricalProbabilisticAnswer(
@@ -47,7 +45,7 @@ class DummyAgentNoPrediction(bm.AbstractBenchmarkedAgent):
     def __init__(self) -> None:
         super().__init__(agent_name="dummy_no_prediction")
 
-    def check_and_predict(self, market: AgentMarket) -> bm.Prediction:
+    def check_and_predict(self, market_question: str) -> bm.Prediction:
         return bm.Prediction(
             is_predictable=False,
             outcome_prediction=None,
@@ -60,9 +58,8 @@ def dummy_agent_no_prediction() -> DummyAgentNoPrediction:
 
 
 def test_agent_prediction(dummy_agent: DummyAgent) -> None:
-    market = Mock(AgentMarket, wraps=AgentMarket)
-    market.question = "Will GNO go up?"
-    prediction = dummy_agent.check_and_predict(market=market)
+    question = "Will GNO go up?"
+    prediction = dummy_agent.check_and_predict(market_question=question)
     assert prediction.outcome_prediction is not None
     assert prediction.outcome_prediction.probabilities[OutcomeStr("Yes")] == 0.6
     assert prediction.outcome_prediction.confidence == 0.8

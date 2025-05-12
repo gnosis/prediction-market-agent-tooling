@@ -24,23 +24,23 @@ class AbstractBenchmarkedAgent:
         self.agent_name = agent_name
         self.max_workers = max_workers  # Limit the number of workers that can run this worker in parallel threads
 
-    def is_predictable(self, market: AgentMarket) -> bool:
+    def is_predictable(self, market_question: str) -> bool:
         """
         Override if the agent can decide to not predict the question, before doing the hard work.
         """
         return True
 
-    def predict(self, market: AgentMarket) -> Prediction:
+    def predict(self, market_question: str) -> Prediction:
         """
         Predict the outcome of the market question.
         """
         raise NotImplementedError
 
-    def check_and_predict(self, market: AgentMarket) -> Prediction:
-        is_predictable = self.is_predictable(market=market)
+    def check_and_predict(self, market_question: str) -> Prediction:
+        is_predictable = self.is_predictable(market_question=market_question)
         if not is_predictable:
             return Prediction(is_predictable=is_predictable)
-        return self.predict(market=market)
+        return self.predict(market_question=market_question)
 
     def is_predictable_restricted(
         self,
@@ -56,7 +56,7 @@ class AbstractBenchmarkedAgent:
 
     def predict_restricted(
         self,
-        market: AgentMarket,
+        market_question: str,
         time_restriction_up_to: DatetimeUTC,
     ) -> Prediction:
         """
@@ -81,13 +81,13 @@ class AbstractBenchmarkedAgent:
         if not is_predictable:
             return Prediction(is_predictable=is_predictable)
         return self.predict_restricted(
-            market=market,
+            market_question=market.question,
             time_restriction_up_to=time_restriction_up_to,
         )
 
 
 class RandomAgent(AbstractBenchmarkedAgent):
-    def predict(self, market: AgentMarket) -> Prediction:
+    def predict(self, market_question: str) -> Prediction:
         p_yes, confidence = random.random(), random.random()
 
         return Prediction(
@@ -97,9 +97,9 @@ class RandomAgent(AbstractBenchmarkedAgent):
         )
 
     def predict_restricted(
-        self, market: AgentMarket, time_restriction_up_to: DatetimeUTC
+        self, market_question: str, time_restriction_up_to: DatetimeUTC
     ) -> Prediction:
-        return self.predict(market)
+        return self.predict(market_question)
 
 
 class FixedAgent(AbstractBenchmarkedAgent):
@@ -109,7 +109,7 @@ class FixedAgent(AbstractBenchmarkedAgent):
         super().__init__(agent_name, max_workers)
         self.fixed_answer = fixed_answer
 
-    def predict(self, market: AgentMarket) -> Prediction:
+    def predict(self, market_question: str) -> Prediction:
         p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
 
         return Prediction(
@@ -122,6 +122,6 @@ class FixedAgent(AbstractBenchmarkedAgent):
         )
 
     def predict_restricted(
-        self, market: AgentMarket, time_restriction_up_to: DatetimeUTC
+        self, market_question: str, time_restriction_up_to: DatetimeUTC
     ) -> Prediction:
-        return self.predict(market)
+        return self.predict(market_question)

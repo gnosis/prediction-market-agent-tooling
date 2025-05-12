@@ -139,7 +139,7 @@ class Benchmarker:
             ) -> tuple[str, Prediction]:
                 with openai_costs(model=agent.model) as costs:
                     prediction = (
-                        agent.check_and_predict(market=market)
+                        agent.check_and_predict(market_question=market.question)
                         if not market.is_resolved()
                         else (
                             agent.check_and_predict_restricted(

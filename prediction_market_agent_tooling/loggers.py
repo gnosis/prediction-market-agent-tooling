@@ -69,7 +69,7 @@ def _handle_exception(
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
-    info = None
+    info: BaseException | None = exc_value
     if isinstance(exc_value, RetryError):
         # In case of RetryError from tenacity, add last attempt's exp to the log, otherwise we won't see the exception's message in the logs.
         info = exc_value.last_attempt.exception()

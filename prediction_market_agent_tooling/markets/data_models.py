@@ -87,9 +87,13 @@ class ProbabilisticAnswer(BaseModel):
     @property
     def probable_resolution(self) -> Resolution:
         return (
-            Resolution(outcome=YES_OUTCOME_LOWERCASE_IDENTIFIER, invalid=False)
+            Resolution(
+                outcome=OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER), invalid=False
+            )
             if self.p_yes > 0.5
-            else Resolution(outcome=NO_OUTCOME_LOWERCASE_IDENTIFIER, invalid=False)
+            else Resolution(
+                outcome=OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER), invalid=False
+            )
         )
 
 

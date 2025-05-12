@@ -5,15 +5,11 @@ from unittest.mock import Mock
 import pytest
 
 import prediction_market_agent_tooling.benchmark.benchmark as bm
-from prediction_market_agent_tooling.benchmark.utils import (
-    OutcomePrediction,
-    Resolution,
-)
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
-    ProbabilisticAnswer,
     CategoricalProbabilisticAnswer,
+    Resolution,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -32,7 +28,7 @@ class DummyAgent(bm.AbstractBenchmarkedAgent):
     def check_and_predict(self, market: AgentMarket) -> bm.Prediction:
         return bm.Prediction(
             is_predictable=True,
-            outcome_prediction=ProbabilisticAnswer(
+            outcome_prediction=CategoricalProbabilisticAnswer(
                 probabilities={
                     OMEN_TRUE_OUTCOME: Probability(0.6),
                     OMEN_FALSE_OUTCOME: Probability(0.4),
@@ -153,8 +149,8 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
             cache_path=cache_path,
         )
         prediction = bm.Prediction(
-            outcome_prediction=OutcomePrediction(
-                info_utility=0.3333, confidence=0.22222, probabilities={}
+            outcome_prediction=CategoricalProbabilisticAnswer(
+                confidence=0.22222, probabilities={}
             ),
         )
         assert prediction.outcome_prediction is not None  # Makes mypy happy.

@@ -14,7 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
 
 class Resolution(BaseModel):
@@ -110,6 +110,13 @@ class CategoricalProbabilisticAnswer(BaseModel):
             key=lambda item: item[1],
         )[0]
         return Resolution(outcome=most_likely_outcome, invalid=False)
+
+    def to_probabilistic_answer(self) -> ProbabilisticAnswer:
+        p_yes = check_not_none(self.get_yes_probability())
+        return ProbabilisticAnswer(
+            p_yes=p_yes,
+            confidence=self.confidence,
+        )
 
     @staticmethod
     def from_probabilistic_answer(

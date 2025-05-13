@@ -33,14 +33,6 @@ class LogConfig(BaseSettings):
     LOG_LEVEL: LogLevel = LogLevel.DEBUG
 
 
-def escape_dicts_in_string(s: str) -> str:
-    """
-    Escapes curly braces in a string so that dictionary-like structures
-    can be safely used with .format() without causing KeyError or ValueError.
-    """
-    return s.replace("{", "{{").replace("}", "}}")
-
-
 class _CustomJsonFormatter(jsonlogger.JsonFormatter):
     MAX_MESSAGE_LENGTH = 50_000
 

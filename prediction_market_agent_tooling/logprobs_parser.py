@@ -1,11 +1,13 @@
 import math
 from itertools import product
-from typing import Any, Tuple, TypedDict
+from typing import Any, Tuple
+
+from pydantic import BaseModel
 
 from prediction_market_agent_tooling.loggers import logger
 
 
-class LogprobKey(TypedDict):
+class LogprobKey(BaseModel):
     name: str
     key_type: type
     valid_values: set[Any] | None
@@ -17,11 +19,11 @@ class LogprobsParser:
     ) -> int:
         key_candidate = ""
         for i, token in enumerate(logprobs):
-            if token["token"] in key["name"]:
+            if token["token"] in key.name:
                 key_candidate = key_candidate + token["token"]
             else:
                 key_candidate = ""
-            if key_candidate == key["name"]:
+            if key_candidate == key.name:
                 return i
 
         return -1
@@ -71,8 +73,8 @@ class LogprobsParser:
         results_filtered: list[dict[str, Any]] = [
             result
             for result in results
-            if self._is_correct_type(result["token"], key["key_type"])
-            and (key["valid_values"] is None or result["token"] in key["valid_values"])
+            if self._is_correct_type(result["token"], key.key_type)
+            and (key.valid_values is None or result["token"] in key.valid_values)
         ]
 
         return sorted(results_filtered, key=lambda x: x["logprob"], reverse=True)[
@@ -87,7 +89,7 @@ class LogprobsParser:
         for key in keys:
             key_index = self._get_logprobs_key_index(logprobs, key)
             if key_index < 0:
-                logger.warning(f"Key {key['name']} not found in logprobs")
+                logger.warning(f"Key {key.name} not found in logprobs")
                 continue
 
             (
@@ -95,7 +97,7 @@ class LogprobsParser:
                 result_end_index,
             ) = self._get_logprobs_indexes_for_result(logprobs, key_index)
             if result_start_index < 0 or result_end_index < 0:
-                logger.warning(f"Error in parsing result for {key['name']} in logprobs")
+                logger.warning(f"Error in parsing result for {key.name} in logprobs")
                 continue
 
             valid_logprobs = [
@@ -105,7 +107,7 @@ class LogprobsParser:
 
             results_for_keys.append(
                 {
-                    "key": key["name"],
+                    "key": key.name,
                     "logprobs": self._parse_valid_tokens_with__agg_probs(
                         list(product(*valid_logprobs)), key
                     ),

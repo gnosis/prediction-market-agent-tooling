@@ -33,6 +33,14 @@ class LogConfig(BaseSettings):
     LOG_LEVEL: LogLevel = LogLevel.DEBUG
 
 
+def escape_dicts_in_string(s: str) -> str:
+    """
+    Escapes curly braces in a string so that dictionary-like structures
+    can be safely used with .format() without causing KeyError or ValueError.
+    """
+    return s.replace("{", "{{").replace("}", "}}")
+
+
 class _CustomJsonFormatter(jsonlogger.JsonFormatter):
     MAX_MESSAGE_LENGTH = 50_000
 
@@ -69,13 +77,16 @@ def _handle_exception(
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
-    info: BaseException | None = exc_value
+    exp_details: BaseException | None = exc_value
     if isinstance(exc_value, RetryError):
         # In case of RetryError from tenacity, add last attempt's exp to the log, otherwise we won't see the exception's message in the logs.
-        info = exc_value.last_attempt.exception()
+        exp_details = exc_value.last_attempt.exception()
 
     logger.error(
-        f"Uncaught exception: {info}",
+        # Do not use f-string here, loguru internally calls `message.format(*args, **kwargs)` and in case you put {} into the message (for example, dict-formatted exception from evm),
+        # it would throw an error.
+        "Uncaught exception: {exp_details}",
+        exp_details=exp_details,
         exc_info=(exc_type, exc_value, exc_traceback),
     )
 

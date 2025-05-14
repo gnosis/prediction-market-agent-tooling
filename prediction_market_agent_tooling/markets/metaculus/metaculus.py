@@ -34,6 +34,7 @@ class MetaculusAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model(model: MetaculusQuestion) -> "MetaculusAgentMarket":
+        probabilities = AgentMarket.build_probability_map_from_p_yes(p_yes=model.p_yes)
         return MetaculusAgentMarket(
             id=str(model.id),
             question=model.title,
@@ -48,7 +49,7 @@ class MetaculusAgentMarket(AgentMarket):
             description=model.question.description,
             fine_print=model.question.fine_print,
             resolution_criteria=model.question.resolution_criteria,
-            probabilities={},  # ToDo - Set probability map when working with Metaculus
+            probabilities=probabilities,
         )
 
     @staticmethod

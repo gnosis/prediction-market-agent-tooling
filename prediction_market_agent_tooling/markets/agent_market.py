@@ -297,6 +297,15 @@ class AgentMarket(BaseModel):
         return probabilities
 
     @staticmethod
+    def build_probability_map_from_p_yes(
+        p_yes: Probability,
+    ) -> dict[OutcomeStr, Probability]:
+        return {
+            OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER): p_yes,
+            OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER): Probability(1.0 - p_yes),
+        }
+
+    @staticmethod
     def build_probability_map(
         outcome_token_amounts: list[OutcomeWei], outcomes: list[OutcomeStr]
     ) -> dict[OutcomeStr, Probability]:

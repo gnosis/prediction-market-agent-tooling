@@ -11,8 +11,8 @@ from prediction_market_agent_tooling.benchmark.utils import get_most_probable_ou
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
     INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
-    YES_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
@@ -24,10 +24,10 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
     Bet,
+    CategoricalProbabilisticAnswer,
     CollateralToken,
     ExistingPosition,
     PlacedTrade,
-    CategoricalProbabilisticAnswer,
     Resolution,
     ResolvedBet,
 )

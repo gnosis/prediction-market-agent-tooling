@@ -4,8 +4,8 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, computed_field
 
 from prediction_market_agent_tooling.deploy.constants import (
-    YES_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,

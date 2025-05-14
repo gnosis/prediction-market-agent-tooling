@@ -7,8 +7,8 @@ from pydantic import BaseModel
 
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
-    PlacedTrade,
     CategoricalProbabilisticAnswer,
+    PlacedTrade,
     ResolvedBet,
     TradeType,
 )

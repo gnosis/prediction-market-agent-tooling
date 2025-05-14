@@ -27,8 +27,8 @@ from cowdao_cowpy.subgraph.client import BaseModel
 from tenacity import (
     retry_if_not_exception_type,
     stop_after_attempt,
-    wait_fixed,
     wait_exponential,
+    wait_fixed,
 )
 from web3 import Web3
 

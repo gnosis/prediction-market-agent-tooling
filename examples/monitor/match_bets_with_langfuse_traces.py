@@ -14,11 +14,11 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent import AnsweredEnum, MarketType
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    CategoricalProbabilisticAnswer,
     GuaranteedLossError,
     KellyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MultiCategoricalMaxAccuracyBettingStrategy,
-    CategoricalProbabilisticAnswer,
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import (

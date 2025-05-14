@@ -6,8 +6,8 @@ from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.deploy.constants import (
-    YES_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.loggers import logger

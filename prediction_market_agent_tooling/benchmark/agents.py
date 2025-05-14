@@ -1,9 +1,7 @@
 import random
 import typing as t
 
-from prediction_market_agent_tooling.benchmark.utils import (
-    Prediction,
-)
+from prediction_market_agent_tooling.benchmark.utils import Prediction
 from prediction_market_agent_tooling.gtypes import Probability
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (

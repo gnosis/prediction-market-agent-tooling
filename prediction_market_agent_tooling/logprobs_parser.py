@@ -1,29 +1,39 @@
 import math
 from itertools import product
-from typing import Any, Tuple
+from typing import Any, Tuple, Type
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from pydantic.fields import FieldInfo
+from pydantic.type_adapter import TypeAdapter
 
 from prediction_market_agent_tooling.loggers import logger
 
 
-class LogprobKey(BaseModel):
-    name: str
-    key_type: type
-    valid_values: set[Any] | None
+class LogprobDetail(BaseModel):
+    token: str
+    logprob: float
+    prob: float
+
+
+class FieldLogprobs(BaseModel):
+    key: str
+    logprobs: list[LogprobDetail]
 
 
 class LogprobsParser:
+    def __init__(self, skip_fields: list[str] = []):
+        self.skip_fields = ["logprobs"] + skip_fields
+
     def _get_logprobs_key_index(
-        self, logprobs: list[dict[str, Any]], key: LogprobKey
+        self, logprobs: list[dict[str, Any]], field_name: str
     ) -> int:
         key_candidate = ""
         for i, token in enumerate(logprobs):
-            if token["token"] in key.name:
+            if token["token"] in field_name:
                 key_candidate = key_candidate + token["token"]
             else:
                 key_candidate = ""
-            if key_candidate == key.name:
+            if key_candidate == field_name:
                 return i
 
         return -1
@@ -49,15 +59,18 @@ class LogprobsParser:
         )
         return result_start_index + 1, result_end_index
 
-    def _is_correct_type(self, token: str, key_type: type) -> bool:
-        try:
-            key_type(token)
+    def _is_correct_type(self, token: str, key_type: type | None) -> bool:
+        if key_type is None:
             return True
-        except ValueError:
+
+        try:
+            TypeAdapter(key_type).validate_python(token)
+            return True
+        except ValidationError:
             return False
 
     def _parse_valid_tokens_with__agg_probs(
-        self, logprobs_list: list[tuple[dict[str, Any]]], key: LogprobKey
+        self, logprobs_list: list[tuple[dict[str, Any]]], field_info: FieldInfo
     ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = [
             {
@@ -73,8 +86,7 @@ class LogprobsParser:
         results_filtered: list[dict[str, Any]] = [
             result
             for result in results
-            if self._is_correct_type(result["token"], key.key_type)
-            and (key.valid_values is None or result["token"] in key.valid_values)
+            if self._is_correct_type(result["token"], field_info.annotation)
         ]
 
         return sorted(results_filtered, key=lambda x: x["logprob"], reverse=True)[
@@ -82,36 +94,43 @@ class LogprobsParser:
         ]
 
     def parse_logprobs(
-        self, logprobs: list[dict[str, Any]], keys: list[LogprobKey]
-    ) -> list[dict[str, Any]]:
+        self, logprobs: list[dict[str, Any]], target_model_cls: Type[BaseModel]
+    ) -> list[FieldLogprobs]:
         results_for_keys = []
 
-        for key in keys:
-            key_index = self._get_logprobs_key_index(logprobs, key)
+        for field_name, field_info in target_model_cls.model_fields.items():
+            if field_name in self.skip_fields:
+                continue
+
+            key_index = self._get_logprobs_key_index(logprobs, field_name)
+
             if key_index < 0:
-                logger.warning(f"Key {key.name} not found in logprobs")
+                logger.warning(f"Key {field_name} not found in logprobs")
                 continue
 
             (
                 result_start_index,
                 result_end_index,
             ) = self._get_logprobs_indexes_for_result(logprobs, key_index)
+
             if result_start_index < 0 or result_end_index < 0:
-                logger.warning(f"Error in parsing result for {key.name} in logprobs")
+                logger.warning(f"Error in parsing result for {field_name} in logprobs")
                 continue
 
-            valid_logprobs = [
+            valid_logprobs_raw = [
                 logprobs[i]["top_logprobs"]
                 for i in range(result_start_index, result_end_index)
             ]
 
+            parsed_logprobs_data = self._parse_valid_tokens_with__agg_probs(
+                list(product(*valid_logprobs_raw)), field_info
+            )
+
             results_for_keys.append(
-                {
-                    "key": key.name,
-                    "logprobs": self._parse_valid_tokens_with__agg_probs(
-                        list(product(*valid_logprobs)), key
-                    ),
-                }
+                FieldLogprobs(
+                    key=field_name,
+                    logprobs=[LogprobDetail(**item) for item in parsed_logprobs_data],
+                )
             )
 
         return results_for_keys

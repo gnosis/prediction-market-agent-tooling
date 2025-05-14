@@ -1,15 +1,22 @@
 import math
-from typing import Any, Dict, List, TypedDict
+from typing import Any, Dict, List, Literal
 
 import pytest
+from pydantic import BaseModel
 
-from prediction_market_agent_tooling.logprobs_parser import LogprobKey, LogprobsParser
+from prediction_market_agent_tooling.logprobs_parser import LogprobsParser
 
 
-class LogprobToken(TypedDict):
-    token: str
-    logprob: float
-    top_logprobs: List[Dict[str, Any]]
+class DummyModel(BaseModel):
+    p_yes: float
+
+
+class DummyModelWithInvalidValues(BaseModel):
+    p_no: float
+
+
+class DummyModelWithValidatedValues(BaseModel):
+    p_yes: Literal["0.8"]
 
 
 @pytest.fixture
@@ -69,11 +76,6 @@ def sample_logprobs() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_keys() -> List[LogprobKey]:
-    return [LogprobKey(name="p_yes", key_type=float, valid_values=None)]
-
-
-@pytest.fixture
 def parser() -> LogprobsParser:
     return LogprobsParser()
 
@@ -81,26 +83,23 @@ def parser() -> LogprobsParser:
 def test_get_logprobs_key_index(
     parser: LogprobsParser,
     sample_logprobs: List[Dict[str, Any]],
-    sample_keys: List[LogprobKey],
 ) -> None:
-    key_index = parser._get_logprobs_key_index(sample_logprobs, sample_keys[0])
+    key_index = parser._get_logprobs_key_index(sample_logprobs, "p_yes")
     assert key_index == 4
 
 
 def test_get_logprobs_key_index_not_found(
     parser: LogprobsParser, sample_logprobs: List[Dict[str, Any]]
 ) -> None:
-    key = LogprobKey(name="nonexistent", key_type=str, valid_values=None)
-    key_index = parser._get_logprobs_key_index(sample_logprobs, key)
+    key_index = parser._get_logprobs_key_index(sample_logprobs, "nonexistent")
     assert key_index == -1
 
 
 def test_get_logprobs_indexes_for_result(
     parser: LogprobsParser,
     sample_logprobs: List[Dict[str, Any]],
-    sample_keys: List[LogprobKey],
 ) -> None:
-    key_index = parser._get_logprobs_key_index(sample_logprobs, sample_keys[0])
+    key_index = parser._get_logprobs_key_index(sample_logprobs, "p_yes")
     start_index, end_index = parser._get_logprobs_indexes_for_result(
         sample_logprobs, key_index
     )
@@ -118,9 +117,9 @@ def test_is_correct_type(parser: LogprobsParser) -> None:
 def test_parse_valid_tokens_with_agg_probs(
     parser: LogprobsParser,
     sample_logprobs: List[Dict[str, Any]],
-    sample_keys: List[LogprobKey],
 ) -> None:
-    key_index = parser._get_logprobs_key_index(sample_logprobs, sample_keys[0])
+    dummy_yes_info = DummyModel.model_fields["p_yes"]
+    key_index = parser._get_logprobs_key_index(sample_logprobs, "p_yes")
     start_index, end_index = parser._get_logprobs_indexes_for_result(
         sample_logprobs, key_index
     )
@@ -129,7 +128,7 @@ def test_parse_valid_tokens_with_agg_probs(
     ]
 
     results = parser._parse_valid_tokens_with__agg_probs(
-        [tuple(lp) for lp in valid_logprobs], sample_keys[0]
+        [tuple(lp) for lp in valid_logprobs], dummy_yes_info
     )
 
     assert len(results) > 0
@@ -144,37 +143,30 @@ def test_parse_valid_tokens_with_agg_probs(
 def test_parse_logprobs(
     parser: LogprobsParser,
     sample_logprobs: List[Dict[str, Any]],
-    sample_keys: List[LogprobKey],
 ) -> None:
-    results = parser.parse_logprobs(sample_logprobs, sample_keys)
+    results = parser.parse_logprobs(sample_logprobs, DummyModel)
 
     assert len(results) == 1
-    assert results[0]["key"] == "p_yes"
-    assert "logprobs" in results[0]
-    assert len(results[0]["logprobs"]) > 0
+    assert results[0].key == "p_yes"
+    assert results[0].logprobs is not None
+    assert len(results[0].logprobs) > 0
 
 
 def test_parse_logprobs_with_valid_values(
     parser: LogprobsParser, sample_logprobs: List[Dict[str, Any]]
 ) -> None:
-    key = LogprobKey(
-        name="p_yes",
-        key_type=float,
-        valid_values={"0.8"},  # Only allow 0.8 as valid value
-    )
-    results = parser.parse_logprobs(sample_logprobs, [key])
+    results = parser.parse_logprobs(sample_logprobs, DummyModelWithValidatedValues)
 
     assert len(results) == 1
-    assert results[0]["key"] == "p_yes"
-    assert len(results[0]["logprobs"]) > 0
-    assert all(result["token"] == "0.8" for result in results[0]["logprobs"])
+    assert results[0].key == "p_yes"
+    assert len(results[0].logprobs) > 0
+    assert all(result.token == "0.8" for result in results[0].logprobs)
 
 
 def test_parse_logprobs_with_invalid_key(
     parser: LogprobsParser, sample_logprobs: List[Dict[str, Any]]
 ) -> None:
-    key = LogprobKey(name="nonexistent", key_type=str, valid_values=None)
-    results = parser.parse_logprobs(sample_logprobs, [key])
+    results = parser.parse_logprobs(sample_logprobs, DummyModelWithInvalidValues)
     assert len(results) == 0
 
 
@@ -188,8 +180,8 @@ def test_logprob_calculation(parser: LogprobsParser) -> None:
         )  # type: ignore
     ]
 
-    key = LogprobKey(name="test", key_type=float, valid_values=None)
-    results = parser._parse_valid_tokens_with__agg_probs(valid_logprobs, key)
+    dummy_yes_info = DummyModel.model_fields["p_yes"]
+    results = parser._parse_valid_tokens_with__agg_probs(valid_logprobs, dummy_yes_info)
 
     # Calculate expected values
     expected_logprob = -0.5 + -0.3 + -0.2  # Sum of individual logprobs
@@ -203,7 +195,6 @@ def test_logprob_calculation(parser: LogprobsParser) -> None:
 def test_get_logprobs_key_index_partial_match(
     parser: LogprobsParser, sample_logprobs: List[Dict[str, Any]]
 ) -> None:
-    key = LogprobKey(name="p_y", key_type=str, valid_values=None)
-    key_index = parser._get_logprobs_key_index(sample_logprobs, key)
+    key_index = parser._get_logprobs_key_index(sample_logprobs, "p_y")
 
     assert key_index != 4

@@ -122,16 +122,13 @@ class PriceManager:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
         price_data: dict[HexAddress, CollateralToken] = {}
 
-        # we ignore the invalid outcome.
-        # Seer hardcodes `invalid outcome` as the latest one (https://github.com/seer-pm/demo/blob/45f4fc59fb521154f914a372b17192812f512fb3/web/src/lib/market.ts#L123).
-        valid_wrapped_tokens = self.seer_market.wrapped_tokens[:-1]
-
-        for wrapped_token in valid_wrapped_tokens:
+        for wrapped_token in self.seer_market.wrapped_tokens:
             price = self.get_price_for_token(
                 token=Web3.to_checksum_address(wrapped_token),
             )
-            if price is not None:
-                price_data[wrapped_token] = price
+            price_data[wrapped_token] = (
+                price if price is not None else CollateralToken.zero()
+            )
 
         # We normalize the prices to sum up to 1.
         normalized_prices = {}

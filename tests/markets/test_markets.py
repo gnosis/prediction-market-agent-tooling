@@ -25,40 +25,54 @@ def test_market_mapping_contains_all_types(market_type: MarketType) -> None:
 
 
 def test_valid_token_pool() -> None:
+    probability_map = {
+        OutcomeStr("yes"): Probability(0.5),
+        OutcomeStr("no"): Probability(0.5),
+    }
     market = AgentMarket(
         id="foo",
         question="bar",
         description=None,
-        outcomes=[OutcomeStr("yes"), OutcomeStr("no")],
-        outcome_token_pool={"yes": OutcomeToken(1.1), "no": OutcomeToken(2.0)},
+        outcomes=list(probability_map.keys()),
+        outcome_token_pool={
+            OutcomeStr("yes"): OutcomeToken(1.1),
+            OutcomeStr("no"): OutcomeToken(2.0),
+        },
         resolution=None,
         created_time=None,
         close_time=None,
-        current_p_yes=Probability(0.5),
+        probabilities=probability_map,
         url="https://example.com",
         volume=None,
         fees=MarketFees.get_zero_fees(),
     )
     assert market.has_token_pool() is True
-    assert market.get_pool_tokens("yes") == OutcomeToken(1.1)
-    assert market.get_pool_tokens("no") == OutcomeToken(2.0)
+    assert market.get_pool_tokens(OutcomeStr("yes")) == OutcomeToken(1.1)
+    assert market.get_pool_tokens(OutcomeStr("no")) == OutcomeToken(2.0)
 
 
 def test_invalid_token_pool() -> None:
+    prob_map = {
+        OutcomeStr("yes"): Probability(0.5),
+        OutcomeStr("no"): Probability(0.5),
+    }
     with pytest.raises(ValueError) as e:
         AgentMarket(
             id="foo",
             question="bar",
             description=None,
-            outcomes=[OutcomeStr("yes"), OutcomeStr("no")],
-            outcome_token_pool={"baz": OutcomeToken(1.1), "qux": OutcomeToken(2.0)},
+            outcomes=list(prob_map.keys()),
+            outcome_token_pool={
+                OutcomeStr("baz"): OutcomeToken(1.1),
+                OutcomeStr("qux"): OutcomeToken(2.0),
+            },
             resolution=None,
             created_time=None,
             close_time=None,
-            current_p_yes=Probability(0.5),
             url="https://example.com",
             volume=None,
             fees=MarketFees.get_zero_fees(),
+            probabilities=prob_map,
         )
     assert "do not match outcomes" in str(e.value)
 
@@ -80,7 +94,7 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
         MarketType.METACULUS,
         MarketType.POLYMARKET,
     ]
-    market = market_type.market_class.get_binary_markets(
+    market = market_type.market_class.get_markets(
         limit=1,
         sort_by=SortBy.NONE,
         filter_by=FilterBy.OPEN,
@@ -108,7 +122,7 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
 )
 def test_get_markets(market_type: MarketType) -> None:
     limit = 100
-    markets = market_type.market_class.get_binary_markets(
+    markets = market_type.market_class.get_markets(
         limit=limit, sort_by=SortBy.NONE, filter_by=FilterBy.OPEN
     )
     assert len(markets) <= limit

@@ -2,7 +2,7 @@ import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import USD
+from prediction_market_agent_tooling.gtypes import USD, OutcomeStr
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
@@ -17,8 +17,11 @@ def test_seer_place_bet(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     # We fetch the market with the highest liquidity because we expect quotes to be available for all outcome tokens.
-    markets = SeerSubgraphHandler().get_binary_markets(
-        filter_by=FilterBy.OPEN, limit=1, sort_by=SortBy.HIGHEST_LIQUIDITY
+    markets = SeerSubgraphHandler().get_markets(
+        filter_by=FilterBy.OPEN,
+        limit=1,
+        sort_by=SortBy.HIGHEST_LIQUIDITY,
+        include_categorical_markets=True,
     )
     market_data_model = markets[0]
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
@@ -30,7 +33,7 @@ def test_seer_place_bet(
         # We expect an exception from Cow since test accounts don't have enough funds.
         agent_market.place_bet(
             api_keys=test_keys,
-            outcome=True,
+            outcome=OutcomeStr("Yes"),
             amount=amount,
             auto_deposit=True,
             web3=local_web3,

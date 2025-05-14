@@ -30,7 +30,7 @@ def test_omen_get_market(omen_subgraph_handler: OmenSubgraphHandler) -> None:
 
 
 def test_markets_with_outcome_null(omen_subgraph_handler: OmenSubgraphHandler) -> None:
-    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
+    markets = omen_subgraph_handler.get_omen_markets_simple(
         limit=sys.maxsize, filter_by=FilterBy.NONE, sort_by=SortBy.NONE
     )
     for market in markets:
@@ -60,7 +60,7 @@ def test_get_markets_exclude_questions(
         "Belgium v Italy - Who will win this UEFA Euro 2020 Quarter-Finals match?",
         "Will the Grayscale Ethereum Trust (ETHE) have a discount to NAV at the end of September 2021?",
     ]
-    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
+    markets = omen_subgraph_handler.get_omen_markets_simple(
         excluded_questions=set(excluded_question_titles),
         filter_by=FilterBy.NONE,
         sort_by=SortBy.NONE,
@@ -109,7 +109,7 @@ def test_get_bets(
 def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     limit = 100
 
-    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
+    markets = omen_subgraph_handler.get_omen_markets_simple(
         limit=limit,
         sort_by=SortBy.NEWEST,
         filter_by=FilterBy.OPEN,
@@ -121,7 +121,7 @@ def test_filter_open_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None
 
 def test_filter_resolved_markets(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     limit = 100
-    markets = omen_subgraph_handler.get_omen_binary_markets_simple(
+    markets = omen_subgraph_handler.get_omen_markets_simple(
         limit=limit,
         sort_by=SortBy.CLOSING_SOONEST,
         filter_by=FilterBy.RESOLVED,
@@ -302,7 +302,7 @@ def build_incomplete_user_position_from_condition_ids(
 
 def test_get_markets_id_in(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     market_id = "0x934b9f379dd9d8850e468df707d58711da2966cd"
-    markets = omen_subgraph_handler.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_markets(
         limit=1,
         id_in=[market_id],
     )
@@ -340,7 +340,7 @@ def test_get_non_existing_image(omen_subgraph_handler: OmenSubgraphHandler) -> N
 def test_wont_return_non_wxdai_markets_if_not_wanted(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
-    markets = omen_subgraph_handler.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_markets(
         limit=None,
         id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
         collateral_token_address_in=(WrappedxDaiContract().address,),
@@ -353,7 +353,7 @@ def test_wont_return_non_wxdai_markets_if_not_wanted(
 def test_will_return_non_wxdai_markets_if_asked_for(
     omen_subgraph_handler: OmenSubgraphHandler,
 ) -> None:
-    markets = omen_subgraph_handler.get_omen_binary_markets(
+    markets = omen_subgraph_handler.get_omen_markets(
         limit=None,
         id_in=[MARKET_ID_WITH_SDAI_AS_COLLATERAL],
         collateral_token_address_in=None,

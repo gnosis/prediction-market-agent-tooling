@@ -181,19 +181,23 @@ class Market(BaseModel):
             zip(self.outcomes, self.outcomePrices)
         )
 
-        # On Polymarket, we can find out binary market resolution by by checking for the outcome prices.
+        # On Polymarket, we can find out binary market resolution by checking for the outcome prices.
         # E.g. if `Yes` price (probability) is 1$ and `No` price (probability) is 0$, it means the resolution is `Yes`.
         if (
             outcome_to_outcome_price[POLYMARKET_TRUE_OUTCOME] == 1.0
             and outcome_to_outcome_price[POLYMARKET_FALSE_OUTCOME] == 0.0
         ):
-            return Resolution.YES
+            return Resolution(
+                outcome=OutcomeStr(POLYMARKET_TRUE_OUTCOME), invalid=False
+            )
 
         elif (
             outcome_to_outcome_price[POLYMARKET_TRUE_OUTCOME] == 0.0
             and outcome_to_outcome_price[POLYMARKET_FALSE_OUTCOME] == 1.0
         ):
-            return Resolution.NO
+            return Resolution(
+                outcome=OutcomeStr(POLYMARKET_FALSE_OUTCOME), invalid=False
+            )
 
         else:
             raise ValueError(

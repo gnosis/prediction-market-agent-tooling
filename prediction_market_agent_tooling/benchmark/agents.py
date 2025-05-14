@@ -1,11 +1,13 @@
 import random
 import typing as t
 
-from prediction_market_agent_tooling.benchmark.utils import (
-    OutcomePrediction,
-    Prediction,
-)
+from prediction_market_agent_tooling.benchmark.utils import Prediction
 from prediction_market_agent_tooling.gtypes import Probability
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
+from prediction_market_agent_tooling.markets.data_models import (
+    CategoricalProbabilisticAnswer,
+    ProbabilisticAnswer,
+)
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -64,20 +66,20 @@ class AbstractBenchmarkedAgent:
 
     def check_and_predict_restricted(
         self,
-        market_question: str,
+        market: AgentMarket,
         time_restriction_up_to: DatetimeUTC,
     ) -> Prediction:
         """
         Data used must be restricted to the time_restriction_up_to.
         """
         is_predictable = self.is_predictable_restricted(
-            market_question=market_question,
+            market_question=market.question,
             time_restriction_up_to=time_restriction_up_to,
         )
         if not is_predictable:
             return Prediction(is_predictable=is_predictable)
         return self.predict_restricted(
-            market_question=market_question,
+            market_question=market.question,
             time_restriction_up_to=time_restriction_up_to,
         )
 
@@ -85,11 +87,10 @@ class AbstractBenchmarkedAgent:
 class RandomAgent(AbstractBenchmarkedAgent):
     def predict(self, market_question: str) -> Prediction:
         p_yes, confidence = random.random(), random.random()
+
         return Prediction(
-            outcome_prediction=OutcomePrediction(
-                p_yes=Probability(p_yes),
-                confidence=confidence,
-                info_utility=None,
+            outcome_prediction=CategoricalProbabilisticAnswer.from_probabilistic_answer(
+                ProbabilisticAnswer(p_yes=Probability(p_yes), confidence=confidence),
             ),
         )
 
@@ -108,12 +109,14 @@ class FixedAgent(AbstractBenchmarkedAgent):
 
     def predict(self, market_question: str) -> Prediction:
         p_yes, confidence = 1.0 if self.fixed_answer else 0.0, 1.0
+
         return Prediction(
-            outcome_prediction=OutcomePrediction(
-                p_yes=Probability(p_yes),
-                confidence=confidence,
-                info_utility=None,
-            ),
+            outcome_prediction=CategoricalProbabilisticAnswer.from_probabilistic_answer(
+                ProbabilisticAnswer(
+                    p_yes=Probability(p_yes),
+                    confidence=confidence,
+                )
+            )
         )
 
     def predict_restricted(

@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import httpx
 import tenacity
+from cachetools import TTLCache, cached
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
@@ -23,7 +24,12 @@ from cowdao_cowpy.order_book.generated.model import (
     TokenAmount,
 )
 from cowdao_cowpy.subgraph.client import BaseModel
-from tenacity import retry_if_not_exception_type, stop_after_attempt, wait_fixed
+from tenacity import (
+    retry_if_not_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    wait_fixed,
+)
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -88,8 +94,8 @@ def get_sell_token_amount(
 
 
 @tenacity.retry(
-    stop=stop_after_attempt(3),
-    wait=wait_fixed(1),
+    stop=stop_after_attempt(4),
+    wait=wait_exponential(min=4, max=10),
     retry=retry_if_not_exception_type(NoLiquidityAvailableOnCowException),
 )
 def get_quote(
@@ -133,6 +139,7 @@ def get_quote(
         raise
 
 
+@cached(TTLCache(maxsize=100, ttl=5 * 60))
 def get_buy_token_amount_else_raise(
     sell_amount: Wei,
     sell_token: ChecksumAddress,

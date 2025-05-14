@@ -8,6 +8,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     MarketFees,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
@@ -48,7 +49,7 @@ def test_kelly_price_impact_calculation2() -> None:
 def test_kelly_price_impact_works_large_pool(
     max_bet_amount: float, max_price_impact: float, p_yes: float
 ) -> None:
-    large_market = OmenSubgraphHandler().get_omen_binary_markets_simple(
+    large_market = OmenSubgraphHandler().get_omen_markets_simple(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
@@ -67,7 +68,7 @@ def test_kelly_price_impact_works_large_pool(
 def test_kelly_price_impact_works_small_pool(
     max_bet_amount: float, max_price_impact: float, p_yes: float
 ) -> None:
-    market = OmenSubgraphHandler().get_omen_binary_markets_simple(
+    market = OmenSubgraphHandler().get_omen_markets_simple(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.LOWEST_LIQUIDITY,
@@ -107,17 +108,24 @@ def assert_price_impact_converges(
     )
 
     kelly = KellyBettingStrategy(
-        max_bet_amount=max_bet_amount, max_price_impact=max_price_impact
+        max_bet_amount=max_bet_amount,
+        max_price_impact=max_price_impact,
     )
 
+    # not sure about direction, trying out Yes
+    direction = OMEN_TRUE_OUTCOME
+    outcome_idx = omen_agent_market.get_outcome_index(direction)
+
     max_price_impact_bet_amount = kelly.calculate_bet_amount_for_price_impact(
-        omen_agent_market, kelly_bet
+        omen_agent_market, kelly_bet, direction=direction
     )
     price_impact = kelly.calculate_price_impact_for_bet_amount(
-        kelly_bet.direction,
+        outcome_idx=outcome_idx,
+        pool_balances=[
+            yes_outcome_pool_size.as_outcome_wei,
+            no_outcome_pool_size.as_outcome_wei,
+        ],
         bet_amount=max_price_impact_bet_amount,
-        yes=yes_outcome_pool_size,
-        no=no_outcome_pool_size,
         fees=omen_agent_market.fees,
     )
 
@@ -132,11 +140,12 @@ def assert_price_impact(
     no: OutcomeToken,
     kelly: KellyBettingStrategy,
 ) -> None:
+    pool_balances = [yes.as_outcome_wei, no.as_outcome_wei]
+    outcome_idx = 0 if buy_direction else 1
     price_impact = kelly.calculate_price_impact_for_bet_amount(
-        buy_direction,
+        outcome_idx=outcome_idx,
+        pool_balances=pool_balances,
         bet_amount=bet_amount,
-        yes=yes,
-        no=no,
         fees=MarketFees.get_zero_fees(),
     )
 

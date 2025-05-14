@@ -3,6 +3,10 @@ from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, computed_field
 
+from prediction_market_agent_tooling.deploy.constants import (
+    NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
+)
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
@@ -10,24 +14,22 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
 
-class Resolution(str, Enum):
-    YES = "YES"
-    NO = "NO"
-    CANCEL = "CANCEL"
-    MKT = "MKT"
+class Resolution(BaseModel):
+    outcome: OutcomeStr | None
+    invalid: bool
 
     @staticmethod
-    def from_bool(value: bool) -> "Resolution":
-        return Resolution.YES if value else Resolution.NO
+    def from_answer(answer: OutcomeStr) -> "Resolution":
+        return Resolution(outcome=answer, invalid=False)
 
 
 class Bet(BaseModel):
     id: str
     amount: CollateralToken
-    outcome: bool
+    outcome: OutcomeStr
     created_time: DatetimeUTC
     market_question: str
     market_id: str
@@ -37,7 +39,7 @@ class Bet(BaseModel):
 
 
 class ResolvedBet(Bet):
-    market_outcome: bool
+    market_outcome: OutcomeStr
     resolved_time: DatetimeUTC
     profit: CollateralToken
 
@@ -82,6 +84,65 @@ class ProbabilisticAnswer(BaseModel):
     def p_no(self) -> Probability:
         return Probability(1 - self.p_yes)
 
+    @property
+    def probable_resolution(self) -> Resolution:
+        return (
+            Resolution(
+                outcome=OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER), invalid=False
+            )
+            if self.p_yes > 0.5
+            else Resolution(
+                outcome=OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER), invalid=False
+            )
+        )
+
+
+class CategoricalProbabilisticAnswer(BaseModel):
+    probabilities: dict[OutcomeStr, Probability]
+    confidence: float
+    reasoning: str | None = None
+
+    @property
+    def probable_resolution(self) -> Resolution:
+        # ToDo - Abstract into method
+        most_likely_outcome = max(
+            self.probabilities.items(),
+            key=lambda item: item[1],
+        )[0]
+        return Resolution(outcome=most_likely_outcome, invalid=False)
+
+    def to_probabilistic_answer(self) -> ProbabilisticAnswer:
+        p_yes = check_not_none(self.get_yes_probability())
+        return ProbabilisticAnswer(
+            p_yes=p_yes,
+            confidence=self.confidence,
+        )
+
+    @staticmethod
+    def from_probabilistic_answer(
+        answer: ProbabilisticAnswer,
+    ) -> "CategoricalProbabilisticAnswer":
+        return CategoricalProbabilisticAnswer(
+            probabilities={
+                OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER): answer.p_yes,
+                OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER): Probability(
+                    1 - answer.p_yes
+                ),
+            },
+            confidence=answer.confidence,
+            reasoning=answer.reasoning,
+        )
+
+    def get_yes_probability(self) -> Probability | None:
+        return next(
+            (
+                p
+                for o, p in self.probabilities.items()
+                if o.lower() == YES_OUTCOME_LOWERCASE_IDENTIFIER
+            ),
+            None,
+        )
+
 
 class Position(BaseModel):
     market_id: str
@@ -122,7 +183,7 @@ class TradeType(str, Enum):
 
 class Trade(BaseModel):
     trade_type: TradeType
-    outcome: bool
+    outcome: OutcomeStr
     amount: USD
 
 
@@ -142,13 +203,13 @@ class PlacedTrade(Trade):
 class SimulatedBetDetail(BaseModel):
     strategy: str
     url: str
-    market_p_yes: float
-    agent_p_yes: float
+    probabilities: dict[OutcomeStr, Probability]
+    agent_prob_multi: dict[OutcomeStr, Probability]
     agent_conf: float
     org_bet: CollateralToken
     sim_bet: CollateralToken
-    org_dir: bool
-    sim_dir: bool
+    org_dir: OutcomeStr
+    sim_dir: OutcomeStr
     org_profit: CollateralToken
     sim_profit: CollateralToken
     timestamp: DatetimeUTC
@@ -168,6 +229,4 @@ class SimulatedLifetimeDetail(BaseModel):
     total_simulated_profit: CollateralToken
     roi: float
     simulated_roi: float
-    sharpe_output_original: SharpeOutput
-    sharpe_output_simulation: SharpeOutput
     maximize: float

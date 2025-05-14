@@ -21,6 +21,9 @@ from prediction_market_agent_tooling.gtypes import (
     private_key_type,
     xDai,
 )
+from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    OmenSubgraphHandler,
+)
 from prediction_market_agent_tooling.tools.web3_utils import prepare_tx, send_xdai_to
 
 
@@ -116,3 +119,8 @@ def execute_tx_from_impersonated_account(
         # And wait for the receipt.
         tx_receipt = web3.eth.wait_for_transaction_receipt(send_tx)
         return tx_receipt
+
+
+@pytest.fixture(scope="session")
+def omen_subgraph_handler() -> OmenSubgraphHandler:
+    return OmenSubgraphHandler()

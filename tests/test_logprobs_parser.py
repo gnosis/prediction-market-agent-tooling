@@ -128,7 +128,7 @@ def test_parse_valid_tokens_with_agg_probs(
     ]
 
     results = parser._parse_valid_tokens_with__agg_probs(
-        [tuple(lp) for lp in valid_logprobs], dummy_yes_info
+        [tuple(lp) for lp in valid_logprobs], dummy_yes_info, 1
     )
 
     assert len(results) > 0
@@ -181,7 +181,9 @@ def test_logprob_calculation(parser: LogprobsParser) -> None:
     ]
 
     dummy_yes_info = DummyModel.model_fields["p_yes"]
-    results = parser._parse_valid_tokens_with__agg_probs(valid_logprobs, dummy_yes_info)
+    results = parser._parse_valid_tokens_with__agg_probs(
+        valid_logprobs, dummy_yes_info, 1
+    )
 
     # Calculate expected values
     expected_logprob = -0.5 + -0.3 + -0.2  # Sum of individual logprobs

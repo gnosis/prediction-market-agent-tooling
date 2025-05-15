@@ -55,7 +55,7 @@ class LogprobsParser:
                 for i in range(result_start_index, len(logprobs))
                 if logprobs[i]["token"] in {",", '"', ",\n", "\",\n'", '",\n'}
             ),
-            -1,
+            len(logprobs) - 1,
         )
         return result_start_index + 1, result_end_index
 
@@ -70,7 +70,10 @@ class LogprobsParser:
             return False
 
     def _parse_valid_tokens_with__agg_probs(
-        self, logprobs_list: list[tuple[dict[str, Any]]], field_info: FieldInfo
+        self,
+        logprobs_list: list[tuple[dict[str, Any]]],
+        field_info: FieldInfo,
+        top_logprobs: int,
     ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = [
             {
@@ -89,9 +92,14 @@ class LogprobsParser:
             if self._is_correct_type(result["token"], field_info.annotation)
         ]
 
-        return sorted(results_filtered, key=lambda x: x["logprob"], reverse=True)[
-            : len(logprobs_list[0])
-        ]
+        sorted_results = sorted(
+            results_filtered, key=lambda x: x["logprob"], reverse=True
+        )
+        return (
+            sorted_results[:top_logprobs]
+            if len(sorted_results) > top_logprobs
+            else sorted_results
+        )
 
     def parse_logprobs(
         self, logprobs: list[dict[str, Any]], target_model_cls: Type[BaseModel]
@@ -123,7 +131,9 @@ class LogprobsParser:
             ]
 
             parsed_logprobs_data = self._parse_valid_tokens_with__agg_probs(
-                list(product(*valid_logprobs_raw)), field_info
+                list(product(*valid_logprobs_raw)),
+                field_info,
+                len(logprobs[0]["top_logprobs"]),
             )
 
             results_for_keys.append(

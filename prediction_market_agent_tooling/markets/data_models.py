@@ -132,6 +132,14 @@ class CategoricalProbabilisticAnswer(BaseModel):
             reasoning=answer.reasoning,
         )
 
+    def probability_for_market_outcome(self, market_outcome: OutcomeStr) -> Probability:
+        for k, v in self.probabilities.items():
+            if k.lower() == market_outcome.lower():
+                return v
+        raise ValueError(
+            f"Could not find probability for market outcome {market_outcome}"
+        )
+
     def get_yes_probability(self) -> Probability | None:
         return next(
             (

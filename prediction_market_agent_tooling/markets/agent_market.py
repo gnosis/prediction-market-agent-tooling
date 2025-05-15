@@ -131,6 +131,24 @@ class AgentMarket(BaseModel):
             del data["fee"]
         return data
 
+    def market_outcome_for_probability_key(
+        self, probability_key: OutcomeStr
+    ) -> OutcomeStr:
+        for market_outcome in self.outcomes:
+            if market_outcome.lower() == probability_key.lower():
+                return market_outcome
+        raise ValueError(
+            f"Could not find probability for probability key {probability_key}"
+        )
+
+    def probability_for_market_outcome(self, market_outcome: OutcomeStr) -> Probability:
+        for k, v in self.probabilities.items():
+            if k.lower() == market_outcome.lower():
+                return v
+        raise ValueError(
+            f"Could not find probability for market outcome {market_outcome}"
+        )
+
     @property
     def is_binary(self) -> bool:
         # 3 outcomes can also be binary if 3rd outcome is invalid (Seer)

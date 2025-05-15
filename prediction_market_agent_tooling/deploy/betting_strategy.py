@@ -38,19 +38,6 @@ class GuaranteedLossError(RuntimeError):
     pass
 
 
-class OutcomeConverter:
-    def __init__(
-        self, probabilities: dict[OutcomeStr, Probability], outcomes: list[OutcomeStr]
-    ):
-        self.probabilities = probabilities
-        self.outcomes = outcomes
-        self.prob_outcome_to_market_outcome = self.build_mapping()
-
-    def build_mapping(self) -> dict[OutcomeStr, OutcomeStr]:
-        # ToDo
-        return {}
-
-
 class BettingStrategy(ABC):
     @abstractmethod
     def calculate_trades(
@@ -107,9 +94,6 @@ class BettingStrategy(ABC):
         )
         return trades
 
-    def _get_outcome_amount(self, amounts: dict, outcome: str) -> USD:
-        return amounts.get(outcome.lower(), self.build_zero_usd_amount())
-
     def _build_rebalance_trades_from_positions(
         self,
         existing_position: ExistingPosition | None,
@@ -126,7 +110,7 @@ class BettingStrategy(ABC):
         ]
         Note that we order the trades to first buy then sell, in order to minimally tilt the odds so that sell price is higher.
         """
-        trades = []
+
         existing_amounts = (
             {
                 outcome.lower(): amount
@@ -146,8 +130,12 @@ class BettingStrategy(ABC):
 
         trades = []
         for outcome in market.outcomes:
-            existing_amount = self._get_outcome_amount(existing_amounts, outcome)
-            target_amount = self._get_outcome_amount(target_amounts, outcome)
+            existing_amount = existing_amounts.get(
+                outcome.lower(), self.build_zero_usd_amount()
+            )
+            target_amount = target_amounts.get(
+                outcome.lower(), self.build_zero_usd_amount()
+            )
 
             diff_amount = target_amount - existing_amount
             if diff_amount == 0:
@@ -188,7 +176,8 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
             answer.probabilities.items(),
             key=lambda item: item[1],
         )[0]
-        return most_likely_outcome
+
+        return market.market_outcome_for_probability_key(most_likely_outcome)
 
     @staticmethod
     def get_other_direction(
@@ -229,7 +218,11 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
         """
         Returns the index of the outcome with the highest expected value.
         """
-        missing_outcomes = set(market.outcomes) - set(answer.probabilities.keys())
+
+        missing_outcomes = set([i.lower() for i in market.outcomes]) - set(
+            [i.lower() for i in market.probabilities.keys()]
+        )
+
         if missing_outcomes:
             raise ValueError(
                 f"Outcomes {missing_outcomes} not found in answer probabilities {answer.probabilities}"
@@ -237,14 +230,19 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
 
         best_outcome = None
         best_ev = float("-inf")
-        for outcome in market.outcomes:
-            if market.probabilities[outcome] == Probability(0.0):
+        for market_outcome in market.outcomes:
+            if market.probability_for_market_outcome(market_outcome) == Probability(
+                0.0
+            ):
                 # avoid division by 0
                 continue
-            ev = answer.probabilities[outcome] / market.probabilities[outcome]
+
+            ev = answer.probability_for_market_outcome(
+                market_outcome
+            ) / market.probability_for_market_outcome(market_outcome)
             if ev > best_ev:
                 best_ev = ev
-                best_outcome = outcome
+                best_outcome = market_outcome
 
         if best_outcome is None:
             raise ValueError(
@@ -273,14 +271,17 @@ class KellyBettingStrategy(BettingStrategy):
         override_p_yes: float | None = None,
     ) -> SimpleBet:
         estimated_p_yes = (
-            answer.probabilities[direction] if not override_p_yes else override_p_yes
+            answer.probability_for_market_outcome(direction)
+            if not override_p_yes
+            else override_p_yes
         )
 
         if not market.is_binary:
             # use Kelly simple, since Kelly full only supports 2 outcomes
+
             kelly_bet = get_kelly_bet_simplified(
                 max_bet=market.get_usd_in_token(max_bet_amount),
-                market_p_yes=market.probabilities[direction],
+                market_p_yes=market.probability_for_market_outcome(direction),
                 estimated_p_yes=estimated_p_yes,
                 confidence=answer.confidence,
             )

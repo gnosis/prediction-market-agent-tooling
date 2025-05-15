@@ -89,7 +89,7 @@ from prediction_market_agent_tooling.tools.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import get_receipt_block_timestamp
 
 OMEN_DEFAULT_REALITIO_BOND_VALUE = xDai(0.01)
-OMEN_TINY_BET_AMOUNT = USD(0.00001)
+OMEN_TINY_BET_AMOUNT = USD(0.001)
 
 
 class OmenAgentMarket(AgentMarket):

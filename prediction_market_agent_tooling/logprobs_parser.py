@@ -21,8 +21,9 @@ class FieldLogprobs(BaseModel):
 
 
 class LogprobsParser:
-    def __init__(self, skip_fields: list[str] = []):
-        self.skip_fields = ["logprobs"] + skip_fields
+    def __init__(self, skip_fields: list[str] | None = None):
+        base_skip_fields = ["logprobs"]
+        self.skip_fields = base_skip_fields + (skip_fields or [])
 
     def _get_logprobs_key_index(
         self, logprobs: list[dict[str, Any]], field_name: str

@@ -38,6 +38,19 @@ class GuaranteedLossError(RuntimeError):
     pass
 
 
+class OutcomeConverter:
+    def __init__(
+        self, probabilities: dict[OutcomeStr, Probability], outcomes: list[OutcomeStr]
+    ):
+        self.probabilities = probabilities
+        self.outcomes = outcomes
+        self.prob_outcome_to_market_outcome = self.build_mapping()
+
+    def build_mapping(self) -> dict[OutcomeStr, OutcomeStr]:
+        # ToDo
+        return {}
+
+
 class BettingStrategy(ABC):
     @abstractmethod
     def calculate_trades(
@@ -94,6 +107,9 @@ class BettingStrategy(ABC):
         )
         return trades
 
+    def _get_outcome_amount(self, amounts: dict, outcome: str) -> USD:
+        return amounts.get(outcome.lower(), self.build_zero_usd_amount())
+
     def _build_rebalance_trades_from_positions(
         self,
         existing_position: ExistingPosition | None,
@@ -108,22 +124,35 @@ class BettingStrategy(ABC):
             Trade(outcome=0, amount=10, trade_type=TradeType.BUY),
             Trade(outcome=1, amount=5, trade_type=TradeType.SELL)
         ]
-        Note that we order the trades to first buy then sell, in order to minimally tilt the odds so that
-        sell price is higher.
+        Note that we order the trades to first buy then sell, in order to minimally tilt the odds so that sell price is higher.
         """
         trades = []
+        existing_amounts = (
+            {
+                outcome.lower(): amount
+                for outcome, amount in existing_position.amounts_current.items()
+            }
+            if existing_position
+            else {}
+        )
+        target_amounts = (
+            {
+                outcome.lower(): amount
+                for outcome, amount in target_position.amounts_current.items()
+            }
+            if target_position
+            else {}
+        )
+
+        trades = []
         for outcome in market.outcomes:
-            prev_amount = (
-                existing_position.amounts_current[outcome]
-                if existing_position and outcome in existing_position.amounts_current
-                else self.build_zero_usd_amount()
-            )
-            new_amount = target_position.amounts_current.get(
-                outcome, self.build_zero_usd_amount()
-            )
-            diff_amount = new_amount - prev_amount
+            existing_amount = self._get_outcome_amount(existing_amounts, outcome)
+            target_amount = self._get_outcome_amount(target_amounts, outcome)
+
+            diff_amount = target_amount - existing_amount
             if diff_amount == 0:
                 continue
+
             trade_type = TradeType.SELL if diff_amount < 0 else TradeType.BUY
             trade = Trade(
                 amount=abs(diff_amount),

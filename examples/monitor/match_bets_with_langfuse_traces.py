@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
     GuaranteedLossError,
     KellyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
+    MaxExpectedValueBettingStrategy,
     MultiCategoricalMaxAccuracyBettingStrategy,
     TradeType,
 )
@@ -238,6 +239,9 @@ def get_objective(
             ),
             MaxAccuracyWithKellyScaledBetsStrategy.__name__: lambda: MaxAccuracyWithKellyScaledBetsStrategy(
                 max_bet_amount=bet_amount
+            ),
+            MaxExpectedValueBettingStrategy.__name__: lambda: MaxExpectedValueBettingStrategy(
+                bet_amount=bet_amount
             ),
             KellyBettingStrategy.__name__: lambda: KellyBettingStrategy(
                 max_bet_amount=bet_amount, max_price_impact=max_price_impact

@@ -340,7 +340,6 @@ class OmenAgentMarket(AgentMarket):
             resolution=model.get_resolution_enum(),
             created_time=model.creation_datetime,
             finalized_time=model.finalized_datetime,
-            # current_p_yes=model.current_p_yes,
             condition=model.condition,
             url=model.url,
             volume=model.collateralVolume.as_token,

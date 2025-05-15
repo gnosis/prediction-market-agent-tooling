@@ -104,7 +104,6 @@ class CategoricalProbabilisticAnswer(BaseModel):
 
     @property
     def probable_resolution(self) -> Resolution:
-        # ToDo - Abstract into method
         most_likely_outcome = max(
             self.probabilities.items(),
             key=lambda item: item[1],

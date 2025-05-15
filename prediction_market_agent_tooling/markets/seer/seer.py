@@ -278,7 +278,7 @@ class SeerAgentMarket(AgentMarket):
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
     ) -> t.Optional["SeerAgentMarket"]:
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-        # current_p_yes = p.current_p_yes()
+
         probability_map = p.build_probability_map()
         if not probability_map:
             logger.info(

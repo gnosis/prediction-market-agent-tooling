@@ -21,9 +21,16 @@ class FieldLogprobs(BaseModel):
 
 
 class LogprobsParser:
-    def __init__(self, skip_fields: list[str] | None = None):
+    def __init__(
+        self,
+        skip_fields: list[str] | None = None,
+        max_top_logprobs_length: int = 3,
+        max_logprobs_length: int = 5,
+    ):
         base_skip_fields = ["logprobs"]
         self.skip_fields = base_skip_fields + (skip_fields or [])
+        self.max_top_logprobs_length = max_top_logprobs_length
+        self.max_logprobs_length = max_logprobs_length
 
     def _get_logprobs_key_index(
         self, logprobs: list[dict[str, Any]], field_name: str
@@ -127,20 +134,15 @@ class LogprobsParser:
                 continue
 
             valid_logprobs_raw = [
-                logprobs[i]["top_logprobs"]
+                logprobs[i]["top_logprobs"][: self.max_top_logprobs_length]
                 for i in range(result_start_index, result_end_index)
+                if logprobs[i]["top_logprobs"] is not None
             ]
 
-            valid_logprobs_raw_top_n = (
-                valid_logprobs_raw
-                if len(valid_logprobs_raw) <= 10
-                else valid_logprobs_raw[:10]
-            )  # Take max 10 tokens long logprobs to avoid combinatorial explosion
-
             parsed_logprobs_data = self._parse_valid_tokens_with__agg_probs(
-                list(product(*valid_logprobs_raw_top_n)),
+                list(product(*valid_logprobs_raw[: self.max_logprobs_length])),
                 field_info,
-                len(logprobs[0]["top_logprobs"]),
+                min(len(sublist) for sublist in valid_logprobs_raw),
             )
 
             results_for_keys.append(

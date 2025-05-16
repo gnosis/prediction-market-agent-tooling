@@ -131,8 +131,14 @@ class LogprobsParser:
                 for i in range(result_start_index, result_end_index)
             ]
 
+            valid_logprobs_raw_top_n = (
+                valid_logprobs_raw
+                if len(valid_logprobs_raw) <= 10
+                else valid_logprobs_raw[:10]
+            )  # Take max 10 tokens long logprobs to avoid combinatorial explosion
+
             parsed_logprobs_data = self._parse_valid_tokens_with__agg_probs(
-                list(product(*valid_logprobs_raw)),
+                list(product(*valid_logprobs_raw_top_n)),
                 field_info,
                 len(logprobs[0]["top_logprobs"]),
             )

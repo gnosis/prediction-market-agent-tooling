@@ -8,6 +8,7 @@ import typer.main
 from loguru import logger
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pythonjsonlogger import jsonlogger
+from tenacity import RetryError
 
 
 class LogFormat(str, Enum):
@@ -68,7 +69,18 @@ def _handle_exception(
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    exp_details: BaseException | None = exc_value
+    if isinstance(exc_value, RetryError):
+        # In case of RetryError from tenacity, add last attempt's exp to the log, otherwise we won't see the exception's message in the logs.
+        exp_details = exc_value.last_attempt.exception()
+
+    logger.error(
+        # Do not use f-string here, loguru internally calls `message.format(*args, **kwargs)` and in case you put {} into the message (for example, dict-formatted exception from evm),
+        # it would throw an error.
+        "Uncaught exception: {exp_details}",
+        exp_details=exp_details,
+        exc_info=(exc_type, exc_value, exc_traceback),
+    )
 
 
 def patch_logger(force_patch: bool = False) -> None:

@@ -89,7 +89,8 @@ from prediction_market_agent_tooling.tools.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import get_receipt_block_timestamp
 
 OMEN_DEFAULT_REALITIO_BOND_VALUE = xDai(0.01)
-OMEN_TINY_BET_AMOUNT = USD(0.00001)
+# Too low value would work with the Omen contract, but causes CoW orders (when buying the specific market's tokens) to fail.
+OMEN_TINY_BET_AMOUNT = USD(0.001)
 
 
 class OmenAgentMarket(AgentMarket):

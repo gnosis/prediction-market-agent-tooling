@@ -23,25 +23,27 @@ def generate_image(
         raise ImportError(
             "openai not installed, please install extras `openai` to use this function."
         )
-    response = (
-        OpenAI(
-            api_key=APIKeys().openai_api_key.get_secret_value(),
-        )
-        .images.generate(
-            model=model,
-            prompt=prompt,
-            size=size,
-            quality=quality,
-            response_format="b64_json",
-            n=1,
-        )
-        .data[0]
+    response = OpenAI(
+        api_key=APIKeys().openai_api_key.get_secret_value(),
+    ).images.generate(
+        model=model,
+        prompt=prompt,
+        size=size,
+        quality=quality,
+        response_format="b64_json",
+        n=1,
     )
+
+    if response.data is None or len(response.data) == 0:
+        raise ValueError("No image data returned from the API.")
+
+    image_data = response.data[0]
+
     image = Image.open(
         io.BytesIO(
             base64.b64decode(
                 check_not_none(
-                    response.b64_json, "Can't be none if response_format is b64_json."
+                    image_data.b64_json, "Can't be none if response_format is b64_json."
                 )
             )
         )

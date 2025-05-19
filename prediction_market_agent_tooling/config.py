@@ -278,8 +278,8 @@ class RPCConfig(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    ETHEREUM_RPC_URL: URI = Field(default=URI("https://ethereum-rpc.publicnode.com"))
-    GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosischain.com"))
+    ETHEREUM_RPC_URL: URI = Field(default=URI("https://rpc.eth.gateway.fm"))
+    GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
     CHAIN_ID: ChainID = Field(default=ChainID(100))
 
     @property

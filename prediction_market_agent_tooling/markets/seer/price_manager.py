@@ -132,6 +132,16 @@ class PriceManager:
 
         # We normalize the prices to sum up to 1.
         normalized_prices = {}
+
+        if not price_data or (
+            sum(price_data.values(), start=CollateralToken.zero())
+            == CollateralToken.zero()
+        ):
+            return {
+                OutcomeStr(outcome): Probability(0)
+                for outcome in self.seer_market.outcomes
+            }
+
         for outcome_token, price in price_data.items():
             old_price = price
             new_price = Probability(

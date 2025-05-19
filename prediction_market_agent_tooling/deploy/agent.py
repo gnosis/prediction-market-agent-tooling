@@ -195,6 +195,7 @@ class DeployablePredictionAgent(DeployableAgent):
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
     trade_on_markets_created_after: DatetimeUTC | None = None
     get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
+    get_markets_filter_by: FilterBy = FilterBy.OPEN
 
     # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
@@ -338,7 +339,7 @@ class DeployablePredictionAgent(DeployableAgent):
         available_markets = cls.get_markets(
             limit=self.n_markets_to_fetch,
             sort_by=self.get_markets_sort_by,
-            filter_by=FilterBy.OPEN,
+            filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
             fetch_categorical_markets=self.fetch_categorical_markets,
         )

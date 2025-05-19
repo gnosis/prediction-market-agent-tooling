@@ -431,6 +431,12 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
         )
 
 
+class MetriSuperGroup(ContractERC20OnGnosisChain):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x7147A7405fCFe5CFa30c6d5363f9f357a317d082"
+    )
+
+
 class GNOContract(ContractERC20OnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
         "0x9c58bacc331c9aa871afd802db6379a98e80cedb"
@@ -923,10 +929,12 @@ class CollateralTokenChoice(str, Enum):
     wxdai = "wxdai"
     sdai = "sdai"
     gno = "gno"
+    metri_super_user = "metri_super_user"
 
 
 COLLATERAL_TOKEN_CHOICE_TO_ADDRESS = {
     CollateralTokenChoice.wxdai: WrappedxDaiContract().address,
     CollateralTokenChoice.sdai: sDaiContract().address,
     CollateralTokenChoice.gno: GNOContract().address,
+    CollateralTokenChoice.metri_super_user: MetriSuperGroup().address,
 }

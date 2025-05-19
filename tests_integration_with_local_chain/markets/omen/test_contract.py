@@ -87,6 +87,14 @@ def test_init_erc4626_erc20_contract_throws_on_unknown_contract(
             ["uint256", "address"],
             True,
         ),
+        (
+            Web3.to_checksum_address(
+                "0x7147a7405fcfe5cfa30c6d5363f9f357a317d082"
+            ),  # Circles ERC20 token
+            "balanceOf",
+            ["address"],
+            True,
+        ),
     ],
 )
 def test_contract_implements_function(

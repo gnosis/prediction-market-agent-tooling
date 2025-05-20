@@ -42,7 +42,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             self.get_token_in_usd(
                 self.get_buy_token_amount(
                     bet_amount=trade.amount,
-                    direction=trade.outcome,
+                    outcome=trade.outcome,
                 ).as_token
             )
             - trade.amount
@@ -56,7 +56,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         sort_by: SortBy = SortBy.CLOSING_SOONEST,
     ) -> t.Sequence["OmenJobAgentMarket"]:
-        markets = OmenSubgraphHandler().get_omen_binary_markets_simple(
+        markets = OmenSubgraphHandler().get_omen_markets_simple(
             limit=limit,
             filter_by=filter_by,
             sort_by=sort_by,
@@ -124,7 +124,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             resolution=market.resolution,
             created_time=market.created_time,
             close_time=market.close_time,
-            current_p_yes=market.current_p_yes,
+            probabilities=market.probabilities,
             url=market.url,
             volume=market.volume,
             creator=market.creator,

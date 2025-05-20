@@ -6,7 +6,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    MaxAccuracyBettingStrategy,
+    MultiCategoricalMaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -18,9 +18,10 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
+    CategoricalProbabilisticAnswer,
     ExistingPosition,
-    ProbabilisticAnswer,
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -40,17 +41,28 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 @pytest.mark.parametrize(
-    "estimate_p_yes, market_p_yes, expected_direction",
+    "prob_multi, expected_direction",
     [
-        (0.6, 0.5, True),
-        (0.4, 0.5, False),
+        ({"yes": 0.6, "no": 0.4}, OutcomeStr("yes")),
+        ({"yes": 0.4, "no": 0.6}, OutcomeStr("no")),
     ],
 )
 def test_answer_decision(
-    estimate_p_yes: float, market_p_yes: float, expected_direction: bool
+    prob_multi: dict[OutcomeStr, Probability], expected_direction: OutcomeStr
 ) -> None:
-    betting_strategy = MaxAccuracyBettingStrategy(bet_amount=USD(0.1))
-    direction: bool = betting_strategy.calculate_direction(market_p_yes, estimate_p_yes)
+    betting_strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(0.1))
+    mock_answer = CategoricalProbabilisticAnswer(
+        probabilities=prob_multi, confidence=1.0
+    )
+    # Create a mock market
+    mock_market = Mock(spec=AgentMarket)
+    # Mock market outcome for probability key (defined in pytest parameterize)
+    mock_market.market_outcome_for_probability_key.side_effect = lambda x: x
+
+    direction = betting_strategy.calculate_direction(
+        market=mock_market, answer=mock_answer
+    )
+
     assert direction == expected_direction
 
 
@@ -81,8 +93,14 @@ def test_rebalance() -> None:
     )
     buy_token_amount = OutcomeToken(10)
     bet_amount = USD(tiny_amount.value) + mock_existing_position.total_amount_current
-    strategy = MaxAccuracyBettingStrategy(bet_amount=bet_amount)
-    mock_answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=0.5)
+    strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=bet_amount)
+    mock_answer = CategoricalProbabilisticAnswer(
+        probabilities={
+            OMEN_TRUE_OUTCOME: Probability(0.9),
+            OMEN_FALSE_OUTCOME: Probability(0.1),
+        },
+        confidence=0.5,
+    )
     mock_market = Mock(OmenAgentMarket, wraps=OmenAgentMarket)
     mock_market.get_liquidity.return_value = liquidity_amount
     mock_market.get_tiny_bet_amount.return_value = tiny_amount
@@ -92,6 +110,8 @@ def test_rebalance() -> None:
     mock_market.get_token_in_usd = lambda x: USD(x.value)
     mock_market.current_p_yes = 0.5
     mock_market.id = "0x123"
+    mock_market.outcomes = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
+    mock_market.market_outcome_for_probability_key.side_effect = lambda x: x
 
     trades = strategy.calculate_trades(mock_existing_position, mock_answer, mock_market)
     # assert 1 buy trade and 1 sell trade
@@ -109,19 +129,19 @@ def test_rebalance() -> None:
     "strategy, liquidity, bet_proportion_fee, should_raise",
     [
         (
-            MaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
             1,
             0.02,
             True,  # Should raise because fee will eat the profit.
         ),
         (
-            MaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
             10,
             0.02,
             False,  # Should be okay, because liquidity + fee combo is reasonable.
         ),
         (
-            MaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
             10,
             0.5,
             True,  # Should raise because fee will eat the profit.
@@ -155,14 +175,23 @@ def test_attacking_market(
         finalized_time=None,
         created_time=utcnow(),
         close_time=utcnow() + timedelta(days=3),
-        current_p_yes=Probability(0.5),
+        probabilities={
+            OMEN_TRUE_OUTCOME: Probability(0.5),
+            OMEN_FALSE_OUTCOME: Probability(0.5),
+        },
         outcome_token_pool={
             OMEN_BINARY_MARKET_OUTCOMES[0]: liquidity,
             OMEN_BINARY_MARKET_OUTCOMES[1]: liquidity,
         },
         fees=MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee),
     )
-    answer = ProbabilisticAnswer(p_yes=Probability(0.9), confidence=1.0)
+    answer = CategoricalProbabilisticAnswer(
+        probabilities={
+            OMEN_TRUE_OUTCOME: Probability(0.9),
+            OMEN_FALSE_OUTCOME: Probability(0.1),
+        },
+        confidence=1.0,
+    )
 
     try:
         trades = strategy.calculate_trades(None, answer, market)

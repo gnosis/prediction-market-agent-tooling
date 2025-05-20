@@ -69,6 +69,7 @@ MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.SEER: SeerAgentMarket,
 }
 
+
 JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {
     MarketType.OMEN: OmenJobAgentMarket,
 }
@@ -83,7 +84,7 @@ def get_binary_markets(
     created_after: DatetimeUTC | None = None,
 ) -> t.Sequence[AgentMarket]:
     agent_market_class = MARKET_TYPE_TO_AGENT_MARKET[market_type]
-    markets = agent_market_class.get_binary_markets(
+    markets = agent_market_class.get_markets(
         limit=limit,
         sort_by=sort_by,
         filter_by=filter_by,

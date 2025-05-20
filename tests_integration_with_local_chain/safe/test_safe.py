@@ -70,7 +70,7 @@ def test_send_function_on_contract_tx_using_safe(
     safe_balance = local_ethereum_client.get_balance(test_safe.address)
     logger.debug(f"safe balance {safe_balance} xDai")
     # Fetch existing market with enough liquidity
-    markets = OmenSubgraphHandler().get_omen_binary_markets_simple(
+    markets = OmenSubgraphHandler().get_omen_markets_simple(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.NONE,
@@ -89,7 +89,7 @@ def test_send_function_on_contract_tx_using_safe(
         api_keys=test_keys,
         amount=amount,
         market=omen_agent_market,
-        binary_outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )

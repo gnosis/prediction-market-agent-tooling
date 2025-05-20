@@ -697,21 +697,18 @@ class OmenRealitioContract(ContractOnGnosisChain):
         self,
         api_keys: APIKeys,
         question_id: HexBytes,
-        answer: str,
-        outcomes: t.Sequence[str],
+        outcome_index: int,
         bond: xDaiWei,
         max_previous: xDaiWei | None = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:
         # Normalise the answer to lowercase, to match Enum values as [YES, NO] against outcomes as ["Yes", "No"].
-        answer = answer.lower()
-        outcomes = [o.lower() for o in outcomes]
 
         return self.submitAnswer(
             api_keys=api_keys,
             question_id=question_id,
             answer=int_to_hexbytes(
-                outcomes.index(answer)
+                outcome_index
             ),  # Contract's method expects answer index in bytes.
             bond=bond,
             max_previous=max_previous,

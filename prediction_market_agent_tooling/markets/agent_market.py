@@ -1,25 +1,33 @@
 import typing as t
 from enum import Enum
+from math import prod
 
 from eth_typing import ChecksumAddress
 from pydantic import BaseModel, field_validator, model_validator
 from pydantic_core.core_schema import FieldValidationInfo
 from web3 import Web3
 
+from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.constants import (
+    INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
+    NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
+)
 from prediction_market_agent_tooling.gtypes import (
-    CollateralToken,
     OutcomeStr,
     OutcomeToken,
+    OutcomeWei,
     Probability,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
     Bet,
+    CategoricalProbabilisticAnswer,
     CollateralToken,
     ExistingPosition,
     PlacedTrade,
-    ProbabilisticAnswer,
     Resolution,
     ResolvedBet,
 )
@@ -27,13 +35,12 @@ from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
-    should_not_happen,
     utcnow,
 )
 
 
 class ProcessedMarket(BaseModel):
-    answer: ProbabilisticAnswer
+    answer: CategoricalProbabilisticAnswer
 
 
 class ProcessedTradedMarket(ProcessedMarket):
@@ -66,14 +73,31 @@ class AgentMarket(BaseModel):
     question: str
     description: str | None
     outcomes: t.Sequence[OutcomeStr]
-    outcome_token_pool: dict[str, OutcomeToken] | None
+    outcome_token_pool: dict[OutcomeStr, OutcomeToken] | None
     resolution: Resolution | None
     created_time: DatetimeUTC | None
     close_time: DatetimeUTC | None
-    current_p_yes: Probability
+
+    probabilities: dict[OutcomeStr, Probability]
     url: str
     volume: CollateralToken | None
     fees: MarketFees
+
+    @field_validator("probabilities")
+    def validate_probabilities(
+        cls,
+        probs: dict[OutcomeStr, Probability],
+        info: FieldValidationInfo,
+    ) -> dict[OutcomeStr, Probability]:
+        outcomes: t.Sequence[OutcomeStr] = check_not_none(info.data.get("outcomes"))
+        if set(probs.keys()) != set(outcomes):
+            raise ValueError("Keys of `probabilities` must match `outcomes` exactly.")
+        total = float(sum(probs.values()))
+        if not 0.999 <= total <= 1.001:
+            # We simply log a warning because for some use-cases (e.g. existing positions), the
+            # markets might be already closed hence no reliable outcome token prices exist anymore.
+            logger.warning(f"Probabilities for market {info.data=} do not sum to 1.")
+        return probs
 
     @field_validator("outcome_token_pool")
     def validate_outcome_token_pool(
@@ -91,6 +115,14 @@ class AgentMarket(BaseModel):
                 )
         return outcome_token_pool
 
+    def get_outcome_token_pool_by_outcome(self, outcome: OutcomeStr) -> OutcomeToken:
+        if self.outcome_token_pool is None or not self.outcome_token_pool:
+            return OutcomeToken(0)
+
+        # We look up by index to avoid having to deal with case sensitivity issues.
+        outcome_idx = self.get_outcome_index(outcome)
+        return list(self.outcome_token_pool.values())[outcome_idx]
+
     @model_validator(mode="before")
     def handle_legacy_fee(cls, data: dict[str, t.Any]) -> dict[str, t.Any]:
         # Backward compatibility for older `AgentMarket` without `fees`.
@@ -99,33 +131,51 @@ class AgentMarket(BaseModel):
             del data["fee"]
         return data
 
-    @property
-    def current_p_no(self) -> Probability:
-        return Probability(1 - self.current_p_yes)
+    def market_outcome_for_probability_key(
+        self, probability_key: OutcomeStr
+    ) -> OutcomeStr:
+        for market_outcome in self.outcomes:
+            if market_outcome.lower() == probability_key.lower():
+                return market_outcome
+        raise ValueError(
+            f"Could not find probability for probability key {probability_key}"
+        )
+
+    def probability_for_market_outcome(self, market_outcome: OutcomeStr) -> Probability:
+        for k, v in self.probabilities.items():
+            if k.lower() == market_outcome.lower():
+                return v
+        raise ValueError(
+            f"Could not find probability for market outcome {market_outcome}"
+        )
 
     @property
-    def yes_outcome_price(self) -> CollateralToken:
-        """
-        Price at prediction market is equal to the probability of given outcome.
-        Keep as an extra property, in case it wouldn't be true for some prediction market platform.
-        """
-        return CollateralToken(self.current_p_yes)
+    def is_binary(self) -> bool:
+        # 3 outcomes can also be binary if 3rd outcome is invalid (Seer)
+        if len(self.outcomes) not in [2, 3]:
+            return False
+
+        lowercase_outcomes = [outcome.lower() for outcome in self.outcomes]
+
+        has_yes = YES_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
+        has_no = NO_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
+
+        if len(lowercase_outcomes) == 3:
+            invalid_outcome = lowercase_outcomes[-1]
+            has_invalid = INVALID_OUTCOME_LOWERCASE_IDENTIFIER in invalid_outcome
+            return has_yes and has_no and has_invalid
+
+        return has_yes and has_no
 
     @property
-    def yes_outcome_price_usd(self) -> USD:
-        return self.get_token_in_usd(self.yes_outcome_price)
+    def p_yes(self) -> Probability:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return check_not_none(probs_lowercase.get(YES_OUTCOME_LOWERCASE_IDENTIFIER))
 
     @property
-    def no_outcome_price(self) -> CollateralToken:
-        """
-        Price at prediction market is equal to the probability of given outcome.
-        Keep as an extra property, in case it wouldn't be true for some prediction market platform.
-        """
-        return CollateralToken(self.current_p_no)
-
-    @property
-    def no_outcome_price_usd(self) -> USD:
-        return self.get_token_in_usd(self.no_outcome_price)
+    def p_no(self) -> Probability:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return check_not_none(probs_lowercase.get(NO_OUTCOME_LOWERCASE_IDENTIFIER))
 
     @property
     def probable_resolution(self) -> Resolution:
@@ -135,16 +185,8 @@ class AgentMarket(BaseModel):
             else:
                 raise ValueError(f"Unknown resolution: {self.resolution}")
         else:
-            return Resolution.YES if self.current_p_yes > 0.5 else Resolution.NO
-
-    @property
-    def boolean_outcome(self) -> bool:
-        if self.resolution:
-            if self.resolution == Resolution.YES:
-                return True
-            elif self.resolution == Resolution.NO:
-                return False
-        should_not_happen(f"Market {self.id} does not have a successful resolution.")
+            outcome = get_most_probable_outcome(self.probabilities)
+            return Resolution(outcome=outcome, invalid=False)
 
     def get_last_trade_p_yes(self) -> Probability | None:
         """
@@ -201,7 +243,7 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_sell_value_of_outcome_token(
-        self, outcome: str, amount: OutcomeToken
+        self, outcome: OutcomeStr, amount: OutcomeToken
     ) -> CollateralToken:
         """
         When you hold OutcomeToken(s), it's easy to calculate how much you get at the end if you win (1 OutcomeToken will equal to 1 Token).
@@ -225,30 +267,77 @@ class AgentMarket(BaseModel):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def liquidate_existing_positions(self, outcome: bool) -> None:
+    def liquidate_existing_positions(self, outcome: OutcomeStr) -> None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def place_bet(self, outcome: bool, amount: USD) -> str:
+    def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def buy_tokens(self, outcome: bool, amount: USD) -> str:
+    def buy_tokens(self, outcome: OutcomeStr, amount: USD) -> str:
         return self.place_bet(outcome=outcome, amount=amount)
 
     def get_buy_token_amount(
-        self, bet_amount: USD | CollateralToken, direction: bool
+        self, bet_amount: USD | CollateralToken, outcome: OutcomeStr
     ) -> OutcomeToken | None:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def sell_tokens(self, outcome: bool, amount: USD | OutcomeToken) -> str:
+    def sell_tokens(self, outcome: OutcomeStr, amount: USD | OutcomeToken) -> str:
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
-    def get_binary_markets(
+    def compute_fpmm_probabilities(balances: list[OutcomeWei]) -> list[Probability]:
+        """
+        Compute the implied probabilities in a Fixed Product Market Maker.
+
+        Args:
+            balances (List[float]): Balances of outcome tokens.
+
+        Returns:
+            List[float]: Implied probabilities for each outcome.
+        """
+        if all(x.value == 0 for x in balances):
+            return [Probability(0.0)] * len(balances)
+
+        # converting to standard values for prod compatibility.
+        values_balance = [i.value for i in balances]
+        # Compute product of balances excluding each outcome
+        excluded_products = []
+        for i in range(len(values_balance)):
+            other_balances = values_balance[:i] + values_balance[i + 1 :]
+            excluded_products.append(prod(other_balances))
+
+        # Normalize to sum to 1
+        total = sum(excluded_products)
+        if total == 0:
+            return [Probability(0.0)] * len(balances)
+        probabilities = [Probability(p / total) for p in excluded_products]
+
+        return probabilities
+
+    @staticmethod
+    def build_probability_map_from_p_yes(
+        p_yes: Probability,
+    ) -> dict[OutcomeStr, Probability]:
+        return {
+            OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER): p_yes,
+            OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER): Probability(1.0 - p_yes),
+        }
+
+    @staticmethod
+    def build_probability_map(
+        outcome_token_amounts: list[OutcomeWei], outcomes: list[OutcomeStr]
+    ) -> dict[OutcomeStr, Probability]:
+        probs = AgentMarket.compute_fpmm_probabilities(outcome_token_amounts)
+        return {outcome: prob for outcome, prob in zip(outcomes, probs)}
+
+    @staticmethod
+    def get_markets(
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -328,12 +417,17 @@ class AgentMarket(BaseModel):
         return self.get_liquidity() > 0
 
     def has_successful_resolution(self) -> bool:
-        return self.resolution in [Resolution.YES, Resolution.NO]
+        return (
+            self.resolution is not None
+            and self.resolution.outcome is not None
+            and not self.resolution.invalid
+        )
 
     def has_unsuccessful_resolution(self) -> bool:
-        return self.resolution in [Resolution.CANCEL, Resolution.MKT]
+        return self.resolution is not None and self.resolution.invalid
 
-    def get_outcome_str_from_bool(self, outcome: bool) -> OutcomeStr:
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_str(self, outcome_index: int) -> OutcomeStr:
@@ -344,13 +438,14 @@ class AgentMarket(BaseModel):
                 f"Outcome index `{outcome_index}` out of range for `{self.outcomes}`: `{self.outcomes}`."
             )
 
-    def get_outcome_index(self, outcome: str) -> int:
+    def get_outcome_index(self, outcome: OutcomeStr) -> int:
+        outcomes_lowercase = [o.lower() for o in self.outcomes]
         try:
-            return self.outcomes.index(outcome)
+            return outcomes_lowercase.index(outcome.lower())
         except ValueError:
             raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
 
-    def get_token_balance(self, user_id: str, outcome: str) -> OutcomeToken:
+    def get_token_balance(self, user_id: str, outcome: OutcomeStr) -> OutcomeToken:
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_position(self, user_id: str) -> ExistingPosition | None:
@@ -385,7 +480,7 @@ class AgentMarket(BaseModel):
     def has_token_pool(self) -> bool:
         return self.outcome_token_pool is not None
 
-    def get_pool_tokens(self, outcome: str) -> OutcomeToken:
+    def get_pool_tokens(self, outcome: OutcomeStr) -> OutcomeToken:
         if not self.outcome_token_pool:
             raise ValueError("Outcome token pool is not available.")
 

@@ -1,5 +1,6 @@
 import pytest
 
+from prediction_market_agent_tooling.gtypes import OutcomeStr
 from prediction_market_agent_tooling.markets.polymarket.utils import (
     PolymarketFullMarket,
     Resolution,
@@ -53,7 +54,7 @@ def test_polymarket_is_main(url: str, expected: bool) -> None:
         ),
         (
             "Will Putin be reelected?",
-            Resolution.YES,
+            Resolution(outcome=OutcomeStr("Yes"), invalid=False),
         ),
     ],
 )

@@ -54,8 +54,13 @@ def test_answer_decision(
     mock_answer = CategoricalProbabilisticAnswer(
         probabilities=prob_multi, confidence=1.0
     )
+    # Create a mock market
+    mock_market = Mock(spec=AgentMarket)
+    # Mock market outcome for probability key (defined in pytest parameterize)
+    mock_market.market_outcome_for_probability_key.side_effect = lambda x: x
+
     direction = betting_strategy.calculate_direction(
-        market=Mock(AgentMarket), answer=mock_answer
+        market=mock_market, answer=mock_answer
     )
 
     assert direction == expected_direction

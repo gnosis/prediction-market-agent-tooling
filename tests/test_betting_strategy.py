@@ -111,6 +111,7 @@ def test_rebalance() -> None:
     mock_market.current_p_yes = 0.5
     mock_market.id = "0x123"
     mock_market.outcomes = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
+    mock_market.market_outcome_for_probability_key.side_effect = lambda x: x
 
     trades = strategy.calculate_trades(mock_existing_position, mock_answer, mock_market)
     # assert 1 buy trade and 1 sell trade

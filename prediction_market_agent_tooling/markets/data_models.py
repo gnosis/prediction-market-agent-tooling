@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
+from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
 
@@ -79,6 +80,7 @@ class ProbabilisticAnswer(BaseModel):
     p_yes: Probability
     confidence: float
     reasoning: str | None = None
+    logprobs: list[FieldLogprobs] | None = None
 
     @property
     def p_no(self) -> Probability:

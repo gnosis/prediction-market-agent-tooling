@@ -12,6 +12,7 @@ from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Account, Web3
 
+from prediction_market_agent_tooling.chains import ETHEREUM_ID, GNOSIS_CHAIN_ID
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
 from prediction_market_agent_tooling.gtypes import (
     ChainID,
@@ -280,7 +281,7 @@ class RPCConfig(BaseSettings):
 
     ETHEREUM_RPC_URL: URI = Field(default=URI("https://rpc.eth.gateway.fm"))
     GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
-    CHAIN_ID: ChainID = Field(default=ChainID(100))
+    CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
 
     @property
     def ethereum_rpc_url(self) -> URI:
@@ -299,9 +300,9 @@ class RPCConfig(BaseSettings):
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
     def chain_id_to_rpc_url(self, chain_id: ChainID) -> URI:
-        if chain_id == ChainID(1):
+        if chain_id == ETHEREUM_ID:
             return self.ethereum_rpc_url
-        elif chain_id == ChainID(100):
+        elif chain_id == GNOSIS_CHAIN_ID:
             return self.gnosis_rpc_url
         else:
             raise ValueError(f"Unsupported chain ID: {chain_id}")

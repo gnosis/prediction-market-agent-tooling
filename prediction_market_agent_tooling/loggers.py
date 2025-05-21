@@ -134,6 +134,7 @@ def patch_logger(force_patch: bool = False) -> None:
             handler,
             level=config.LOG_LEVEL.value,
             colorize=False,
+            catch=False,
         )
 
     # Use logging module for warnings.

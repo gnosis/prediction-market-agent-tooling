@@ -11,6 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Account, Web3
+from web3._utils.http import construct_user_agent
 
 from prediction_market_agent_tooling.chains import ETHEREUM_ID, GNOSIS_CHAIN_ID
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
@@ -280,7 +281,9 @@ class RPCConfig(BaseSettings):
     )
 
     ETHEREUM_RPC_URL: URI = Field(default=URI("https://rpc.eth.gateway.fm"))
+    ETHEREUM_RPC_BEARER: SecretStr | None = None
     GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
+    GNOSIS_RPC_BEARER: SecretStr | None = None
     CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
 
     @property
@@ -300,15 +303,33 @@ class RPCConfig(BaseSettings):
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
     def chain_id_to_rpc_url(self, chain_id: ChainID) -> URI:
-        if chain_id == ETHEREUM_ID:
-            return self.ethereum_rpc_url
-        elif chain_id == GNOSIS_CHAIN_ID:
-            return self.gnosis_rpc_url
-        else:
-            raise ValueError(f"Unsupported chain ID: {chain_id}")
+        return {
+            ETHEREUM_ID: self.ethereum_rpc_url,
+            GNOSIS_CHAIN_ID: self.gnosis_rpc_url,
+        }[chain_id]
+
+    def chain_id_to_rpc_bearer(self, chain_id: ChainID) -> SecretStr | None:
+        return {
+            ETHEREUM_ID: self.ETHEREUM_RPC_BEARER,
+            GNOSIS_CHAIN_ID: self.GNOSIS_RPC_BEARER,
+        }[chain_id]
 
     def get_web3(self) -> Web3:
-        return Web3(Web3.HTTPProvider(self.gnosis_rpc_url))
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": construct_user_agent(str(type(self))),
+        }
+        if bearer := self.chain_id_to_rpc_bearer(self.chain_id):
+            headers["Authorization"] = f"Bearer {bearer.get_secret_value()}"
+
+        return Web3(
+            Web3.HTTPProvider(
+                self.chain_id_to_rpc_url(self.chain_id),
+                request_kwargs={
+                    "headers": headers,
+                },
+            )
+        )
 
 
 class CloudCredentials(BaseSettings):

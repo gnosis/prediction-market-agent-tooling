@@ -137,10 +137,9 @@ class PriceManager:
             sum(price_data.values(), start=CollateralToken.zero())
             == CollateralToken.zero()
         ):
-            return {
-                OutcomeStr(outcome): Probability(0)
-                for outcome in self.seer_market.outcomes
-            }
+            raise ValueError(
+                f"All prices for market {self.seer_market.url} are zero. This shouldn't happen."
+            )
 
         for outcome_token, price in price_data.items():
             old_price = price

@@ -303,20 +303,16 @@ class RPCConfig(BaseSettings):
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
     def chain_id_to_rpc_url(self, chain_id: ChainID) -> URI:
-        if chain_id == ETHEREUM_ID:
-            return self.ethereum_rpc_url
-        elif chain_id == GNOSIS_CHAIN_ID:
-            return self.gnosis_rpc_url
-        else:
-            raise ValueError(f"Unsupported chain ID: {chain_id}")
+        return {
+            ETHEREUM_ID: self.ethereum_rpc_url,
+            GNOSIS_CHAIN_ID: self.gnosis_rpc_url,
+        }[chain_id]
 
     def chain_id_to_rpc_bearer(self, chain_id: ChainID) -> SecretStr | None:
-        if chain_id == ETHEREUM_ID:
-            return self.ETHEREUM_RPC_BEARER
-        elif chain_id == GNOSIS_CHAIN_ID:
-            return self.GNOSIS_RPC_BEARER
-        else:
-            raise ValueError(f"Unsupported chain ID: {chain_id}")
+        return {
+            ETHEREUM_ID: self.ETHEREUM_RPC_BEARER,
+            GNOSIS_CHAIN_ID: self.GNOSIS_RPC_BEARER,
+        }[chain_id]
 
     def get_web3(self) -> Web3:
         headers = {

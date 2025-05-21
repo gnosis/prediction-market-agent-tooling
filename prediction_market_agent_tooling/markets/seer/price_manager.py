@@ -1,5 +1,6 @@
-from datetime import timedelta
+import typing as t
 
+from cachetools import TTLCache, cached
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -15,11 +16,31 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
-from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_buy_token_amount_else_raise,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+
+
+def _make_cache_key(
+    *args: t.Any,
+    token: ChecksumAddress,
+    collateral_exchange_amount: CollateralToken | None = None,
+) -> str:
+    """
+    Generate a unique cache key based on a token address and optional collateral token.
+    """
+
+    if collateral_exchange_amount is None:
+        return f"{token}-no_collateral"
+
+    return "-".join(
+        [
+            token,
+            collateral_exchange_amount.symbol,
+            str(collateral_exchange_amount.value),
+        ]
+    )
 
 
 class PriceManager:
@@ -43,7 +64,7 @@ class PriceManager:
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
             )
 
-    @db_cache(max_age=timedelta(hours=1), cache_none=False)
+    @cached(TTLCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
     def get_price_for_token(
         self,
         token: ChecksumAddress,

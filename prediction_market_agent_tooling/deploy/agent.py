@@ -1,7 +1,4 @@
 import getpass
-import inspect
-import os
-import tempfile
 import time
 import typing as t
 from datetime import timedelta
@@ -13,19 +10,9 @@ from pydantic import computed_field
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    MaxAccuracyBettingStrategy,
+    MultiCategoricalMaxAccuracyBettingStrategy,
     TradeType,
 )
-from prediction_market_agent_tooling.deploy.constants import (
-    MARKET_TYPE_KEY,
-    REPOSITORY_KEY,
-)
-from prediction_market_agent_tooling.deploy.gcp.deploy import (
-    deploy_to_gcp,
-    run_deployed_gcp_function,
-    schedule_deployed_gcp_function,
-)
-from prediction_market_agent_tooling.deploy.gcp.utils import gcp_function_is_active
 from prediction_market_agent_tooling.deploy.trade_interval import (
     FixedInterval,
     TradeInterval,
@@ -40,6 +27,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    CategoricalProbabilisticAnswer,
     ExistingPosition,
     PlacedTrade,
     ProbabilisticAnswer,
@@ -51,9 +39,6 @@ from prediction_market_agent_tooling.markets.markets import (
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     send_keeping_token_to_eoa_xdai,
-)
-from prediction_market_agent_tooling.monitor.monitor_app import (
-    MARKET_TYPE_TO_DEPLOYED_AGENT,
 )
 from prediction_market_agent_tooling.tools.custom_exceptions import (
     CantPayForGasError,
@@ -185,88 +170,6 @@ class DeployableAgent:
             self.run(market_type=market_type)
             time.sleep(sleep_time)
 
-    def deploy_gcp(
-        self,
-        repository: str,
-        market_type: MarketType,
-        api_keys: APIKeys,
-        memory: int,
-        labels: dict[str, str] | None = None,
-        env_vars: dict[str, str] | None = None,
-        secrets: dict[str, str] | None = None,
-        cron_schedule: str | None = None,
-        gcp_fname: str | None = None,
-        start_time: DatetimeUTC | None = None,
-        timeout: int = 180,
-    ) -> None:
-        """
-        Deploy the agent as GCP Function.
-        """
-        path_to_agent_file = os.path.relpath(inspect.getfile(self.__class__))
-
-        entrypoint_function_name = "main"
-        entrypoint_template = f"""
-from {path_to_agent_file.replace("/", ".").replace(".py", "")} import *
-import functions_framework
-from prediction_market_agent_tooling.markets.markets import MarketType
-
-@functions_framework.http
-def {entrypoint_function_name}(request) -> str:
-    {self.__class__.__name__}().run(market_type={market_type.__class__.__name__}.{market_type.name})
-    return "Success"
-"""
-
-        gcp_fname = gcp_fname or self.get_gcloud_fname(market_type)
-
-        # For labels, only hyphens (-), underscores (_), lowercase characters, and numbers are allowed in values.
-        labels = (labels or {}) | {
-            MARKET_TYPE_KEY: market_type.value,
-        }
-        env_vars = (env_vars or {}) | {
-            REPOSITORY_KEY: repository,
-        }
-        secrets = secrets or {}
-
-        env_vars |= api_keys.model_dump_public()
-        secrets |= api_keys.model_dump_secrets()
-
-        monitor_agent = MARKET_TYPE_TO_DEPLOYED_AGENT[market_type].from_api_keys(
-            name=gcp_fname,
-            start_time=start_time or utcnow(),
-            api_keys=api_keys,
-        )
-        env_vars |= monitor_agent.model_dump_prefixed()
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
-            f.write(entrypoint_template)
-            f.flush()
-
-            fname = deploy_to_gcp(
-                gcp_fname=gcp_fname,
-                requirements_file=None,
-                extra_deps=[repository],
-                function_file=f.name,
-                labels=labels,
-                env_vars=env_vars,
-                secrets=secrets,
-                memory=memory,
-                entrypoint_function_name=entrypoint_function_name,
-                timeout=timeout,
-            )
-
-        # Check that the function is deployed
-        if not gcp_function_is_active(fname):
-            raise RuntimeError("Failed to deploy the function")
-
-        # Run the function
-        response = run_deployed_gcp_function(fname)
-        if not response.ok:
-            raise RuntimeError("Failed to run the deployed function")
-
-        # Schedule the function
-        if cron_schedule:
-            schedule_deployed_gcp_function(fname, cron_schedule=cron_schedule)
-
     def run(self, market_type: MarketType) -> None:
         """
         Run single iteration of the agent.
@@ -292,6 +195,7 @@ class DeployablePredictionAgent(DeployableAgent):
     n_markets_to_fetch: int = MAX_AVAILABLE_MARKETS
     trade_on_markets_created_after: DatetimeUTC | None = None
     get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
+    get_markets_filter_by: FilterBy = FilterBy.OPEN
 
     # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
@@ -377,9 +281,13 @@ class DeployablePredictionAgent(DeployableAgent):
             return False
 
         # Manifold allows to bet only on markets with probability between 1 and 99.
-        if market_type == MarketType.MANIFOLD and not (1 < market.current_p_yes < 99):
-            logger.info("Manifold's market probability not in the range 1-99.")
-            return False
+        if market_type == MarketType.MANIFOLD:
+            probability_yes = market.probabilities[
+                market.get_outcome_str_from_bool(True)
+            ]
+            if not probability_yes or not 1 < probability_yes < 99:
+                logger.info("Manifold's market probability not in the range 1-99.")
+                return False
 
         # Do as a last check, as it uses paid OpenAI API.
         if not is_predictable_binary(market.question):
@@ -392,11 +300,32 @@ class DeployablePredictionAgent(DeployableAgent):
 
         return True
 
+    def answer_categorical_market(
+        self, market: AgentMarket
+    ) -> CategoricalProbabilisticAnswer | None:
+        raise NotImplementedError("This method must be implemented by the subclass")
+
     def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
         """
-        Answer the binary market. This method must be implemented by the subclass.
+        Answer the binary market.
+
+        If this method is not overridden by the subclass, it will fall back to using
+        answer_categorical_market(). Therefore, subclasses only need to implement
+        answer_categorical_market() if they want to handle both types of markets.
         """
-        raise NotImplementedError("This method must be implemented by the subclass")
+        raise NotImplementedError(
+            "Either this method, or answer_categorical_market, must be implemented by the subclass."
+        )
+
+    @property
+    def fetch_categorical_markets(self) -> bool:
+        # Check if the subclass has implemented the answer_categorical_market method, if yes, fetch categorical markets as well.
+        if (
+            self.answer_categorical_market.__func__  # type: ignore[attr-defined] # This works just fine, but mypy doesn't know about it for some reason.
+            is not DeployablePredictionAgent.answer_categorical_market
+        ):
+            return True
+        return False
 
     def get_markets(
         self,
@@ -407,11 +336,12 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         cls = market_type.market_class
         # Fetch the soonest closing markets to choose from
-        available_markets = cls.get_binary_markets(
+        available_markets = cls.get_markets(
             limit=self.n_markets_to_fetch,
             sort_by=self.get_markets_sort_by,
-            filter_by=FilterBy.OPEN,
+            filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
+            fetch_categorical_markets=self.fetch_categorical_markets,
         )
         return available_markets
 
@@ -432,6 +362,35 @@ class DeployablePredictionAgent(DeployableAgent):
                     multiplier=3,
                 )
 
+    def build_answer(
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        verify_market: bool = True,
+    ) -> CategoricalProbabilisticAnswer | None:
+        if verify_market and not self.verify_market(market_type, market):
+            logger.info(f"Market '{market.question}' doesn't meet the criteria.")
+            return None
+
+        logger.info(f"Answering market '{market.question}'.")
+
+        if market.is_binary:
+            try:
+                binary_answer = self.answer_binary_market(market)
+                return (
+                    CategoricalProbabilisticAnswer.from_probabilistic_answer(
+                        binary_answer
+                    )
+                    if binary_answer is not None
+                    else None
+                )
+            except NotImplementedError:
+                logger.info(
+                    "answer_binary_market() not implemented, falling back to answer_categorical_market()"
+                )
+
+        return self.answer_categorical_market(market)
+
     def process_market(
         self,
         market_type: MarketType,
@@ -443,13 +402,9 @@ class DeployablePredictionAgent(DeployableAgent):
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
         )
 
-        answer: ProbabilisticAnswer | None
-        if verify_market and not self.verify_market(market_type, market):
-            logger.info(f"Market '{market.question}' doesn't meet the criteria.")
-            answer = None
-        else:
-            logger.info(f"Answering market '{market.question}'.")
-            answer = self.answer_binary_market(market)
+        answer = self.build_answer(
+            market=market, market_type=market_type, verify_market=verify_market
+        )
 
         processed_market = (
             ProcessedMarket(answer=answer) if answer is not None else None
@@ -494,6 +449,7 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         logger.info("Start processing of markets.")
         available_markets = self.get_markets(market_type)
+
         logger.info(
             f"Fetched {len(available_markets)=} markets to process, going to process {self.bet_on_n_markets_per_run=}."
         )
@@ -580,24 +536,29 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                 f"Minimum required balance {min_required_balance_to_trade} for agent {api_keys.bet_from_address=} is not met."
             )
 
+    @staticmethod
+    def get_total_amount_to_bet(market: AgentMarket) -> USD:
+        user_id = market.get_user_id(api_keys=APIKeys())
+
+        total_amount = market.get_in_usd(market.get_tiny_bet_amount())
+        existing_position = market.get_position(user_id=user_id)
+        if existing_position and existing_position.total_amount_current > USD(0):
+            total_amount += existing_position.total_amount_current
+        return total_amount
+
     def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
         """
         Override this method to customize betting strategy of your agent.
 
         Given the market and prediction, agent uses this method to calculate optimal outcome and bet size.
         """
-        user_id = market.get_user_id(api_keys=APIKeys())
-
-        total_amount = market.get_in_usd(market.get_tiny_bet_amount())
-        if existing_position := market.get_position(user_id=user_id):
-            total_amount += existing_position.total_amount_current
-
-        return MaxAccuracyBettingStrategy(bet_amount=total_amount)
+        total_amount = self.get_total_amount_to_bet(market)
+        return MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=total_amount)
 
     def build_trades(
         self,
         market: AgentMarket,
-        answer: ProbabilisticAnswer,
+        answer: CategoricalProbabilisticAnswer,
         existing_position: ExistingPosition | None,
     ) -> list[Trade]:
         strategy = self.get_betting_strategy(market=market)
@@ -654,8 +615,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                             market.get_position(user_id),
                             "Should exists if we are going to sell outcomes.",
                         )
+
                         current_position_value_usd = current_position.amounts_current[
-                            market.get_outcome_str_from_bool(trade.outcome)
+                            trade.outcome
                         ]
                         amount_to_sell: USD | OutcomeToken
                         if current_position_value_usd <= trade.amount:
@@ -663,9 +625,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                                 f"Current value of position {trade.outcome=}, {current_position_value_usd=} is less than the desired selling amount {trade.amount=}. Selling all."
                             )
                             # In case the agent asked to sell too much, provide the amount to sell as all outcome tokens, instead of in USD, to minimze fx fluctuations when selling.
-                            amount_to_sell = current_position.amounts_ot[
-                                market.get_outcome_str_from_bool(trade.outcome)
-                            ]
+                            amount_to_sell = current_position.amounts_ot[trade.outcome]
                         else:
                             amount_to_sell = trade.amount
                         id = market.sell_tokens(

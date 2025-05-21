@@ -10,7 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.manifold.utils import (
+from prediction_market_agent_tooling.markets.manifold.api import (
     find_resolution_on_manifold,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
@@ -168,19 +168,7 @@ def finalize_markets(
                     f"Skipping, no resolution provided, market closed before {closed_before_days} days: {market.url=}"
                 )
 
-        elif resolution in (Resolution.YES, Resolution.NO):
-            logger.info(f"Found resolution {resolution.value=} for {market.url=}")
-            omen_submit_answer_market_tx(
-                api_keys,
-                market,
-                resolution,
-                realitio_bond,
-                web3=web3,
-            )
-            finalized_markets.append(market.id)
-            logger.info(f"Finalized {market.url=}")
-
-        else:
+        elif resolution.invalid:
             logger.warning(
                 f"Invalid resolution found, {resolution=}, for {market.url=}, finalizing as invalid."
             )
@@ -190,6 +178,18 @@ def finalize_markets(
                 realitio_bond,
                 web3=web3,
             )
+
+        else:
+            logger.info(f"Found resolution {resolution=} for {market.url=}")
+            omen_submit_answer_market_tx(
+                api_keys,
+                market,
+                resolution,
+                realitio_bond,
+                web3=web3,
+            )
+            finalized_markets.append(market.id)
+            logger.info(f"Finalized {market.url=}")
 
     return finalized_markets
 
@@ -223,11 +223,11 @@ def omen_submit_answer_market_tx(
     And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
     """
     realitio_contract = OmenRealitioContract()
+    outcome_index = market.outcomes.index(resolution.outcome)
     realitio_contract.submit_answer(
         api_keys=api_keys,
         question_id=market.question.id,
-        answer=resolution.value,
-        outcomes=market.question.outcomes,
+        outcome_index=outcome_index,
         bond=bond.as_xdai_wei,
         web3=web3,
     )

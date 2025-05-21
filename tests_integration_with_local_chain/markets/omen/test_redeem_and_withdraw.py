@@ -8,6 +8,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import USD, private_key_type, xDai
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_FALSE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -82,7 +83,7 @@ def test_redeem_and_withdraw(
         api_keys,
         bet_size,
         agent_market,
-        binary_outcome=False,
+        outcome=OMEN_FALSE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )

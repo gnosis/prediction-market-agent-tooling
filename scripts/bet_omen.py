@@ -3,7 +3,7 @@ from eth_typing import HexAddress, HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import USD, private_key_type
+from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, private_key_type
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     omen_buy_outcome_tx,
@@ -49,7 +49,7 @@ def buy(
         ),
         amount=USD(amount_usd),
         market=market,
-        outcome=outcome,
+        outcome=OutcomeStr(outcome),
         auto_deposit=auto_deposit,
     )
 
@@ -88,7 +88,7 @@ def sell(
         ),
         amount=USD(amount_usd),
         market=market,
-        outcome=outcome,
+        outcome=OutcomeStr(outcome),
         auto_withdraw=auto_withdraw,
     )
 

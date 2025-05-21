@@ -14,17 +14,18 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent import AnsweredEnum, MarketType
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    CategoricalProbabilisticAnswer,
     GuaranteedLossError,
     KellyBettingStrategy,
-    MaxAccuracyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MaxExpectedValueBettingStrategy,
-    ProbabilisticAnswer,
+    MultiCategoricalMaxAccuracyBettingStrategy,
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
+    OutcomeStr,
     private_key_type,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -38,9 +39,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     get_omen_market_by_market_id_cached,
-)
-from prediction_market_agent_tooling.monitor.financial_metrics.financial_metrics import (
-    SharpeRatioCalculator,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
@@ -63,7 +61,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 class SimulatedOutcome(BaseModel):
     size: CollateralToken
-    direction: bool
+    direction: OutcomeStr
     correct: bool
     profit: CollateralToken
 
@@ -71,7 +69,7 @@ class SimulatedOutcome(BaseModel):
 def get_outcome_for_trace(
     strategy: BettingStrategy,
     trace: ProcessMarketTrace,
-    market_outcome: bool,
+    market_outcome: OutcomeStr,
     actual_placed_bet: ResolvedBet,
     tx_block_cache: TransactionBlockCache,
 ) -> SimulatedOutcome | None:
@@ -81,8 +79,8 @@ def get_outcome_for_trace(
     try:
         trades = strategy.calculate_trades(
             existing_position=None,
-            answer=ProbabilisticAnswer(
-                p_yes=answer.p_yes,
+            answer=CategoricalProbabilisticAnswer(
+                probabilities=answer.probabilities,
                 confidence=answer.confidence,
             ),
             market=market,
@@ -123,7 +121,7 @@ def get_outcome_for_trace(
     else:
         received_outcome_tokens = (
             omen_agent_market_before_placing_bet.get_buy_token_amount(
-                buy_trade.amount, direction=buy_trade.outcome
+                buy_trade.amount, outcome=buy_trade.outcome
             )
         )
         profit = received_outcome_tokens.as_token - buy_trade_in_tokes
@@ -155,11 +153,12 @@ def calc_metrics(
         if simulated_outcome is None:
             continue
         simulated_outcomes.append(simulated_outcome)
+
         simulation_detail = SimulatedBetDetail(
             strategy=repr(strategy),
             url=bet_with_trace.trace.market.url,
-            market_p_yes=round(bet_with_trace.trace.market.current_p_yes, 4),
-            agent_p_yes=round(bet_with_trace.trace.answer.p_yes, 4),
+            probabilities=bet_with_trace.trace.market.probabilities,
+            agent_prob_multi=bet_with_trace.trace.answer.probabilities,
             agent_conf=round(bet_with_trace.trace.answer.confidence, 4),
             org_bet=round(bet_with_trace.bet.amount, 4),
             sim_bet=round(simulated_outcome.size, 4),
@@ -171,18 +170,17 @@ def calc_metrics(
         )
         per_bet_details.append(simulation_detail)
 
-    # Financial analysis
-    calc = SharpeRatioCalculator(details=per_bet_details)
-    sharpe_output_simulation = calc.calculate_annual_sharpe_ratio()
-    sharpe_output_original = calc.calculate_annual_sharpe_ratio(
-        profit_col_name="org_profit"
-    )
-
     sum_squared_errors = 0.0
     for bet_with_trace in bets:
-        estimated_p_yes = bet_with_trace.trace.answer.p_yes
-        actual_answer = float(bet_with_trace.bet.market_outcome)
-        sum_squared_errors += (estimated_p_yes - actual_answer) ** 2
+        predicted_probs = bet_with_trace.trace.answer.probabilities
+
+        # Create actual outcome vector (1 for winning outcome, 0 for others)
+        actual_outcome = bet_with_trace.bet.market_outcome
+        sum_squared_errors_outcome = 0.0
+        for outcome, predicted_prob in predicted_probs.items():
+            actual_value = 1.0 if outcome == actual_outcome else 0.0
+            sum_squared_errors_outcome += (predicted_prob - actual_value) ** 2
+        sum_squared_errors += sum_squared_errors_outcome / len(predicted_probs)
 
     p_yes_mse = sum_squared_errors / len(bets)
     total_bet_amount = sum([bt.bet.amount for bt in bets], start=CollateralToken(0))
@@ -204,8 +202,6 @@ def calc_metrics(
         total_simulated_profit=total_simulated_profit,
         roi=roi,
         simulated_roi=simulated_roi,
-        sharpe_output_original=sharpe_output_original,
-        sharpe_output_simulation=sharpe_output_simulation,
         maximize=total_simulated_profit.value,  # Metric to be maximized for.
     )
 
@@ -225,8 +221,7 @@ def get_objective(
         strategy_name = trial.suggest_categorical(
             "strategy_name",
             [
-                MaxAccuracyBettingStrategy.__name__,
-                MaxExpectedValueBettingStrategy.__name__,
+                MultiCategoricalMaxAccuracyBettingStrategy.__name__,
                 MaxAccuracyWithKellyScaledBetsStrategy.__name__,
                 KellyBettingStrategy.__name__,
             ],
@@ -237,26 +232,26 @@ def get_objective(
             if strategy_name == KellyBettingStrategy.__name__
             else None
         )
-        strategy = (
-            MaxAccuracyBettingStrategy(bet_amount=bet_amount)
-            if strategy_name == MaxAccuracyBettingStrategy.__name__
-            else (
-                MaxExpectedValueBettingStrategy(bet_amount=bet_amount)
-                if strategy_name == MaxExpectedValueBettingStrategy.__name__
-                else (
-                    MaxAccuracyWithKellyScaledBetsStrategy(max_bet_amount=bet_amount)
-                    if strategy_name == MaxAccuracyWithKellyScaledBetsStrategy.__name__
-                    else (
-                        KellyBettingStrategy(
-                            max_bet_amount=bet_amount, max_price_impact=max_price_impact
-                        )
-                        if strategy_name == KellyBettingStrategy.__name__
-                        else None
-                    )
-                )
-            )
-        )
-        assert strategy is not None, f"Invalid {strategy_name=}"
+
+        strategy_constructors: dict[str, t.Callable[[], BettingStrategy]] = {
+            MultiCategoricalMaxAccuracyBettingStrategy.__name__: lambda: MultiCategoricalMaxAccuracyBettingStrategy(
+                bet_amount=bet_amount
+            ),
+            MaxAccuracyWithKellyScaledBetsStrategy.__name__: lambda: MaxAccuracyWithKellyScaledBetsStrategy(
+                max_bet_amount=bet_amount
+            ),
+            MaxExpectedValueBettingStrategy.__name__: lambda: MaxExpectedValueBettingStrategy(
+                bet_amount=bet_amount
+            ),
+            KellyBettingStrategy.__name__: lambda: KellyBettingStrategy(
+                max_bet_amount=bet_amount, max_price_impact=max_price_impact
+            ),
+        }
+
+        strategy_constructor = strategy_constructors.get(strategy_name)
+        if strategy_constructor is None:
+            raise ValueError(f"Invalid strategy name: {strategy_name}")
+        strategy = strategy_constructor()
 
         per_bet_details, metrics = list(
             zip(*[calc_metrics(bs, strategy, tx_block_cache) for bs in bets])

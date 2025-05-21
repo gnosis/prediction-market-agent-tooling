@@ -38,7 +38,9 @@ from tests.utils import RUN_PAID_TESTS
         (
             "What percentile did the median superforecaster get in the 2023 ACX prediction contest?",
             False,
-        ),
+        ),  # This is ambiguous since date not available
+        ("Who will win the 2026 FIFA World Cup?", True),
+        ("What will the general sentiment be about AI in the future?", False),
     ],
 )
 def test_is_predictable_binary(question: str, answerable: bool) -> None:

@@ -1,7 +1,7 @@
 import typing as t
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.manifold.utils import validate_resolution
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
@@ -92,20 +93,24 @@ class ManifoldMarket(BaseModel):
     def outcomes(self) -> t.Sequence[OutcomeStr]:
         return [OutcomeStr(o) for o in self.pool.model_fields.keys()]
 
-    def get_resolved_boolean_outcome(self) -> bool:
-        if self.resolution == Resolution.YES:
-            return True
-        elif self.resolution == Resolution.NO:
-            return False
+    def get_resolved_outcome(self) -> OutcomeStr:
+        if self.resolution and self.resolution.outcome:
+            return self.resolution.outcome
         else:
-            should_not_happen(f"Unexpected bet outcome string, '{self.resolution}'.")
+            raise ValueError(f"Market is not resolved. Resolution {self.resolution=}")
 
     def is_resolved_non_cancelled(self) -> bool:
         return (
             self.isResolved
             and self.resolutionTime is not None
-            and self.resolution not in [Resolution.CANCEL, Resolution.MKT]
+            and self.resolution is not None
+            and self.resolution.outcome is not None
+            and not self.resolution.invalid
         )
+
+    @field_validator("resolution", mode="before")
+    def validate_resolution(cls, v: t.Any) -> Resolution:
+        return validate_resolution(v)
 
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
@@ -197,18 +202,20 @@ class ManifoldBet(BaseModel):
     createdTime: DatetimeUTC
     outcome: Resolution
 
-    def get_resolved_boolean_outcome(self) -> bool:
-        if self.outcome == Resolution.YES:
-            return True
-        elif self.outcome == Resolution.NO:
-            return False
-        else:
-            should_not_happen(f"Unexpected bet outcome string, '{self.outcome.value}'.")
+    @field_validator("outcome", mode="before")
+    def validate_resolution(cls, v: t.Any) -> Resolution:
+        return validate_resolution(v)
 
-    def get_profit(self, market_outcome: bool) -> CollateralToken:
+    def get_resolved_outcome(self) -> OutcomeStr:
+        if self.outcome.outcome:
+            return self.outcome.outcome
+        else:
+            raise ValueError(f"Bet {self.id} is not resolved. {self.outcome=}")
+
+    def get_profit(self, market_outcome: OutcomeStr) -> CollateralToken:
         profit = (
             self.shares - self.amount
-            if self.get_resolved_boolean_outcome() == market_outcome
+            if self.get_resolved_outcome() == market_outcome
             else -self.amount
         )
         return profit

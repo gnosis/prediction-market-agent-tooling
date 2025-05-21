@@ -23,7 +23,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     OmenPosition,
     OmenUserPosition,
-    OutcomeStr,
     OutcomeWei,
     RealityAnswer,
     RealityQuestion,
@@ -221,7 +220,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         self,
         creator: HexAddress | None,
         creator_in: t.Sequence[HexAddress] | None,
-        outcomes: t.Sequence[OutcomeStr],
         created_after: DatetimeUTC | None,
         question_opened_before: DatetimeUTC | None,
         question_opened_after: DatetimeUTC | None,
@@ -239,12 +237,15 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         id_in: list[str] | None,
         collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
         category: str | None,
+        include_categorical_markets: bool = False,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
-            "outcomes": outcomes,
             "title_not": None,
             "condition_": {},
         }
+        if not include_categorical_markets:
+            where_stms["outcomeSlotCount"] = 2
+            where_stms["outcomes"] = OMEN_BINARY_MARKET_OUTCOMES
 
         where_stms["question_"] = self.get_omen_question_filters(
             question_id=question_id,
@@ -329,12 +330,13 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         return sort_direction, sort_by_field
 
-    def get_omen_binary_markets_simple(
+    def get_omen_markets_simple(
         self,
         limit: t.Optional[int],
         # Enumerated values for simpler usage.
         filter_by: FilterBy,
         sort_by: SortBy,
+        include_categorical_markets: bool = False,
         # Additional filters, these can not be modified by the enums above.
         created_after: DatetimeUTC | None = None,
         excluded_questions: set[str] | None = None,  # question titles
@@ -345,7 +347,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         creator_in: t.Sequence[HexAddress] | None = None,
     ) -> t.List[OmenMarket]:
         """
-        Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
+        Simplified `get_omen_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
         """
         # These values need to be set according to the filter_by value, so they can not be passed as arguments.
         resolved: bool | None = None
@@ -367,7 +369,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
-        return self.get_omen_binary_markets(
+        all_markets = self.get_omen_markets(
             limit=limit,
             resolved=resolved,
             question_opened_after=opened_after,
@@ -379,9 +381,12 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             collateral_token_address_in=collateral_token_address_in,
             category=category,
             creator_in=creator_in,
+            include_categorical_markets=include_categorical_markets,
         )
 
-    def get_omen_binary_markets(
+        return all_markets
+
+    def get_omen_markets(
         self,
         limit: t.Optional[int],
         creator: HexAddress | None = None,
@@ -403,19 +408,18 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         id_in: list[str] | None = None,
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
-        outcomes: t.Sequence[OutcomeStr] = OMEN_BINARY_MARKET_OUTCOMES,
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
         ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
+        include_categorical_markets: bool = True,
     ) -> t.List[OmenMarket]:
         """
-        Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
+        Complete method to fetch Omen  markets with various filters, use `get_omen_markets_simple` for simplified version that uses FilterBy and SortBy enums.
         """
         where_stms = self._build_where_statements(
             creator=creator,
             creator_in=creator_in,
-            outcomes=outcomes,
             created_after=created_after,
             question_opened_before=question_opened_before,
             question_opened_after=question_opened_after,
@@ -433,6 +437,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             liquidity_bigger_than=liquidity_bigger_than,
             collateral_token_address_in=collateral_token_address_in,
             category=category,
+            include_categorical_markets=include_categorical_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.
@@ -451,6 +456,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         )
 
         fields = self._get_fields_for_markets(markets)
+
         omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
         return omen_markets
 
@@ -914,7 +920,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         unique_condition_ids: list[HexBytes] = list(
             set(sum([u.position.conditionIds for u in user_positions], []))
         )
-        markets = self.get_omen_binary_markets(
+        markets = self.get_omen_markets(
             limit=sys.maxsize, condition_id_in=unique_condition_ids
         )
         return markets
@@ -924,7 +930,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
     ) -> OmenMarket:
         """Markets and user positions are uniquely connected via condition_ids"""
         condition_ids = user_position.position.conditionIds
-        markets = self.get_omen_binary_markets(limit=1, condition_id_in=condition_ids)
+        markets = self.get_omen_markets(limit=1, condition_id_in=condition_ids)
         if len(markets) != 1:
             raise ValueError(
                 f"Incorrect number of markets fetched {len(markets)}, expected 1."

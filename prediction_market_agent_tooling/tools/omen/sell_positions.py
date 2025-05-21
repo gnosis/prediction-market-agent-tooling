@@ -47,9 +47,10 @@ def sell_all(
             continue
 
         old_balance = new_balance
+        bet_outcome = bet.fpmm.outcomes[bet.outcomeIndex]
         agent_market.sell_tokens(
-            bet.boolean_outcome,
-            current_token_balance,
+            outcome=bet_outcome,
+            amount=current_token_balance,
             auto_withdraw=auto_withdraw,
             api_keys=api_keys,
         )

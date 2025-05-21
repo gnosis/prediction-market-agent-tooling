@@ -6,13 +6,12 @@ from web3 import Web3
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
+    HexAddress,
+    OutcomeStr,
     Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.seer.data_models import (
-    SeerMarket,
-    SeerOutcomeEnum,
-)
+from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
@@ -65,30 +64,6 @@ class PriceManager:
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
             )
 
-    def current_p_yes(self) -> Probability | None:
-        # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
-        price_data: dict[int, CollateralToken | None] = {}
-        for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
-            price = self.get_price_for_token(
-                token=Web3.to_checksum_address(wrapped_token),
-            )
-
-            price_data[idx] = price
-
-        price_yes = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.YES]]
-        price_no = price_data[self.seer_market.outcome_as_enums[SeerOutcomeEnum.NO]]
-
-        # We only return a probability if we have both price_yes and price_no, since we could place bets
-        # in both sides hence we need current probabilities for both outcomes.
-        if price_yes is not None and price_no is not None:
-            normalized_price_yes = price_yes / (price_yes + price_no)
-            self._log_track_price_normalization_diff(
-                old_price=price_yes.value, normalized_price=normalized_price_yes
-            )
-            return Probability(normalized_price_yes)
-        else:
-            return None
-
     @cached(TTLCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
     def get_price_for_token(
         self,
@@ -117,7 +92,7 @@ class PriceManager:
             return self.get_token_price_from_pools(token=token)
 
     @staticmethod
-    def _pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:
+    def pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:
         return pool.token0.id.hex().lower() == token.lower()
 
     def get_token_price_from_pools(
@@ -138,7 +113,46 @@ class PriceManager:
         # For example, in a outcomeYES (token0)/sDAI pool (token1), token1Price is the price of outcomeYES in units of sDAI.
         price = (
             pool.token1Price
-            if self._pool_token0_matches_token(token=token, pool=pool)
+            if self.pool_token0_matches_token(token=token, pool=pool)
             else pool.token0Price
         )
         return price
+
+    def build_probability_map(self) -> dict[OutcomeStr, Probability]:
+        # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
+        price_data: dict[HexAddress, CollateralToken] = {}
+
+        for wrapped_token in self.seer_market.wrapped_tokens:
+            price = self.get_price_for_token(
+                token=Web3.to_checksum_address(wrapped_token),
+            )
+            price_data[wrapped_token] = (
+                price if price is not None else CollateralToken.zero()
+            )
+
+        # We normalize the prices to sum up to 1.
+        normalized_prices = {}
+
+        if not price_data or (
+            sum(price_data.values(), start=CollateralToken.zero())
+            == CollateralToken.zero()
+        ):
+            return {
+                OutcomeStr(outcome): Probability(0)
+                for outcome in self.seer_market.outcomes
+            }
+
+        for outcome_token, price in price_data.items():
+            old_price = price
+            new_price = Probability(
+                price / (sum(price_data.values(), start=CollateralToken.zero()))
+            )
+            self._log_track_price_normalization_diff(
+                old_price=old_price.value, normalized_price=new_price
+            )
+            outcome = self.seer_market.outcomes[
+                self.seer_market.wrapped_tokens.index(outcome_token)
+            ]
+            normalized_prices[OutcomeStr(outcome)] = new_price
+
+        return normalized_prices

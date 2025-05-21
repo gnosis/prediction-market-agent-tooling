@@ -1,6 +1,11 @@
 import typing as t
 
+from pydantic import field_validator
+from pydantic_core.core_schema import FieldValidationInfo
+
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -32,14 +37,29 @@ class MetaculusAgentMarket(AgentMarket):
     resolution_criteria: str
     fees: MarketFees = MarketFees.get_zero_fees()  # No fees on Metaculus.
 
+    @field_validator("probabilities")
+    def validate_probabilities(
+        cls,
+        probs: dict[OutcomeStr, Probability],
+        info: FieldValidationInfo,
+    ) -> dict[OutcomeStr, Probability]:
+        outcomes: t.Sequence[OutcomeStr] = check_not_none(info.data.get("outcomes"))
+        # We don't check for outcomes match because Metaculus has no filled outcomes.
+        total = float(sum(probs.values()))
+        if not 0.999 <= total <= 1.001:
+            # We simply log a warning because for some use-cases (e.g. existing positions), the
+            # markets might be already closed hence no reliable outcome token prices exist anymore.
+            logger.warning(f"Probabilities for market {info.data=} do not sum to 1.")
+        return probs
+
     @staticmethod
     def from_data_model(model: MetaculusQuestion) -> "MetaculusAgentMarket":
+        probabilities = AgentMarket.build_probability_map_from_p_yes(p_yes=model.p_yes)
         return MetaculusAgentMarket(
             id=str(model.id),
             question=model.title,
             outcomes=[],
             resolution=None,
-            current_p_yes=model.p_yes,
             created_time=model.created_at,
             close_time=model.scheduled_close_time,
             url=model.page_url,
@@ -49,10 +69,11 @@ class MetaculusAgentMarket(AgentMarket):
             description=model.question.description,
             fine_print=model.question.fine_print,
             resolution_criteria=model.question.resolution_criteria,
+            probabilities=probabilities,
         )
 
     @staticmethod
-    def get_binary_markets(
+    def get_markets(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
@@ -109,8 +130,12 @@ class MetaculusAgentMarket(AgentMarket):
     def store_prediction(
         self, processed_market: ProcessedMarket | None, keys: APIKeys, agent_name: str
     ) -> None:
-        if processed_market is not None:
-            make_prediction(self.id, processed_market.answer.p_yes)
+        if (
+            processed_market is not None
+            and processed_market.answer.get_yes_probability() is not None
+        ):
+            yes_prob = check_not_none(processed_market.answer.get_yes_probability())
+            make_prediction(self.id, yes_prob)
             post_question_comment(
                 self.id,
                 check_not_none(

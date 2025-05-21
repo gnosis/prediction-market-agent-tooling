@@ -16,7 +16,7 @@ class Orga(BaseModel):
 
 
 def build_digest_from_cid(cid: str) -> str:
-    decoded = base58.b58decode(cid)
+    decoded: bytes = base58.b58decode(cid)
     digest = decoded[2:]  # remove multihash prefix (2 bytes)
     return "0x" + digest.hex()
 
@@ -37,7 +37,7 @@ def main(
     ```
     """
 
-    assert (len(organization_name) < 32, "Organization name too long")
+    assert len(organization_name) < 32, "Organization name too long"
 
     api_keys = APIKeys(
         BET_FROM_PRIVATE_KEY=private_key_type(from_private_key),

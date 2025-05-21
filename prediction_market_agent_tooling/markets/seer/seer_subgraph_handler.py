@@ -88,6 +88,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case FilterBy.OPEN:
                 and_stms["openingTs_gt"] = now
                 and_stms["hasAnswers"] = False
+                and_stms["outcomesSupply_gt"] = 0
             case FilterBy.RESOLVED:
                 # We consider RESOLVED == CLOSED (on Seer UI)
                 and_stms["payoutReported"] = True

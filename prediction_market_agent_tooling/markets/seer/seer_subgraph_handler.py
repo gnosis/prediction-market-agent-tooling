@@ -9,7 +9,7 @@ from prediction_market_agent_tooling.deploy.constants import (
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
-from prediction_market_agent_tooling.gtypes import ChecksumAddress
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
@@ -77,6 +77,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     @staticmethod
     def _build_where_statements(
         filter_by: FilterBy,
+        outcome_supply_gt_if_open: Wei,
         include_conditional_markets: bool = False,
         include_categorical_markets: bool = True,
     ) -> dict[Any, Any]:
@@ -88,6 +89,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case FilterBy.OPEN:
                 and_stms["openingTs_gt"] = now
                 and_stms["hasAnswers"] = False
+                and_stms["outcomesSupply_gt"] = outcome_supply_gt_if_open.value
             case FilterBy.RESOLVED:
                 # We consider RESOLVED == CLOSED (on Seer UI)
                 and_stms["payoutReported"] = True
@@ -154,6 +156,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         filter_by: FilterBy,
         sort_by: SortBy = SortBy.NONE,
         limit: int | None = None,
+        outcome_supply_gt_if_open: Wei = Wei(0),
         include_conditional_markets: bool = True,
         include_categorical_markets: bool = True,
     ) -> list[SeerMarket]:
@@ -163,6 +166,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         # Binary markets on Seer contain 3 outcomes: OutcomeA, outcomeB and an Invalid option.
         where_stms = self._build_where_statements(
             filter_by=filter_by,
+            outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             include_conditional_markets=include_conditional_markets,
             include_categorical_markets=include_categorical_markets,
         )

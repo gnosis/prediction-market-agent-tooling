@@ -122,10 +122,15 @@ class PriceManager:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
         price_data: dict[HexAddress, CollateralToken] = {}
 
-        for wrapped_token in self.seer_market.wrapped_tokens:
+        for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
             price = self.get_price_for_token(
                 token=Web3.to_checksum_address(wrapped_token),
             )
+            # It's okay if invalid (last) outcome has price 0, but not the other outcomes.
+            if price is None and idx != len(self.seer_market.wrapped_tokens) - 1:
+                raise ValueError(
+                    f"Couldn't get price for {wrapped_token} for market {self.seer_market.url}."
+                )
             price_data[wrapped_token] = (
                 price if price is not None else CollateralToken.zero()
             )
@@ -137,10 +142,9 @@ class PriceManager:
             sum(price_data.values(), start=CollateralToken.zero())
             == CollateralToken.zero()
         ):
-            return {
-                OutcomeStr(outcome): Probability(0)
-                for outcome in self.seer_market.outcomes
-            }
+            raise ValueError(
+                f"All prices for market {self.seer_market.url} are zero. This shouldn't happen."
+            )
 
         for outcome_token, price in price_data.items():
             old_price = price

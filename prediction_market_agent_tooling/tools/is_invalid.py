@@ -77,10 +77,10 @@ def is_invalid(
         return True
 
     llm = ChatOpenAI(
-        model=engine,
+        model_name=engine,
         temperature=temperature,
         seed=seed,
-        api_key=APIKeys().openai_api_key_secretstr_v1,
+        openai_api_key=APIKeys().openai_api_key,
     )
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)

@@ -98,10 +98,10 @@ def is_predictable_binary(
         return True
 
     llm = ChatOpenAI(
-        model=engine,
+        model_name=engine,
         temperature=LLM_SUPER_LOW_TEMPERATURE,
         seed=LLM_SEED,
-        api_key=APIKeys().openai_api_key_secretstr_v1,
+        openai_api_key=APIKeys().openai_api_key,
     )
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)
@@ -138,10 +138,10 @@ def is_predictable_without_description(
         return True
 
     llm = ChatOpenAI(
-        model=engine,
+        model_name=engine,
         temperature=LLM_SUPER_LOW_TEMPERATURE,
         seed=LLM_SEED,
-        api_key=APIKeys().openai_api_key_secretstr_v1,
+        openai_api_key=APIKeys().openai_api_key,
     )
 
     prompt = ChatPromptTemplate.from_template(template=prompt_template)

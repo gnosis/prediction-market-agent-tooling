@@ -31,7 +31,12 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
 )
-from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
+from prediction_market_agent_tooling.markets.seer.exceptions import (
+    PriceCalculationError,
+)
+from prediction_market_agent_tooling.markets.seer.price_manager import (
+    PriceManager,
+)
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     GnosisRouter,
     SeerMarketFactory,
@@ -279,31 +284,44 @@ class SeerAgentMarket(AgentMarket):
     ) -> t.Optional["SeerAgentMarket"]:
         p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
 
-        probability_map = p.build_probability_map()
-        if not probability_map:
-            logger.info(
-                f"probability_map for market {model.id.hex()} could not be calculated. Skipping."
+        model.get_outcome_token_balances()
+
+        try:
+            probability_map = p.build_probability_map()
+
+            market = SeerAgentMarket(
+                id=model.id.hex(),
+                question=model.title,
+                creator=model.creator,
+                created_time=model.created_time,
+                outcomes=model.outcomes,
+                collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
+                condition_id=model.condition_id,
+                url=model.url,
+                close_time=model.close_time,
+                wrapped_tokens=[
+                    Web3.to_checksum_address(i) for i in model.wrapped_tokens
+                ],
+                fees=MarketFees.get_zero_fees(),
+                outcome_token_pool=None,
+                outcomes_supply=model.outcomes_supply,
+                resolution=None,
+                volume=None,
+                probabilities=probability_map,
+            )
+            liquidity = market.get_liquidity()
+            logger.info(f"{liquidity=}")
+            return market
+        except PriceCalculationError as e:
+            logger.warning(
+                f"Skipping market {model.id.hex()} due to price calculation error: {e}"
             )
             return None
-
-        return SeerAgentMarket(
-            id=model.id.hex(),
-            question=model.title,
-            creator=model.creator,
-            created_time=model.created_time,
-            outcomes=model.outcomes,
-            collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
-            condition_id=model.condition_id,
-            url=model.url,
-            close_time=model.close_time,
-            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
-            fees=MarketFees.get_zero_fees(),
-            outcome_token_pool=None,
-            outcomes_supply=model.outcomes_supply,
-            resolution=None,
-            volume=None,
-            probabilities=probability_map,
-        )
+        except Exception as e:
+            logger.warning(
+                f"probability_map for market {model.id.hex()} could not be calculated. Exception {e}. Skipping."
+            )
+            return None
 
     @staticmethod
     def get_markets(

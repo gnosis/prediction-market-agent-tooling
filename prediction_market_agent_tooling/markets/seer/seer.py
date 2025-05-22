@@ -34,9 +34,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
 from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
 )
-from prediction_market_agent_tooling.markets.seer.price_manager import (
-    PriceManager,
-)
+from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     GnosisRouter,
     SeerMarketFactory,
@@ -282,12 +280,15 @@ class SeerAgentMarket(AgentMarket):
     def from_data_model_with_subgraph(
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
     ) -> t.Optional["SeerAgentMarket"]:
-        p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-
-        model.get_outcome_token_balances()
-
+        price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
+        # We already skip markets that do not have enough liquidity in pools (since they won't have prices)
+        if not price_manager.check_if_all_outcome_liquidities_gt_0(model=model):
+            logger.info(
+                f"Market {model.id.hex()} does not have enough liquidity. Skipping."
+            )
+            return None
         try:
-            probability_map = p.build_probability_map()
+            probability_map = price_manager.build_probability_map()
 
             market = SeerAgentMarket(
                 id=model.id.hex(),

@@ -586,16 +586,6 @@ class DebuggingContract(ContractOnGnosisChain):
         )
 
 
-def contract_exposes_balanceOf(web3: Web3, address: ChecksumAddress) -> bool:
-    """This is a fallback check for contracts that implement some proxies but are indeed ERC20-compatible."""
-    try:
-        contract = ContractERC20OnGnosisChain(address=address)
-        contract.balanceOf(for_address=CHECKSUM_ADDRESSS_ZERO, web3=web3)
-        return True
-    except Exception:
-        return False
-
-
 def contract_implements_function(
     contract_address: ChecksumAddress,
     function_name: str,
@@ -688,7 +678,7 @@ def init_collateral_token_contract(
         "balanceOf",
         web3=web3,
         function_arg_types=["address"],
-    ) or contract_exposes_balanceOf(web3=web3, address=address):
+    ):
         return ContractERC20BaseClass(address=address)
 
     else:

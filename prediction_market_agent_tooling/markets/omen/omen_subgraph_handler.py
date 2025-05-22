@@ -238,6 +238,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
         category: str | None,
         include_categorical_markets: bool = False,
+        include_scalar_markets: bool = False,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
             "title_not": None,
@@ -246,6 +247,10 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         if not include_categorical_markets:
             where_stms["outcomeSlotCount"] = 2
             where_stms["outcomes"] = OMEN_BINARY_MARKET_OUTCOMES
+
+        if not include_scalar_markets:
+            # scalar markets can be identified
+            where_stms["outcomes_not"] = None
 
         where_stms["question_"] = self.get_omen_question_filters(
             question_id=question_id,
@@ -413,6 +418,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
         include_categorical_markets: bool = True,
+        include_scalar_markets: bool = False,
     ) -> t.List[OmenMarket]:
         """
         Complete method to fetch Omen  markets with various filters, use `get_omen_markets_simple` for simplified version that uses FilterBy and SortBy enums.
@@ -438,6 +444,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             collateral_token_address_in=collateral_token_address_in,
             category=category,
             include_categorical_markets=include_categorical_markets,
+            include_scalar_markets=include_scalar_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.

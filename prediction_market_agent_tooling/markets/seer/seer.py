@@ -281,7 +281,6 @@ class SeerAgentMarket(AgentMarket):
         model: SeerMarket, seer_subgraph: SeerSubgraphHandler
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-        # We already skip markets that do not have enough liquidity in pools (since they won't have prices)
 
         try:
             probability_map = price_manager.build_probability_map()

@@ -1,11 +1,13 @@
 import os
-from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 import httpx
-from pydantic_ai.settings import ModelSettings
 
-from .perplexity_models import PerplexityRequestParameters, PerplexityResponse
+from .perplexity_models import (
+    PerplexityModelSettings,
+    PerplexityRequestParameters,
+    PerplexityResponse,
+)
 
 
 class PerplexityModel:
@@ -27,16 +29,20 @@ class PerplexityModel:
     async def request(
         self,
         messages: List[dict[str, str]],
-        model_settings: Optional[ModelSettings],
+        model_settings: Optional[PerplexityModelSettings],
         model_request_parameters: PerplexityRequestParameters,
     ) -> PerplexityResponse:
         # Start with base payload
         payload: Dict[str, Any] = {"model": self.model_name, "messages": messages}
 
         if model_settings:
-            payload.update(model_settings)
+            model_settings_dict = model_settings.model_dump()
+            model_settings_dict = {
+                k: v for k, v in model_settings_dict.items() if v is not None
+            }
+            payload.update(model_settings_dict)
 
-        params_dict = asdict(model_request_parameters)
+        params_dict = model_request_parameters.model_dump()
         params_dict = {k: v for k, v in params_dict.items() if v is not None}
 
         # Extract and handle search_context_size specially
@@ -47,20 +53,23 @@ class PerplexityModel:
         # Add remaining Perplexity parameters to payload
         payload.update(params_dict)
 
-        async with httpx.AsyncClient(timeout=180) as client:
-            response = await client.post(
-                self.completition_endpoint,
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            response.raise_for_status()
-            result: dict[str, Any] = response.json()
+        try:
+            async with httpx.AsyncClient(timeout=180) as client:
+                response = await client.post(
+                    self.completition_endpoint,
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                response.raise_for_status()
+                result: dict[str, Any] = response.json()
 
-        return PerplexityResponse(
-            content=result["choices"][0]["message"]["content"],
-            citations=result["citations"],
-            usage=result.get("usage", {}),
-        )
+                return PerplexityResponse(
+                    content=result["choices"][0]["message"]["content"],
+                    citations=result["citations"],
+                    usage=result.get("usage", {}),
+                )
+        except Exception as e:
+            raise e

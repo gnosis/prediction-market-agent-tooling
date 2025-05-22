@@ -3,13 +3,13 @@ import typing as t
 from datetime import date
 
 import tenacity
-from pydantic_ai.settings import ModelSettings
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.perplexity.perplexity_client import (
     PerplexityModel,
 )
 from prediction_market_agent_tooling.tools.perplexity.perplexity_models import (
+    PerplexityModelSettings,
     PerplexityRequestParameters,
     PerplexityResponse,
 )
@@ -27,17 +27,15 @@ SYSTEM_PROMPT = "You are a helpful search assistant. Your task is to provide acc
 def perplexity_search(
     query: str,
     search_context_size: t.Literal["low", "medium", "high"] = "medium",
-    search_recency_filter: t.Literal["any", "day", "week", "month", "year"] = "any",
+    search_recency_filter: t.Literal["any", "day", "week", "month", "year"]
+    | None = None,
     search_filter_before_date: date | None = None,
     search_filter_after_date: date | None = None,
-    max_results: int = 20,
+    search_return_related_questions: bool | None = None,
+    include_domains: list[str] | None = None,
     temperature: float = 0,
     model_name: str = "sonar-pro",
     max_tokens: int = 2048,
-    include_domains: list[str] | None = None,
-    include_answer: bool = True,
-    include_raw_content: bool = True,
-    use_cache: bool = False,
     api_keys: APIKeys | None = None,
 ) -> PerplexityResponse:
     if api_keys is None:
@@ -50,13 +48,12 @@ def perplexity_search(
     ]
 
     # Define special parameters for the request and create the settings
-    model_settings = ModelSettings(max_tokens=max_tokens)
+    model_settings = PerplexityModelSettings(
+        max_tokens=max_tokens, temperature=temperature
+    )
 
     # Create a basic request parameters object with required base parameters
     request_params = PerplexityRequestParameters(
-        function_tools=[],
-        allow_text_output=True,
-        output_tools=[],
         search_domain_filter=include_domains,
         search_after_date_filter=search_filter_after_date.strftime("%Y-%m-%d")
         if search_filter_after_date
@@ -66,6 +63,7 @@ def perplexity_search(
         else None,
         search_recency_filter=search_recency_filter,
         search_context_size=search_context_size,
+        search_return_related_questions=search_return_related_questions,
     )
 
     model = PerplexityModel(

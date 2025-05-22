@@ -67,21 +67,6 @@ class PriceManager:
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
             )
 
-    def check_if_all_outcome_liquidities_gt_0(self, model: SeerMarket) -> bool:
-        # We ignore the invalid outcome
-        for w in model.wrapped_tokens[:-1]:
-            pool = self.seer_subgraph.get_pool_by_token(
-                token_address=Web3.to_checksum_address(w),
-                collateral_address=model.collateral_token_contract_address_checksummed,
-            )
-
-            if not pool or pool.liquidity == 0:
-                logger.info(
-                    f"Could not fetch pool {pool=} with enough liquidity for token {w} and market {model.id.hex()}"
-                )
-                return False
-        return True
-
     @cached(TTLCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
     def get_price_for_token(
         self,

@@ -282,11 +282,7 @@ class SeerAgentMarket(AgentMarket):
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
         # We already skip markets that do not have enough liquidity in pools (since they won't have prices)
-        if not price_manager.check_if_all_outcome_liquidities_gt_0(model=model):
-            logger.info(
-                f"Market {model.id.hex()} does not have enough liquidity. Skipping."
-            )
-            return None
+
         try:
             probability_map = price_manager.build_probability_map()
 
@@ -310,8 +306,9 @@ class SeerAgentMarket(AgentMarket):
                 volume=None,
                 probabilities=probability_map,
             )
-            liquidity = market.get_liquidity()
-            logger.info(f"{liquidity=}")
+            if not market.has_liquidity():
+                logger.info(f"market {market.id} has not enough liquidity. Skipping.")
+                return None
             return market
         except PriceCalculationError as e:
             logger.warning(

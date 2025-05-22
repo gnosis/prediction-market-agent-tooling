@@ -37,21 +37,6 @@ class MetaculusAgentMarket(AgentMarket):
     resolution_criteria: str
     fees: MarketFees = MarketFees.get_zero_fees()  # No fees on Metaculus.
 
-    @field_validator("probabilities")
-    def validate_probabilities(
-        cls,
-        probs: dict[OutcomeStr, Probability],
-        info: FieldValidationInfo,
-    ) -> dict[OutcomeStr, Probability]:
-        outcomes: t.Sequence[OutcomeStr] = check_not_none(info.data.get("outcomes"))
-        # We don't check for outcomes match because Metaculus has no filled outcomes.
-        total = float(sum(probs.values()))
-        if not 0.999 <= total <= 1.001:
-            # We simply log a warning because for some use-cases (e.g. existing positions), the
-            # markets might be already closed hence no reliable outcome token prices exist anymore.
-            logger.warning(f"Probabilities for market {info.data=} do not sum to 1.")
-        return probs
-
     @staticmethod
     def from_data_model(model: MetaculusQuestion) -> "MetaculusAgentMarket":
         probabilities = AgentMarket.build_probability_map_from_p_yes(p_yes=model.p_yes)

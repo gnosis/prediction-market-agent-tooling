@@ -222,6 +222,7 @@ class DeployablePredictionAgent(DeployableAgent):
         self.have_bet_on_market_since = observe()(self.have_bet_on_market_since)  # type: ignore[method-assign]
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
+        self.answer_categorical_market = observe()(self.answer_categorical_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(

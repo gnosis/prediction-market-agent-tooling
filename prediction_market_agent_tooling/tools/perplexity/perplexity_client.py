@@ -1,9 +1,9 @@
 import os
 from typing import Any, Dict, List, Optional
-
+from pydantic import SecretStr
 import httpx
 
-from .perplexity_models import (
+from prediction_market_agent_tooling.tools.perplexity.perplexity_models import (
     PerplexityModelSettings,
     PerplexityRequestParameters,
     PerplexityResponse,
@@ -15,16 +15,13 @@ class PerplexityModel:
         self,
         model_name: str,
         *,
-        api_key: Optional[str] = None,
+        api_key: SecretStr,
         completition_endpoint: str = "https://api.perplexity.ai/chat/completions",
     ) -> None:
         self.model_name: str = model_name
-        self.api_key: str | None = api_key or os.environ.get("PERPLEXITY_API_KEY")
+        self.api_key: SecretStr = api_key
         self.completition_endpoint: str = completition_endpoint
-        if not self.api_key:
-            raise ValueError(
-                "API key required. Set PERPLEXITY_API_KEY or pass api_key parameter."
-            )
+
 
     async def request(
         self,
@@ -32,7 +29,7 @@ class PerplexityModel:
         model_settings: Optional[PerplexityModelSettings],
         model_request_parameters: PerplexityRequestParameters,
     ) -> PerplexityResponse:
-        # Start with base payload
+
         payload: Dict[str, Any] = {"model": self.model_name, "messages": messages}
 
         if model_settings:
@@ -58,7 +55,7 @@ class PerplexityModel:
                 response = await client.post(
                     self.completition_endpoint,
                     headers={
-                        "Authorization": f"Bearer {self.api_key}",
+                        "Authorization": f"Bearer {self.api_key.get_secret_value()}",
                         "Content-Type": "application/json",
                     },
                     json=payload,
@@ -66,10 +63,23 @@ class PerplexityModel:
                 response.raise_for_status()
                 result: dict[str, Any] = response.json()
 
+
+                choices = result.get("choices", [])
+                if not choices:
+                    raise ValueError("Invalid response: no choices")
+
+                content = choices[0].get("message", {}).get("content")
+                if not content:
+                    raise ValueError("Invalid response: no content")
+                
                 return PerplexityResponse(
-                    content=result["choices"][0]["message"]["content"],
-                    citations=result["citations"],
+                    content=content,
+                    citations=result.get("citations", []),
                     usage=result.get("usage", {}),
                 )
+        except httpx.HTTPStatusError as e:
+            raise ValueError(f"HTTP error from Perplexity API: {e.response.status_code} - {e.response.text}") from e
+        except httpx.RequestError as e:
+            raise ValueError(f"Request error to Perplexity API: {str(e)}") from e
         except Exception as e:
-            raise e
+            raise ValueError(f"Unexpected error in Perplexity API request: {str(e)}") from e

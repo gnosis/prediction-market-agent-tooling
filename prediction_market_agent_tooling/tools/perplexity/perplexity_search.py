@@ -1,6 +1,7 @@
 import asyncio
 import typing as t
 from datetime import date
+from datetime import timedelta
 
 import tenacity
 
@@ -13,19 +14,19 @@ from prediction_market_agent_tooling.tools.perplexity.perplexity_models import (
     PerplexityRequestParameters,
     PerplexityResponse,
 )
+from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 
-DEFAULT_SCORE_THRESHOLD = 0.75
 SYSTEM_PROMPT = "You are a helpful search assistant. Your task is to provide accurate information based on web searches."
 
-
-# @db_cache(
-#     max_age=timedelta(days=1),
-#     ignore_args=["api_keys"],
-#     log_error_on_unsavable_data=False,
-# )
+@db_cache(
+    max_age=timedelta(days=1),
+    ignore_args=["api_keys"],
+    log_error_on_unsavable_data=False,
+)
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 def perplexity_search(
     query: str,
+    api_keys: APIKeys,
     search_context_size: t.Literal["low", "medium", "high"] = "medium",
     search_recency_filter: t.Literal["any", "day", "week", "month", "year"]
     | None = None,
@@ -36,11 +37,7 @@ def perplexity_search(
     temperature: float = 0,
     model_name: str = "sonar-pro",
     max_tokens: int = 2048,
-    api_keys: APIKeys | None = None,
 ) -> PerplexityResponse:
-    if api_keys is None:
-        raise ValueError("API keys are required")
-
     # Create messages in ModelMessage format
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -66,9 +63,7 @@ def perplexity_search(
         search_return_related_questions=search_return_related_questions,
     )
 
-    model = PerplexityModel(
-        model_name=model_name, api_key=api_keys.perplexity_api_key.get_secret_value()
-    )
+    model = PerplexityModel(model_name=model_name, api_key=api_keys.perplexity_api_key)
     return asyncio.run(
         model.request(
             messages=messages,

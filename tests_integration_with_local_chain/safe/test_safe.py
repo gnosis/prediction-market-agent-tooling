@@ -18,6 +18,9 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     SortBy,
     binary_omen_buy_outcome_tx,
 )
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    SDAI_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenAgentResultMappingContract,
 )
@@ -74,6 +77,7 @@ def test_send_function_on_contract_tx_using_safe(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.NONE,
+        collateral_token_address_in=tuple([SDAI_CONTRACT_ADDRESS]),
     )
     # Check that there is a market with enough liquidity
     assert len(markets) == 1

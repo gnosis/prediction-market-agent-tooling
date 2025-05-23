@@ -361,13 +361,14 @@ def test_omen_buy_and_sell_outcome(
 
     # Check that we now have a position in the market.
     outcome_tokens = get_market_outcome_tokens()
-    assert get_market_outcome_tokens() > 0
+    assert outcome_tokens > 0
 
     sell_id = agent_market.sell_tokens(
         outcome=outcome_str,
         amount=outcome_tokens,
         web3=local_web3,
         api_keys=test_keys,
+        auto_withdraw=False,
     )
 
     # Check that we have sold our entire stake in the market up to some slippage

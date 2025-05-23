@@ -12,6 +12,9 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
+from prediction_market_agent_tooling.markets.seer.exceptions import (
+    PriceCalculationError,
+)
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
@@ -128,7 +131,7 @@ class PriceManager:
             )
             # It's okay if invalid (last) outcome has price 0, but not the other outcomes.
             if price is None and idx != len(self.seer_market.wrapped_tokens) - 1:
-                raise ValueError(
+                raise PriceCalculationError(
                     f"Couldn't get price for {wrapped_token} for market {self.seer_market.url}."
                 )
             price_data[wrapped_token] = (
@@ -142,7 +145,7 @@ class PriceManager:
             sum(price_data.values(), start=CollateralToken.zero())
             == CollateralToken.zero()
         ):
-            raise ValueError(
+            raise PriceCalculationError(
                 f"All prices for market {self.seer_market.url} are zero. This shouldn't happen."
             )
 

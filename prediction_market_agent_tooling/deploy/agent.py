@@ -222,6 +222,7 @@ class DeployablePredictionAgent(DeployableAgent):
         self.have_bet_on_market_since = observe()(self.have_bet_on_market_since)  # type: ignore[method-assign]
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
+        self.answer_categorical_market = observe()(self.answer_categorical_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
@@ -321,7 +322,7 @@ class DeployablePredictionAgent(DeployableAgent):
     def fetch_categorical_markets(self) -> bool:
         # Check if the subclass has implemented the answer_categorical_market method, if yes, fetch categorical markets as well.
         if (
-            self.answer_categorical_market.__func__  # type: ignore[attr-defined] # This works just fine, but mypy doesn't know about it for some reason.
+            self.answer_categorical_market.__wrapped__.__func__  # type: ignore[attr-defined] # This works just fine, but mypy doesn't know about it for some reason.
             is not DeployablePredictionAgent.answer_categorical_market
         ):
             return True

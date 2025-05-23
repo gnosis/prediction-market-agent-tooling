@@ -305,18 +305,11 @@ class SeerAgentMarket(AgentMarket):
                 volume=None,
                 probabilities=probability_map,
             )
-            if not market.has_liquidity():
-                logger.info(f"market {market.id} has not enough liquidity. Skipping.")
-                return None
+
             return market
         except PriceCalculationError as e:
             logger.warning(
                 f"Skipping market {model.id.hex()} due to price calculation error: {e}"
-            )
-            return None
-        except Exception as e:
-            logger.warning(
-                f"probability_map for market {model.id.hex()} could not be calculated. Exception {e}. Skipping."
             )
             return None
 
@@ -339,7 +332,7 @@ class SeerAgentMarket(AgentMarket):
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
         # represents an invalid market.
-        return [
+        seer_agent_markets = [
             market
             for m in markets
             if (
@@ -349,6 +342,11 @@ class SeerAgentMarket(AgentMarket):
             )
             is not None
         ]
+
+        if filter_by == FilterBy.OPEN:
+            seer_agent_markets = [m for m in seer_agent_markets if m.has_liquidity()]
+
+        return seer_agent_markets
 
     def get_outcome_str_from_idx(self, outcome_index: int) -> OutcomeStr:
         return self.outcomes[outcome_index]

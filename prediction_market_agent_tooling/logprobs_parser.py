@@ -61,7 +61,8 @@ class LogprobsParser:
             (
                 i
                 for i in range(result_start_index, len(logprobs))
-                if logprobs[i]["token"] in {",", '"', ",\n", "\",\n'", '",\n'}
+                if logprobs[i]["token"]
+                in {",", '"', ",\n", "\",\n'", '",\n', '"\n', "\n"}
             ),
             len(logprobs) - 1,
         )

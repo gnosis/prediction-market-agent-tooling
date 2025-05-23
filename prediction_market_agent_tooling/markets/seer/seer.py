@@ -282,8 +282,13 @@ class SeerAgentMarket(AgentMarket):
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
 
+        probability_map = {}
         try:
             probability_map = price_manager.build_probability_map()
+        except PriceCalculationError as e:
+            logger.info(
+                f"Error when calculating probabilities for market {model.id.hex()} - {e}"
+            )
 
             market = SeerAgentMarket(
                 id=model.id.hex(),
@@ -307,11 +312,6 @@ class SeerAgentMarket(AgentMarket):
             )
 
             return market
-        except PriceCalculationError as e:
-            logger.warning(
-                f"Skipping market {model.id.hex()} due to price calculation error: {e}"
-            )
-            return None
 
     @staticmethod
     def get_markets(

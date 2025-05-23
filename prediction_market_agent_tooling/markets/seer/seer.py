@@ -278,7 +278,9 @@ class SeerAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model_with_subgraph(
-        model: SeerMarket, seer_subgraph: SeerSubgraphHandler
+        model: SeerMarket,
+        seer_subgraph: SeerSubgraphHandler,
+        must_have_prices: bool = True,
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
 
@@ -289,6 +291,9 @@ class SeerAgentMarket(AgentMarket):
             logger.info(
                 f"Error when calculating probabilities for market {model.id.hex()} - {e}"
             )
+            if must_have_prices:
+                # Price calculation failed, so don't return the market
+                return None
 
         market = SeerAgentMarket(
             id=model.id.hex(),

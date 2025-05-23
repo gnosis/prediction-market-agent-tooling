@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Sequence
 
 from pydantic import BaseModel, BeforeValidator, computed_field
 
@@ -25,6 +25,26 @@ class Resolution(BaseModel):
     @staticmethod
     def from_answer(answer: OutcomeStr) -> "Resolution":
         return Resolution(outcome=answer, invalid=False)
+
+    def find_outcome_matching_market(
+        self, market_outcomes: Sequence[OutcomeStr]
+    ) -> OutcomeStr | None:
+        """
+        Finds a matching outcome in the provided market outcomes.
+
+        Performs case-insensitive matching between this resolution's outcome
+        and the provided market outcomes.
+
+        """
+
+        if not self.outcome:
+            return None
+
+        normalized_outcome = self.outcome.lower()
+        for outcome in market_outcomes:
+            if outcome.lower() == normalized_outcome:
+                return outcome
+        return None
 
 
 class Bet(BaseModel):

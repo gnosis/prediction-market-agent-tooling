@@ -290,28 +290,26 @@ class SeerAgentMarket(AgentMarket):
                 f"Error when calculating probabilities for market {model.id.hex()} - {e}"
             )
 
-            market = SeerAgentMarket(
-                id=model.id.hex(),
-                question=model.title,
-                creator=model.creator,
-                created_time=model.created_time,
-                outcomes=model.outcomes,
-                collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
-                condition_id=model.condition_id,
-                url=model.url,
-                close_time=model.close_time,
-                wrapped_tokens=[
-                    Web3.to_checksum_address(i) for i in model.wrapped_tokens
-                ],
-                fees=MarketFees.get_zero_fees(),
-                outcome_token_pool=None,
-                outcomes_supply=model.outcomes_supply,
-                resolution=None,
-                volume=None,
-                probabilities=probability_map,
-            )
+        market = SeerAgentMarket(
+            id=model.id.hex(),
+            question=model.title,
+            creator=model.creator,
+            created_time=model.created_time,
+            outcomes=model.outcomes,
+            collateral_token_contract_address_checksummed=model.collateral_token_contract_address_checksummed,
+            condition_id=model.condition_id,
+            url=model.url,
+            close_time=model.close_time,
+            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
+            fees=MarketFees.get_zero_fees(),
+            outcome_token_pool=None,
+            outcomes_supply=model.outcomes_supply,
+            resolution=None,
+            volume=None,
+            probabilities=probability_map,
+        )
 
-            return market
+        return market
 
     @staticmethod
     def get_markets(

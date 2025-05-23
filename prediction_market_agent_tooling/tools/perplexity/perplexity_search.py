@@ -1,11 +1,11 @@
 import asyncio
 import typing as t
-from datetime import date
-from datetime import timedelta
+from datetime import date, timedelta
 
 import tenacity
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.perplexity.perplexity_client import (
     PerplexityModel,
 )
@@ -14,9 +14,9 @@ from prediction_market_agent_tooling.tools.perplexity.perplexity_models import (
     PerplexityRequestParameters,
     PerplexityResponse,
 )
-from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 
 SYSTEM_PROMPT = "You are a helpful search assistant. Your task is to provide accurate information based on web searches."
+
 
 @db_cache(
     max_age=timedelta(days=1),

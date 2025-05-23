@@ -1,8 +1,13 @@
 import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.tools.perplexity.perplexity_search import perplexity_search
-from prediction_market_agent_tooling.markets.markets import MarketType, get_binary_markets
+from prediction_market_agent_tooling.markets.markets import (
+    MarketType,
+    get_binary_markets,
+)
+from prediction_market_agent_tooling.tools.perplexity.perplexity_search import (
+    perplexity_search,
+)
 from tests.utils import RUN_PAID_TESTS
 
 

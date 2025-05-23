@@ -1,7 +1,7 @@
-import os
 from typing import Any, Dict, List, Optional
-from pydantic import SecretStr
+
 import httpx
+from pydantic import SecretStr
 
 from prediction_market_agent_tooling.tools.perplexity.perplexity_models import (
     PerplexityModelSettings,
@@ -22,14 +22,12 @@ class PerplexityModel:
         self.api_key: SecretStr = api_key
         self.completition_endpoint: str = completition_endpoint
 
-
     async def request(
         self,
         messages: List[dict[str, str]],
         model_settings: Optional[PerplexityModelSettings],
         model_request_parameters: PerplexityRequestParameters,
     ) -> PerplexityResponse:
-
         payload: Dict[str, Any] = {"model": self.model_name, "messages": messages}
 
         if model_settings:
@@ -63,7 +61,6 @@ class PerplexityModel:
                 response.raise_for_status()
                 result: dict[str, Any] = response.json()
 
-
                 choices = result.get("choices", [])
                 if not choices:
                     raise ValueError("Invalid response: no choices")
@@ -71,15 +68,19 @@ class PerplexityModel:
                 content = choices[0].get("message", {}).get("content")
                 if not content:
                     raise ValueError("Invalid response: no content")
-                
+
                 return PerplexityResponse(
                     content=content,
                     citations=result.get("citations", []),
                     usage=result.get("usage", {}),
                 )
         except httpx.HTTPStatusError as e:
-            raise ValueError(f"HTTP error from Perplexity API: {e.response.status_code} - {e.response.text}") from e
+            raise ValueError(
+                f"HTTP error from Perplexity API: {e.response.status_code} - {e.response.text}"
+            ) from e
         except httpx.RequestError as e:
             raise ValueError(f"Request error to Perplexity API: {str(e)}") from e
         except Exception as e:
-            raise ValueError(f"Unexpected error in Perplexity API request: {str(e)}") from e
+            raise ValueError(
+                f"Unexpected error in Perplexity API request: {str(e)}"
+            ) from e

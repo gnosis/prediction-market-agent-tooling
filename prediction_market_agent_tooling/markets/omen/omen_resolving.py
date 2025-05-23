@@ -31,7 +31,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.tokens.main_token import (
     MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
@@ -223,7 +223,10 @@ def omen_submit_answer_market_tx(
     And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
     """
     realitio_contract = OmenRealitioContract()
-    outcome_index = market.outcomes.index(resolution.outcome)
+    outcome_matching_market = check_not_none(
+        resolution.find_outcome_matching_market(market.outcomes)
+    )
+    outcome_index = market.outcomes.index(outcome_matching_market)
     realitio_contract.submit_answer(
         api_keys=api_keys,
         question_id=market.question.id,

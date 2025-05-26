@@ -65,6 +65,8 @@ class APIKeys(BaseSettings):
 
     SQLALCHEMY_DB_URL: t.Optional[SecretStr] = None
 
+    PERPLEXITY_API_KEY: t.Optional[SecretStr] = None
+
     ENABLE_CACHE: bool = False
     CACHE_DIR: str = "./.cache"
 
@@ -258,6 +260,12 @@ class APIKeys(BaseSettings):
             for k, v in self.model_dump().items()
             if self.model_fields[k].annotation not in SECRET_TYPES and v is not None
         }
+
+    @property
+    def perplexity_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.PERPLEXITY_API_KEY, "PERPLEXITY_API_KEY missing in the environment."
+        )
 
     def model_dump_secrets(self) -> dict[str, t.Any]:
         return {

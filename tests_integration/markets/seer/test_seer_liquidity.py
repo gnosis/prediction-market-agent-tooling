@@ -15,7 +15,9 @@ def test_get_liquidity(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
     # We expect outcomes to have been minted
     agent_market = check_not_none(
         SeerAgentMarket.from_data_model_with_subgraph(
-            model=liquid_market, seer_subgraph=seer_subgraph_handler_test
+            model=liquid_market,
+            seer_subgraph=seer_subgraph_handler_test,
+            must_have_prices=True,
         )
     )
     print(agent_market.get_liquidity())

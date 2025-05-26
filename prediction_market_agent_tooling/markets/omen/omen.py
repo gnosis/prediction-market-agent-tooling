@@ -163,7 +163,7 @@ class OmenAgentMarket(AgentMarket):
         prev_bets = self.get_bets_made_since(
             better_address=keys.bet_from_address, start_time=start_time
         )
-        # check if market_id is in prev_bets
+
         return self.id in [b.market_id for b in prev_bets]
 
     def liquidate_existing_positions(

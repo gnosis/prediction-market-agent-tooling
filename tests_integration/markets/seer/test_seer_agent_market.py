@@ -1,15 +1,15 @@
 from unittest.mock import Mock, patch
 
-from eth_pydantic_types import HexStr
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import HexBytes, HexStr, CollateralToken
+from prediction_market_agent_tooling.gtypes import CollateralToken, HexBytes, HexStr
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 def test_seer_bet_on_market_since(
@@ -27,10 +27,12 @@ def test_seer_bet_on_market_since(
         keys.bet_from_address = Web3.to_checksum_address(
             "0xd0363Ccd573163DF94b754Ca00c0acA2bb66b748"
         )
-        agent_market = SeerAgentMarket.from_data_model_with_subgraph(
-            model=market,
-            seer_subgraph=seer_subgraph_handler_test,
-            must_have_prices=False,
+        agent_market = check_not_none(
+            SeerAgentMarket.from_data_model_with_subgraph(
+                model=market,
+                seer_subgraph=seer_subgraph_handler_test,
+                must_have_prices=False,
+            )
         )
         # cow order id 0xcd7f4456ce9756977aa1cca8b1f8eb19f0a9827a6ebfbe2407cda57913831640d0363ccd573163df94b754ca00c0aca2bb66b7486834b44f
         order_date = DatetimeUTC(2025, 5, 25)

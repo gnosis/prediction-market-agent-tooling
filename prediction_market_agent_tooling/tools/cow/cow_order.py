@@ -293,7 +293,7 @@ def get_trades_by_owner(
 @tenacity.retry(
     stop=stop_after_attempt(3),
     wait=wait_fixed(1),
-    after=lambda x: logger.debug(f"get_trades_by_owner failed, {x.attempt_number=}."),
+    after=lambda x: logger.debug(f"get_orders_by_owner failed, {x.attempt_number=}."),
 )
 def get_orders_by_owner(
     owner: ChecksumAddress,

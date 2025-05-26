@@ -18,12 +18,12 @@ from prediction_market_agent_tooling.tools.perplexity.perplexity_models import (
 SYSTEM_PROMPT = "You are a helpful search assistant. Your task is to provide accurate information based on web searches."
 
 
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @db_cache(
     max_age=timedelta(days=1),
     ignore_args=["api_keys"],
     log_error_on_unsavable_data=False,
 )
-@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 def perplexity_search(
     query: str,
     api_keys: APIKeys,

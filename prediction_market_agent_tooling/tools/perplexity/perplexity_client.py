@@ -18,9 +18,9 @@ class PerplexityModel:
         api_key: SecretStr,
         completition_endpoint: str = "https://api.perplexity.ai/chat/completions",
     ) -> None:
-        self.model_name: str = model_name
-        self.api_key: SecretStr = api_key
-        self.completition_endpoint: str = completition_endpoint
+        self.model_name = model_name
+        self.api_key = api_key
+        self.completition_endpoint = completition_endpoint
 
     async def request(
         self,

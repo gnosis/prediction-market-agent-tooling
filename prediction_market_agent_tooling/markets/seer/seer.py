@@ -31,6 +31,9 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
 )
+from prediction_market_agent_tooling.markets.seer.exceptions import (
+    PriceCalculationError,
+)
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     GnosisRouter,
@@ -275,18 +278,24 @@ class SeerAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model_with_subgraph(
-        model: SeerMarket, seer_subgraph: SeerSubgraphHandler
+        model: SeerMarket,
+        seer_subgraph: SeerSubgraphHandler,
+        must_have_prices: bool,
     ) -> t.Optional["SeerAgentMarket"]:
-        p = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
+        price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
 
-        probability_map = p.build_probability_map()
-        if not probability_map:
+        probability_map = {}
+        try:
+            probability_map = price_manager.build_probability_map()
+        except PriceCalculationError as e:
             logger.info(
-                f"probability_map for market {model.id.hex()} could not be calculated. Skipping."
+                f"Error when calculating probabilities for market {model.id.hex()} - {e}"
             )
-            return None
+            if must_have_prices:
+                # Price calculation failed, so don't return the market
+                return None
 
-        return SeerAgentMarket(
+        market = SeerAgentMarket(
             id=model.id.hex(),
             question=model.title,
             creator=model.creator,
@@ -304,6 +313,8 @@ class SeerAgentMarket(AgentMarket):
             volume=None,
             probabilities=probability_map,
         )
+
+        return market
 
     @staticmethod
     def get_markets(
@@ -324,16 +335,24 @@ class SeerAgentMarket(AgentMarket):
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
         # represents an invalid market.
-        return [
+        seer_agent_markets = [
             market
             for m in markets
             if (
                 market := SeerAgentMarket.from_data_model_with_subgraph(
-                    model=m, seer_subgraph=seer_subgraph
+                    model=m,
+                    seer_subgraph=seer_subgraph,
+                    must_have_prices=filter_by == FilterBy.OPEN,
                 )
             )
             is not None
         ]
+
+        if filter_by == FilterBy.OPEN:
+            # Extra manual filter for liquidity, as subgraph is sometimes unreliable.
+            seer_agent_markets = [m for m in seer_agent_markets if m.has_liquidity()]
+
+        return seer_agent_markets
 
     def get_outcome_str_from_idx(self, outcome_index: int) -> OutcomeStr:
         return self.outcomes[outcome_index]

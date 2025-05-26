@@ -1,4 +1,5 @@
 import asyncio
+import typing as t
 from datetime import timedelta
 
 import httpx
@@ -23,7 +24,6 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderStatus,
     TokenAmount,
 )
-from cowdao_cowpy.subgraph.client import BaseModel
 from tenacity import (
     retry_if_not_exception_type,
     stop_after_attempt,
@@ -39,12 +39,8 @@ from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
+from prediction_market_agent_tooling.tools.cow.models import MinimalisticToken, Order
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
-
-
-class MinimalisticToken(BaseModel):
-    sellToken: ChecksumAddress
-    buyToken: ChecksumAddress
 
 
 class OrderStatusError(Exception):
@@ -292,3 +288,38 @@ def get_trades_by_owner(
     )
     response.raise_for_status()
     return [MinimalisticToken.model_validate(i) for i in response.json()]
+
+
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    after=lambda x: logger.debug(f"get_trades_by_owner failed, {x.attempt_number=}."),
+)
+def get_orders_by_owner(
+    owner: ChecksumAddress,
+) -> list[Order]:
+    """Retrieves all orders with pagination."""
+    items = paginate_endpoint(f"https://api.cow.fi/xdai/api/v1/account/{owner}/orders")
+    return [Order.model_validate(i) for i in items]
+
+
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    after=lambda x: logger.debug(f"paginate_endpoint failed, {x.attempt_number=}."),
+)
+def paginate_endpoint(url: str, limit: int = 1000) -> t.Any:
+    offset = 0
+    results = []
+
+    while True:
+        response = httpx.get(url, params={"offset": offset, "limit": limit})
+        response.raise_for_status()
+        items = response.json()
+        if not items:
+            break
+
+        results.extend(items)
+        offset += limit
+
+    return results

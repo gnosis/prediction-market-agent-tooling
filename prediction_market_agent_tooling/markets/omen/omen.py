@@ -84,6 +84,7 @@ from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     calculate_sell_amount_in_collateral,
     check_not_none,
+    utcnow,
 )
 from prediction_market_agent_tooling.tools.web3_utils import get_receipt_block_timestamp
 
@@ -156,6 +157,14 @@ class OmenAgentMarket(AgentMarket):
 
     def get_usd_in_token(self, x: USD) -> CollateralToken:
         return get_usd_in_token(x, self.collateral_token_contract_address_checksummed)
+
+    def have_bet_on_market_since(self, keys: APIKeys, since: timedelta) -> bool:
+        start_time = utcnow() - since
+        prev_bets = self.get_bets_made_since(
+            better_address=keys.bet_from_address, start_time=start_time
+        )
+        # check if market_id is in prev_bets
+        return self.id in [b.market_id for b in prev_bets]
 
     def liquidate_existing_positions(
         self,

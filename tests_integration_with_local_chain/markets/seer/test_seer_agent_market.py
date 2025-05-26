@@ -25,7 +25,9 @@ def test_seer_place_bet(
     )
     market_data_model = markets[0]
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
-        market_data_model, seer_subgraph=seer_subgraph_handler_test
+        market_data_model,
+        seer_subgraph=seer_subgraph_handler_test,
+        must_have_prices=True,
     )
     agent_market = check_not_none(agent_market)
     amount = USD(1.0)

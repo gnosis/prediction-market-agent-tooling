@@ -45,6 +45,9 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     NewMarketEvent,
 )
+from prediction_market_agent_tooling.markets.seer.SwaprPoolHandler import (
+    SwaprPoolHandler,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
@@ -455,19 +458,38 @@ class SeerAgentMarket(AgentMarket):
 
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
 
-        #  Sell sDAI using token address
-        order_metadata = swap_tokens_waiting(
-            amount_wei=amount_wei,
-            sell_token=collateral_contract.address,
-            buy_token=outcome_token,
-            api_keys=api_keys,
-            web3=web3,
-        )
-        logger.debug(
-            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Order details {order_metadata}"
-        )
+        # ToDo - place bet via Cow
+        #  If it fails, fallback to pool
+        # . if also fails, raise
 
-        return order_metadata.uid.root
+        #  Sell sDAI using token address
+        try:
+            order_metadata = swap_tokens_waiting(
+                amount_wei=amount_wei,
+                sell_token=collateral_contract.address,
+                buy_token=outcome_token,
+                api_keys=api_keys,
+                web3=web3,
+            )
+            logger.debug(
+                f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Order details {order_metadata}"
+            )
+
+            return order_metadata.uid.root
+        except TimeoutError as e:
+            logger.info(
+                f"TimeoutError: {e} - we try placing bets directly on Swapr pools."
+            )
+            tx_receipt = SwaprPoolHandler(
+                api_keys=api_keys,
+                market=self,
+            ).swap(
+                token_in=self.collateral_token_contract_address_checksummed,
+                token_out=outcome_token,
+                amount_wei=amount_wei,
+                web3=web3,
+            )
+            return tx_receipt["transactionHash"].hex()
 
     def sell_tokens(
         self,
@@ -489,21 +511,34 @@ class SeerAgentMarket(AgentMarket):
             else self.get_in_token(amount).as_wei
         )
 
-        order_metadata = swap_tokens_waiting(
-            amount_wei=token_amount,
-            sell_token=outcome_token,
-            buy_token=Web3.to_checksum_address(
-                self.collateral_token_contract_address_checksummed
-            ),
-            api_keys=api_keys,
-            web3=web3,
-        )
+        try:
+            order_metadata = swap_tokens_waiting(
+                amount_wei=token_amount,
+                sell_token=outcome_token,
+                buy_token=Web3.to_checksum_address(
+                    self.collateral_token_contract_address_checksummed
+                ),
+                api_keys=api_keys,
+                web3=web3,
+            )
 
-        logger.debug(
-            f"Sold {outcome_token} in exchange for {self.collateral_token_contract_address_checksummed}. Order details {order_metadata}"
-        )
+            logger.debug(
+                f"Sold {outcome_token} in exchange for {self.collateral_token_contract_address_checksummed}. Order details {order_metadata}"
+            )
 
-        return order_metadata.uid.root
+            return order_metadata.uid.root
+        except TimeoutError as e:
+            logger.info(f"TimeoutError: {e} - we try selling directly on Swapr pools.")
+            tx_receipt = SwaprPoolHandler(
+                api_keys=api_keys,
+                market=self,
+            ).swap(
+                token_in=outcome_token,
+                token_out=self.collateral_token_contract_address_checksummed,
+                amount_wei=token_amount,
+                web3=web3,
+            )
+            return tx_receipt["transactionHash"].hex()
 
 
 def seer_create_market_tx(

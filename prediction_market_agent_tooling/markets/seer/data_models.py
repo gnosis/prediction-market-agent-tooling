@@ -1,4 +1,5 @@
 import typing as t
+from datetime import timedelta
 from urllib.parse import urljoin
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,6 +20,7 @@ from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class CreateCategoricalMarketsParams(BaseModel):
@@ -133,3 +135,19 @@ class RedeemParams(BaseModel):
     market: ChecksumAddress
     outcome_indices: list[int] = Field(alias="outcomeIndexes")
     amounts: list[OutcomeWei]
+
+
+class ExactInputSingleParams(BaseModel):
+    # from https://gnosisscan.io/address/0xffb643e73f280b97809a8b41f7232ab401a04ee1#code
+    model_config = ConfigDict(populate_by_name=True)
+    token_in: ChecksumAddress = Field(alias="tokenIn")
+    token_out: ChecksumAddress = Field(alias="tokenOut")
+    recipient: ChecksumAddress
+    deadline: int = Field(
+        default_factory=lambda: int((utcnow() + timedelta(minutes=10)).timestamp())
+    )
+    amount_in: int = Field(alias="amountIn")
+    amount_out_minimum: int = Field(alias="amountOutMinimum")
+    limit_sqrt_price: int = Field(
+        alias="limitSqrtPrice", default=0
+    )  # 0 for convenience, we also don't expect major price shifts

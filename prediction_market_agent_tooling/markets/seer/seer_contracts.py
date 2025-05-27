@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     OutcomeStr,
     TxReceipt,
+    Wei,
     xDai,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -19,6 +20,7 @@ from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ContractERC20OnGnosisChain,
     ContractOnGnosisChain,
     abi_field_validator,
 )
@@ -134,9 +136,21 @@ class SwaprRouterContract(ContractOnGnosisChain):
         params: ExactInputSingleParams,
         web3: Web3 | None = None,
     ) -> TxReceipt:
+        # ToDo - check allowance
+        erc20_token = ContractERC20OnGnosisChain(
+            address=Web3.to_checksum_address(params.token_in)
+        )
+
+        if erc20_token.allowance(
+            api_keys.bet_from_address, self.address, web3=web3
+        ) < Wei(params.amount_in):
+            erc20_token.approve(
+                api_keys, self.address, Wei(params.amount_in), web3=web3
+            )
+
         return self.send(
             api_keys=api_keys,
             function_name="exactInputSingle",
-            function_params=params.model_dump(by_alias=True),
+            function_params=[tuple(params.model_dump(by_alias=True).values())],
             web3=web3,
         )

@@ -45,8 +45,8 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     NewMarketEvent,
 )
-from prediction_market_agent_tooling.markets.seer.SwaprPoolHandler import (
-    SwaprPoolHandler,
+from prediction_market_agent_tooling.markets.seer.swap_pool_handler import (
+    SwapPoolHandler,
 )
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
@@ -450,7 +450,9 @@ class SeerAgentMarket(AgentMarket):
                 collateral_contract, amount_wei, api_keys, web3
             )
 
-        collateral_balance = collateral_contract.balanceOf(api_keys.bet_from_address)
+        collateral_balance = collateral_contract.balanceOf(
+            api_keys.bet_from_address, web3=web3
+        )
         if collateral_balance < amount_wei:
             raise ValueError(
                 f"Balance {collateral_balance} not enough for bet size {amount}"
@@ -458,11 +460,6 @@ class SeerAgentMarket(AgentMarket):
 
         outcome_token = self.get_wrapped_token_for_outcome(outcome)
 
-        # ToDo - place bet via Cow
-        #  If it fails, fallback to pool
-        # . if also fails, raise
-
-        #  Sell sDAI using token address
         try:
             order_metadata = swap_tokens_waiting(
                 amount_wei=amount_wei,
@@ -480,16 +477,30 @@ class SeerAgentMarket(AgentMarket):
             logger.info(
                 f"TimeoutError: {e} - we try placing bets directly on Swapr pools."
             )
-            tx_receipt = SwaprPoolHandler(
+            # ToDo - Cancel previous order
+            tx_receipt = SwapPoolHandler(
                 api_keys=api_keys,
-                market=self,
-            ).swap(
+                market_id=self.id,
+                collateral_token_address=self.collateral_token_contract_address_checksummed,
+            ).buy_or_sell_outcome_token(
                 token_in=self.collateral_token_contract_address_checksummed,
                 token_out=outcome_token,
                 amount_wei=amount_wei,
                 web3=web3,
             )
             return tx_receipt["transactionHash"].hex()
+
+    def get_token_balance(
+        self, user_id: str, outcome: OutcomeStr, web3: Web3 | None = None
+    ) -> OutcomeToken:
+        erc20_token = ContractERC20OnGnosisChain(
+            address=self.get_wrapped_token_for_outcome(outcome)
+        )
+        return OutcomeToken.from_token(
+            erc20_token.balance_of_in_tokens(
+                for_address=Web3.to_checksum_address(user_id), web3=web3
+            )
+        )
 
     def sell_tokens(
         self,
@@ -528,11 +539,13 @@ class SeerAgentMarket(AgentMarket):
 
             return order_metadata.uid.root
         except TimeoutError as e:
+            # ToDo - Cancel previous order
             logger.info(f"TimeoutError: {e} - we try selling directly on Swapr pools.")
-            tx_receipt = SwaprPoolHandler(
+            tx_receipt = SwapPoolHandler(
                 api_keys=api_keys,
-                market=self,
-            ).swap(
+                market_id=self.id,
+                collateral_token_address=self.collateral_token_contract_address_checksummed,
+            ).buy_or_sell_outcome_token(
                 token_in=outcome_token,
                 token_out=self.collateral_token_contract_address_checksummed,
                 amount_wei=token_amount,

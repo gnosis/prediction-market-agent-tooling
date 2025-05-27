@@ -11,6 +11,6 @@ class MinimalisticToken(BaseModel):
 
 class Order(BaseModel):
     uid: str
-    sellToken: ChecksumAddress
-    buyToken: ChecksumAddress
+    sellToken: str
+    buyToken: str
     creationDate: DatetimeUTC

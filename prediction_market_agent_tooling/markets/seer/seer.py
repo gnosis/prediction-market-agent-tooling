@@ -1,5 +1,6 @@
 import asyncio
 import typing as t
+from datetime import timedelta
 
 from eth_typing import ChecksumAddress
 from web3 import Web3
@@ -58,6 +59,7 @@ from prediction_market_agent_tooling.tools.contract import (
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     cancel_order,
     get_buy_token_amount_else_raise,
+    get_orders_by_owner,
     get_trades_by_owner,
     swap_tokens_waiting,
     wait_for_order_completion,
@@ -70,6 +72,7 @@ from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
 SEER_TINY_BET_AMOUNT = USD(0.1)
@@ -278,6 +281,20 @@ class SeerAgentMarket(AgentMarket):
                 logger.error(f"Failed to redeem market {market.id.hex()}, {e}")
 
         # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
+
+    def have_bet_on_market_since(self, keys: APIKeys, since: timedelta) -> bool:
+        """Check if the user has placed a bet on this market since a specific time using Cow API."""
+        # Cow endpoint doesn't allow us to filter by time.
+        start_time = utcnow() - since
+        prev_orders = get_orders_by_owner(owner=keys.bet_from_address)
+        for order in prev_orders:
+            if order.creationDate >= start_time and {
+                Web3.to_checksum_address(order.sellToken),
+                Web3.to_checksum_address(order.buyToken),
+            }.intersection(set(self.wrapped_tokens)):
+                return True
+
+        return False
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

@@ -1,19 +1,12 @@
 import typing as t
-from datetime import timedelta
 from enum import Enum
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
 from prediction_market_agent_tooling.jobs.omen.omen_jobs import OmenJobAgentMarket
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
-)
-from prediction_market_agent_tooling.markets.manifold.api import (
-    get_authenticated_user,
-    get_manifold_bets,
-    get_manifold_market,
 )
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
@@ -22,18 +15,11 @@ from prediction_market_agent_tooling.markets.metaculus.metaculus import (
     MetaculusAgentMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
-    OmenSubgraphHandler,
-)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
-from prediction_market_agent_tooling.tools.utils import (
-    DatetimeUTC,
-    should_not_happen,
-    utcnow,
-)
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class MarketType(str, Enum):
@@ -92,35 +78,3 @@ def get_binary_markets(
         excluded_questions=excluded_questions,
     )
     return markets
-
-
-def have_bet_on_market_since(
-    keys: APIKeys, market: AgentMarket, since: timedelta
-) -> bool:
-    start_time = utcnow() - since
-    recently_betted_questions = (
-        set(
-            get_manifold_market(b.contractId).question
-            for b in get_manifold_bets(
-                user_id=get_authenticated_user(
-                    keys.manifold_api_key.get_secret_value()
-                ).id,
-                start_time=start_time,
-                end_time=None,
-            )
-        )
-        if isinstance(market, ManifoldAgentMarket)
-        else (
-            set(
-                b.title
-                for b in OmenSubgraphHandler().get_bets(
-                    better_address=keys.bet_from_address,
-                    start_time=start_time,
-                    market_id=market.market_maker_contract_address_checksummed,
-                )
-            )
-            if isinstance(market, OmenAgentMarket)
-            else should_not_happen(f"Unknown market: {market}")
-        )
-    )
-    return market.question in recently_betted_questions

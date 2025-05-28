@@ -1,7 +1,6 @@
 import asyncio
 import typing as t
 from datetime import timedelta
-from typing import Sequence
 
 import httpx
 import tenacity
@@ -31,7 +30,6 @@ from cowdao_cowpy.order_book.generated.model import (
     OrderStatus,
     TokenAmount,
 )
-from cowdao_cowpy.subgraph.client import BaseModel
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_keys.datatypes import PrivateKey as eth_keys_PrivateKey
@@ -393,7 +391,7 @@ def paginate_endpoint(url: str, limit: int = 1000) -> t.Any:
 
 
 async def cancel_order(
-    order_uids: Sequence[str],
+    order_uids: t.Sequence[str],
     api_keys: APIKeys,
     chain: Chain = Chain.GNOSIS,
     env: Envs = "prod",

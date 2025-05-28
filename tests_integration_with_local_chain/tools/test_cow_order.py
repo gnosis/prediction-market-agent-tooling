@@ -122,7 +122,6 @@ async def test_cow_cancellation(local_web3: Web3) -> None:
     env: Envs = "prod"
     chain: Chain = Chain.GNOSIS
 
-    # 1. Create order (unrealistic so that it's not filled)
     amount_wei = CollateralToken(0.01).as_wei
     handle_allowance(
         api_keys=test_keys,

@@ -52,9 +52,6 @@ def test_seer_place_bet_via_pools(
     test_keys: APIKeys,
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
-    # ToDo
-    # . 1. Mock cow, throw Timeout
-
     # We fetch the market with the highest liquidity because we expect quotes to be available for all outcome tokens.
     markets = SeerSubgraphHandler().get_markets(
         filter_by=FilterBy.OPEN,
@@ -83,7 +80,7 @@ def test_seer_place_bet_via_pools(
             web3=local_web3,
             api_keys=test_keys,
         )
-    # . 4. assert outcome token balance increases
+
     final_outcome_token_balance = agent_market.get_token_balance(
         user_id=test_keys.bet_from_address, outcome=outcome, web3=local_web3
     )

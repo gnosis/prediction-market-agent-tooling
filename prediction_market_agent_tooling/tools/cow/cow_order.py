@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from typing import Sequence
 
 import httpx
 import tenacity
@@ -8,11 +9,17 @@ from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
 from cowdao_cowpy.common.constants import CowContractAddress
+from cowdao_cowpy.contracts.domain import domain
+from cowdao_cowpy.contracts.sign import SigningScheme, sign_order_cancellations
 from cowdao_cowpy.cow.swap import CompletedOrder, get_order_quote, swap_tokens
 from cowdao_cowpy.order_book.api import OrderBookApi
 from cowdao_cowpy.order_book.config import Envs, OrderBookAPIConfigFactory
 from cowdao_cowpy.order_book.generated.model import (
+    UID,
     Address,
+    EcdsaSignature,
+    EcdsaSigningScheme,
+    OrderCancellations,
     OrderMetaData,
     OrderQuoteRequest,
     OrderQuoteResponse,
@@ -24,6 +31,9 @@ from cowdao_cowpy.order_book.generated.model import (
     TokenAmount,
 )
 from cowdao_cowpy.subgraph.client import BaseModel
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
+from eth_keys.datatypes import PrivateKey as eth_keys_PrivateKey
 from tenacity import (
     retry_if_not_exception_type,
     stop_after_attempt,
@@ -33,7 +43,13 @@ from tenacity import (
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes, Wei
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    HexBytes,
+    HexStr,
+    PrivateKey,
+    Wei,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
@@ -157,21 +173,12 @@ def get_buy_token_amount_else_raise(
     return Wei(order_quote.quote.buyAmount.root)
 
 
-@tenacity.retry(
-    stop=stop_after_attempt(3),
-    wait=wait_fixed(1),
-    retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
-    after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
-)
-def swap_tokens_waiting(
-    amount_wei: Wei,
-    sell_token: ChecksumAddress,
-    buy_token: ChecksumAddress,
+def handle_allowance(
     api_keys: APIKeys,
-    chain: Chain = Chain.GNOSIS,
-    env: Envs = "prod",
+    sell_token: ChecksumAddress,
+    amount_wei: Wei,
     web3: Web3 | None = None,
-) -> OrderMetaData:
+) -> None:
     # Approve the CoW Swap Vault Relayer to get the sell token only if allowance not sufficient.
     for_address = Web3.to_checksum_address(CowContractAddress.VAULT_RELAYER.value)
     current_allowance = ContractERC20OnGnosisChain(address=sell_token).allowance(
@@ -187,24 +194,39 @@ def swap_tokens_waiting(
             web3=web3,
         )
 
-    # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
-    return asyncio.run(
-        swap_tokens_waiting_async(
-            amount_wei, sell_token, buy_token, api_keys, chain, env
-        )
-    )
 
-
-async def swap_tokens_waiting_async(
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
+    after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
+)
+def swap_tokens_waiting(
     amount_wei: Wei,
     sell_token: ChecksumAddress,
     buy_token: ChecksumAddress,
     api_keys: APIKeys,
+    chain: Chain = Chain.GNOSIS,
+    env: Envs = "prod",
+    web3: Web3 | None = None,
+) -> OrderMetaData:
+    # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
+    return asyncio.run(
+        swap_tokens_waiting_async(
+            amount_wei, sell_token, buy_token, api_keys, chain, env, web3=web3
+        )
+    )
+
+
+async def do_swap(
+    api_keys: APIKeys,
+    amount_wei: Wei,
+    sell_token: ChecksumAddress,
+    buy_token: ChecksumAddress,
     chain: Chain,
     env: Envs,
-    timeout: timedelta = timedelta(seconds=120),
     slippage_tolerance: float = 0.01,
-) -> OrderMetaData:
+) -> CompletedOrder:
     account = api_keys.get_account()
     safe_address = api_keys.safe_address_checksum
 
@@ -224,6 +246,10 @@ async def swap_tokens_waiting_async(
         logger.info(f"Safe is used. Signing the order after its creation.")
         await sign_safe_cow_swap(api_keys, order, chain, env)
 
+    return order
+
+
+async def do_wait(order: CompletedOrder, timeout: timedelta) -> OrderMetaData:
     start_time = utcnow()
 
     while True:
@@ -242,15 +268,43 @@ async def swap_tokens_waiting_async(
             raise OrderStatusError(f"Order {order.uid} failed. {order.url}")
 
         if utcnow() - start_time > timeout:
-            raise TimeoutError(
+            logger.warning(
                 f"Timeout waiting for order {order.uid} to be completed. {order.url}"
             )
+            raise TimeoutError(f"{order.uid}")
 
         logger.info(
             f"Order status of {order.uid} ({order.url}): {order_metadata.status}, waiting..."
         )
 
         await asyncio.sleep(3.14)
+
+
+async def swap_tokens_waiting_async(
+    amount_wei: Wei,
+    sell_token: ChecksumAddress,
+    buy_token: ChecksumAddress,
+    api_keys: APIKeys,
+    chain: Chain,
+    env: Envs,
+    timeout: timedelta = timedelta(seconds=120),
+    slippage_tolerance: float = 0.01,
+    web3: Web3 | None = None,
+) -> OrderMetaData:
+    handle_allowance(
+        api_keys=api_keys, sell_token=sell_token, amount_wei=amount_wei, web3=web3
+    )
+    order = await do_swap(
+        api_keys=api_keys,
+        amount_wei=amount_wei,
+        sell_token=sell_token,
+        buy_token=buy_token,
+        chain=chain,
+        env=env,
+        slippage_tolerance=slippage_tolerance,
+    )
+
+    return await do_wait(order=order, timeout=timeout)
 
 
 @tenacity.retry(
@@ -292,3 +346,33 @@ def get_trades_by_owner(
     )
     response.raise_for_status()
     return [MinimalisticToken.model_validate(i) for i in response.json()]
+
+
+async def cancel_order(
+    order_uids: Sequence[str],
+    api_keys: APIKeys,
+    chain: Chain = Chain.GNOSIS,
+    env: Envs = "prod",
+) -> None:
+    """Cancels orders that were created by the user corresponding to the api_keys.."""
+    order_domain = domain(
+        chain=chain, verifying_contract=CowContractAddress.SETTLEMENT_CONTRACT.value
+    )
+    owner = build_account(api_keys.bet_from_private_key)
+    order_signature = sign_order_cancellations(
+        order_domain, list(order_uids), owner, SigningScheme.EIP712
+    )
+    oc = OrderCancellations(
+        signature=EcdsaSignature(root=order_signature.data),
+        orderUids=[UID(root=order_uid) for order_uid in order_uids],
+        signingScheme=EcdsaSigningScheme.eip712,
+    )
+    order_book_api = get_order_book_api(env, chain)
+    await order_book_api.delete_order(orders_cancelation=oc)
+
+
+def build_account(private_key: PrivateKey) -> LocalAccount:
+    return LocalAccount(
+        key=eth_keys_PrivateKey(HexBytes(HexStr(private_key.get_secret_value()))),
+        account=Account.from_key(private_key.get_secret_value()),
+    )

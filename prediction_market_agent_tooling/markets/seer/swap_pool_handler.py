@@ -64,7 +64,7 @@ class SwapPoolHandler:
             token_in if token_in != self.collateral_token_address else token_out
         )
 
-        # approximate out price getting the current price and adding a buffer
+        # We could use a quoter contract (https://github.com/SwaprHQ/swapr-sdk/blob/develop/src/entities/trades/swapr-v3/constants.ts#L7), but since there is normally 1 pool per outcome token/collateral pair, it's not necessary.
 
         price_outcome_token = PriceManager.build(
             HexBytes(HexStr(self.market_id))

@@ -1,3 +1,4 @@
+import asyncio
 import typing as t
 
 from eth_typing import ChecksumAddress
@@ -54,6 +55,7 @@ from prediction_market_agent_tooling.tools.contract import (
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
+    cancel_order,
     get_buy_token_amount_else_raise,
     get_trades_by_owner,
     swap_tokens_waiting,
@@ -539,8 +541,10 @@ class SeerAgentMarket(AgentMarket):
 
             return order_metadata.uid.root
         except TimeoutError as e:
-            # ToDo - Cancel previous order
-            logger.info(f"TimeoutError: {e} - we try selling directly on Swapr pools.")
+            # Since timeout occurred, we need to cancel the order before trying to swap again.
+            order_uid = str(e)
+            asyncio.run(cancel_order(order_uids=[order_uid], api_keys=api_keys))
+            logger.info(f"TimeoutError. Trying to swap directly on Swapr pools.")
             tx_receipt = SwapPoolHandler(
                 api_keys=api_keys,
                 market_id=self.id,

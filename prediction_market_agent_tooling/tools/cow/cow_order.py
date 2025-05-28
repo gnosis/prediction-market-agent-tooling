@@ -209,16 +209,24 @@ def swap_tokens_waiting(
     chain: Chain = Chain.GNOSIS,
     env: Envs = "prod",
     web3: Web3 | None = None,
-) -> OrderMetaData:
+    wait_order_complete: bool = True,
+) -> tuple[OrderMetaData | None, CompletedOrder]:
     # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
     return asyncio.run(
         swap_tokens_waiting_async(
-            amount_wei, sell_token, buy_token, api_keys, chain, env, web3=web3
+            amount_wei,
+            sell_token,
+            buy_token,
+            api_keys,
+            chain,
+            env,
+            web3=web3,
+            wait_order_complete=wait_order_complete,
         )
     )
 
 
-async def do_swap(
+async def place_swap_order(
     api_keys: APIKeys,
     amount_wei: Wei,
     sell_token: ChecksumAddress,
@@ -249,7 +257,9 @@ async def do_swap(
     return order
 
 
-async def do_wait(order: CompletedOrder, timeout: timedelta) -> OrderMetaData:
+async def wait_for_order_completion(
+    order: CompletedOrder, timeout: timedelta = timedelta(seconds=120)
+) -> OrderMetaData:
     start_time = utcnow()
 
     while True:
@@ -268,10 +278,9 @@ async def do_wait(order: CompletedOrder, timeout: timedelta) -> OrderMetaData:
             raise OrderStatusError(f"Order {order.uid} failed. {order.url}")
 
         if utcnow() - start_time > timeout:
-            logger.warning(
+            raise TimeoutError(
                 f"Timeout waiting for order {order.uid} to be completed. {order.url}"
             )
-            raise TimeoutError(f"{order.uid}")
 
         logger.info(
             f"Order status of {order.uid} ({order.url}): {order_metadata.status}, waiting..."
@@ -290,11 +299,12 @@ async def swap_tokens_waiting_async(
     timeout: timedelta = timedelta(seconds=120),
     slippage_tolerance: float = 0.01,
     web3: Web3 | None = None,
-) -> OrderMetaData:
+    wait_order_complete: bool = True,
+) -> tuple[OrderMetaData | None, CompletedOrder]:
     handle_allowance(
         api_keys=api_keys, sell_token=sell_token, amount_wei=amount_wei, web3=web3
     )
-    order = await do_swap(
+    order = await place_swap_order(
         api_keys=api_keys,
         amount_wei=amount_wei,
         sell_token=sell_token,
@@ -303,8 +313,10 @@ async def swap_tokens_waiting_async(
         env=env,
         slippage_tolerance=slippage_tolerance,
     )
-
-    return await do_wait(order=order, timeout=timeout)
+    if wait_order_complete:
+        order_metadata = await wait_for_order_completion(order=order, timeout=timeout)
+        return order_metadata, order
+    return None, order
 
 
 @tenacity.retry(

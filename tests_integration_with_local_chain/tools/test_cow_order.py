@@ -22,11 +22,11 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     build_account,
     cancel_order,
-    do_swap,
     get_buy_token_amount_else_raise,
     get_order_book_api,
     get_sell_token_amount,
     handle_allowance,
+    place_swap_order,
     swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
@@ -135,7 +135,7 @@ async def test_cow_cancellation(local_web3: Web3) -> None:
     # We expect the order to not be filled during the test (small amount)
 
     build_account(test_keys.bet_from_private_key)
-    order = await do_swap(
+    order = await place_swap_order(
         api_keys=test_keys,
         amount_wei=amount_wei,
         sell_token=sell_token,

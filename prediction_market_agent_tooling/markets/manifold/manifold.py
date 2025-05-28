@@ -1,4 +1,5 @@
 import typing as t
+from datetime import timedelta
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -15,6 +16,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 )
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
+    get_manifold_bets,
     get_manifold_binary_markets,
     get_manifold_market,
     place_bet,
@@ -24,7 +26,7 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     FullManifoldMarket,
     usd_to_mana,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 
 class ManifoldAgentMarket(AgentMarket):
@@ -50,6 +52,20 @@ class ManifoldAgentMarket(AgentMarket):
 
     def get_tiny_bet_amount(self) -> CollateralToken:
         return CollateralToken(1)
+
+    def have_bet_on_market_since(self, keys: APIKeys, since: timedelta) -> bool:
+        start_time = utcnow() - since
+        recently_betted_questions = set(
+            get_manifold_market(b.contractId).question
+            for b in get_manifold_bets(
+                user_id=get_authenticated_user(
+                    keys.manifold_api_key.get_secret_value()
+                ).id,
+                start_time=start_time,
+                end_time=None,
+            )
+        )
+        return self.question in recently_betted_questions
 
     def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
         self.get_usd_in_token(amount)

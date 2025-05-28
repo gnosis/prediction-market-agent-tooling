@@ -33,10 +33,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ProbabilisticAnswer,
     Trade,
 )
-from prediction_market_agent_tooling.markets.markets import (
-    MarketType,
-    have_bet_on_market_since,
-)
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
     send_keeping_token_to_eoa_xdai,
 )
@@ -219,7 +216,6 @@ class DeployablePredictionAgent(DeployableAgent):
     def initialize_langfuse(self) -> None:
         super().initialize_langfuse()
         # Auto-observe all the methods where it makes sense, so that subclassses don't need to do it manually.
-        self.have_bet_on_market_since = observe()(self.have_bet_on_market_since)  # type: ignore[method-assign]
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.answer_categorical_market = observe()(self.answer_categorical_market)  # type: ignore[method-assign]
@@ -265,16 +261,13 @@ class DeployablePredictionAgent(DeployableAgent):
                 f"{api_keys=} doesn't have enough operational balance."
             )
 
-    def have_bet_on_market_since(self, market: AgentMarket, since: timedelta) -> bool:
-        return have_bet_on_market_since(keys=APIKeys(), market=market, since=since)
-
     def verify_market(self, market_type: MarketType, market: AgentMarket) -> bool:
         """
         Subclasses can implement their own logic instead of this one, or on top of this one.
         By default, it allows only markets where user didn't bet recently and it's a reasonable question.
         """
-        if self.have_bet_on_market_since(
-            market, since=self.same_market_trade_interval.get(market=market)
+        if market.have_bet_on_market_since(
+            keys=APIKeys(), since=self.same_market_trade_interval.get(market=market)
         ):
             logger.info(
                 f"Market already bet on within {self.same_market_trade_interval}."

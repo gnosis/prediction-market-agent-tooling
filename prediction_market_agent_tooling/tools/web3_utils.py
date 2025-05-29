@@ -67,17 +67,23 @@ def unwrap_generic_value(value: Any) -> Any:
         return value.value
     elif isinstance(value, list):
         return [unwrap_generic_value(v) for v in value]
+    elif isinstance(value, tuple):
+        return tuple(unwrap_generic_value(v) for v in value)
     elif isinstance(value, dict):
         return {k: unwrap_generic_value(v) for k, v in value.items()}
     return value
 
 
-def parse_function_params(params: Optional[list[Any] | dict[str, Any]]) -> list[Any]:
+def parse_function_params(
+    params: Optional[list[Any] | tuple[Any] | dict[str, Any]]
+) -> list[Any]:
     params = unwrap_generic_value(params)
     if params is None:
         return []
     if isinstance(params, list):
-        return params
+        return [unwrap_generic_value(i) for i in params]
+    if isinstance(params, tuple):
+        return tuple(unwrap_generic_value(i) for i in params)
     if isinstance(params, dict):
         return list(params.values())
     raise ValueError(f"Invalid type for function parameters: {type(params)}")

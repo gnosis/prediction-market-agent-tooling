@@ -76,7 +76,7 @@ def unwrap_generic_value(value: Any) -> Any:
 
 def parse_function_params(
     params: Optional[list[Any] | tuple[Any] | dict[str, Any]]
-) -> list[Any]:
+) -> list[Any] | tuple[Any]:
     params = unwrap_generic_value(params)
     if params is None:
         return []

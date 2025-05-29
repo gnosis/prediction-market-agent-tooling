@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from prediction_market_agent_tooling.gtypes import Wei
@@ -38,6 +40,9 @@ from prediction_market_agent_tooling.tools.web3_utils import parse_function_para
         ),
     ],
 )
-def test_parse_function_params(input_params, expected_output):
+def test_parse_function_params(
+    input_params: list[Any] | tuple[Any] | dict[str, Any],
+    expected_output: list[Any] | tuple[Any] | dict[str, Any],
+) -> None:
     result = parse_function_params(input_params)
     assert result == expected_output

@@ -1,4 +1,5 @@
 import typing as t
+from datetime import timedelta
 from enum import Enum
 from math import prod
 
@@ -114,6 +115,9 @@ class AgentMarket(BaseModel):
                     f"Keys of outcome_token_pool ({outcome_keys}) do not match outcomes ({expected_keys})."
                 )
         return outcome_token_pool
+
+    def have_bet_on_market_since(self, keys: APIKeys, since: timedelta) -> bool:
+        raise NotImplementedError("Subclasses must implement this method")
 
     def get_outcome_token_pool_by_outcome(self, outcome: OutcomeStr) -> OutcomeToken:
         if self.outcome_token_pool is None or not self.outcome_token_pool:

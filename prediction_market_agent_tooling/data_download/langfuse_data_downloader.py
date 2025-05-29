@@ -1,32 +1,24 @@
-import concurrent.futures
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from threading import Lock
 from typing import Any
 
 import pandas as pd
 import typer
 from langfuse import Langfuse
 from langfuse.client import TraceWithDetails
-from loky import get_reusable_executor
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
-    USD,
     DatetimeUTC,
-    HexAddress,
     OutcomeStr,
     OutcomeToken,
-    Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.omen.data_models import OmenMarket
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -233,7 +225,7 @@ def get_market_resolution(market_id: str, market_type: str) -> Resolution:
     except Exception as e:
         raise ValueError(
             f"Failed to fetch {market_type} market {market_id} resolution: {e}"
-        )
+        ) from e
 
 
 def parse_date(date_str: str, param_name: str) -> DatetimeUTC:
@@ -242,7 +234,7 @@ def parse_date(date_str: str, param_name: str) -> DatetimeUTC:
     except ValueError:
         typer.echo(f"Error: Invalid date format for {param_name}: {date_str}")
         typer.echo("Expected format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 def main(

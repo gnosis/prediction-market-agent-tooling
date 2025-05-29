@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeWei,
     Web3Wei,
+    Wei,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerParentMarket,
@@ -146,8 +147,8 @@ class ExactInputSingleParams(BaseModel):
     deadline: int = Field(
         default_factory=lambda: int((utcnow() + timedelta(minutes=10)).timestamp())
     )
-    amount_in: int = Field(alias="amountIn")
-    amount_out_minimum: int = Field(alias="amountOutMinimum")
-    limit_sqrt_price: int = Field(
-        alias="limitSqrtPrice", default=0
+    amount_in: Wei = Field(alias="amountIn")
+    amount_out_minimum: Wei = Field(alias="amountOutMinimum")
+    limit_sqrt_price: Wei = Field(
+        alias="limitSqrtPrice", default_factory=lambda: Wei(0)
     )  # 0 for convenience, we also don't expect major price shifts

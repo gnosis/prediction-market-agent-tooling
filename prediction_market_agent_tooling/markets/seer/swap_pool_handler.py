@@ -3,6 +3,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
+    CollateralToken,
     HexBytes,
     HexStr,
     TxReceipt,
@@ -37,15 +38,15 @@ class SwapPoolHandler:
         self,
         amount_wei: Wei,
         token_in: ChecksumAddress,
-        price_outcome_token: float,
+        price_outcome_token: CollateralToken,
         buffer_pct: float = 0.05,
     ) -> Wei:
         is_buying_outcome = token_in == self.collateral_token_address
 
         if is_buying_outcome:
-            value = amount_wei.value * (1.0 - buffer_pct) / price_outcome_token
+            value = amount_wei.value * (1.0 - buffer_pct) / price_outcome_token.value
         else:
-            value = amount_wei.value * price_outcome_token * (1.0 - buffer_pct)
+            value = amount_wei.value * price_outcome_token.value * (1.0 - buffer_pct)
         return Wei(int(value))
 
     def buy_or_sell_outcome_token(
@@ -78,15 +79,15 @@ class SwapPoolHandler:
         amount_out_minimum = self._calculate_amount_out_minimum(
             amount_wei=amount_wei,
             token_in=token_in,
-            price_outcome_token=price_outcome_token.value,
+            price_outcome_token=price_outcome_token,
         )
 
         p = ExactInputSingleParams(
             token_in=token_in,
             token_out=token_out,
             recipient=self.api_keys.bet_from_address,
-            amount_in=amount_wei.value,
-            amount_out_minimum=int(amount_out_minimum.value),
+            amount_in=amount_wei,
+            amount_out_minimum=amount_out_minimum,
         )
 
         tx_receipt = SwaprRouterContract().exact_input_single(

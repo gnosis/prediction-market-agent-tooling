@@ -1,6 +1,8 @@
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import pytest
+from cowdao_cowpy.cow.swap import CompletedOrder
+from cowdao_cowpy.order_book.generated.model import UID
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -67,12 +69,18 @@ def test_seer_place_bet_via_pools(
     )
     agent_market = check_not_none(agent_market)
     outcome = agent_market.outcomes[0]
+    mock_completed_order = Mock(spec=CompletedOrder)
+    mock_completed_order.uid = UID(root="1234")
     # Mock swap_tokens_waiting to throw a TimeoutError immediately
     with patch(
-        "prediction_market_agent_tooling.markets.seer.seer.swap_tokens_waiting"
-    ) as mock_swap:
-        mock_swap.side_effect = TimeoutError("Mocked timeout error")
-
+        "prediction_market_agent_tooling.markets.seer.seer.swap_tokens_waiting",
+        return_value=(None, mock_completed_order),
+    ), patch(
+        "prediction_market_agent_tooling.markets.seer.seer.wait_for_order_completion",
+        side_effect=TimeoutError("Mocked timeout error"),
+    ), patch(
+        "prediction_market_agent_tooling.markets.seer.seer.cancel_order"
+    ):
         agent_market.place_bet(
             outcome=outcome,
             amount=USD(1.0),

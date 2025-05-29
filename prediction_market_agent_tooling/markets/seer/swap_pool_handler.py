@@ -39,13 +39,14 @@ class SwapPoolHandler:
         token_in: ChecksumAddress,
         price_outcome_token: float,
         buffer_pct: float = 0.05,
-    ) -> float:
+    ) -> Wei:
         is_buying_outcome = token_in == self.collateral_token_address
 
         if is_buying_outcome:
-            return amount_wei.value * (1.0 - buffer_pct) / price_outcome_token
+            value = amount_wei.value * (1.0 - buffer_pct) / price_outcome_token
         else:
-            return amount_wei.value * price_outcome_token * (1.0 - buffer_pct)
+            value = amount_wei.value * price_outcome_token * (1.0 - buffer_pct)
+        return Wei(int(value))
 
     def buy_or_sell_outcome_token(
         self,
@@ -85,7 +86,7 @@ class SwapPoolHandler:
             token_out=token_out,
             recipient=self.api_keys.bet_from_address,
             amount_in=amount_wei.value,
-            amount_out_minimum=int(amount_out_minimum),
+            amount_out_minimum=int(amount_out_minimum.value),
         )
 
         tx_receipt = SwaprRouterContract().exact_input_single(

@@ -136,7 +136,6 @@ class SwaprRouterContract(ContractOnGnosisChain):
         params: ExactInputSingleParams,
         web3: Web3 | None = None,
     ) -> TxReceipt:
-        # ToDo - check allowance
         erc20_token = ContractERC20OnGnosisChain(
             address=Web3.to_checksum_address(params.token_in)
         )

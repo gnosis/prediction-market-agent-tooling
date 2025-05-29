@@ -231,7 +231,7 @@ def get_market_resolution(market_id: str, market_type: str) -> Resolution:
 def parse_date(date_str: str, param_name: str) -> DatetimeUTC:
     try:
         return DatetimeUTC.from_datetime(datetime.fromisoformat(date_str))
-    except ValueError:
+    except ValueError as e:
         typer.echo(f"Error: Invalid date format for {param_name}: {date_str}")
         typer.echo("Expected format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")
         raise typer.Exit(1) from e

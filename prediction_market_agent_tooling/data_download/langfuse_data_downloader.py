@@ -158,7 +158,7 @@ def process_trace(
             raise ValueError(f"No resolution found for market {market_state.id}")
 
         result = TraceResult(
-            agent_name=trace.metadata.get("agent_class", "unknown"),
+            agent_name=trace.metadata["agent_class"],
             trace_id=trace.id,
             market_id=market_state.id,
             market_type=market_type,
@@ -179,7 +179,7 @@ def process_trace(
         return result
 
     except Exception as e:
-        logger.error(f"Error processing trace {trace.id}: {e}", exc_info=True)
+        logger.exception(f"Error processing trace {trace.id}: {e}")
         return None
 
 
@@ -226,7 +226,7 @@ def get_market_resolution(market_id: str, market_type: str) -> Resolution:
 
 def parse_date(date_str: str, param_name: str) -> DatetimeUTC:
     try:
-        return DatetimeUTC.from_datetime(datetime.fromisoformat(date_str))
+        return DatetimeUTC.to_datetime_utc(date_str)
     except ValueError as e:
         typer.echo(f"Error: Invalid date format for {param_name}: {date_str}")
         typer.echo("Expected format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")

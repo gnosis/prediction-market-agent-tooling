@@ -6,7 +6,7 @@ from cowdao_cowpy.order_book.generated.model import UID
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import USD, OutcomeStr
+from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
@@ -31,7 +31,7 @@ def test_seer_place_bet(
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
         market_data_model,
         seer_subgraph=seer_subgraph_handler_test,
-        must_have_prices=True,
+        must_have_prices=False,
     )
     agent_market = check_not_none(agent_market)
     amount = USD(1.0)
@@ -39,14 +39,17 @@ def test_seer_place_bet(
         # We expect an exception from Cow since test accounts don't have enough funds.
         agent_market.place_bet(
             api_keys=test_keys,
-            outcome=OutcomeStr("Yes"),
+            outcome=agent_market.outcomes[0],
             amount=amount,
             auto_deposit=True,
             web3=local_web3,
         )
-    assert "InsufficientBalance" in str(
-        e
-    ) or f"Balance 0 not enough for bet size {amount}" in str(e)
+    # trick to get the wrapped exception from tenacity
+    exception_message = e.value.last_attempt.exception().message  # type: ignore
+    assert (
+        "InsufficientBalance" in exception_message
+        or f"Balance 0 not enough for bet size {amount}" in exception_message
+    )
 
 
 def test_seer_place_bet_via_pools(

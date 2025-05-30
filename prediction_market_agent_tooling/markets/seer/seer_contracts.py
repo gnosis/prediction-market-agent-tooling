@@ -11,11 +11,15 @@ from prediction_market_agent_tooling.gtypes import (
     TxReceipt,
     xDai,
 )
-from prediction_market_agent_tooling.markets.seer.data_models import RedeemParams
+from prediction_market_agent_tooling.markets.seer.data_models import (
+    ExactInputSingleParams,
+    RedeemParams,
+)
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ContractERC20OnGnosisChain,
     ContractOnGnosisChain,
     abi_field_validator,
 )
@@ -110,3 +114,38 @@ class GnosisRouter(ContractOnGnosisChain):
             web3=web3,
         )
         return receipt_tx
+
+
+class SwaprRouterContract(ContractOnGnosisChain):
+    # File content taken from https://github.com/protofire/omen-exchange/blob/master/app/src/abi/marketMaker.json.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../../abis/swapr_router.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0xffb643e73f280b97809a8b41f7232ab401a04ee1"
+    )
+
+    def exact_input_single(
+        self,
+        api_keys: APIKeys,
+        params: ExactInputSingleParams,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        erc20_token = ContractERC20OnGnosisChain(address=params.token_in)
+
+        if (
+            erc20_token.allowance(api_keys.bet_from_address, self.address, web3=web3)
+            < params.amount_in
+        ):
+            erc20_token.approve(api_keys, self.address, params.amount_in, web3=web3)
+
+        return self.send(
+            api_keys=api_keys,
+            function_name="exactInputSingle",
+            function_params=[tuple(dict(params).values())],
+            web3=web3,
+        )

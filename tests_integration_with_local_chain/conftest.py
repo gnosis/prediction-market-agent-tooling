@@ -33,15 +33,14 @@ def load_env() -> None:
 
 
 @pytest.fixture(scope="session")
-def local_web3(
-    load_env: None, chain: ChainManager, eoa_accounts: list[TestAccount]
-) -> t.Generator[Web3, None, None]:
+def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, None]:
     print("entering fixture local_web3")
 
     if (tenderly_fork_rpc := APIKeys().TENDERLY_FORK_RPC) is not None:
         print("using tenderly rpc")
         w3 = Web3(Web3.HTTPProvider(tenderly_fork_rpc))
         print("funding test accounts on tenderly")
+        eoa_accounts = get_eoa_accounts(web3=w3)
         fund_account_on_tenderly(
             tenderly_fork_rpc, [a.address for a in eoa_accounts], xDai(1000)
         )
@@ -57,6 +56,11 @@ def local_web3(
     print("exiting fixture local_web3")
 
 
+def get_eoa_accounts(web3: Web3):
+    return eoa_accounts(web3, ape_accounts.test_accounts)
+
+
+@pytest.fixture(scope="session")
 def eoa_accounts(local_web3: Web3, accounts: list[TestAccount]) -> list[TestAccount]:
     # We filter out accounts that are smart accounts because our methods `send_xdai_to` fails in that case (we are using
     # legacy transactions)

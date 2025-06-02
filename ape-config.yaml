@@ -32,4 +32,4 @@ foundry:
 
 test:
   mnemonic: test test test test test test test test test test test junk
-  number_of_accounts: 10
+  number_of_accounts: 20

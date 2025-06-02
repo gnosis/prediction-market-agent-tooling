@@ -36,7 +36,7 @@ from tests.utils import mint_new_block
 
 
 def test_stealing_on_markets(
-    accounts: list[TestAccount],
+    eoa_accounts: list[TestAccount],
     local_web3: Web3,
 ) -> None:
     """
@@ -44,7 +44,7 @@ def test_stealing_on_markets(
     """
 
     # Get two accounts, one will create a job market (A) and one will try to sabotage it (B)
-    account_A, account_B = accounts[2], accounts[3]
+    account_A, account_B = eoa_accounts[2], eoa_accounts[3]
     api_keys_A, api_keys_B = APIKeys(
         BET_FROM_PRIVATE_KEY=private_key_type(account_A.private_key), SAFE_ADDRESS=None
     ), APIKeys(

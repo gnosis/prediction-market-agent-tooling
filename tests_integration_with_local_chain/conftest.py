@@ -34,7 +34,7 @@ def load_env() -> None:
 
 @pytest.fixture(scope="session")
 def local_web3(
-    load_env: None, chain: ChainManager, accounts: list[TestAccount]
+    load_env: None, chain: ChainManager, eoa_accounts: list[TestAccount]
 ) -> t.Generator[Web3, None, None]:
     print("entering fixture local_web3")
 
@@ -43,7 +43,7 @@ def local_web3(
         w3 = Web3(Web3.HTTPProvider(tenderly_fork_rpc))
         print("funding test accounts on tenderly")
         fund_account_on_tenderly(
-            tenderly_fork_rpc, [a.address for a in accounts], xDai(1000)
+            tenderly_fork_rpc, [a.address for a in eoa_accounts], xDai(1000)
         )
         yield w3
     else:
@@ -57,14 +57,24 @@ def local_web3(
     print("exiting fixture local_web3")
 
 
+def eoa_accounts(local_web3: Web3, accounts: list[TestAccount]) -> list[TestAccount]:
+    # We filter out accounts that are smart accounts because our methods `send_xdai_to` fails in that case (we are using
+    # legacy transactions)
+    # For ex, see https://gnosis.blockscout.com/address/0x70997970C51812dc3A010C7d01b50e0d17dc79C8?tab=contract_code
+    # This account corresponds to foundry account # 1
+    return [
+        acc for acc in accounts if local_web3.eth.get_code(acc.address).hex() == "0x"
+    ]
+
+
 @pytest.fixture(scope="module")
 def local_ethereum_client(local_web3: Web3) -> EthereumClient:
     return EthereumClient(URI(local_web3.provider.endpoint_uri))  # type: ignore
 
 
 @pytest.fixture(scope="session")
-def test_keys(accounts: list[TestAccount]) -> APIKeys:
-    account = accounts[0]
+def test_keys(eoa_accounts: list[TestAccount]) -> APIKeys:
+    account = eoa_accounts[0]
 
     # Using a standard Anvil account with enough xDAI.
     return APIKeys(

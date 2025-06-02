@@ -116,10 +116,10 @@ def test_contract_implements_function(
 @pytest.mark.skip(
     reason="See https://github.com/gnosis/prediction-market-agent-tooling/issues/625"
 )
-def test_wont_retry(local_web3: Web3, accounts: list[TestAccount]) -> None:
+def test_wont_retry(local_web3: Web3, eoa_accounts: list[TestAccount]) -> None:
     value = CollateralToken(10).as_wei
-    from_account = accounts[0]
-    to_account = accounts[1]
+    from_account = eoa_accounts[0]
+    to_account = eoa_accounts[1]
 
     start_time = time.time()
     with pytest.raises(Exception) as e:
@@ -151,10 +151,10 @@ def test_sdai_asset_balance_of(local_web3: Web3) -> None:
 
 
 def test_sdai_allowance_and_approval(
-    local_web3: Web3, test_keys: APIKeys, accounts: list[TestAccount]
+    local_web3: Web3, test_keys: APIKeys, eoa_accounts: list[TestAccount]
 ) -> None:
     amount_wei = CollateralToken(1).as_wei
-    for_address = accounts[-1].address
+    for_address = eoa_accounts[-1].address
     token_contract = sDaiContract()
     token_contract.approve(
         api_keys=test_keys,

@@ -36,7 +36,7 @@ from tests.utils import mint_new_block
 
 
 def test_redeem_invalid_market(
-    accounts: list[TestAccount],
+    eoa_accounts: list[TestAccount],
     local_web3: Web3,
 ) -> None:
     """
@@ -44,7 +44,7 @@ def test_redeem_invalid_market(
     """
 
     # Get three accounts, one will create a market with liquidity, and the two will place bets in opposing directions.
-    account_A, account_B, account_C = accounts[7], accounts[8], accounts[9]
+    account_A, account_B, account_C = eoa_accounts[7], eoa_accounts[8], eoa_accounts[9]
     api_keys_A, api_keys_B, api_keys_C = (
         APIKeys(
             BET_FROM_PRIVATE_KEY=private_key_type(account_A.private_key),

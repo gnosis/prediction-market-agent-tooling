@@ -51,24 +51,40 @@ def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, N
             "gnosis:mainnet_fork:foundry"
         ) as provider:
             w3 = Web3(Web3.HTTPProvider(provider.http_uri))
+            get_eoa_accounts(w3)
             yield w3
 
     print("exiting fixture local_web3")
 
 
-def get_eoa_accounts(web3: Web3):
-    return eoa_accounts(web3, ape_accounts.test_accounts)
+def get_eoa_accounts(web3: Web3) -> list[TestAccount]:
+    test_accounts: list[TestAccount] = ape_accounts.test_accounts
+    eoa_accounts = list(
+        filter(
+            lambda acc: web3.eth.get_code(account=acc.address).hex() == "0x",
+            test_accounts,
+        )
+    )
+    return eoa_accounts
 
 
 @pytest.fixture(scope="session")
-def eoa_accounts(local_web3: Web3, accounts: list[TestAccount]) -> list[TestAccount]:
+def eoa_accounts(local_web3: Web3) -> list[TestAccount]:
     # We filter out accounts that are smart accounts because our methods `send_xdai_to` fails in that case (we are using
     # legacy transactions)
     # For ex, see https://gnosis.blockscout.com/address/0x70997970C51812dc3A010C7d01b50e0d17dc79C8?tab=contract_code
     # This account corresponds to foundry account # 1
-    return [
-        acc for acc in accounts if local_web3.eth.get_code(acc.address).hex() == "0x"
-    ]
+    return get_eoa_accounts(local_web3)
+
+
+def keep_only_eoa_accounts(
+    accounts: list[TestAccount], web3: Web3
+) -> list[TestAccount]:
+    return list(
+        filter(
+            lambda acc: web3.eth.get_code(account=acc.address).hex() == "0x", accounts
+        )
+    )
 
 
 @pytest.fixture(scope="module")

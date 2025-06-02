@@ -31,7 +31,11 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
 from prediction_market_agent_tooling.tools.tokens.main_token import (
     MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    extract_error_from_retry_error,
+    utcnow,
+)
 from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
@@ -264,14 +268,24 @@ def omen_resolve_market_tx(
     Market can be resolved after the answer if finalized on Reality.
     """
     oracle_contract = OmenOracleContract()
-    oracle_contract.resolve(
-        api_keys=api_keys,
-        question_id=market.question.id,
-        template_id=market.question.templateId,
-        question_raw=market.question.question_raw,
-        n_outcomes=market.question.n_outcomes,
-        web3=web3,
-    )
+    try:
+        oracle_contract.resolve(
+            api_keys=api_keys,
+            question_id=market.question.id,
+            template_id=market.question.templateId,
+            question_raw=market.question.question_raw,
+            n_outcomes=market.question.n_outcomes,
+            web3=web3,
+        )
+    except BaseException as e:
+        e = extract_error_from_retry_error(e)
+        if "condition not prepared or found" in str(e):
+            # We can't do anything about these, so just skip them with warning.
+            logger.warning(
+                f"Market {market.url=} not resolved, because `condition not prepared or found`, skipping."
+            )
+        else:
+            raise
 
 
 def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:

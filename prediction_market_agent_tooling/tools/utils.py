@@ -9,6 +9,7 @@ import requests
 from pydantic import BaseModel, ValidationError
 from scipy.optimize import newton
 from scipy.stats import entropy
+from tenacity import RetryError
 
 from prediction_market_agent_tooling.gtypes import (
     CollateralToken,
@@ -230,3 +231,12 @@ def calculate_sell_amount_in_collateral(
 
     amount_to_sell = newton(f, 0)
     return CollateralToken(float(amount_to_sell) * 0.999999)  # Avoid rounding errors
+
+
+def extract_error_from_retry_error(e: BaseException | RetryError) -> BaseException:
+    if (
+        isinstance(e, RetryError)
+        and (exp_from_retry := e.last_attempt.exception()) is not None
+    ):
+        e = exp_from_retry
+    return e

@@ -12,7 +12,9 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.manifold.utils import validate_resolution
+from prediction_market_agent_tooling.markets.manifold.utils import (
+    validate_manifold_resolution,
+)
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, should_not_happen
 
 MANIFOLD_BASE_URL = "https://manifold.markets"
@@ -110,7 +112,7 @@ class ManifoldMarket(BaseModel):
 
     @field_validator("resolution", mode="before")
     def validate_resolution(cls, v: t.Any) -> Resolution:
-        return validate_resolution(v)
+        return validate_manifold_resolution(v)
 
     def __repr__(self) -> str:
         return f"Manifold's market: {self.question}"
@@ -204,7 +206,7 @@ class ManifoldBet(BaseModel):
 
     @field_validator("outcome", mode="before")
     def validate_resolution(cls, v: t.Any) -> Resolution:
-        return validate_resolution(v)
+        return validate_manifold_resolution(v)
 
     def get_resolved_outcome(self) -> OutcomeStr:
         if self.outcome.outcome:

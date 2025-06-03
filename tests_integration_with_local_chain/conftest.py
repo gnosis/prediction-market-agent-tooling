@@ -40,7 +40,9 @@ def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, N
         print("using tenderly rpc")
         w3 = Web3(Web3.HTTPProvider(tenderly_fork_rpc))
         print("funding test accounts on tenderly")
-        eoa_accounts = get_eoa_accounts(web3=w3)
+        eoa_accounts: list[TestAccount] = keep_only_eoa_accounts(
+            ape_accounts.test_accounts, w3
+        )
         fund_account_on_tenderly(
             tenderly_fork_rpc, [a.address for a in eoa_accounts], xDai(1000)
         )
@@ -56,24 +58,13 @@ def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, N
     print("exiting fixture local_web3")
 
 
-def get_eoa_accounts(web3: Web3) -> list[TestAccount]:
-    test_accounts: list[TestAccount] = ape_accounts.test_accounts
-    eoa_accounts = list(
-        filter(
-            lambda acc: web3.eth.get_code(account=acc.address).hex() == "0x",
-            test_accounts,
-        )
-    )
-    return eoa_accounts
-
-
 @pytest.fixture(scope="session")
 def eoa_accounts(local_web3: Web3) -> list[TestAccount]:
     # We filter out accounts that are smart accounts because our methods `send_xdai_to` fails in that case (we are using
     # legacy transactions)
     # For ex, see https://gnosis.blockscout.com/address/0x70997970C51812dc3A010C7d01b50e0d17dc79C8?tab=contract_code
     # This account corresponds to foundry account # 1
-    return get_eoa_accounts(local_web3)
+    return keep_only_eoa_accounts(ape_accounts.test_accounts, local_web3)
 
 
 def keep_only_eoa_accounts(

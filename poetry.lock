@@ -886,13 +886,13 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "cloudevents"
-version = "1.11.1"
+version = "1.12.0"
 description = "CloudEvents Python SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "cloudevents-1.11.1-py3-none-any.whl", hash = "sha256:74bc7739cda90c5fabaadeb3ee8995edb8faea3a6669775df8c26d368a9cfa71"},
-    {file = "cloudevents-1.11.1.tar.gz", hash = "sha256:9fa882aefe277f1295319f2945ac62a10daac783ccc3c3c431000774a61c99e3"},
+    {file = "cloudevents-1.12.0-py3-none-any.whl", hash = "sha256:49196267f5f963d87ae156f93fc0fa32f4af69485f2c8e62e0db8b0b4b8b8921"},
+    {file = "cloudevents-1.12.0.tar.gz", hash = "sha256:ebd5544ceb58c8378a0787b657a2ae895e929b80a82d6675cba63f0e8c5539e0"},
 ]
 
 [package.dependencies]
@@ -2825,13 +2825,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.3.43"
+version = "0.3.44"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "langsmith-0.3.43-py3-none-any.whl", hash = "sha256:2d4558068abf2eeb60ff80871187724e07f5e657d7d6be9e0c603df36c41140a"},
-    {file = "langsmith-0.3.43.tar.gz", hash = "sha256:7dab99b635859e24a1a252ad4f7e23170a45f4ea742567a10b4b26c50478ed43"},
+    {file = "langsmith-0.3.44-py3-none-any.whl", hash = "sha256:fa57afc1a3b1688f8970a5082dae8c271fdbd611cee013d412921eef926fcd78"},
+    {file = "langsmith-0.3.44.tar.gz", hash = "sha256:0a72dfe87aa2f464ebbfb94937f57101bed9e0b1d6d26401d5e422b0e8867b40"},
 ]
 
 [package.dependencies]
@@ -3514,13 +3514,13 @@ files = [
 
 [[package]]
 name = "openai"
-version = "1.82.1"
+version = "1.83.0"
 description = "The official Python library for the openai API"
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "openai-1.82.1-py3-none-any.whl", hash = "sha256:334eb5006edf59aa464c9e932b9d137468d810b2659e5daea9b3a8c39d052395"},
-    {file = "openai-1.82.1.tar.gz", hash = "sha256:ffc529680018e0417acac85f926f92aa0bbcbc26e82e2621087303c66bc7f95d"},
+    {file = "openai-1.83.0-py3-none-any.whl", hash = "sha256:d15ec58ba52537d4abc7b744890ecc4ab3cffb0fdaa8e5389830f6e1a2f7f128"},
+    {file = "openai-1.83.0.tar.gz", hash = "sha256:dfb421837962d9e8078929d8fc7e36e51c2a110b23a777a14e27f579d1afd6b6"},
 ]
 
 [package.dependencies]

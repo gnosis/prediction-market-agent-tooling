@@ -51,7 +51,6 @@ def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, N
             "gnosis:mainnet_fork:foundry"
         ) as provider:
             w3 = Web3(Web3.HTTPProvider(provider.http_uri))
-            get_eoa_accounts(w3)
             yield w3
 
     print("exiting fixture local_web3")

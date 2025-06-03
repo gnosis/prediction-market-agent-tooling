@@ -123,8 +123,8 @@ def prepare_tx(
 
     # Build the transaction.
     function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
-    tx_params_new = function_call.build_transaction(tx_params_new)
-    return tx_params_new
+    built_tx_params: TxParams = function_call.build_transaction(tx_params_new)
+    return built_tx_params
 
 
 def _prepare_tx_params(

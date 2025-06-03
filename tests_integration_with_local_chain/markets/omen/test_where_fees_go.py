@@ -39,7 +39,7 @@ from tests.utils import mint_new_block
 
 
 def test_where_fees_go(
-    accounts: list[TestAccount],
+    eoa_accounts: list[TestAccount],
     local_web3: Web3,
 ) -> None:
     """
@@ -47,7 +47,7 @@ def test_where_fees_go(
     """
 
     # Get three accounts, one will create a market with liquidity and huge fees, second one will add some more liquidity, and the last one will bet there.
-    account_A, account_B, account_C = accounts[4], accounts[5], accounts[6]
+    account_A, account_B, account_C = eoa_accounts[4], eoa_accounts[5], eoa_accounts[6]
     api_keys_A, api_keys_B, api_keys_C = (
         APIKeys(
             BET_FROM_PRIVATE_KEY=private_key_type(account_A.private_key),

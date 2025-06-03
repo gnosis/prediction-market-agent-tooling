@@ -24,10 +24,11 @@ def test_connect_local_chain(local_web3: Web3) -> None:
     assert local_web3.is_connected()
 
 
-def test_send_xdai(local_web3: Web3, accounts: list[TestAccount]) -> None:
+def test_send_xdai(local_web3: Web3, eoa_accounts: list[TestAccount]) -> None:
     value = xDai(10).as_xdai_wei
-    from_account = accounts[0]
-    to_account = accounts[1]
+    from_account = eoa_accounts[0]
+    to_account = eoa_accounts[1]
+
     initial_balance_from = get_balances(from_account.address, local_web3)
     initial_balance_to = get_balances(to_account.address, local_web3)
 
@@ -83,9 +84,9 @@ def test_send_xdai_from_locked_account(
 
 def test_anvil_account_has_more_than_minimum_required_balance(
     local_web3: Web3,
-    accounts: list[TestAccount],
+    eoa_accounts: list[TestAccount],
 ) -> None:
-    account_adr = Web3.to_checksum_address(accounts[0].address)
+    account_adr = Web3.to_checksum_address(eoa_accounts[0].address)
     assert get_balances(account_adr, local_web3).total > CollateralToken(0.5)
 
 
@@ -139,12 +140,12 @@ def test_now_datetime(local_web3: Web3, test_keys: APIKeys) -> None:
     ],
 )
 def test_send_xdai_with_data(
-    message: str, value_xdai: float, local_web3: Web3, accounts: list[TestAccount]
+    message: str, value_xdai: float, local_web3: Web3, eoa_accounts: list[TestAccount]
 ) -> None:
     value = xDai(value_xdai).as_xdai_wei
     message = "Hello there!"
-    from_account = accounts[0]
-    to_account = accounts[1]
+    from_account = eoa_accounts[2]
+    to_account = eoa_accounts[3]
 
     tx_receipt = send_xdai_to(
         web3=local_web3,

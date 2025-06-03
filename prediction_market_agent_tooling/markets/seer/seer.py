@@ -1,3 +1,4 @@
+import asyncio
 import typing as t
 from datetime import timedelta
 
@@ -15,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     OutcomeWei,
+    Wei,
     xDai,
 )
 from prediction_market_agent_tooling.loggers import logger
@@ -46,16 +48,21 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     NewMarketEvent,
 )
+from prediction_market_agent_tooling.markets.seer.swap_pool_handler import (
+    SwapPoolHandler,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
+    cancel_order,
     get_buy_token_amount_else_raise,
     get_orders_by_owner,
     get_trades_by_owner,
     swap_tokens_waiting,
+    wait_for_order_completion,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -441,6 +448,60 @@ class SeerAgentMarket(AgentMarket):
         outcome_idx = self.outcomes.index(outcome)
         return self.wrapped_tokens[outcome_idx]
 
+    def _swap_tokens_with_fallback(
+        self,
+        sell_token: ChecksumAddress,
+        buy_token: ChecksumAddress,
+        amount_wei: Wei,
+        api_keys: APIKeys,
+        web3: Web3 | None,
+    ) -> str:
+        """
+        Helper method to swap tokens with a fallback to direct pool swapping if the order times out.
+
+        Args:
+            sell_token: Address of the token to sell
+            buy_token: Address of the token to buy
+            amount_wei: Amount to swap in wei
+            api_keys: API keys for the transaction
+            web3: Web3 instance
+
+        Returns:
+            Transaction hash of the successful swap
+        """
+        _, order = swap_tokens_waiting(
+            amount_wei=amount_wei,
+            sell_token=sell_token,
+            buy_token=buy_token,
+            api_keys=api_keys,
+            web3=web3,
+            wait_order_complete=False,
+        )
+
+        try:
+            order_metadata = asyncio.run(wait_for_order_completion(order=order))
+            logger.debug(
+                f"Swapped {sell_token} for {buy_token}. Order details {order_metadata}"
+            )
+            return order_metadata.uid.root
+
+        except TimeoutError:
+            # Since timeout occurred, we need to cancel the order before trying to swap again.
+            asyncio.run(cancel_order(order_uids=[order.uid.root], api_keys=api_keys))
+            logger.info("TimeoutError. Trying to swap directly on Swapr pools.")
+
+            tx_receipt = SwapPoolHandler(
+                api_keys=api_keys,
+                market_id=self.id,
+                collateral_token_address=self.collateral_token_contract_address_checksummed,
+            ).buy_or_sell_outcome_token(
+                token_in=sell_token,
+                token_out=buy_token,
+                amount_wei=amount_wei,
+                web3=web3,
+            )
+            return tx_receipt["transactionHash"].hex()
+
     def place_bet(
         self,
         outcome: OutcomeStr,
@@ -449,6 +510,7 @@ class SeerAgentMarket(AgentMarket):
         web3: Web3 | None = None,
         api_keys: APIKeys | None = None,
     ) -> str:
+        outcome_token = self.get_wrapped_token_for_outcome(outcome)
         api_keys = api_keys if api_keys is not None else APIKeys()
         if not self.can_be_traded():
             raise ValueError(
@@ -464,27 +526,21 @@ class SeerAgentMarket(AgentMarket):
                 collateral_contract, amount_wei, api_keys, web3
             )
 
-        collateral_balance = collateral_contract.balanceOf(api_keys.bet_from_address)
+        collateral_balance = collateral_contract.balanceOf(
+            api_keys.bet_from_address, web3=web3
+        )
         if collateral_balance < amount_wei:
             raise ValueError(
                 f"Balance {collateral_balance} not enough for bet size {amount}"
             )
 
-        outcome_token = self.get_wrapped_token_for_outcome(outcome)
-
-        #  Sell sDAI using token address
-        order_metadata = swap_tokens_waiting(
-            amount_wei=amount_wei,
+        return self._swap_tokens_with_fallback(
             sell_token=collateral_contract.address,
             buy_token=outcome_token,
+            amount_wei=amount_wei,
             api_keys=api_keys,
             web3=web3,
         )
-        logger.debug(
-            f"Purchased {outcome_token} in exchange for {collateral_contract.address}. Order details {order_metadata}"
-        )
-
-        return order_metadata.uid.root
 
     def sell_tokens(
         self,
@@ -506,21 +562,27 @@ class SeerAgentMarket(AgentMarket):
             else self.get_in_token(amount).as_wei
         )
 
-        order_metadata = swap_tokens_waiting(
-            amount_wei=token_amount,
+        return self._swap_tokens_with_fallback(
             sell_token=outcome_token,
             buy_token=Web3.to_checksum_address(
                 self.collateral_token_contract_address_checksummed
             ),
+            amount_wei=token_amount,
             api_keys=api_keys,
             web3=web3,
         )
 
-        logger.debug(
-            f"Sold {outcome_token} in exchange for {self.collateral_token_contract_address_checksummed}. Order details {order_metadata}"
+    def get_token_balance(
+        self, user_id: str, outcome: OutcomeStr, web3: Web3 | None = None
+    ) -> OutcomeToken:
+        erc20_token = ContractERC20OnGnosisChain(
+            address=self.get_wrapped_token_for_outcome(outcome)
         )
-
-        return order_metadata.uid.root
+        return OutcomeToken.from_token(
+            erc20_token.balance_of_in_tokens(
+                for_address=Web3.to_checksum_address(user_id), web3=web3
+            )
+        )
 
 
 def seer_create_market_tx(

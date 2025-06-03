@@ -32,11 +32,11 @@ from tests.utils import mint_new_block
 
 
 def test_redeem_and_withdraw(
-    accounts: list[TestAccount],
+    eoa_accounts: list[TestAccount],
     local_web3: Web3,
 ) -> None:
     # Get three accounts, one will create a market with liquidity, and the two will place bets in opposing directions.
-    account = accounts[9]
+    account = eoa_accounts[9]
     api_keys = APIKeys(
         BET_FROM_PRIVATE_KEY=private_key_type(account.private_key),
         SAFE_ADDRESS=None,

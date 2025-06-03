@@ -456,4 +456,4 @@ class Benchmarker:
         md += "\n\n"
         md += "### Markets\n\n"
         md += pd.DataFrame(self.get_markets_summary()).to_markdown(index=False)
-        return md
+        return str(md)

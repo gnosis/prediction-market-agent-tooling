@@ -2,12 +2,14 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
-
+import json
 import pandas as pd
 import typer
+import time
 from langfuse import Langfuse
 from langfuse.client import TraceWithDetails
 from pydantic import BaseModel
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import DatetimeUTC, OutcomeStr, OutcomeToken
@@ -24,7 +26,6 @@ from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCache
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_traces_for_agent,
 )
-from prediction_market_agent_tooling.tools.parallelism import par_map
 
 PREDICTION_STATES = [
     "predict_market",
@@ -32,6 +33,8 @@ PREDICTION_STATES = [
     "make_prediction",
 ]
 REPORT_STATES = ["prepare_report"]
+
+TRADE_STATES = ["build_trades"]
 
 MARKET_RESOLUTION_PROVIDERS = {
     "omen": lambda market_id: OmenAgentMarket.get_binary_market(market_id),
@@ -58,9 +61,12 @@ class TraceResult(BaseModel):
     prediction_decision: str
     prediction_p_yes: float
     prediction_info_utility: float
+    prediction_confidence: float
     market_resolution: str | None
     resolution_is_valid: bool | None
-
+    full_market_json: str | None
+    prediction_json: str
+    trades: list[dict[str, Any]] | None
 
 def get_langfuse_client() -> Langfuse:
     api_keys = APIKeys()
@@ -72,27 +78,39 @@ def get_langfuse_client() -> Langfuse:
     )
 
 
-def download_data(
+def create_output_file_path(
+    agent_name: str,
+    date_from: DatetimeUTC,
+    date_to: DatetimeUTC,
+    output_folder: str,
+) -> str:
+    """Create unique output file path, incrementing version if file exists."""
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
+    
+    default_file_name = f"{agent_name}_{date_from.date()}_{date_to.date()}"
+    output_file = os.path.join(output_folder, f"{default_file_name}.csv")
+    
+    index = 0
+    while os.path.exists(output_file):
+        index += 1
+        output_file = os.path.join(output_folder, f"{default_file_name}_v{index}.csv")
+    
+    return output_file
+
+
+def download_data_daily(
     agent_name: str,
     date_from: DatetimeUTC,
     date_to: DatetimeUTC,
     only_resolved: bool,
-    output_folder: str,
-) -> None:
-    Path(output_folder).mkdir(parents=True, exist_ok=True)
-    index = 0
-    default_file_name = f"{agent_name}_{date_from.date()}_{date_to.date()}"
-    output_file = os.path.join(output_folder, f"{default_file_name}.csv")
-
-    if os.path.exists(output_file):
-        while os.path.exists(output_file):
-            index += 1
-            output_file = os.path.join(
-                output_folder, f"{default_file_name}_v{index}.csv"
-            )
-
+    output_file: str,
+    append_mode: bool = False,
+) -> tuple[int, int]:
+    """Download data for a single day/period and return (traces_downloaded, records_saved)."""
     langfuse_client_for_traces = get_langfuse_client()
-
+    
+    logger.info(f"Processing data for {date_from.date()} to {date_to.date()}")
+    
     traces = get_traces_for_agent(
         agent_name=agent_name,
         trace_name="process_market",
@@ -102,41 +120,124 @@ def download_data(
         client=langfuse_client_for_traces,
         tags=["answered"],
     )
-
+    
+    traces_count = len(traces) if traces else 0
     if not traces:
-        raise ValueError("No traces found for the specified criteria")
-
-    trace_args = [
-        (
-            trace,
-            only_resolved,
-        )
-        for trace in traces
-    ]
-
-    results = par_map(
-        items=trace_args,
-        func=lambda args: process_trace(*args),
-        max_workers=5,
-    )
-
+        logger.info(f"No traces found for {date_from.date()}")
+        # If this is the first call and no traces, create empty CSV with header
+        if not append_mode:
+            df_empty = pd.DataFrame(columns=list(TraceResult.model_fields.keys()))
+            df_empty.to_csv(output_file, mode='w', header=True, index=False)
+        return 0, 0
+        
+    # Use ThreadPoolExecutor with shared client (thread-safe)
+    results = []
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        # Submit all tasks
+        future_to_trace = {
+            executor.submit(process_trace, trace, only_resolved, langfuse_client_for_traces): trace 
+            for trace in traces
+        }
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_trace):
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                trace = future_to_trace[future]
+                logger.exception(f"Error processing trace {trace.id}: {e}")
+                results.append(None)
+    
     successful_results = [r for r in results if r is not None]
     if successful_results:
         results_data = [result.model_dump() for result in successful_results]
-        pd.DataFrame(results_data).to_csv(output_file, index=False)
-        logger.info(f"Saved {len(successful_results)} records to {output_file}")
-    else:
+        df = pd.DataFrame(results_data)
+        
+        df.to_csv(output_file, mode='a' if append_mode else 'w', header=not append_mode, index=False)
+        logger.info(f"Saved {len(successful_results)} records for {date_from.date()}")
+    elif not append_mode:
+        df_empty = pd.DataFrame(columns=list(TraceResult.model_fields.keys()))
+        df_empty.to_csv(output_file, mode='w', header=True, index=False)
+    
+    return traces_count, len(successful_results)
+
+
+def download_data(
+    agent_name: str,
+    date_from: DatetimeUTC,
+    date_to: DatetimeUTC,
+    only_resolved: bool,
+    output_folder: str,
+) -> None:
+    output_file = create_output_file_path(agent_name, date_from, date_to, output_folder)
+    total_traces = 0
+    total_saved = 0
+    daily_stats = []
+    
+    current_date = date_from
+    first_call = True
+    
+    while current_date < date_to:
+        next_date = DatetimeUTC.from_datetime(current_date + timedelta(days=1))
+        if next_date > date_to:
+            next_date = date_to
+            
+        traces_downloaded, records_saved = download_data_daily(
+            agent_name=agent_name,
+            date_from=current_date,
+            date_to=next_date,
+            only_resolved=only_resolved,
+            output_file=output_file,
+            append_mode=not first_call,
+        )
+        
+        daily_stats.append({
+            'date': current_date.date(),
+            'traces_downloaded': traces_downloaded,
+            'records_saved': records_saved
+        })
+        
+        total_traces += traces_downloaded
+        total_saved += records_saved
+        first_call = False
+        current_date = next_date
+    
+    # Print daily report
+    logger.info("="*60)
+    logger.info("DAILY PROCESSING REPORT")
+    logger.info("="*60)
+    for stats in daily_stats:
+        traces_downloaded: int = stats['traces_downloaded']
+        records_saved: int = stats['records_saved'] 
+        success_rate = (records_saved / traces_downloaded * 100) if traces_downloaded > 0 else 0
+        logger.info(f"{stats['date']}: {traces_downloaded} traces downloaded, {records_saved} successfully processed ({success_rate:.1f}%)")
+    
+    logger.info("="*60)
+    logger.info("OVERALL SUMMARY")
+    logger.info("="*60)
+    overall_success_rate = (total_saved / total_traces * 100) if total_traces > 0 else 0
+    logger.info(f"Total traces downloaded: {total_traces}")
+    logger.info(f"Total records saved: {total_saved}")
+    logger.info(f"Overall success rate: {overall_success_rate:.1f}%")
+    
+    if total_saved == 0:
         logger.warning("No results to save")
+    else:
+        logger.info(f"Output file: {output_file}")
+    logger.info("="*60)
 
 
 def process_trace(
     trace: TraceWithDetails,
     only_resolved: bool,
+    langfuse_client: Langfuse,
+    include_market: bool = True,
 ) -> TraceResult | None:
-    langfuse_client = get_langfuse_client()
     try:
+        logger.info(f"Processing trace {trace.id}")
         observations = langfuse_client.fetch_observations(trace_id=trace.id)
-
+        logger.info(f"Observations downloaded for trace {trace.id}")
         market_state, market_type = get_agent_market_state(trace.input)
 
         prepare_report_obs = [
@@ -145,7 +246,9 @@ def process_trace(
         predict_market_obs = [
             obs for obs in observations.data if obs.name in PREDICTION_STATES
         ]
-
+        build_trades_obs = [
+            obs for obs in observations.data if obs.name in TRADE_STATES
+        ]
         if not prepare_report_obs or not predict_market_obs:
             raise ValueError(f"Missing required observations for trace {trace.id}")
 
@@ -169,13 +272,17 @@ def process_trace(
             market_close_time=market_state.close_time,
             analysis=analysis,
             prediction_reasoning=prediction["reasoning"],
-            prediction_decision="YES" if prediction["decision"] == "y" else "NO",
+            prediction_decision="y" if prediction["p_yes"] > 0.5 else "n",
             prediction_p_yes=prediction["p_yes"],
             prediction_info_utility=prediction["info_utility"],
+            prediction_confidence=prediction["confidence"],
+            prediction_json=json.dumps(prediction),
             market_resolution=resolution.outcome if resolution else None,
             resolution_is_valid=not resolution.invalid if resolution else None,
+            full_market_json=market_state.model_dump_json() if include_market else None,
+            trades=build_trades_obs[0].output if build_trades_obs else None,
         )
-
+        logger.info(f"Downloaded trace {trace.id} finished")
         return result
 
     except Exception as e:
@@ -197,7 +304,27 @@ def get_agent_market_state(input_data: dict[str, Any]) -> tuple[AgentMarket, str
         raise ValueError(f"Unknown market type: {market_type}")
 
     market_data = args[1]  # market object data
-    market_state = AgentMarket.model_construct(**market_data)
+    if market_type == "omen":
+        market_state = OmenAgentMarket.model_construct(**market_data)
+    elif market_type == "seer":
+        market_state = SeerAgentMarket.model_construct(**market_data)  # type: ignore
+    else:
+        market_state = AgentMarket.model_construct(**market_data)  # type: ignore
+
+    # If there are no probabilities in the market state, we need to build them.
+    if (
+        market_state.outcome_token_pool
+        and not hasattr(market_state, "probabilities")
+    ):
+        market_state.probabilities = AgentMarket.build_probability_map(
+            [
+                OutcomeToken(
+                    float(value["value"]) if isinstance(value, dict) else float(value)
+                ).as_outcome_wei
+                for value in market_state.outcome_token_pool.values()
+            ],
+            list(market_state.outcome_token_pool.keys()),
+        )
 
     return market_state, market_type
 
@@ -234,7 +361,7 @@ def parse_date(date_str: str, param_name: str) -> DatetimeUTC:
 
 
 def main(
-    agent_name: str = "DeployablePredictionProphetGPT4oAgent",
+    agent_name: str = "DeployablePredictionProphet",
     only_resolved: bool = True,
     date_from: str = typer.Option(
         None, help="Start date in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"

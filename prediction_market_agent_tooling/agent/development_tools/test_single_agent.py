@@ -3,7 +3,6 @@ from typing import Any, Dict
 
 import pandas as pd
 import typer
-from prediction_market_agent.agents.utils import get_maximum_possible_bet_amount
 from prediction_market_agent.tools.openai_utils import get_openai_provider
 from prediction_market_agent.utils import APIKeys
 from prediction_prophet.autonolas.research import Prediction as PredictionProphet
@@ -17,7 +16,9 @@ from prediction_market_agent_tooling.agent.development_tools.prophet_agent_teste
     ProphetAgentTester,
     ProphetTestResult,
 )
-from prediction_market_agent_tooling.deploy.betting_strategy import KellyBettingStrategy
+from prediction_market_agent_tooling.deploy.betting_strategy import (
+    MultiCategoricalMaxAccuracyBettingStrategy,
+)
 from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.loggers import logger
 
@@ -51,22 +52,30 @@ def execute_prophet_predict(
     return partial(make_prediction, include_reasoning=include_reasoning)
 
 
-def test_all_models(
+def test_single_agent(
     dataset_path: str,
+    agent_name: str,
     max_trades_to_test_on: int = 3000,
     delay_between_trades: float = 2.0,
     max_bet_amount_min: USD = USD(1),
     max_bet_amount_max: USD = USD(5),
     trading_balance: USD = USD(40),
     max_price_impact: float = 0.7,
-    use_old_research: bool = True,
-    use_old_prediction: bool = True,
-) -> tuple[Dict[str, list[ProphetTestResult]], Dict[str, Dict[str, Any]]]:
+    use_old_research: bool = False,
+    use_old_prediction: bool = False,
+) -> tuple[list[ProphetTestResult], Dict[str, Any]]:
     dataset = pd.read_csv(dataset_path)
 
-    agent_names = dataset["agent_name"].unique().tolist()
-    total_agents = len(agent_names)
-    logger.info(f"Found {total_agents} agents in dataset: {agent_names}")
+    # Filter dataset for the specific agent
+    agent_data = dataset[dataset["agent_name"] == agent_name]
+    if agent_data.empty:
+        available_agents = dataset["agent_name"].unique().tolist()
+        logger.error(
+            f"Agent '{agent_name}' not found in dataset. Available agents: {available_agents}"
+        )
+        raise ValueError(f"Agent '{agent_name}' not found in dataset")
+
+    logger.info(f"Testing agent: {agent_name} with {len(agent_data)} trades available")
 
     api_keys = APIKeys()
     research_agent = Agent(
@@ -84,82 +93,45 @@ def test_all_models(
         model_settings=ModelSettings(temperature=0.0),
     )
 
-    strategy = KellyBettingStrategy(
-        max_bet_amount=get_maximum_possible_bet_amount(
-            min_=max_bet_amount_min,
-            max_=max_bet_amount_max,
-            trading_balance=trading_balance,
-        ),
-        max_price_impact=max_price_impact,
+    # strategy = KellyBettingStrategy(
+    #     max_bet_amount=get_maximum_possible_bet_amount(
+    #         min_=max_bet_amount_min,
+    #         max_=max_bet_amount_max,
+    #         trading_balance=trading_balance,
+    #     ),
+    #     max_price_impact=max_price_impact,
+    # )
+    strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(10))
+    tester = ProphetAgentTester(
+        prophet_research=execute_prophet_research(research_agent),
+        prophet_predict=execute_prophet_predict(prediction_agent),
+        betting_strategy=strategy,
+        use_old_research=use_old_research,
+        use_old_prediction=use_old_prediction,
+        max_trades_to_test_on=max_trades_to_test_on,
+        run_name=f"test_{agent_name}",
+        mocked_agent_name=agent_name,
+        delay_between_trades=delay_between_trades,
     )
 
-    all_results, all_metrics = {}, {}
-    for agent_index, agent_name in enumerate(agent_names, 1):
-        logger.info(f"Testing agent {agent_index}/{total_agents}: {agent_name}")
+    test_results = tester.test_prophet_agent(
+        agent_data, research_agent, prediction_agent
+    )
+    evaluation_metrics = tester.evaluate_results(
+        test_results, print_individual_metrics=True
+    )
 
-        tester = ProphetAgentTester(
-            prophet_research=execute_prophet_research(research_agent),
-            prophet_predict=execute_prophet_predict(prediction_agent),
-            betting_strategy=strategy,
-            use_old_research=use_old_research,
-            use_old_prediction=use_old_prediction,
-            max_trades_to_test_on=max_trades_to_test_on,
-            run_name=f"test_{agent_name}",
-            mocked_agent_name=agent_name,
-            delay_between_trades=delay_between_trades,
-        )
-
-        test_results = tester.test_prophet_agent(
-            dataset, research_agent, prediction_agent
-        )
-        evaluation_metrics = tester.evaluate_results(test_results)
-
-        all_results[agent_name] = test_results
-        all_metrics[agent_name] = evaluation_metrics
-
-        trades_processed = len(test_results)
-        logger.info(
-            f"Completed testing for {agent_name}: {trades_processed} trades processed"
-        )
-
-    logger.info("\n" + "=" * 60)
-    logger.info("SUMMARY")
-    logger.info("=" * 60)
-
-    total_trades_processed = 0
-    for agent_index, agent_name in enumerate(agent_names, 1):
-        metrics = all_metrics[agent_name]
-        trades_count = len(all_results[agent_name])
-        total_trades_processed += trades_count
-
-        if metrics:
-            logger.info(f"{agent_index}. {agent_name} ({trades_count} trades):")
-            logger.info(
-                f"   Binary Prediction Accuracy: {metrics.get('binary_prediction_accuracy', 'N/A'):.4f}"
-            )
-            logger.info(
-                f"   Weighted Prediction Accuracy: {metrics.get('weighted_prediction_accuracy', 'N/A'):.4f}"
-            )
-            logger.info(
-                f"   Binary Trade Accuracy: {metrics.get('binary_trade_accuracy', 'N/A'):.4f}"
-            )
-            logger.info(
-                f"   Brier Score: {metrics.get('prediction_brier_score', 'N/A'):.4f}"
-            )
-        else:
-            logger.info(
-                f"{agent_index}. {agent_name} ({trades_count} trades): No metrics available"
-            )
-
+    trades_processed = len(test_results)
     logger.info(
-        f"\nTotal: {total_agents} agents tested, {total_trades_processed} total trades processed"
+        f"Completed testing for {agent_name}: {trades_processed} trades processed"
     )
 
-    return all_results, all_metrics
+    return test_results, evaluation_metrics
 
 
 def main(
     dataset_path: str = typer.Argument(..., help="Path to the CSV dataset file"),
+    agent_name: str = typer.Argument(..., help="Name of the agent to test"),
     max_trades: int = typer.Option(
         3000, "--max-trades", help="Maximum number of trades to test per agent"
     ),
@@ -179,8 +151,9 @@ def main(
 ) -> None:
     logger.info(f"Starting agent testing with dataset: {dataset_path}")
 
-    all_results, all_metrics = test_all_models(
+    test_results, evaluation_metrics = test_single_agent(
         dataset_path=dataset_path,
+        agent_name=agent_name,
         max_trades_to_test_on=max_trades,
         delay_between_trades=delay,
         max_bet_amount_min=USD(min_bet),

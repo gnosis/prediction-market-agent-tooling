@@ -22,7 +22,6 @@ GPT_4O_MODEL = "gpt-4o-2024-08-06"
 
 
 def execute_prophet_research(
-    agent: Agent,
     use_summaries: bool = False,
     use_tavily_raw_content: bool = False,
     initial_subqueries_limit: int = 20,
@@ -43,7 +42,7 @@ def execute_prophet_research(
 
 
 def execute_prophet_predict(
-    agent: Agent, include_reasoning: bool = False
+    include_reasoning: bool = False
 ) -> partial[PredictionProphet]:
     return partial(make_prediction, include_reasoning=include_reasoning)
 
@@ -81,8 +80,8 @@ def test_all_models(
         logger.info(f"Testing agent {agent_index}/{total_agents}: {agent_name}")
 
         tester = ProphetAgentTester(
-            prophet_research=execute_prophet_research(research_agent),
-            prophet_predict=execute_prophet_predict(prediction_agent),
+            prophet_research=execute_prophet_research(),
+            prophet_predict=execute_prophet_predict(),
             use_old_research=use_old_research,
             use_old_prediction=use_old_prediction,
             max_trades_to_test_on=max_trades_to_test_on,

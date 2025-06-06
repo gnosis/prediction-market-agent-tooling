@@ -110,7 +110,7 @@ def test_single_agent(
     test_results = tester.test_prophet_agent(
         agent_data, research_agent, prediction_agent
     )
-    evaluation_metrics = tester.evaluate_results(
+    tester.evaluate_results(
         test_results, print_individual_metrics=True
     )
 

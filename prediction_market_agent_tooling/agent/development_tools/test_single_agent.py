@@ -22,8 +22,10 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
 from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.loggers import logger
 
-GPT_4O_MODEL = "gpt-4o-2024-08-06"
+app = typer.Typer()
 
+
+GPT_4O_MODEL = "gpt-4o-2024-08-06"
 
 def execute_prophet_research(
     agent: Agent,
@@ -128,7 +130,7 @@ def test_single_agent(
 
     return test_results, evaluation_metrics
 
-
+@app.command()
 def main(
     dataset_path: str = typer.Argument(..., help="Path to the CSV dataset file"),
     agent_name: str = typer.Argument(..., help="Name of the agent to test"),
@@ -168,4 +170,4 @@ def main(
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()

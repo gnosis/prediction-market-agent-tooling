@@ -21,6 +21,8 @@ from prediction_market_agent_tooling.deploy.betting_strategy import KellyBetting
 from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.loggers import logger
 
+app = typer.Typer()
+
 GPT_4O_MODEL = "gpt-4o-2024-08-06"
 
 
@@ -158,6 +160,7 @@ def test_all_models(
     return all_results, all_metrics
 
 
+@app.command()
 def main(
     dataset_path: str = typer.Argument(..., help="Path to the CSV dataset file"),
     max_trades: int = typer.Option(
@@ -195,4 +198,4 @@ def main(
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()

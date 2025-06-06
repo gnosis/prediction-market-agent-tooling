@@ -110,9 +110,7 @@ def test_single_agent(
     test_results = tester.test_prophet_agent(
         agent_data, research_agent, prediction_agent
     )
-    tester.evaluate_results(
-        test_results, print_individual_metrics=True
-    )
+    tester.evaluate_results(test_results, print_individual_metrics=True)
 
     trades_processed = len(test_results)
     logger.info(

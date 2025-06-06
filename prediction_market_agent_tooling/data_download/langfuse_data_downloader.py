@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import DatetimeUTC, OutcomeStr, Outc
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
@@ -37,8 +38,8 @@ REPORT_STATES = ["prepare_report"]
 TRADE_STATES = ["build_trades"]
 
 MARKET_RESOLUTION_PROVIDERS = {
-    "omen": lambda market_id: OmenAgentMarket.get_binary_market(market_id),
-    "seer": lambda market_id: SeerAgentMarket.from_data_model_with_subgraph(
+    MarketType.OMEN: lambda market_id: OmenAgentMarket.get_binary_market(market_id),
+    MarketType.SEER: lambda market_id: SeerAgentMarket.from_data_model_with_subgraph(
         model=SeerSubgraphHandler().get_market_by_id(HexBytes(market_id)),
         seer_subgraph=SeerSubgraphHandler(),
         must_have_prices=False,
@@ -280,7 +281,7 @@ def process_trace(
             agent_name=trace.metadata["agent_class"],
             trace_id=trace.id,
             market_id=market_state.id,
-            market_type=market_type,
+            market_type=market_type.value,
             market_question=market_state.question,
             market_outcomes=list(market_state.outcomes),
             market_outcome_token_pool=market_state.outcome_token_pool,
@@ -306,7 +307,9 @@ def process_trace(
         return None
 
 
-def get_agent_market_state(input_data: dict[str, Any]) -> tuple[AgentMarket, str]:
+def get_agent_market_state(
+    input_data: dict[str, Any]
+) -> tuple[AgentMarket, MarketType]:
     if not input_data or "args" not in input_data:
         raise ValueError("Invalid input data: missing args")
 
@@ -314,15 +317,14 @@ def get_agent_market_state(input_data: dict[str, Any]) -> tuple[AgentMarket, str
     if len(args) < 2:
         raise ValueError("Invalid args: expected at least 2 elements")
 
-    market_type = args[0]  # e.g., "omen", "seer"
-
+    market_type = MarketType(args[0])
     if market_type not in MARKET_RESOLUTION_PROVIDERS:
         raise ValueError(f"Unknown market type: {market_type}")
 
     market_data = args[1]  # market object data
-    if market_type == "omen":
+    if market_type == MarketType.OMEN:
         market_state = OmenAgentMarket.model_construct(**market_data)
-    elif market_type == "seer":
+    elif market_type == MarketType.SEER:
         market_state = SeerAgentMarket.model_construct(**market_data)  # type: ignore
     else:
         market_state = AgentMarket.model_construct(**market_data)  # type: ignore
@@ -342,16 +344,12 @@ def get_agent_market_state(input_data: dict[str, Any]) -> tuple[AgentMarket, str
     return market_state, market_type
 
 
-def get_market_resolution(market_id: str, market_type: str) -> Resolution:
-    market_type_lower = market_type.lower()
-
-    if market_type_lower not in MARKET_RESOLUTION_PROVIDERS:
-        raise ValueError(f"Unknown market type: {market_type}")
+def get_market_resolution(market_id: str, market_type: MarketType) -> Resolution:
+    if market_type not in MARKET_RESOLUTION_PROVIDERS:
+        raise ValueError(f"Unknown market type: {market_type.market_class}")
 
     try:
-        market: AgentMarket | None = MARKET_RESOLUTION_PROVIDERS[market_type_lower](
-            market_id
-        )
+        market: AgentMarket | None = MARKET_RESOLUTION_PROVIDERS[market_type](market_id)
 
         if not market or not market.resolution:
             raise ValueError(f"No resolution found for market: {market_id}")
@@ -360,7 +358,7 @@ def get_market_resolution(market_id: str, market_type: str) -> Resolution:
 
     except Exception as e:
         raise ValueError(
-            f"Failed to fetch {market_type} market {market_id} resolution: {e}"
+            f"Failed to fetch {market_type.market_class} market {market_id} resolution: {e}"
         ) from e
 
 

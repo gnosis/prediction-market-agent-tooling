@@ -1,9 +1,7 @@
 from functools import partial
-from typing import Any, Dict
 
 import pandas as pd
 import typer
-from prediction_market_agent.agents.utils import get_maximum_possible_bet_amount
 from prediction_market_agent.tools.openai_utils import get_openai_provider
 from prediction_market_agent.utils import APIKeys
 from prediction_prophet.autonolas.research import Prediction as PredictionProphet
@@ -15,10 +13,7 @@ from pydantic_ai.settings import ModelSettings
 
 from prediction_market_agent_tooling.agent.development_tools.prophet_agent_tester import (
     ProphetAgentTester,
-    ProphetTestResult,
 )
-from prediction_market_agent_tooling.deploy.betting_strategy import KellyBettingStrategy
-from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.loggers import logger
 
 app = typer.Typer()
@@ -56,14 +51,9 @@ def execute_prophet_predict(
 def test_all_models(
     dataset_path: str,
     max_trades_to_test_on: int = 3000,
-    delay_between_trades: float = 2.0,
-    max_bet_amount_min: USD = USD(1),
-    max_bet_amount_max: USD = USD(5),
-    trading_balance: USD = USD(40),
-    max_price_impact: float = 0.7,
     use_old_research: bool = True,
     use_old_prediction: bool = True,
-) -> tuple[Dict[str, list[ProphetTestResult]], Dict[str, Dict[str, Any]]]:
+) -> None:
     dataset = pd.read_csv(dataset_path)
 
     agent_names = dataset["agent_name"].unique().tolist()
@@ -86,15 +76,6 @@ def test_all_models(
         model_settings=ModelSettings(temperature=0.0),
     )
 
-    strategy = KellyBettingStrategy(
-        max_bet_amount=get_maximum_possible_bet_amount(
-            min_=max_bet_amount_min,
-            max_=max_bet_amount_max,
-            trading_balance=trading_balance,
-        ),
-        max_price_impact=max_price_impact,
-    )
-
     all_results, all_metrics = {}, {}
     for agent_index, agent_name in enumerate(agent_names, 1):
         logger.info(f"Testing agent {agent_index}/{total_agents}: {agent_name}")
@@ -102,13 +83,12 @@ def test_all_models(
         tester = ProphetAgentTester(
             prophet_research=execute_prophet_research(research_agent),
             prophet_predict=execute_prophet_predict(prediction_agent),
-            betting_strategy=strategy,
             use_old_research=use_old_research,
             use_old_prediction=use_old_prediction,
             max_trades_to_test_on=max_trades_to_test_on,
             run_name=f"test_{agent_name}",
             mocked_agent_name=agent_name,
-            delay_between_trades=delay_between_trades,
+            simulate_trades=False,
         )
 
         test_results = tester.test_prophet_agent(
@@ -137,17 +117,16 @@ def test_all_models(
         if metrics:
             logger.info(f"{agent_index}. {agent_name} ({trades_count} trades):")
             logger.info(
-                f"   Binary Prediction Accuracy: {metrics.get('binary_prediction_accuracy', 'N/A'):.4f}"
+                f"   Binary Prediction Accuracy: {metrics.binary_prediction_accuracy:.4f}"
             )
             logger.info(
-                f"   Weighted Prediction Accuracy: {metrics.get('weighted_prediction_accuracy', 'N/A'):.4f}"
+                f"   Weighted Prediction Accuracy: {metrics.weighted_prediction_accuracy:.4f}"
             )
-            logger.info(
-                f"   Binary Trade Accuracy: {metrics.get('binary_trade_accuracy', 'N/A'):.4f}"
-            )
-            logger.info(
-                f"   Brier Score: {metrics.get('prediction_brier_score', 'N/A'):.4f}"
-            )
+            logger.info(f"   Brier Score: {metrics.prediction_brier_score:.4f}")
+            if tester.simulate_trades:
+                logger.info(
+                    f"   Binary Trade Accuracy: {metrics.binary_trade_accuracy:.4f}"
+                )
         else:
             logger.info(
                 f"{agent_index}. {agent_name} ({trades_count} trades): No metrics available"
@@ -157,8 +136,6 @@ def test_all_models(
         f"\nTotal: {total_agents} agents tested, {total_trades_processed} total trades processed"
     )
 
-    return all_results, all_metrics
-
 
 @app.command()
 def main(
@@ -166,13 +143,6 @@ def main(
     max_trades: int = typer.Option(
         3000, "--max-trades", help="Maximum number of trades to test per agent"
     ),
-    delay: float = typer.Option(
-        2.0, "--delay", help="Delay in seconds between processing each trade"
-    ),
-    min_bet: float = typer.Option(1.0, "--min-bet", help="Minimum bet amount"),
-    max_bet: float = typer.Option(5.0, "--max-bet", help="Maximum bet amount"),
-    balance: float = typer.Option(40.0, "--balance", help="Total trading balance"),
-    max_impact: float = typer.Option(0.7, "--max-impact", help="Maximum price impact"),
     use_old_research: bool = typer.Option(
         True, "--use-old-research", help="Use old research generation"
     ),
@@ -182,14 +152,9 @@ def main(
 ) -> None:
     logger.info(f"Starting agent testing with dataset: {dataset_path}")
 
-    all_results, all_metrics = test_all_models(
+    test_all_models(
         dataset_path=dataset_path,
         max_trades_to_test_on=max_trades,
-        delay_between_trades=delay,
-        max_bet_amount_min=USD(min_bet),
-        max_bet_amount_max=USD(max_bet),
-        trading_balance=USD(balance),
-        max_price_impact=max_impact,
         use_old_research=use_old_research,
         use_old_prediction=use_old_prediction,
     )

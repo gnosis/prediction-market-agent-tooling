@@ -1,5 +1,4 @@
 from functools import partial
-from typing import Any, Dict
 
 import pandas as pd
 import typer
@@ -14,7 +13,6 @@ from pydantic_ai.settings import ModelSettings
 
 from prediction_market_agent_tooling.agent.development_tools.prophet_agent_tester import (
     ProphetAgentTester,
-    ProphetTestResult,
 )
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     MultiCategoricalMaxAccuracyBettingStrategy,
@@ -26,6 +24,7 @@ app = typer.Typer()
 
 
 GPT_4O_MODEL = "gpt-4o-2024-08-06"
+
 
 def execute_prophet_research(
     agent: Agent,
@@ -65,7 +64,7 @@ def test_single_agent(
     max_price_impact: float = 0.7,
     use_old_research: bool = False,
     use_old_prediction: bool = False,
-) -> tuple[list[ProphetTestResult], Dict[str, Any]]:
+) -> None:
     dataset = pd.read_csv(dataset_path)
 
     # Filter dataset for the specific agent
@@ -95,14 +94,6 @@ def test_single_agent(
         model_settings=ModelSettings(temperature=0.0),
     )
 
-    # strategy = KellyBettingStrategy(
-    #     max_bet_amount=get_maximum_possible_bet_amount(
-    #         min_=max_bet_amount_min,
-    #         max_=max_bet_amount_max,
-    #         trading_balance=trading_balance,
-    #     ),
-    #     max_price_impact=max_price_impact,
-    # )
     strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(10))
     tester = ProphetAgentTester(
         prophet_research=execute_prophet_research(research_agent),
@@ -128,7 +119,6 @@ def test_single_agent(
         f"Completed testing for {agent_name}: {trades_processed} trades processed"
     )
 
-    return test_results, evaluation_metrics
 
 @app.command()
 def main(
@@ -153,7 +143,7 @@ def main(
 ) -> None:
     logger.info(f"Starting agent testing with dataset: {dataset_path}")
 
-    test_results, evaluation_metrics = test_single_agent(
+    test_single_agent(
         dataset_path=dataset_path,
         agent_name=agent_name,
         max_trades_to_test_on=max_trades,

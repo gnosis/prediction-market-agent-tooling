@@ -1,7 +1,7 @@
 import json
 import time
 from functools import partial
-from typing import Any, Dict, Sequence
+from typing import Sequence
 
 import pandas as pd
 from prediction_prophet.autonolas.research import Prediction as PredictionProphet
@@ -32,18 +32,27 @@ class ProphetTestResult(BaseModel):
     market_outcomes: Sequence[str]
 
 
+class ProphetTestMetrics(BaseModel):
+    total_trades: int
+    binary_prediction_accuracy: float
+    weighted_prediction_accuracy: float
+    prediction_brier_score: float
+    binary_trade_accuracy: float | None
+
+
 class ProphetAgentTester:
     def __init__(
         self,
         prophet_research: partial[Research],
         prophet_predict: partial[PredictionProphet],
-        betting_strategy: BettingStrategy,
+        betting_strategy: BettingStrategy | None = None,
         use_old_research: bool = False,
         use_old_prediction: bool = False,
         mocked_agent_name: str = "DeployablePredictionProphetGPT4oAgent",
         max_trades_to_test_on: int = 10,
         run_name: str = "test_prophet_agent_baseline",
         delay_between_trades: float = 0.5,
+        simulate_trades: bool = True,
     ):
         self.prophet_research = prophet_research
         self.prophet_predict = prophet_predict
@@ -54,6 +63,7 @@ class ProphetAgentTester:
         self.use_old_prediction = use_old_prediction
         self.run_name = run_name
         self.delay_between_trades = delay_between_trades
+        self.simulate_trades = simulate_trades
 
     def test_prophet_agent(
         self, dataset: pd.DataFrame, research_agent: Agent, prediction_agent: Agent
@@ -68,14 +78,14 @@ class ProphetAgentTester:
 
         results = []
 
-        for index, (row_index, item) in enumerate(
+        for index, (_, item) in enumerate(
             filtered_dataset.head(self.max_trades_to_test_on).iterrows()
         ):
             logger.info(
                 f"Processing trade {index + 1}/{trades_to_process}: {item['market_question']}"
             )
 
-            if self.delay_between_trades > 0:
+            if self.simulate_trades and self.delay_between_trades > 0:
                 time.sleep(self.delay_between_trades)
 
             market = OmenAgentMarket.model_validate(
@@ -161,7 +171,11 @@ class ProphetAgentTester:
         )
 
         trades = []
-        if prediction.outcome_prediction:
+        if (
+            self.simulate_trades
+            and prediction.outcome_prediction
+            and self.betting_strategy
+        ):
             try:
                 trades = self.betting_strategy.calculate_trades(
                     None,
@@ -177,10 +191,10 @@ class ProphetAgentTester:
         self,
         test_results: list[ProphetTestResult],
         print_individual_metrics: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> ProphetTestMetrics | None:
         if not test_results:
             logger.warning("No test results to evaluate")
-            return {}
+            return None
 
         total_trades = len(test_results)
         logger.info(f"Evaluating {total_trades} test results")
@@ -205,11 +219,6 @@ class ProphetAgentTester:
             y_pred_label.append(max_outcome.lower())
             y_pred_weight.append(probs[max_outcome])
 
-        y_trade_outcome = [
-            result.trades[0].outcome.lower() if result.trades else None
-            for result in valid_results
-        ]
-
         binary_prediction_accuracy = [
             1 if true_val == pred_val else 0
             for true_val, pred_val in zip(y_true, y_pred_label)
@@ -218,12 +227,6 @@ class ProphetAgentTester:
         weighted_prediction_accuracy = [
             weight if true_val == pred_val else (1 - weight)
             for true_val, pred_val, weight in zip(y_true, y_pred_label, y_pred_weight)
-        ]
-
-        binary_trade_accuracy = [
-            1 if true_val == trade_val else 0
-            for true_val, trade_val in zip(y_true, y_trade_outcome)
-            if trade_val is not None
         ]
 
         brier_scores = []
@@ -250,34 +253,46 @@ class ProphetAgentTester:
         avg_weighted_prediction_accuracy = sum(weighted_prediction_accuracy) / len(
             weighted_prediction_accuracy
         )
-        avg_binary_trade_accuracy = (
-            sum(binary_trade_accuracy) / len(binary_trade_accuracy)
-            if binary_trade_accuracy
-            else 0
-        )
 
-        metrics = {
-            "total_trades": total_trades,
-            "binary_prediction_accuracy": avg_binary_prediction_accuracy,
-            "weighted_prediction_accuracy": avg_weighted_prediction_accuracy,
-            "binary_trade_accuracy": avg_binary_trade_accuracy,
-            "prediction_brier_score": avg_brier_score,
-        }
+        avg_binary_trade_accuracy = None
+        if self.simulate_trades:
+            y_trade_outcome = [
+                result.trades[0].outcome.lower() if result.trades else None
+                for result in valid_results
+            ]
+            binary_trade_accuracy = [
+                1 if true_val == trade_val else 0
+                for true_val, trade_val in zip(y_true, y_trade_outcome)
+                if trade_val is not None
+            ]
+            avg_binary_trade_accuracy = (
+                sum(binary_trade_accuracy) / len(binary_trade_accuracy)
+                if binary_trade_accuracy
+                else 0
+            )
 
-        logger.info(
-            f"Results: Binary Accuracy: {avg_binary_prediction_accuracy:.4f}, Weighted Accuracy: {avg_weighted_prediction_accuracy:.4f}, Brier Score: {avg_brier_score:.4f}"
+        metrics = ProphetTestMetrics(
+            total_trades=total_trades,
+            binary_prediction_accuracy=avg_binary_prediction_accuracy,
+            weighted_prediction_accuracy=avg_weighted_prediction_accuracy,
+            binary_trade_accuracy=avg_binary_trade_accuracy,
+            prediction_brier_score=avg_brier_score,
         )
 
         if print_individual_metrics:
-            print("\n" + "=" * 50)
-            print("EVALUATION METRICS")
-            print("=" * 50)
-            print(f"Total Trades: {total_trades}")
-            print(f"Binary Prediction Accuracy: {avg_binary_prediction_accuracy:.4f}")
-            print(
+            logger.info("\n" + "=" * 50)
+            logger.info("EVALUATION METRICS")
+            logger.info("=" * 50)
+            logger.info(f"Total Trades: {total_trades}")
+            logger.info(
+                f"Binary Prediction Accuracy: {avg_binary_prediction_accuracy:.4f}"
+            )
+            logger.info(
                 f"Weighted Prediction Accuracy: {avg_weighted_prediction_accuracy:.4f}"
             )
-            print(f"Binary Trade Accuracy: {avg_binary_trade_accuracy:.4f}")
-            print(f"Brier Score: {avg_brier_score:.4f}")
+            logger.info(f"Brier Score: {avg_brier_score:.4f}")
+
+            if self.simulate_trades:
+                logger.info(f"Binary Trade Accuracy: {avg_binary_trade_accuracy:.4f}")
 
         return metrics

@@ -322,26 +322,25 @@ def get_agent_market_state(
         raise ValueError(f"Unknown market type: {market_type}")
 
     market_data = args[1]  # market object data
-    if market_type == MarketType.OMEN:
-        market_state = OmenAgentMarket.model_construct(**market_data)
-    elif market_type == MarketType.SEER:
-        market_state = SeerAgentMarket.model_construct(**market_data)  # type: ignore
-    else:
-        market_state = AgentMarket.model_construct(**market_data)  # type: ignore
 
-    # If there are no probabilities in the market state, we need to build them.
-    if market_state.outcome_token_pool and not hasattr(market_state, "probabilities"):
-        market_state.probabilities = AgentMarket.build_probability_map(
+    # recreate probabilities if not present
+    if "outcome_token_pool" in market_data and "probabilities" not in market_data:
+        market_data["probabilities"] = AgentMarket.build_probability_map(
             [
                 OutcomeToken(
                     float(value["value"]) if isinstance(value, dict) else float(value)
                 ).as_outcome_wei
-                for value in market_state.outcome_token_pool.values()
+                for value in market_data["outcome_token_pool"].values()
             ],
-            list(market_state.outcome_token_pool.keys()),
+            list(market_data["outcome_token_pool"].keys()),
         )
 
-    return market_state, market_type
+    if market_type == MarketType.OMEN:
+        return OmenAgentMarket.model_validate(market_data), market_type
+    elif market_type == MarketType.SEER:
+        return SeerAgentMarket.model_validate(market_data), market_type
+    else:
+        return AgentMarket.model_validate(market_data), market_type
 
 
 def get_market_resolution(market_id: str, market_type: MarketType) -> Resolution:

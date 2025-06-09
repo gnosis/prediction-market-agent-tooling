@@ -10,6 +10,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pythonjsonlogger import jsonlogger
 from tenacity import RetryError
 
+UNPATCHED_PRINT_FN = builtins.print
+
 
 class LogFormat(str, Enum):
     DEFAULT = "default"
@@ -153,7 +155,13 @@ def print_using_logger_info(
     end: str = "\n",
     **kwargs: t.Any,
 ) -> None:
-    logger.info(sep.join(map(str, values)) + end)
+    # If `logger.exception` is used, loguru+traceback somehow uses `print` statement to format the error stack,
+    # if that happens, without this if condition, it errors out because of deadlock and/or recursion errors.
+    # This is hacky, but that's exactly how loguru is checking for it internally..
+    if getattr(logger._core.handlers[1]._lock_acquired, "acquired", False):  # type: ignore # They use stubs and didn't type this.
+        UNPATCHED_PRINT_FN(*values, sep=sep, end=end, **kwargs)
+    else:
+        logger.info(sep.join(map(str, values)) + end)
 
 
 patch_logger()

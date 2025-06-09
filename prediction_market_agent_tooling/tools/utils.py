@@ -1,6 +1,7 @@
 import os
 import subprocess
 from datetime import datetime
+from math import prod
 from typing import Any, NoReturn, Optional, Type, TypeVar
 
 import pytz
@@ -8,8 +9,15 @@ import requests
 from pydantic import BaseModel, ValidationError
 from scipy.optimize import newton
 from scipy.stats import entropy
+from tenacity import RetryError
 
-from prediction_market_agent_tooling.gtypes import DatetimeUTC, Probability, SecretStr
+from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
+    DatetimeUTC,
+    OutcomeToken,
+    Probability,
+    SecretStr,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 
@@ -182,11 +190,11 @@ def prob_uncertainty(prob: Probability) -> float:
 
 
 def calculate_sell_amount_in_collateral(
-    shares_to_sell: float,
-    holdings: float,
-    other_holdings: float,
+    shares_to_sell: OutcomeToken,
+    outcome_index: int,
+    pool_balances: list[OutcomeToken],
     fees: MarketFees,
-) -> float:
+) -> CollateralToken:
     """
     Computes the amount of collateral that needs to be sold to get `shares`
     amount of shares. Returns None if the amount can't be computed.
@@ -194,16 +202,41 @@ def calculate_sell_amount_in_collateral(
     Taken from https://github.com/protofire/omen-exchange/blob/29d0ab16bdafa5cc0d37933c1c7608a055400c73/app/src/util/tools/fpmm/trading/index.ts#L99
     Simplified for binary markets.
     """
-    for v in [shares_to_sell, holdings, other_holdings]:
-        if v <= 0:
-            raise ValueError("All share args must be greater than 0")
+
+    if shares_to_sell == 0:
+        return CollateralToken(0)
+
+    if not (0 <= outcome_index < len(pool_balances)):
+        raise IndexError("Invalid outcome index")
+
+    if any([v <= 0 for v in pool_balances]):
+        raise ValueError("All pool balances must be greater than 0")
+
+    holdings = pool_balances[outcome_index]
+    other_holdings = [v for i, v in enumerate(pool_balances) if i != outcome_index]
 
     def f(r: float) -> float:
         R = (r + fees.absolute) / (1 - fees.bet_proportion)
-        first_term = other_holdings - R
-        second_term = holdings + shares_to_sell - R
-        third_term = holdings * other_holdings
-        return (first_term * second_term) - third_term
+
+        # First term: product of (h_i - R) for i != outcome_index
+        first_term = prod(h.value - R for h in other_holdings)
+
+        # Second term: (h_o + s - R)
+        second_term = holdings.value + shares_to_sell.value - R
+
+        # Third term: product of all holdings (including outcome_index)
+        total_product = prod(h.value for h in pool_balances)
+
+        return (first_term * second_term) - total_product
 
     amount_to_sell = newton(f, 0)
-    return float(amount_to_sell) * 0.999999  # Avoid rounding errors
+    return CollateralToken(float(amount_to_sell) * 0.999999)  # Avoid rounding errors
+
+
+def extract_error_from_retry_error(e: BaseException | RetryError) -> BaseException:
+    if (
+        isinstance(e, RetryError)
+        and (exp_from_retry := e.last_attempt.exception()) is not None
+    ):
+        e = exp_from_retry
+    return e

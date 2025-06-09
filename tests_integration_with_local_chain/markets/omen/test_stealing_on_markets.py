@@ -6,10 +6,12 @@ from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.gtypes import USD, private_key_type, xDai
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -34,7 +36,7 @@ from tests.utils import mint_new_block
 
 
 def test_stealing_on_markets(
-    accounts: list[TestAccount],
+    eoa_accounts: list[TestAccount],
     local_web3: Web3,
 ) -> None:
     """
@@ -42,7 +44,7 @@ def test_stealing_on_markets(
     """
 
     # Get two accounts, one will create a job market (A) and one will try to sabotage it (B)
-    account_A, account_B = accounts[2], accounts[3]
+    account_A, account_B = eoa_accounts[2], eoa_accounts[3]
     api_keys_A, api_keys_B = APIKeys(
         BET_FROM_PRIVATE_KEY=private_key_type(account_A.private_key), SAFE_ADDRESS=None
     ), APIKeys(
@@ -64,7 +66,7 @@ def test_stealing_on_markets(
     question = f"Will job X be completed in {close_in} seconds from now?"
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)
-    funds = xdai_type(10)
+    funds = USD(10)
     finalization_wait_time_seconds = 1
     category = "cryptocurrency"
     language = "en"
@@ -97,12 +99,12 @@ def test_stealing_on_markets(
     ), "Starting balance of A should have been lowered"
 
     # Buy YES tokens from account B (attacker) -- removing profit from any real agent that'd like to complete the job.
-    buy_yes_for_b = xdai_type(5)
+    buy_yes_for_b = USD(5)
     binary_omen_buy_outcome_tx(
         api_keys_B,
         buy_yes_for_b,
         agent_market,
-        binary_outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -128,17 +130,17 @@ def test_stealing_on_markets(
             api_keys_B,
             buy_yes_for_b,
             agent_market,
-            binary_outcome=True,
+            outcome=OMEN_TRUE_OUTCOME,
             auto_deposit=True,
             web3=local_web3,
         )
-    sell_yes_for_b = xdai_type(1)
+    sell_yes_for_b = agent_market.get_usd_in_token(USD(1))
     with pytest.raises(Exception):
         binary_omen_sell_outcome_tx(
             api_keys_B,
             sell_yes_for_b,
             agent_market,
-            binary_outcome=True,
+            outcome=OMEN_TRUE_OUTCOME,
             auto_withdraw=True,
             web3=local_web3,
         )
@@ -158,8 +160,8 @@ def test_stealing_on_markets(
     omen_submit_answer_market_tx(
         api_keys_A,
         omen_market,
-        Resolution.NO,
-        bond=xdai_type(0.001),
+        Resolution(outcome=OMEN_FALSE_OUTCOME, invalid=False),
+        bond=xDai(0.001),
         web3=local_web3,
     )
 
@@ -203,8 +205,8 @@ def test_stealing_on_markets(
         ending_balance_A > starting_balance_A
     ), "Assumption was that A will receive B's money."
     assert (
-        ending_balance_B < starting_balance_A
-    ), "Assumption was that B will loose the money he gambled by trying to steal from real job completors."
+        ending_balance_B < starting_balance_B
+    ), "Assumption was that B will lose the money he gambled by trying to steal from real job completors."
 
     print(
         f"Account A (job creator) ending difference: {ending_balance_A - starting_balance_A}."

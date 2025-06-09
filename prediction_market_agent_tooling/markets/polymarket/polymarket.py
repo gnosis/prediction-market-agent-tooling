@@ -1,12 +1,12 @@
 import typing as t
 
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeStr
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarket_binary_markets,
 )
@@ -24,7 +24,6 @@ class PolymarketAgentMarket(AgentMarket):
     Polymarket's market class that can be used by agents to make predictions.
     """
 
-    currency: t.ClassVar[Currency] = Currency.USDC
     base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
 
     # Based on https://docs.polymarket.com/#fees, there are currently no fees, except for transactions fees.
@@ -41,28 +40,28 @@ class PolymarketAgentMarket(AgentMarket):
             description=model.description,
             outcomes=[x.outcome for x in model.tokens],
             resolution=model.resolution,
-            current_p_yes=model.p_yes,
             created_time=None,
             close_time=model.end_date_iso,
             url=model.url,
             volume=None,
             outcome_token_pool=None,
+            probabilities={},  # ToDo - Implement when fixing Polymarket
         )
 
-    @classmethod
-    def get_tiny_bet_amount(cls) -> BetAmount:
+    def get_tiny_bet_amount(self) -> CollateralToken:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
-    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
+    def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
 
     @staticmethod
-    def get_binary_markets(
+    def get_markets(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         if sort_by != SortBy.NONE:
             raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")

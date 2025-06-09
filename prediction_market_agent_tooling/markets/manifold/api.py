@@ -3,13 +3,9 @@ import typing as t
 import requests
 import tenacity
 
-from prediction_market_agent_tooling.gtypes import Mana, SecretStr
+from prediction_market_agent_tooling.gtypes import Mana, OutcomeStr, SecretStr
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.data_models import (
-    BetAmount,
-    Currency,
-    ResolvedBet,
-)
+from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     FullManifoldMarket,
     ManifoldBet,
@@ -109,14 +105,13 @@ def get_one_manifold_binary_market() -> ManifoldMarket:
     after=lambda x: logger.debug(f"place_bet failed, {x.attempt_number=}."),
 )
 def place_bet(
-    amount: Mana, market_id: str, outcome: bool, manifold_api_key: SecretStr
+    amount: Mana, market_id: str, outcome: OutcomeStr, manifold_api_key: SecretStr
 ) -> ManifoldBet:
-    outcome_str = "YES" if outcome else "NO"
     url = f"{MANIFOLD_API_BASE_URL}/v0/bet"
     params = {
         "amount": float(amount),  # Convert to float to avoid serialization issues.
         "contractId": market_id,
-        "outcome": outcome_str,
+        "outcome": outcome,
     }
 
     headers = {
@@ -208,11 +203,12 @@ def manifold_to_generic_resolved_bet(
     if not market.resolutionTime:
         raise ValueError(f"Market {market.id} has no resolution time.")
 
-    market_outcome = market.get_resolved_boolean_outcome()
+    market_outcome = market.get_resolved_outcome()
+
     return ResolvedBet(
         id=bet.id,
-        amount=BetAmount(amount=bet.amount, currency=Currency.Mana),
-        outcome=bet.get_resolved_boolean_outcome(),
+        amount=bet.amount,
+        outcome=bet.get_resolved_outcome(),
         created_time=bet.createdTime,
         market_question=market.question,
         market_id=market.id,
@@ -228,3 +224,14 @@ def get_market_positions(market_id: str, user_id: str) -> list[ManifoldContractM
     return response_list_to_model(
         requests.get(url, params=params), ManifoldContractMetric
     )
+
+
+def find_resolution_on_manifold(question: str, n: int = 100) -> Resolution | None:
+    # Even with exact-match search, Manifold doesn't return it as the first result, increase `n` if you can't find market that you know exists.
+    manifold_markets = get_manifold_binary_markets(
+        n, term=question, filter_=None, sort=None
+    )
+    for manifold_market in manifold_markets:
+        if manifold_market.question == question:
+            return manifold_market.resolution
+    return None

@@ -20,7 +20,7 @@ class AggregationItem(BaseModel):
     centers: list[float] | None
     interval_upper_bounds: list[float] | None
     means: list[float] | None
-    histogram: list[float] | None
+    histogram: list[list[float]] | None
 
 
 class Aggregation(BaseModel):

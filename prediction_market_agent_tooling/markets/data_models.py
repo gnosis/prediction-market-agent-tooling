@@ -1,45 +1,56 @@
 from enum import Enum
-from typing import Annotated, TypeAlias
+from typing import Annotated, Sequence
 
 from pydantic import BaseModel, BeforeValidator, computed_field
 
-from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.deploy.constants import (
+    NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
+)
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    OutcomeStr,
+    OutcomeToken,
+    Probability,
+)
+from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
 
-class Currency(str, Enum):
-    xDai = "xDai"
-    Mana = "Mana"
-    USDC = "USDC"
-
-
-class Resolution(str, Enum):
-    YES = "YES"
-    NO = "NO"
-    CANCEL = "CANCEL"
-    MKT = "MKT"
+class Resolution(BaseModel):
+    outcome: OutcomeStr | None
+    invalid: bool
 
     @staticmethod
-    def from_bool(value: bool) -> "Resolution":
-        return Resolution.YES if value else Resolution.NO
+    def from_answer(answer: OutcomeStr) -> "Resolution":
+        return Resolution(outcome=answer, invalid=False)
 
+    def find_outcome_matching_market(
+        self, market_outcomes: Sequence[OutcomeStr]
+    ) -> OutcomeStr | None:
+        """
+        Finds a matching outcome in the provided market outcomes.
 
-class TokenAmount(BaseModel):
-    amount: float
-    currency: Currency
+        Performs case-insensitive matching between this resolution's outcome
+        and the provided market outcomes.
 
-    def __str__(self) -> str:
-        return f"Amount {self.amount} currency {self.currency}"
+        """
 
+        if not self.outcome:
+            return None
 
-BetAmount: TypeAlias = TokenAmount
-ProfitAmount: TypeAlias = TokenAmount
+        normalized_outcome = self.outcome.lower()
+        for outcome in market_outcomes:
+            if outcome.lower() == normalized_outcome:
+                return outcome
+        return None
 
 
 class Bet(BaseModel):
     id: str
-    amount: BetAmount
-    outcome: bool
+    amount: CollateralToken
+    outcome: OutcomeStr
     created_time: DatetimeUTC
     market_question: str
     market_id: str
@@ -49,9 +60,9 @@ class Bet(BaseModel):
 
 
 class ResolvedBet(Bet):
-    market_outcome: bool
+    market_outcome: OutcomeStr
     resolved_time: DatetimeUTC
-    profit: ProfitAmount
+    profit: CollateralToken
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -60,10 +71,6 @@ class ResolvedBet(Bet):
 
     def __str__(self) -> str:
         return f"Resolved bet for market {self.market_id} for question {self.market_question} created at {self.created_time}: {self.amount} on {self.outcome}. Bet was resolved at {self.resolved_time} and was {'correct' if self.is_correct else 'incorrect'}. Profit was {self.profit}"
-
-
-class TokenAmountAndDirection(TokenAmount):
-    direction: bool
 
 
 def to_boolean_outcome(value: str | bool) -> bool:
@@ -93,29 +100,109 @@ class ProbabilisticAnswer(BaseModel):
     p_yes: Probability
     confidence: float
     reasoning: str | None = None
+    logprobs: list[FieldLogprobs] | None = None
 
     @property
     def p_no(self) -> Probability:
         return Probability(1 - self.p_yes)
 
+    @property
+    def probable_resolution(self) -> Resolution:
+        return (
+            Resolution(
+                outcome=OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER), invalid=False
+            )
+            if self.p_yes > 0.5
+            else Resolution(
+                outcome=OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER), invalid=False
+            )
+        )
+
+
+class CategoricalProbabilisticAnswer(BaseModel):
+    probabilities: dict[OutcomeStr, Probability]
+    confidence: float
+    reasoning: str | None = None
+
+    @property
+    def probable_resolution(self) -> Resolution:
+        most_likely_outcome = max(
+            self.probabilities.items(),
+            key=lambda item: item[1],
+        )[0]
+        return Resolution(outcome=most_likely_outcome, invalid=False)
+
+    def to_probabilistic_answer(self) -> ProbabilisticAnswer:
+        p_yes = check_not_none(self.get_yes_probability())
+        return ProbabilisticAnswer(
+            p_yes=p_yes,
+            confidence=self.confidence,
+        )
+
+    @staticmethod
+    def from_probabilistic_answer(
+        answer: ProbabilisticAnswer,
+    ) -> "CategoricalProbabilisticAnswer":
+        return CategoricalProbabilisticAnswer(
+            probabilities={
+                OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER): answer.p_yes,
+                OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER): Probability(
+                    1 - answer.p_yes
+                ),
+            },
+            confidence=answer.confidence,
+            reasoning=answer.reasoning,
+        )
+
+    def probability_for_market_outcome(self, market_outcome: OutcomeStr) -> Probability:
+        for k, v in self.probabilities.items():
+            if k.lower() == market_outcome.lower():
+                return v
+        raise ValueError(
+            f"Could not find probability for market outcome {market_outcome}"
+        )
+
+    def get_yes_probability(self) -> Probability | None:
+        return next(
+            (
+                p
+                for o, p in self.probabilities.items()
+                if o.lower() == YES_OUTCOME_LOWERCASE_IDENTIFIER
+            ),
+            None,
+        )
+
 
 class Position(BaseModel):
     market_id: str
-    amounts: dict[OutcomeStr, TokenAmount]
+    # This is for how much we could buy or sell the position right now.
+    amounts_current: dict[OutcomeStr, USD]
 
     @property
-    def total_amount(self) -> TokenAmount:
-        return TokenAmount(
-            amount=sum(amount.amount for amount in self.amounts.values()),
-            currency=self.amounts[next(iter(self.amounts.keys()))].currency,
-        )
+    def total_amount_current(self) -> USD:
+        return sum(self.amounts_current.values(), start=USD(0))
 
     def __str__(self) -> str:
         amounts_str = ", ".join(
-            f"{amount.amount} '{outcome}' tokens"
-            for outcome, amount in self.amounts.items()
+            f"{amount} USD of '{outcome}' tokens"
+            for outcome, amount in self.amounts_current.items()
         )
         return f"Position for market id {self.market_id}: {amounts_str}"
+
+
+class ExistingPosition(Position):
+    # This is how much we will get if we win.
+    amounts_potential: dict[OutcomeStr, USD]
+    # These are raw outcome tokens of the market.
+    amounts_ot: dict[OutcomeStr, OutcomeToken]
+
+    @property
+    def total_amount_potential(self) -> USD:
+        return sum(self.amounts_potential.values(), start=USD(0))
+
+    @property
+    def total_amount_ot(self) -> OutcomeToken:
+        return sum(self.amounts_ot.values(), start=OutcomeToken(0))
 
 
 class TradeType(str, Enum):
@@ -125,8 +212,8 @@ class TradeType(str, Enum):
 
 class Trade(BaseModel):
     trade_type: TradeType
-    outcome: bool
-    amount: TokenAmount
+    outcome: OutcomeStr
+    amount: USD
 
 
 class PlacedTrade(Trade):
@@ -145,15 +232,15 @@ class PlacedTrade(Trade):
 class SimulatedBetDetail(BaseModel):
     strategy: str
     url: str
-    market_p_yes: float
-    agent_p_yes: float
+    probabilities: dict[OutcomeStr, Probability]
+    agent_prob_multi: dict[OutcomeStr, Probability]
     agent_conf: float
-    org_bet: float
-    sim_bet: float
-    org_dir: bool
-    sim_dir: bool
-    org_profit: float
-    sim_profit: float
+    org_bet: CollateralToken
+    sim_bet: CollateralToken
+    org_dir: OutcomeStr
+    sim_dir: OutcomeStr
+    org_profit: CollateralToken
+    sim_profit: CollateralToken
     timestamp: DatetimeUTC
 
 
@@ -165,12 +252,10 @@ class SharpeOutput(BaseModel):
 
 class SimulatedLifetimeDetail(BaseModel):
     p_yes_mse: float
-    total_bet_amount: float
-    total_bet_profit: float
-    total_simulated_amount: float
-    total_simulated_profit: float
+    total_bet_amount: CollateralToken
+    total_bet_profit: CollateralToken
+    total_simulated_amount: CollateralToken
+    total_simulated_profit: CollateralToken
     roi: float
     simulated_roi: float
-    sharpe_output_original: SharpeOutput
-    sharpe_output_simulation: SharpeOutput
     maximize: float

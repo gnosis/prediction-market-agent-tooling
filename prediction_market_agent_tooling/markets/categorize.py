@@ -31,8 +31,8 @@ Write only the category itself, nothing else.
     research_evaluation_chain = (
         prompt
         | ChatOpenAI(
-            model=model,
-            api_key=APIKeys().openai_api_key_secretstr_v1,
+            model_name=model,
+            openai_api_key=APIKeys().openai_api_key,
         )
         | StrOutputParser()
     )

@@ -3,7 +3,7 @@ from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     PolymarketFullMarket,
 )
-from prediction_market_agent_tooling.tools.google_utils import search_google
+from prediction_market_agent_tooling.tools.google_utils import search_google_gcp
 
 
 def find_resolution_on_polymarket(question: str) -> Resolution | None:
@@ -35,7 +35,7 @@ def find_url_to_polymarket(question: str) -> str | None:
     slug = "".join(replace_chars.get(char, char) for char in question.lower())
 
     # Search for the links to the Polymarket's market page on Google.
-    links = search_google(
+    links = search_google_gcp(
         # For some reason, just giving it in the query works better than using `site_search`, `exact_terms` or other parameters of the google search.
         query=f"{MarketType.POLYMARKET.market_class.base_url} {question}",
         num=10,

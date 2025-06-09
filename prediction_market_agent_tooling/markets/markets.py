@@ -1,19 +1,12 @@
 import typing as t
-from datetime import timedelta
 from enum import Enum
 
-from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
 from prediction_market_agent_tooling.jobs.omen.omen_jobs import OmenJobAgentMarket
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     SortBy,
-)
-from prediction_market_agent_tooling.markets.manifold.api import (
-    get_authenticated_user,
-    get_manifold_bets,
-    get_manifold_market,
 )
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
@@ -22,17 +15,11 @@ from prediction_market_agent_tooling.markets.metaculus.metaculus import (
     MetaculusAgentMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
-from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
-    OmenSubgraphHandler,
-)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from prediction_market_agent_tooling.tools.utils import (
-    DatetimeUTC,
-    should_not_happen,
-    utcnow,
-)
+from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class MarketType(str, Enum):
@@ -41,6 +28,7 @@ class MarketType(str, Enum):
     MANIFOLD = "manifold"
     POLYMARKET = "polymarket"
     METACULUS = "metaculus"
+    SEER = "seer"
 
     @property
     def market_class(self) -> type[AgentMarket]:
@@ -56,7 +44,7 @@ class MarketType(str, Enum):
 
     @property
     def is_blockchain_market(self) -> bool:
-        return self in [MarketType.OMEN, MarketType.POLYMARKET]
+        return self in [MarketType.OMEN, MarketType.POLYMARKET, MarketType.SEER]
 
 
 MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
@@ -64,7 +52,9 @@ MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.OMEN: OmenAgentMarket,
     MarketType.POLYMARKET: PolymarketAgentMarket,
     MarketType.METACULUS: MetaculusAgentMarket,
+    MarketType.SEER: SeerAgentMarket,
 }
+
 
 JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {
     MarketType.OMEN: OmenJobAgentMarket,
@@ -80,7 +70,7 @@ def get_binary_markets(
     created_after: DatetimeUTC | None = None,
 ) -> t.Sequence[AgentMarket]:
     agent_market_class = MARKET_TYPE_TO_AGENT_MARKET[market_type]
-    markets = agent_market_class.get_binary_markets(
+    markets = agent_market_class.get_markets(
         limit=limit,
         sort_by=sort_by,
         filter_by=filter_by,
@@ -88,34 +78,3 @@ def get_binary_markets(
         excluded_questions=excluded_questions,
     )
     return markets
-
-
-def have_bet_on_market_since(
-    keys: APIKeys, market: AgentMarket, since: timedelta
-) -> bool:
-    start_time = utcnow() - since
-    recently_betted_questions = (
-        set(
-            get_manifold_market(b.contractId).question
-            for b in get_manifold_bets(
-                user_id=get_authenticated_user(
-                    keys.manifold_api_key.get_secret_value()
-                ).id,
-                start_time=start_time,
-                end_time=None,
-            )
-        )
-        if isinstance(market, ManifoldAgentMarket)
-        else (
-            set(
-                b.title
-                for b in OmenSubgraphHandler().get_bets(
-                    better_address=keys.bet_from_address,
-                    start_time=start_time,
-                )
-            )
-            if isinstance(market, OmenAgentMarket)
-            else should_not_happen(f"Unknown market: {market}")
-        )
-    )
-    return market.question in recently_betted_questions

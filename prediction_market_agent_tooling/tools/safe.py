@@ -11,11 +11,10 @@ from safe_eth.eth.constants import NULL_ADDRESS
 from safe_eth.eth.contracts import get_safe_V1_4_1_contract
 from safe_eth.safe.proxy_factory import ProxyFactoryV141
 from safe_eth.safe.safe import SafeV141
-from web3.types import Wei
 
+from prediction_market_agent_tooling.gtypes import Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
 
 def create_safe(
@@ -63,10 +62,10 @@ def create_safe(
             f"does not exist on network {ethereum_network.name}"
         )
 
-    account_balance = ethereum_client.get_balance(account.address)
-    account_balance_xdai = wei_to_xdai(account_balance)
+    account_balance = Wei(ethereum_client.get_balance(account.address))
+    account_balance_xdai = account_balance.as_token
     # We set a reasonable expected balance below for Safe deployment not to fail.
-    if account_balance_xdai < 0.01:
+    if account_balance_xdai.value < 0.01:
         raise ValueError(
             f"Client's balance is {account_balance_xdai} xDAI, too low for deploying a Safe."
         )
@@ -108,7 +107,7 @@ def create_safe(
             payment_token,
             payment,
             payment_receiver,
-        ).build_transaction({"gas": 1, "gasPrice": Wei(1)})["data"]
+        ).build_transaction({"gas": 1, "gasPrice": Wei(1).value})["data"]
     )
 
     proxy_factory = ProxyFactoryV141(proxy_factory_address, ethereum_client)

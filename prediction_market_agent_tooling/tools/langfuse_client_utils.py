@@ -7,19 +7,22 @@ from pydantic import BaseModel
 
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
+    CategoricalProbabilisticAnswer,
     PlacedTrade,
-    ProbabilisticAnswer,
     ResolvedBet,
     TradeType,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    WRAPPED_XDAI_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class ProcessMarketTrace(BaseModel):
     timestamp: int
     market: OmenAgentMarket
-    answer: ProbabilisticAnswer
+    answer: CategoricalProbabilisticAnswer
     trades: list[PlacedTrade]
 
     @property
@@ -64,24 +67,28 @@ def get_traces_for_agent(
     has_output: bool,
     client: Langfuse,
     to_timestamp: DatetimeUTC | None = None,
+    tags: str | list[str] | None = None,
 ) -> list[TraceWithDetails]:
     """
     Fetch agent traces using pagination
     """
+    total_pages = -1
     page = 1  # index starts from 1
     all_agent_traces = []
     while True:
-        logger.debug(f"fetching page {page}")
+        logger.debug(f"Fetching Langfuse page {page} / {total_pages}.")
         traces = client.fetch_traces(
             name=trace_name,
             limit=100,
             page=page,
             from_timestamp=from_timestamp,
             to_timestamp=to_timestamp,
+            tags=tags,
         )
         if not traces.data:
             break
         page += 1
+        total_pages = traces.meta.total_pages
 
         agent_traces = [
             t
@@ -111,10 +118,10 @@ def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket | Non
         return None
 
 
-def trace_to_answer(trace: TraceWithDetails) -> ProbabilisticAnswer:
+def trace_to_answer(trace: TraceWithDetails) -> CategoricalProbabilisticAnswer:
     assert trace.output is not None, "Trace output is None"
     assert trace.output["answer"] is not None, "Trace output result is None"
-    return ProbabilisticAnswer.model_validate(trace.output["answer"])
+    return CategoricalProbabilisticAnswer.model_validate(trace.output["answer"])
 
 
 def trace_to_trades(trace: TraceWithDetails) -> list[PlacedTrade]:
@@ -143,11 +150,20 @@ def get_trace_for_bet(
     # Filter for traces with the same bet outcome and amount
     traces_for_bet: list[ProcessMarketTrace] = []
     for t in traces:
+        if (
+            t.market.collateral_token_contract_address_checksummed
+            not in WRAPPED_XDAI_CONTRACT_ADDRESS
+        ):
+            # TODO: We need to compute bet amount token in USD here, but at the time of bet placement!
+            logger.warning(
+                "This currently works only for WXDAI markets, because we need to compare against USD value."
+            )
+            continue
         # Cannot use exact comparison due to gas fees
         if (
             t.buy_trade
             and t.buy_trade.outcome == bet.outcome
-            and np.isclose(t.buy_trade.amount.amount, bet.amount.amount)
+            and np.isclose(t.buy_trade.amount.value, bet.amount.value)
         ):
             traces_for_bet.append(t)
 

@@ -29,3 +29,7 @@ foundry:
       mainnet:
         upstream_provider: node
 
+
+test:
+  mnemonic: test test test test test test test test test test test junk
+  number_of_accounts: 20

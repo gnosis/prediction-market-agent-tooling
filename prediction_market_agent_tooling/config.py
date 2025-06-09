@@ -1,12 +1,20 @@
+import json
 import typing as t
+from copy import deepcopy
 
-from pydantic import Field
+from eth_account.signers.local import LocalAccount
+from eth_typing import URI
+from pydantic import Field, model_validator
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
+from web3 import Account, Web3
+from web3._utils.http import construct_user_agent
 
+from prediction_market_agent_tooling.chains import ETHEREUM_ID, GNOSIS_CHAIN_ID
+from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
 from prediction_market_agent_tooling.gtypes import (
     ChainID,
     ChecksumAddress,
@@ -34,7 +42,7 @@ class APIKeys(BaseSettings):
     METACULUS_API_KEY: t.Optional[SecretStr] = None
     METACULUS_USER_ID: t.Optional[int] = None
     BET_FROM_PRIVATE_KEY: t.Optional[PrivateKey] = None
-    SAFE_ADDRESS: t.Optional[ChecksumAddress] = None
+    SAFE_ADDRESS: str | None = None
     OPENAI_API_KEY: t.Optional[SecretStr] = None
     GRAPH_API_KEY: t.Optional[SecretStr] = None
     TENDERLY_FORK_RPC: t.Optional[str] = None
@@ -52,11 +60,63 @@ class APIKeys(BaseSettings):
     PINATA_API_SECRET: t.Optional[SecretStr] = None
 
     TAVILY_API_KEY: t.Optional[SecretStr] = None
+    # Don't get fooled! Serper and Serp are two different services.
+    SERPER_API_KEY: t.Optional[SecretStr] = None
 
     SQLALCHEMY_DB_URL: t.Optional[SecretStr] = None
 
+    PERPLEXITY_API_KEY: t.Optional[SecretStr] = None
+
     ENABLE_CACHE: bool = False
     CACHE_DIR: str = "./.cache"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _model_validator(cls, data: t.Any) -> t.Any:
+        data = deepcopy(data)
+        data = cls._replace_gcp_secrets(data)
+        return data
+
+    @staticmethod
+    def _replace_gcp_secrets(data: t.Any) -> t.Any:
+        if isinstance(data, dict):
+            for k, v in data.items():
+                # Check if the value is meant to be fetched from GCP Secret Manager, if so, replace it with it.
+                if isinstance(v, (str, SecretStr)):
+                    secret_value = (
+                        v.get_secret_value() if isinstance(v, SecretStr) else v
+                    )
+                    if secret_value.startswith("gcps:"):
+                        # We assume that secrets are dictionaries and the value is a key in the dictionary,
+                        # example usage: `BET_FROM_PRIVATE_KEY=gcps:my-agent:private_key`
+                        _, secret_name, key_name = secret_value.split(":")
+                        secret_data = json.loads(gcp_get_secret_value(secret_name))[
+                            key_name
+                        ]
+                        data[k] = secret_data
+        else:
+            raise ValueError("Data must be a dictionary.")
+        return data
+
+    def copy_without_safe_address(self) -> "APIKeys":
+        """
+        This is handy when you operate in environment with SAFE_ADDRESS, but need to execute transaction using EOA.
+        """
+        data = self.model_copy(deep=True)
+        data.SAFE_ADDRESS = None
+        return data
+
+    @property
+    def safe_address_checksum(self) -> ChecksumAddress | None:
+        return (
+            Web3.to_checksum_address(self.SAFE_ADDRESS) if self.SAFE_ADDRESS else None
+        )
+
+    @property
+    def serper_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.SERPER_API_KEY, "SERPER_API_KEY missing in the environment."
+        )
 
     @property
     def manifold_user_id(self) -> str:
@@ -96,7 +156,11 @@ class APIKeys(BaseSettings):
     @property
     def bet_from_address(self) -> ChecksumAddress:
         """If the SAFE is available, we always route transactions via SAFE. Otherwise we use the EOA."""
-        return self.SAFE_ADDRESS if self.SAFE_ADDRESS else self.public_key
+        return (
+            self.safe_address_checksum
+            if self.safe_address_checksum
+            else self.public_key
+        )
 
     @property
     def openai_api_key(self) -> SecretStr:
@@ -184,12 +248,24 @@ class APIKeys(BaseSettings):
             self.SQLALCHEMY_DB_URL, "SQLALCHEMY_DB_URL missing in the environment."
         )
 
+    def get_account(self) -> LocalAccount:
+        acc: LocalAccount = Account.from_key(
+            self.bet_from_private_key.get_secret_value()
+        )
+        return acc
+
     def model_dump_public(self) -> dict[str, t.Any]:
         return {
             k: v
             for k, v in self.model_dump().items()
             if self.model_fields[k].annotation not in SECRET_TYPES and v is not None
         }
+
+    @property
+    def perplexity_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.PERPLEXITY_API_KEY, "PERPLEXITY_API_KEY missing in the environment."
+        )
 
     def model_dump_secrets(self) -> dict[str, t.Any]:
         return {
@@ -199,10 +275,10 @@ class APIKeys(BaseSettings):
         }
 
     def check_if_is_safe_owner(self, ethereum_client: EthereumClient) -> bool:
-        if not self.SAFE_ADDRESS:
+        if not self.safe_address_checksum:
             raise ValueError("Cannot check ownership if safe_address is not defined.")
 
-        s = SafeV141(self.SAFE_ADDRESS, ethereum_client)
+        s = SafeV141(self.safe_address_checksum, ethereum_client)
         public_key_from_signer = private_key_to_public_key(self.bet_from_private_key)
         return s.retrieve_is_owner(public_key_from_signer)
 
@@ -212,11 +288,20 @@ class RPCConfig(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    GNOSIS_RPC_URL: str = Field(default="https://rpc.gnosischain.com")
-    CHAIN_ID: ChainID = Field(default=ChainID(100))
+    ETHEREUM_RPC_URL: URI = Field(default=URI("https://rpc.eth.gateway.fm"))
+    ETHEREUM_RPC_BEARER: SecretStr | None = None
+    GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
+    GNOSIS_RPC_BEARER: SecretStr | None = None
+    CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
 
     @property
-    def gnosis_rpc_url(self) -> str:
+    def ethereum_rpc_url(self) -> URI:
+        return check_not_none(
+            self.ETHEREUM_RPC_URL, "ETHEREUM_RPC_URL missing in the environment."
+        )
+
+    @property
+    def gnosis_rpc_url(self) -> URI:
         return check_not_none(
             self.GNOSIS_RPC_URL, "GNOSIS_RPC_URL missing in the environment."
         )
@@ -224,6 +309,35 @@ class RPCConfig(BaseSettings):
     @property
     def chain_id(self) -> ChainID:
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
+
+    def chain_id_to_rpc_url(self, chain_id: ChainID) -> URI:
+        return {
+            ETHEREUM_ID: self.ethereum_rpc_url,
+            GNOSIS_CHAIN_ID: self.gnosis_rpc_url,
+        }[chain_id]
+
+    def chain_id_to_rpc_bearer(self, chain_id: ChainID) -> SecretStr | None:
+        return {
+            ETHEREUM_ID: self.ETHEREUM_RPC_BEARER,
+            GNOSIS_CHAIN_ID: self.GNOSIS_RPC_BEARER,
+        }[chain_id]
+
+    def get_web3(self) -> Web3:
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": construct_user_agent(str(type(self))),
+        }
+        if bearer := self.chain_id_to_rpc_bearer(self.chain_id):
+            headers["Authorization"] = f"Bearer {bearer.get_secret_value()}"
+
+        return Web3(
+            Web3.HTTPProvider(
+                self.chain_id_to_rpc_url(self.chain_id),
+                request_kwargs={
+                    "headers": headers,
+                },
+            )
+        )
 
 
 class CloudCredentials(BaseSettings):

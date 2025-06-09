@@ -1,16 +1,18 @@
 import binascii
-from typing import Any, Optional, TypeVar
+import secrets
+from typing import Any, Optional
 
 import base58
 import tenacity
 from eth_account import Account
 from eth_typing import URI
+from eth_utils.currency import MAX_WEI, MIN_WEI
 from pydantic.types import SecretStr
 from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
-from web3.types import AccessList, AccessListEntry, Nonce, TxParams, TxReceipt, Wei
+from web3.types import AccessList, AccessListEntry, Nonce, TxParams, TxReceipt
 
 from prediction_market_agent_tooling.gtypes import (
     ABI,
@@ -20,31 +22,27 @@ from prediction_market_agent_tooling.gtypes import (
     HexStr,
     IPFSCIDVersion0,
     PrivateKey,
+    Web3Wei,
+    private_key_type,
     xDai,
-    xdai_type,
+    xDaiWei,
 )
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.tools._generic_value import _GenericValue
 
 ONE_NONCE = Nonce(1)
-ONE_XDAI = xdai_type(1)
+ONE_XDAI = xDai(1)
 ZERO_BYTES = HexBytes(HASH_ZERO)
 NOT_REVERTED_ICASE_REGEX_PATTERN = "(?i)(?!.*reverted.*)"
+
+
+def generate_private_key() -> PrivateKey:
+    return private_key_type("0x" + secrets.token_hex(32))
 
 
 def private_key_to_public_key(private_key: SecretStr) -> ChecksumAddress:
     account = Account.from_key(private_key.get_secret_value())
     return verify_address(account.address)
-
-
-def wei_to_xdai(wei: Wei) -> xDai:
-    return xDai(float(Web3.from_wei(wei, "ether")))
-
-
-def xdai_to_wei(native: xDai) -> Wei:
-    return Web3.to_wei(native, "ether")
-
-
-RemoveOrAddFractionAmountType = TypeVar("RemoveOrAddFractionAmountType", bound=int)
 
 
 def verify_address(address: str) -> ChecksumAddress:
@@ -55,26 +53,6 @@ def verify_address(address: str) -> ChecksumAddress:
     return ChecksumAddress(HexAddress(HexStr(address)))
 
 
-def remove_fraction(
-    amount: RemoveOrAddFractionAmountType, fraction: float
-) -> RemoveOrAddFractionAmountType:
-    """Removes the given fraction from the given integer-bounded amount and returns the value as an original type."""
-    if 0 <= fraction <= 1:
-        keep_percentage = 1 - fraction
-        return type(amount)(int(amount * keep_percentage))
-    raise ValueError(f"The given fraction {fraction!r} is not in the range [0, 1].")
-
-
-def add_fraction(
-    amount: RemoveOrAddFractionAmountType, fraction: float
-) -> RemoveOrAddFractionAmountType:
-    """Adds the given fraction to the given integer-bounded amount and returns the value as an original type."""
-    if 0 <= fraction <= 1:
-        keep_percentage = 1 + fraction
-        return type(amount)(int(amount * keep_percentage))
-    raise ValueError(f"The given fraction {fraction!r} is not in the range [0, 1].")
-
-
 def check_tx_receipt(receipt: TxReceipt) -> None:
     if receipt["status"] != 1:
         raise ValueError(
@@ -82,11 +60,30 @@ def check_tx_receipt(receipt: TxReceipt) -> None:
         )
 
 
-def parse_function_params(params: Optional[list[Any] | dict[str, Any]]) -> list[Any]:
+def unwrap_generic_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, _GenericValue):
+        return value.value
+    elif isinstance(value, list):
+        return [unwrap_generic_value(v) for v in value]
+    elif isinstance(value, tuple):
+        return tuple(unwrap_generic_value(v) for v in value)
+    elif isinstance(value, dict):
+        return {k: unwrap_generic_value(v) for k, v in value.items()}
+    return value
+
+
+def parse_function_params(
+    params: Optional[list[Any] | tuple[Any] | dict[str, Any]]
+) -> list[Any] | tuple[Any]:
+    params = unwrap_generic_value(params)
     if params is None:
         return []
     if isinstance(params, list):
-        return params
+        return [unwrap_generic_value(i) for i in params]
+    if isinstance(params, tuple):
+        return tuple(unwrap_generic_value(i) for i in params)
     if isinstance(params, dict):
         return list(params.values())
     raise ValueError(f"Invalid type for function parameters: {type(params)}")
@@ -126,8 +123,8 @@ def prepare_tx(
 
     # Build the transaction.
     function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
-    tx_params_new = function_call.build_transaction(tx_params_new)
-    return tx_params_new
+    built_tx_params: TxParams = function_call.build_transaction(tx_params_new)
+    return built_tx_params
 
 
 def _prepare_tx_params(
@@ -164,9 +161,10 @@ def _prepare_tx_params(
 
 @tenacity.retry(
     # Don't retry on `reverted` messages, as they would always fail again.
-    retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
-    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
-    stop=tenacity.stop_after_attempt(9),
+    # TODO: Check this, see https://github.com/gnosis/prediction-market-agent-tooling/issues/625.
+    # retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
+    stop=tenacity.stop_after_attempt(5),
     after=lambda x: logger.debug(
         f"send_function_on_contract_tx failed, {x.attempt_number=}."
     ),
@@ -201,8 +199,9 @@ def send_function_on_contract_tx(
 
 @tenacity.retry(
     # Don't retry on `reverted` messages, as they would always fail again.
-    retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
-    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 10)]),
+    # TODO: Check this, see https://github.com/gnosis/prediction-market-agent-tooling/issues/625.
+    # retry=tenacity.retry_if_exception_message(match=NOT_REVERTED_ICASE_REGEX_PATTERN),
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
     stop=tenacity.stop_after_attempt(5),
     after=lambda x: logger.debug(
         f"send_function_on_contract_tx_using_safe failed, {x.attempt_number=}."
@@ -298,15 +297,14 @@ def send_xdai_to(
     web3: Web3,
     from_private_key: PrivateKey,
     to_address: ChecksumAddress,
-    value: Wei,
+    value: xDaiWei,
     data_text: Optional[str | bytes] = None,
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
 ) -> TxReceipt:
     from_address = private_key_to_public_key(from_private_key)
 
-    tx_params_new: TxParams = {"value": value, "to": to_address}
-
+    tx_params_new: TxParams = {"value": value.value, "to": to_address}
     if data_text is not None:
         tx_params_new["data"] = (
             Web3.to_bytes(text=data_text)
@@ -351,8 +349,19 @@ def byte32_to_ipfscidv0(hex: HexBytes) -> IPFSCIDVersion0:
     return IPFSCIDVersion0(base58.b58encode(completed_binary_str).decode("utf-8"))
 
 
+@tenacity.retry(
+    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
+    stop=tenacity.stop_after_attempt(5),
+    after=lambda x: logger.debug(
+        f"get_receipt_block_timestamp failed, {x.attempt_number=}."
+    ),
+)
 def get_receipt_block_timestamp(receipt_tx: TxReceipt, web3: Web3) -> int:
     block_number = receipt_tx["blockNumber"]
     block = web3.eth.get_block(block_number)
     block_timestamp: int = block["timestamp"]
     return block_timestamp
+
+
+def is_valid_wei(value: Web3Wei) -> bool:
+    return MIN_WEI <= value <= MAX_WEI

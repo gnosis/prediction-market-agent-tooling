@@ -5,18 +5,21 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
-    Wei,
     xDai,
+    xDaiWei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.manifold.utils import (
+from prediction_market_agent_tooling.markets.manifold.api import (
     find_resolution_on_manifold,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     RealityQuestion,
+)
+from prediction_market_agent_tooling.markets.omen.omen import (
+    send_keeping_token_to_eoa_xdai,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
@@ -25,8 +28,15 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
-from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES, xdai_to_wei
+from prediction_market_agent_tooling.tools.tokens.main_token import (
+    MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
+)
+from prediction_market_agent_tooling.tools.utils import (
+    check_not_none,
+    extract_error_from_retry_error,
+    utcnow,
+)
+from prediction_market_agent_tooling.tools.web3_utils import ZERO_BYTES
 
 
 def claim_bonds_on_realitio_questions(
@@ -50,7 +60,7 @@ def claim_bonds_on_realitio_questions(
         except Exception as e:
             if not skip_failed:
                 raise e
-            logger.error(
+            logger.warning(
                 f"Failed to claim bond for {question.url=}, {question.questionId=}: {e}"
             )
 
@@ -82,7 +92,7 @@ def claim_bonds_on_realitio_question(
 
     history_hashes: list[HexBytes] = []
     addresses: list[ChecksumAddress] = []
-    bonds: list[Wei] = []
+    bonds: list[xDaiWei] = []
     answers: list[HexBytes] = []
 
     # Caller must provide the answer history, in reverse order.
@@ -116,7 +126,9 @@ def claim_bonds_on_realitio_question(
     current_balance = realitio_contract.balanceOf(public_key, web3=web3)
     # Keeping balance on Realitio is not useful, so it's recommended to just withdraw it.
     if current_balance > 0 and auto_withdraw:
-        logger.info(f"Withdrawing remaining balance {current_balance=}")
+        logger.info(
+            f"Withdrawing remaining balance {current_balance.as_xdai} xDai from Realitio."
+        )
         realitio_contract.withdraw(api_keys, web3=web3)
 
 
@@ -133,6 +145,14 @@ def finalize_markets(
         logger.info(
             f"[{idx+1} / {len(markets_with_resolutions)}] Looking into {market.url=} {market.question_title=}"
         )
+
+        # If we don't have enough of xDai for bond, try to get it from the keeping token.
+        send_keeping_token_to_eoa_xdai(
+            api_keys=api_keys,
+            min_required_balance=realitio_bond + MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
+            web3=web3,
+        )
+
         closed_before_days = (utcnow() - market.close_time).days
 
         if resolution is None:
@@ -152,19 +172,7 @@ def finalize_markets(
                     f"Skipping, no resolution provided, market closed before {closed_before_days} days: {market.url=}"
                 )
 
-        elif resolution in (Resolution.YES, Resolution.NO):
-            logger.info(f"Found resolution {resolution.value=} for {market.url=}")
-            omen_submit_answer_market_tx(
-                api_keys,
-                market,
-                resolution,
-                realitio_bond,
-                web3=web3,
-            )
-            finalized_markets.append(market.id)
-            logger.info(f"Finalized {market.url=}")
-
-        else:
+        elif resolution.invalid:
             logger.warning(
                 f"Invalid resolution found, {resolution=}, for {market.url=}, finalizing as invalid."
             )
@@ -174,6 +182,18 @@ def finalize_markets(
                 realitio_bond,
                 web3=web3,
             )
+
+        else:
+            logger.info(f"Found resolution {resolution=} for {market.url=}")
+            omen_submit_answer_market_tx(
+                api_keys,
+                market,
+                resolution,
+                realitio_bond,
+                web3=web3,
+            )
+            finalized_markets.append(market.id)
+            logger.info(f"Finalized {market.url=}")
 
     return finalized_markets
 
@@ -203,16 +223,19 @@ def omen_submit_answer_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     """
-    After the answer is submitted, there is 24h waiting period where the answer can be challenged by others.
+    After the answer is submitted, there is waiting period where the answer can be challenged by others.
     And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
     """
     realitio_contract = OmenRealitioContract()
+    outcome_matching_market = check_not_none(
+        resolution.find_outcome_matching_market(market.outcomes)
+    )
+    outcome_index = market.outcomes.index(outcome_matching_market)
     realitio_contract.submit_answer(
         api_keys=api_keys,
         question_id=market.question.id,
-        answer=resolution.value,
-        outcomes=market.question.outcomes,
-        bond=xdai_to_wei(bond),
+        outcome_index=outcome_index,
+        bond=bond.as_xdai_wei,
         web3=web3,
     )
 
@@ -224,14 +247,14 @@ def omen_submit_invalid_answer_market_tx(
     web3: Web3 | None = None,
 ) -> None:
     """
-    After the answer is submitted, there is 24h waiting period where the answer can be challenged by others.
+    After the answer is submitted, there is waiting period where the answer can be challenged by others.
     And after the period is over, you need to resolve the market using `omen_resolve_market_tx`.
     """
     realitio_contract = OmenRealitioContract()
     realitio_contract.submit_answer_invalid(
         api_keys=api_keys,
         question_id=market.question.id,
-        bond=xdai_to_wei(bond),
+        bond=bond.as_xdai_wei,
         web3=web3,
     )
 
@@ -245,14 +268,27 @@ def omen_resolve_market_tx(
     Market can be resolved after the answer if finalized on Reality.
     """
     oracle_contract = OmenOracleContract()
-    oracle_contract.resolve(
-        api_keys=api_keys,
-        question_id=market.question.id,
-        template_id=market.question.templateId,
-        question_raw=market.question.question_raw,
-        n_outcomes=market.question.n_outcomes,
-        web3=web3,
-    )
+    try:
+        oracle_contract.resolve(
+            api_keys=api_keys,
+            question_id=market.question.id,
+            template_id=market.question.templateId,
+            question_raw=market.question.question_raw,
+            n_outcomes=market.question.n_outcomes,
+            web3=web3,
+        )
+    except BaseException as e:
+        e = extract_error_from_retry_error(e)
+        if "condition not prepared or found" in str(e):
+            # We can't do anything about these, so just skip them with warning.
+            logger.warning(
+                f"Market {market.url=} not resolved, because `condition not prepared or found`, skipping."
+            )
+        elif "payout denominator already set" in str(e):
+            # We can just skip, it's been resolved already.
+            logger.info(f"Market {market.url=} is already resolved.")
+        else:
+            raise
 
 
 def find_resolution_on_other_markets(market: OmenMarket) -> Resolution | None:

@@ -5,9 +5,16 @@ from ape_test import TestAccount
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import private_key_type, xdai_type
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    private_key_type,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_BINARY_MARKET_OUTCOMES,
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -29,7 +36,7 @@ from tests.utils import mint_new_block
 
 
 def test_redeem_invalid_market(
-    accounts: list[TestAccount],
+    eoa_accounts: list[TestAccount],
     local_web3: Web3,
 ) -> None:
     """
@@ -37,7 +44,7 @@ def test_redeem_invalid_market(
     """
 
     # Get three accounts, one will create a market with liquidity, and the two will place bets in opposing directions.
-    account_A, account_B, account_C = accounts[7], accounts[8], accounts[9]
+    account_A, account_B, account_C = eoa_accounts[7], eoa_accounts[8], eoa_accounts[9]
     api_keys_A, api_keys_B, api_keys_C = (
         APIKeys(
             BET_FROM_PRIVATE_KEY=private_key_type(account_A.private_key),
@@ -71,7 +78,8 @@ def test_redeem_invalid_market(
     question = f"Will job X be completed in {close_in} seconds from now?"
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)
-    funds = xdai_type(10)
+    funds = USD(10)
+    funds_t = CollateralToken(funds.value)  # In this test, 1 USD = 1 Token
     fee_perc = 0.02
     finalization_wait_time_seconds = 1
     category = "cryptocurrency"
@@ -103,15 +111,15 @@ def test_redeem_invalid_market(
     assert (
         balance_after_market_creation_A < starting_balance_A
     ), "Starting balance of A should have been lowered"
-    assert agent_market.get_liquidity_in_xdai(local_web3) == funds
+    assert agent_market.get_liquidity(local_web3) == funds_t
 
     # Buy YES tokens from account B
-    bet_size = xdai_type(1)
+    bet_size = USD(1)
     binary_omen_buy_outcome_tx(
         api_keys_B,
         bet_size,
         agent_market,
-        binary_outcome=False,
+        outcome=OMEN_FALSE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -125,7 +133,7 @@ def test_redeem_invalid_market(
         api_keys_C,
         bet_size,
         agent_market,
-        binary_outcome=True,
+        outcome=OMEN_TRUE_OUTCOME,
         auto_deposit=True,
         web3=local_web3,
     )
@@ -143,7 +151,7 @@ def test_redeem_invalid_market(
     omen_submit_invalid_answer_market_tx(
         api_keys_A,
         omen_market,
-        bond=xdai_type(0.001),
+        bond=xDai(0.001),
         web3=local_web3,
     )
 
@@ -185,8 +193,10 @@ def test_redeem_invalid_market(
     print(f"Account C ending difference: {account_C_difference}.")
 
     assert (
-        -bet_size < account_B_difference < 0
+        -agent_market.get_usd_in_token(bet_size)
+        < account_B_difference
+        < CollateralToken(0)
     ), "Assumption was that B will get most of the money back but would incur a loss because he bought tokens at a higher price than 0.5."
-    assert (
-        account_C_difference > 0
+    assert account_C_difference > CollateralToken(
+        0
     ), "Assumption was that C will be profitable because he was buying the cheaper tokens."

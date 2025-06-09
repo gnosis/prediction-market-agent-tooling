@@ -1,28 +1,34 @@
 import typing as t
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
+    CollateralToken,
     HexAddress,
     HexBytes,
     HexStr,
-    OmenOutcomeToken,
+    OutcomeStr,
+    OutcomeWei,
     Probability,
     Wei,
-    wei_type,
     xDai,
+    xDaiWei,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
-    BetAmount,
-    Currency,
-    ProfitAmount,
     Resolution,
     ResolvedBet,
 )
+from prediction_market_agent_tooling.tools.contract import (
+    ContractERC20OnGnosisChain,
+    init_collateral_token_contract,
+    to_gnosis_chain_contract,
+)
+from prediction_market_agent_tooling.tools.tokens.usd import get_token_in_usd
 from prediction_market_agent_tooling.tools.utils import (
     BPS_CONSTANT,
     DatetimeUTC,
@@ -30,11 +36,13 @@ from prediction_market_agent_tooling.tools.utils import (
     should_not_happen,
     utcnow,
 )
-from prediction_market_agent_tooling.tools.web3_utils import wei_to_xdai
 
-OMEN_TRUE_OUTCOME = "Yes"
-OMEN_FALSE_OUTCOME = "No"
-OMEN_BINARY_MARKET_OUTCOMES = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
+OMEN_TRUE_OUTCOME = OutcomeStr("Yes")
+OMEN_FALSE_OUTCOME = OutcomeStr("No")
+OMEN_BINARY_MARKET_OUTCOMES: t.Sequence[OutcomeStr] = [
+    OMEN_TRUE_OUTCOME,
+    OMEN_FALSE_OUTCOME,
+]
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 INVALID_ANSWER_HEX_BYTES = HexBytes(INVALID_ANSWER)
 INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.hex())
@@ -55,7 +63,7 @@ def get_boolean_outcome(outcome_str: str) -> bool:
     raise ValueError(f"Outcome `{outcome_str}` is not a valid boolean outcome.")
 
 
-def get_bet_outcome(binary_outcome: bool) -> str:
+def get_bet_outcome(binary_outcome: bool) -> OutcomeStr:
     return OMEN_TRUE_OUTCOME if binary_outcome else OMEN_FALSE_OUTCOME
 
 
@@ -73,7 +81,7 @@ class Question(BaseModel):
     title: str
     data: str
     templateId: int
-    outcomes: list[str]
+    outcomes: t.Sequence[OutcomeStr]
     isPendingArbitration: bool
     openingTimestamp: int
     answerFinalizedTimestamp: t.Optional[DatetimeUTC] = None
@@ -168,13 +176,23 @@ class OmenPosition(BaseModel):
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:
         return Web3.to_checksum_address(self.collateralTokenAddress)
 
+    def get_collateral_token_contract(
+        self, web3: Web3 | None = None
+    ) -> ContractERC20OnGnosisChain:
+        web3 = web3 or ContractERC20OnGnosisChain.get_web3()
+        return to_gnosis_chain_contract(
+            init_collateral_token_contract(
+                self.collateral_token_contract_address_checksummed, web3
+            )
+        )
+
 
 class OmenUserPosition(BaseModel):
     id: HexBytes
     position: OmenPosition
-    balance: Wei
-    wrappedBalance: Wei
-    totalBalance: Wei
+    balance: OutcomeWei
+    wrappedBalance: OutcomeWei
+    totalBalance: OutcomeWei
 
     @property
     def redeemable(self) -> bool:
@@ -194,8 +212,6 @@ class OmenMarket(BaseModel):
     5. redeeming - a user withdraws collateral tokens from the market
     """
 
-    BET_AMOUNT_CURRENCY: t.ClassVar[Currency] = Currency.xDai
-
     id: HexAddress
     title: str
     creator: HexAddress
@@ -209,9 +225,9 @@ class OmenMarket(BaseModel):
     liquidityParameter: Wei
     usdVolume: USD
     collateralToken: HexAddress
-    outcomes: list[str]
-    outcomeTokenAmounts: list[OmenOutcomeToken]
-    outcomeTokenMarginalPrices: t.Optional[list[xDai]]
+    outcomes: t.Sequence[OutcomeStr]
+    outcomeTokenAmounts: list[OutcomeWei]
+    outcomeTokenMarginalPrices: t.Optional[list[CollateralToken]]
     fee: t.Optional[Wei]
     resolutionTimestamp: t.Optional[int] = None
     answerFinalizedTimestamp: t.Optional[int] = None
@@ -219,6 +235,23 @@ class OmenMarket(BaseModel):
     creationTimestamp: int
     condition: Condition
     question: Question
+
+    @model_validator(mode="after")
+    def _model_validator(self) -> "OmenMarket":
+        if any(number < 0 for number in self.outcomeTokenAmounts):
+            # Sometimes we receive markets with outcomeTokenAmounts as `model.outcomeTokenAmounts=[OutcomeWei(24662799387878572), OutcomeWei(-24750000000000000)]`,
+            # which should be impossible.
+            # Current huntch is that it's a weird transitional status or bug after withdrawing liquidity.
+            # Because so far, it always happened on markets with withdrawn liquidity,
+            # so we just set them to zeros, as we expect them to be.
+            logger.warning(
+                f"Market {self.url} has invalid {self.outcomeTokenAmounts=}. Setting them to zeros."
+            )
+            self.outcomeTokenAmounts = [OutcomeWei(0) for _ in self.outcomes]
+            self.outcomeTokenMarginalPrices = None
+            self.liquidityParameter = Wei(0)
+
+        return self
 
     @property
     def openingTimestamp(self) -> int:
@@ -352,7 +385,11 @@ class OmenMarket(BaseModel):
             )
 
         return Probability(
-            1 - self.outcomeTokenAmounts[self.yes_index] / sum(self.outcomeTokenAmounts)
+            1
+            - (
+                self.outcomeTokenAmounts[self.yes_index]
+                / sum(self.outcomeTokenAmounts, start=OutcomeWei(0))
+            )
         )
 
     def __repr__(self) -> str:
@@ -362,29 +399,16 @@ class OmenMarket(BaseModel):
     def is_binary(self) -> bool:
         return len(self.outcomes) == 2
 
-    def boolean_outcome_from_answer(self, answer: HexBytes) -> bool:
-        if not self.is_binary:
-            raise ValueError(
-                f"Market with title {self.title} is not binary, it has {len(self.outcomes)} outcomes."
-            )
-        outcome: str = self.outcomes[answer.as_int()]
-        return get_boolean_outcome(outcome)
-
-    @property
-    def boolean_outcome(self) -> bool:
-        if not self.is_resolved_with_valid_answer:
-            raise ValueError(f"Bet with title {self.title} is not resolved.")
-        return self.boolean_outcome_from_answer(
-            check_not_none(
-                self.currentAnswer, "Can not be None if `is_resolved_with_valid_answer`"
-            )
-        )
+    def outcome_from_answer(self, answer: HexBytes) -> OutcomeStr | None:
+        if answer == INVALID_ANSWER_HEX_BYTES:
+            return None
+        return self.outcomes[answer.as_int()]
 
     def get_resolution_enum_from_answer(self, answer: HexBytes) -> Resolution:
-        if self.boolean_outcome_from_answer(answer):
-            return Resolution.YES
-        else:
-            return Resolution.NO
+        if outcome := self.outcome_from_answer(answer):
+            return Resolution.from_answer(outcome)
+
+        return Resolution(outcome=None, invalid=True)
 
     def get_resolution_enum(self) -> t.Optional[Resolution]:
         if not self.is_resolved_with_valid_answer:
@@ -451,22 +475,22 @@ class OmenMarket(BaseModel):
 
 
 def calculate_liquidity_parameter(
-    outcome_token_amounts: list[OmenOutcomeToken],
+    outcome_token_amounts: list[OutcomeWei],
 ) -> Wei:
     """
     Converted to Python from https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/utils/fpmm.ts#L171.
     """
-    amounts_product = 1.0
+    amounts_product = Wei(1)
     for amount in outcome_token_amounts:
-        amounts_product *= amount
+        amounts_product *= amount.as_wei
     n = len(outcome_token_amounts)
-    liquidity_parameter = amounts_product ** (1.0 / n)
-    return wei_type(liquidity_parameter)
+    liquidity_parameter = amounts_product.value ** (1.0 / n)
+    return Wei(liquidity_parameter)
 
 
 def calculate_marginal_prices(
-    outcome_token_amounts: list[OmenOutcomeToken],
-) -> list[xDai] | None:
+    outcome_token_amounts: list[OutcomeWei],
+) -> list[CollateralToken] | None:
     """
     Converted to Python from https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/utils/fpmm.ts#L197.
     """
@@ -475,19 +499,19 @@ def calculate_marginal_prices(
         return None
 
     n_outcomes = len(outcome_token_amounts)
-    weights = []
+    weights: list[Wei] = []
 
     for i in range(n_outcomes):
-        weight = 1.0
+        weight = Wei(1)
         for j in range(n_outcomes):
             if i != j:
-                weight *= outcome_token_amounts[j]
+                weight *= outcome_token_amounts[j].as_wei.value
         weights.append(weight)
 
-    sum_weights = sum(weights)
+    sum_weights = sum(weights, start=Wei(0))
 
-    marginal_prices = [weights[i] / sum_weights for i in range(n_outcomes)]
-    return [xDai(mp) for mp in marginal_prices]
+    marginal_prices = [weights[i].value / sum_weights.value for i in range(n_outcomes)]
+    return [CollateralToken(mp) for mp in marginal_prices]
 
 
 class OmenBetCreator(BaseModel):
@@ -498,30 +522,29 @@ class OmenBet(BaseModel):
     id: HexAddress  # A concatenation of: FPMM contract ID, trader ID and nonce. See https://github.com/protofire/omen-subgraph/blob/f92bbfb6fa31ed9cd5985c416a26a2f640837d8b/src/FixedProductMarketMakerMapping.ts#L109
     title: str
     collateralToken: HexAddress
-    outcomeTokenMarginalPrice: xDai
-    oldOutcomeTokenMarginalPrice: xDai
+    outcomeTokenMarginalPrice: CollateralToken
+    oldOutcomeTokenMarginalPrice: CollateralToken
     type: str
     creator: OmenBetCreator
     creationTimestamp: int
     collateralAmount: Wei
     feeAmount: Wei
     outcomeIndex: int
-    outcomeTokensTraded: Wei
+    outcomeTokensTraded: OutcomeWei
     transactionHash: HexBytes
     fpmm: OmenMarket
 
     @property
-    def collateral_amount_usd(self) -> USD:
-        # Convert manually instad of using the field `collateralAmountUSD` available on the graph, because it's bugged, it's 0 for non-xDai markets.
-        return USD(wei_to_xdai(self.collateralAmount))
+    def collateral_amount_token(self) -> CollateralToken:
+        return self.collateralAmount.as_token
+
+    @property
+    def collateral_token_checksummed(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.collateralToken)
 
     @property
     def creation_datetime(self) -> DatetimeUTC:
         return DatetimeUTC.to_datetime_utc(self.creationTimestamp)
-
-    @property
-    def boolean_outcome(self) -> bool:
-        return get_boolean_outcome(self.fpmm.outcomes[self.outcomeIndex])
 
     @property
     def old_probability(self) -> Probability:
@@ -533,24 +556,30 @@ class OmenBet(BaseModel):
         # Marginal price is the probability of the outcome after placing this bet.
         return Probability(float(self.outcomeTokenMarginalPrice))
 
-    def get_profit(self) -> ProfitAmount:
-        bet_amount_xdai = wei_to_xdai(self.collateralAmount)
+    def get_collateral_amount_usd(self) -> USD:
+        return get_token_in_usd(
+            self.collateral_amount_token, self.collateral_token_checksummed
+        )
+
+    def get_profit(self) -> CollateralToken:
+        bet_amount = self.collateral_amount_token
+
+        if not self.fpmm.has_valid_answer:
+            return CollateralToken(0)
+
         profit = (
-            wei_to_xdai(self.outcomeTokensTraded) - bet_amount_xdai
-            if self.boolean_outcome == self.fpmm.boolean_outcome
-            else -bet_amount_xdai
+            self.outcomeTokensTraded.as_outcome_token.as_token - bet_amount
+            if self.outcomeIndex == self.fpmm.answer_index
+            else -bet_amount
         )
-        return ProfitAmount(
-            amount=profit,
-            currency=Currency.xDai,
-        )
+        return profit
 
     def to_bet(self) -> Bet:
         return Bet(
             id=str(self.transactionHash),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
-            amount=BetAmount(amount=self.collateral_amount_usd, currency=Currency.xDai),
-            outcome=self.boolean_outcome,
+            amount=self.collateral_amount_token,
+            outcome=self.fpmm.outcomes[self.outcomeIndex],
             created_time=self.creation_datetime,
             market_question=self.title,
             market_id=self.fpmm.id,
@@ -565,12 +594,12 @@ class OmenBet(BaseModel):
         return ResolvedBet(
             id=self.transactionHash.hex(),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
-            amount=BetAmount(amount=self.collateral_amount_usd, currency=Currency.xDai),
-            outcome=self.boolean_outcome,
+            amount=self.collateral_amount_token,
+            outcome=self.fpmm.outcomes[self.outcomeIndex],
             created_time=self.creation_datetime,
             market_question=self.title,
             market_id=self.fpmm.id,
-            market_outcome=self.fpmm.boolean_outcome,
+            market_outcome=self.fpmm.outcomes[self.outcomeIndex],
             resolved_time=check_not_none(self.fpmm.finalized_datetime),
             profit=self.get_profit(),
         )
@@ -643,7 +672,7 @@ class RealityResponse(BaseModel):
     answer: HexBytes
     isUnrevealed: bool
     isCommitment: bool
-    bond: Wei
+    bond: xDaiWei
     user: HexAddress
     historyHash: HexBytes
     question: RealityQuestion
@@ -652,7 +681,7 @@ class RealityResponse(BaseModel):
 
     @property
     def bond_xdai(self) -> xDai:
-        return wei_to_xdai(self.bond)
+        return self.bond.as_xdai
 
     @property
     def user_checksummed(self) -> ChecksumAddress:
@@ -669,7 +698,7 @@ class RealityAnswersResponse(BaseModel):
 
 def format_realitio_question(
     question: str,
-    outcomes: list[str],
+    outcomes: t.Sequence[str],
     category: str,
     language: str,
     template_id: int,
@@ -696,7 +725,7 @@ def parse_realitio_question(question_raw: str, template_id: int) -> "ParsedQuest
     """If you add a new template id here, also add to the encoding function above."""
     if template_id == 2:
         question, outcomes_raw, category, language = question_raw.split("␟")
-        outcomes = [o.strip('"') for o in outcomes_raw.split(",")]
+        outcomes = [OutcomeStr(o.strip('"')) for o in outcomes_raw.split(",")]
         return ParsedQuestion(
             question=question, outcomes=outcomes, category=category, language=language
         )
@@ -706,7 +735,7 @@ def parse_realitio_question(question_raw: str, template_id: int) -> "ParsedQuest
 
 class ParsedQuestion(BaseModel):
     question: str
-    outcomes: list[str]
+    outcomes: t.Sequence[OutcomeStr]
     language: str
     category: str
 
@@ -768,13 +797,13 @@ class ConditionPreparationEvent(BaseModel):
 
 class FPMMFundingAddedEvent(BaseModel):
     funder: HexAddress
-    amountsAdded: list[OmenOutcomeToken]
+    amountsAdded: list[Wei]
     sharesMinted: Wei
 
     @property
-    def outcome_token_amounts(self) -> list[OmenOutcomeToken]:
+    def outcome_token_amounts(self) -> list[OutcomeWei]:
         # Just renaming so we remember what it is.
-        return self.amountsAdded
+        return [OutcomeWei(x.value) for x in self.amountsAdded]
 
 
 class CreatedMarket(BaseModel):
@@ -786,7 +815,7 @@ class CreatedMarket(BaseModel):
     condition_event: ConditionPreparationEvent | None
     initial_funds: Wei
     fee: Wei
-    distribution_hint: list[OmenOutcomeToken] | None
+    distribution_hint: list[OutcomeWei] | None
 
     @property
     def url(self) -> str:
@@ -831,3 +860,12 @@ class IPFSAgentResult(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+
+
+class PayoutRedemptionEvent(BaseModel):
+    redeemer: HexAddress
+    collateralToken: HexAddress
+    parentCollectionId: HexBytes
+    conditionId: HexBytes
+    indexSets: list[int]
+    payout: Wei

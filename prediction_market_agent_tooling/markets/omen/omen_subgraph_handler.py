@@ -11,7 +11,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexAddress,
     HexBytes,
     Wei,
-    wei_type,
 )
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
@@ -24,12 +23,18 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     OmenPosition,
     OmenUserPosition,
+    OutcomeWei,
     RealityAnswer,
     RealityQuestion,
     RealityResponse,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    COWContract,
+    EUReContract,
+    GNOContract,
     OmenThumbnailMapping,
+    SAFEContract,
+    WETHContract,
     WrappedxDaiContract,
     sDaiContract,
 )
@@ -44,12 +49,20 @@ from prediction_market_agent_tooling.tools.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     byte32_to_ipfscidv0,
+    unwrap_generic_value,
 )
 
-# TODO: Agents don't know how to convert value between other tokens, we assume 1 unit = 1xDai = $1 (for example if market would be in wETH, betting 1 unit of wETH would be crazy :D)
-SAFE_COLLATERAL_TOKEN_MARKETS = (
-    WrappedxDaiContract().address,
-    sDaiContract().address,
+SAFE_COLLATERAL_TOKENS = (
+    WrappedxDaiContract(),
+    sDaiContract(),
+    GNOContract(),
+    WETHContract(),
+    EUReContract(),
+    SAFEContract(),
+    COWContract(),
+)
+SAFE_COLLATERAL_TOKENS_ADDRESSES = tuple(
+    contract.address for contract in SAFE_COLLATERAL_TOKENS
 )
 
 
@@ -207,7 +220,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         self,
         creator: HexAddress | None,
         creator_in: t.Sequence[HexAddress] | None,
-        outcomes: list[str],
         created_after: DatetimeUTC | None,
         question_opened_before: DatetimeUTC | None,
         question_opened_after: DatetimeUTC | None,
@@ -225,12 +237,20 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         id_in: list[str] | None,
         collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
         category: str | None,
+        include_categorical_markets: bool = False,
+        include_scalar_markets: bool = False,
     ) -> dict[str, t.Any]:
         where_stms: dict[str, t.Any] = {
-            "outcomes": outcomes,
             "title_not": None,
             "condition_": {},
         }
+        if not include_categorical_markets:
+            where_stms["outcomeSlotCount"] = 2
+            where_stms["outcomes"] = OMEN_BINARY_MARKET_OUTCOMES
+
+        if not include_scalar_markets:
+            # scalar markets can be identified
+            where_stms["outcomes_not"] = None
 
         where_stms["question_"] = self.get_omen_question_filters(
             question_id=question_id,
@@ -315,23 +335,24 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         return sort_direction, sort_by_field
 
-    def get_omen_binary_markets_simple(
+    def get_omen_markets_simple(
         self,
         limit: t.Optional[int],
         # Enumerated values for simpler usage.
         filter_by: FilterBy,
         sort_by: SortBy,
+        include_categorical_markets: bool = False,
         # Additional filters, these can not be modified by the enums above.
         created_after: DatetimeUTC | None = None,
         excluded_questions: set[str] | None = None,  # question titles
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
-        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+        ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
         creator_in: t.Sequence[HexAddress] | None = None,
     ) -> t.List[OmenMarket]:
         """
-        Simplified `get_omen_binary_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
+        Simplified `get_omen_markets` method, which allows to fetch markets based on the filter_by and sort_by values.
         """
         # These values need to be set according to the filter_by value, so they can not be passed as arguments.
         resolved: bool | None = None
@@ -345,7 +366,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             # because even closed markets don't need to be resolved yet (e.g. if someone forgot to finalize the question on reality).
             opened_after = utcnow()
             # Even if the market isn't closed yet, liquidity can be withdrawn to 0, which essentially closes the market.
-            liquidity_bigger_than = wei_type(0)
+            liquidity_bigger_than = Wei(0)
         elif filter_by == FilterBy.NONE:
             pass
         else:
@@ -353,7 +374,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
-        return self.get_omen_binary_markets(
+        all_markets = self.get_omen_markets(
             limit=limit,
             resolved=resolved,
             question_opened_after=opened_after,
@@ -365,9 +386,12 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             collateral_token_address_in=collateral_token_address_in,
             category=category,
             creator_in=creator_in,
+            include_categorical_markets=include_categorical_markets,
         )
 
-    def get_omen_binary_markets(
+        return all_markets
+
+    def get_omen_markets(
         self,
         limit: t.Optional[int],
         creator: HexAddress | None = None,
@@ -389,19 +413,19 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         id_in: list[str] | None = None,
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
-        outcomes: list[str] = OMEN_BINARY_MARKET_OUTCOMES,
         collateral_token_address_in: (
             tuple[ChecksumAddress, ...] | None
-        ) = SAFE_COLLATERAL_TOKEN_MARKETS,
+        ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
+        include_categorical_markets: bool = True,
+        include_scalar_markets: bool = False,
     ) -> t.List[OmenMarket]:
         """
-        Complete method to fetch Omen binary markets with various filters, use `get_omen_binary_markets_simple` for simplified version that uses FilterBy and SortBy enums.
+        Complete method to fetch Omen  markets with various filters, use `get_omen_markets_simple` for simplified version that uses FilterBy and SortBy enums.
         """
         where_stms = self._build_where_statements(
             creator=creator,
             creator_in=creator_in,
-            outcomes=outcomes,
             created_after=created_after,
             question_opened_before=question_opened_before,
             question_opened_after=question_opened_after,
@@ -419,6 +443,8 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             liquidity_bigger_than=liquidity_bigger_than,
             collateral_token_address_in=collateral_token_address_in,
             category=category,
+            include_categorical_markets=include_categorical_markets,
+            include_scalar_markets=include_scalar_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.
@@ -432,11 +458,12 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible markets
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
             **optional_params,
         )
 
         fields = self._get_fields_for_markets(markets)
+
         omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
         return omen_markets
 
@@ -487,7 +514,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["conditionIds_contains"] = [condition_id.hex()]
 
         positions = self.conditional_tokens_subgraph.Query.positions(
-            first=sys.maxsize, where=where_stms
+            first=sys.maxsize, where=unwrap_generic_value(where_stms)
         )
         fields = self._get_fields_for_positions(positions)
         result = self.sg.query_json(fields)
@@ -496,23 +523,29 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
     def get_user_positions(
         self,
-        better_address: ChecksumAddress,
+        better_address: ChecksumAddress | None = None,
+        user_position_id_in: list[HexBytes] | None = None,
         position_id_in: list[HexBytes] | None = None,
-        total_balance_bigger_than: Wei | None = None,
+        total_balance_bigger_than: OutcomeWei | None = None,
     ) -> list[OmenUserPosition]:
         where_stms: dict[str, t.Any] = {
-            "user": better_address.lower(),
             "position_": {},
         }
 
+        if better_address is not None:
+            where_stms["user"] = better_address.lower()
+
         if total_balance_bigger_than is not None:
             where_stms["totalBalance_gt"] = total_balance_bigger_than
+
+        if user_position_id_in is not None:
+            where_stms["id_in"] = [x.hex() for x in user_position_id_in]
 
         if position_id_in is not None:
             where_stms["position_"]["positionId_in"] = [x.hex() for x in position_id_in]
 
         positions = self.conditional_tokens_subgraph.Query.userPositions(
-            first=sys.maxsize, where=where_stms
+            first=sys.maxsize, where=unwrap_generic_value(where_stms)
         )
         fields = self._get_fields_for_user_positions(positions)
         result = self.sg.query_json(fields)
@@ -566,7 +599,9 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
                 < to_int_timestamp(market_resolved_before)
             )
         if collateral_amount_more_than is not None:
-            where_stms.append(trade.collateralAmount > collateral_amount_more_than)
+            where_stms.append(
+                trade.collateralAmount > collateral_amount_more_than.value
+            )
 
         # These values can not be set to `None`, but they can be omitted.
         optional_params = {}
@@ -577,7 +612,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         trades = self.trades_subgraph.Query.fpmmTrades(
             first=limit if limit else sys.maxsize,
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
             **optional_params,
         )
         fields = self._get_fields_for_bets(trades)
@@ -816,7 +851,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
         )
         fields = self._get_fields_for_reality_questions(questions)
         result = self.sg.query_json(fields)
@@ -830,7 +865,9 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             answer.question.questionId == question_id.hex(),
         ]
 
-        answers = self.realityeth_subgraph.Query.answers(where=where_stms)
+        answers = self.realityeth_subgraph.Query.answers(
+            where=unwrap_generic_value(where_stms)
+        )
         fields = self._get_fields_for_answers(answers)
         result = self.sg.query_json(fields)
         items = self._parse_items_from_json(result)
@@ -877,7 +914,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             first=(
                 limit if limit else sys.maxsize
             ),  # if not limit, we fetch all possible
-            where=where_stms,
+            where=unwrap_generic_value(where_stms),
         )
         fields = self._get_fields_for_responses(responses)
         result = self.sg.query_json(fields)
@@ -890,7 +927,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         unique_condition_ids: list[HexBytes] = list(
             set(sum([u.position.conditionIds for u in user_positions], []))
         )
-        markets = self.get_omen_binary_markets(
+        markets = self.get_omen_markets(
             limit=sys.maxsize, condition_id_in=unique_condition_ids
         )
         return markets
@@ -900,7 +937,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
     ) -> OmenMarket:
         """Markets and user positions are uniquely connected via condition_ids"""
         condition_ids = user_position.position.conditionIds
-        markets = self.get_omen_binary_markets(limit=1, condition_id_in=condition_ids)
+        markets = self.get_omen_markets(limit=1, condition_id_in=condition_ids)
         if len(markets) != 1:
             raise ValueError(
                 f"Incorrect number of markets fetched {len(markets)}, expected 1."
@@ -936,7 +973,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         prediction_added = (
             self.omen_agent_result_mapping_subgraph.Query.predictionAddeds(
-                where=where_stms,
+                where=unwrap_generic_value(where_stms),
                 orderBy="blockNumber",
                 orderDirection="asc",
             )

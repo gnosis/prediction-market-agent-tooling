@@ -1,17 +1,22 @@
 import typing as t
-from math import ceil
+from datetime import timedelta
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Mana, Probability, mana_type
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    OutcomeStr,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import BetAmount, Currency
 from prediction_market_agent_tooling.markets.manifold.api import (
     get_authenticated_user,
+    get_manifold_bets,
     get_manifold_binary_markets,
     get_manifold_market,
     place_bet,
@@ -19,11 +24,9 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     MANIFOLD_BASE_URL,
     FullManifoldMarket,
+    usd_to_mana,
 )
-from prediction_market_agent_tooling.tools.betting_strategies.minimum_bet_to_win import (
-    minimum_bet_to_win,
-)
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 
 class ManifoldAgentMarket(AgentMarket):
@@ -31,7 +34,6 @@ class ManifoldAgentMarket(AgentMarket):
     Manifold's market class that can be used by agents to make predictions.
     """
 
-    currency: t.ClassVar[Currency] = Currency.Mana
     base_url: t.ClassVar[str] = MANIFOLD_BASE_URL
 
     # Manifold has additional fees than `platform_absolute`, but they don't expose them in the API before placing the bet, see https://docs.manifold.markets/api.
@@ -41,27 +43,34 @@ class ManifoldAgentMarket(AgentMarket):
         absolute=0.25,  # For doing trades via API.
     )
 
+    # We restrict Manifold to binary markets, hence current_p_yes always defined.
+    current_p_yes: Probability
+
     def get_last_trade_p_yes(self) -> Probability:
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
         return self.current_p_yes
 
-    def get_last_trade_p_no(self) -> Probability:
-        """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
-        return self.current_p_no
+    def get_tiny_bet_amount(self) -> CollateralToken:
+        return CollateralToken(1)
 
-    @classmethod
-    def get_tiny_bet_amount(cls) -> BetAmount:
-        return BetAmount(amount=1, currency=cls.currency)
+    def have_bet_on_market_since(self, keys: APIKeys, since: timedelta) -> bool:
+        start_time = utcnow() - since
+        recently_betted_questions = set(
+            get_manifold_market(b.contractId).question
+            for b in get_manifold_bets(
+                user_id=get_authenticated_user(
+                    keys.manifold_api_key.get_secret_value()
+                ).id,
+                start_time=start_time,
+                end_time=None,
+            )
+        )
+        return self.question in recently_betted_questions
 
-    def get_minimum_bet_to_win(self, answer: bool, amount_to_win: float) -> Mana:
-        # Manifold lowest bet is 1 Mana, so we need to ceil the result.
-        return mana_type(ceil(minimum_bet_to_win(answer, amount_to_win, self)))
-
-    def place_bet(self, outcome: bool, amount: BetAmount) -> str:
-        if amount.currency != self.currency:
-            raise ValueError(f"Manifold bets are made in Mana. Got {amount.currency}.")
+    def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
+        self.get_usd_in_token(amount)
         bet = place_bet(
-            amount=Mana(amount.amount),
+            amount=usd_to_mana(amount),
             market_id=self.id,
             outcome=outcome,
             manifold_api_key=APIKeys().manifold_api_key,
@@ -70,6 +79,15 @@ class ManifoldAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model(model: FullManifoldMarket) -> "ManifoldAgentMarket":
+        outcome_token_pool = {o: model.pool.size_for_outcome(o) for o in model.outcomes}
+
+        prob_map = AgentMarket.build_probability_map(
+            outcomes=list(outcome_token_pool.keys()),
+            outcome_token_amounts=list(
+                [i.as_outcome_wei for i in outcome_token_pool.values()]
+            ),
+        )
+
         return ManifoldAgentMarket(
             id=model.id,
             question=model.question,
@@ -81,18 +99,18 @@ class ManifoldAgentMarket(AgentMarket):
             current_p_yes=model.probability,
             url=model.url,
             volume=model.volume,
-            outcome_token_pool={
-                o: model.pool.size_for_outcome(o) for o in model.outcomes
-            },
+            outcome_token_pool=outcome_token_pool,
+            probabilities=prob_map,
         )
 
     @staticmethod
-    def get_binary_markets(
+    def get_markets(
         limit: int,
         sort_by: SortBy,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        fetch_categorical_markets: bool = False,
     ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None
         if sort_by == SortBy.CLOSING_SOONEST:

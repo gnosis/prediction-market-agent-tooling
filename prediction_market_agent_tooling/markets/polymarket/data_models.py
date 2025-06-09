@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import USDC, Probability, usdc_type
+from prediction_market_agent_tooling.gtypes import USDC, OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_FALSE_OUTCOME,
@@ -22,7 +22,7 @@ class PolymarketRewards(BaseModel):
 
 class PolymarketToken(BaseModel):
     token_id: str
-    outcome: str
+    outcome: OutcomeStr
     winner: bool
 
 
@@ -69,17 +69,21 @@ class PolymarketMarket(BaseModel):
     def resolution(self) -> Resolution | None:
         winner_tokens = [token for token in self.tokens if token.winner]
         if len(winner_tokens) == 0:
-            return None
+            return Resolution(outcome=None, invalid=True)
         elif (
             len(winner_tokens) == 1
             and winner_tokens[0].outcome == POLYMARKET_TRUE_OUTCOME
         ):
-            return Resolution.YES
+            return Resolution(
+                outcome=OutcomeStr(POLYMARKET_TRUE_OUTCOME), invalid=False
+            )
         elif (
             len(winner_tokens) == 1
             and winner_tokens[0].outcome == POLYMARKET_FALSE_OUTCOME
         ):
-            return Resolution.NO
+            return Resolution(
+                outcome=OutcomeStr(POLYMARKET_FALSE_OUTCOME), invalid=False
+            )
         else:
             raise ValueError(
                 f"Should not happen, invalid winner tokens: {winner_tokens}"
@@ -111,7 +115,7 @@ class PolymarketPriceResponse(BaseModel):
 
     @property
     def price_dec(self) -> USDC:
-        return usdc_type(self.price)
+        return USDC(self.price)
 
 
 class Prices(BaseModel):

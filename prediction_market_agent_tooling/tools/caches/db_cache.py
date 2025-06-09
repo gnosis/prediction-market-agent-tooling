@@ -3,6 +3,7 @@ import inspect
 import json
 from datetime import timedelta
 from functools import wraps
+from types import UnionType
 from typing import (
     Any,
     Callable,
@@ -14,9 +15,11 @@ from typing import (
     overload,
 )
 
+import psycopg2
 from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.exc import DataError
 from sqlmodel import Field, SQLModel, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -24,6 +27,8 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 from prediction_market_agent_tooling.tools.utils import utcnow
+
+DB_CACHE_LOG_PREFIX = "[db-cache]"
 
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
 
@@ -50,6 +55,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
+    log_error_on_unsavable_data: bool = True,
 ) -> Callable[[FunctionT], FunctionT]:
     ...
 
@@ -63,6 +69,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
+    log_error_on_unsavable_data: bool = True,
 ) -> FunctionT:
     ...
 
@@ -75,6 +82,7 @@ def db_cache(
     api_keys: APIKeys | None = None,
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
+    log_error_on_unsavable_data: bool = True,
 ) -> FunctionT | Callable[[FunctionT], FunctionT]:
     if func is None:
         # Ugly Pythonic way to support this decorator as `@postgres_cache` but also `@postgres_cache(max_age=timedelta(days=3))`
@@ -86,6 +94,7 @@ def db_cache(
                 api_keys=api_keys,
                 ignore_args=ignore_args,
                 ignore_arg_types=ignore_arg_types,
+                log_error_on_unsavable_data=log_error_on_unsavable_data,
             )
 
         return decorator
@@ -166,7 +175,7 @@ def db_cache(
         if cached_result:
             logger.info(
                 # Keep the special [case-hit] identifier so we can easily track it in GCP.
-                f"[cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
+                f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
             )
             if is_pydantic_model:
                 # If the output contains any Pydantic models, we need to initialise them.
@@ -177,7 +186,7 @@ def db_cache(
                 except ValueError as e:
                     # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
                     logger.warning(
-                        f"Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
+                        f"{DB_CACHE_LOG_PREFIX} [cache-miss] Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
                     )
                     cached_result = None
             else:
@@ -187,7 +196,7 @@ def db_cache(
         computed_result = func(*args, **kwargs)
         # Keep the special [case-miss] identifier so we can easily track it in GCP.
         logger.info(
-            f"[cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
+            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
         )
 
         # If postgres access was specified, save it.
@@ -200,12 +209,24 @@ def db_cache(
                 result=computed_result,
                 created_at=utcnow(),
             )
-            with DBManager(
-                api_keys.sqlalchemy_db_url.get_secret_value()
-            ).get_session() as session:
-                logger.info(f"Saving {cache_entry} into database.")
-                session.add(cache_entry)
-                session.commit()
+            # Do not raise an exception if saving to the database fails, just log it and let the agent continue the work.
+            try:
+                with DBManager(
+                    api_keys.sqlalchemy_db_url.get_secret_value()
+                ).get_session() as session:
+                    logger.info(
+                        f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database."
+                    )
+                    session.add(cache_entry)
+                    session.commit()
+            except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
+                (logger.error if log_error_on_unsavable_data else logger.warning)(
+                    f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring, because: {e}"
+                )
+            except Exception:
+                logger.exception(
+                    f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring."
+                )
 
         return computed_result
 
@@ -260,6 +281,17 @@ def convert_cached_output_to_pydantic(return_type: Any, data: Any) -> Any:
                 ): convert_cached_output_to_pydantic(value_type, v)
                 for k, v in data.items()
             }
+        # If the origin is a union and one of the unions is basemodel, convert it to it.
+        elif (
+            origin is UnionType
+            and (
+                base_model_from_args := next(
+                    (x for x in args if issubclass(x, BaseModel)), None
+                )
+            )
+            is not None
+        ):
+            return base_model_from_args.model_validate(data)
         else:
             # If the origin is not a dictionary, return the data as is
             return data

@@ -47,7 +47,7 @@ def execute_prophet_research(
 
 
 def execute_prophet_predict(
-    include_reasoning: bool = False
+    include_reasoning: bool = False,
 ) -> partial[PredictionProphet]:
     return partial(make_prediction, include_reasoning=include_reasoning)
 

@@ -6,7 +6,7 @@ from web3 import Web3
 from web3.constants import ADDRESS_ZERO, HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import USD, PrivateKey
+from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, PrivateKey
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
@@ -118,7 +118,8 @@ def test_add_prediction_with_safe(
     dummy_market_address = Web3.to_checksum_address(ADDRESS_ZERO)
     p = ContractPrediction(
         tx_hashes=[HexBytes(dummy_transaction_hash)],
-        estimated_probability_bps=5454,
+        outcome_hashes=[ContractPrediction.hash_outcome(OutcomeStr("test"))],
+        estimated_probabilities_bps=[5454],
         ipfs_hash=HexBytes(HASH_ZERO),
         publisher=test_keys.bet_from_address,
     )

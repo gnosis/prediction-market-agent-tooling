@@ -13,6 +13,7 @@ from prediction_market_agent_tooling.gtypes import (
     CollateralToken,
     HexAddress,
     HexStr,
+    OutcomeStr,
     OutcomeToken,
     OutcomeWei,
     private_key_type,
@@ -524,7 +525,8 @@ def test_add_predictions(local_web3: Web3, test_keys: APIKeys, ipfs_hash: str) -
     )
     p = ContractPrediction(
         tx_hashes=[HexBytes(dummy_transaction_hash)],
-        estimated_probability_bps=5454,
+        outcome_hashes=[ContractPrediction.hash_outcome(OutcomeStr("test"))],
+        estimated_probabilities_bps=[5454],
         ipfs_hash=HexBytes(ipfs_hash),
         publisher=test_keys.bet_from_address,
     )

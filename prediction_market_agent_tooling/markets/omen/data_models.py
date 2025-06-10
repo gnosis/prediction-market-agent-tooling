@@ -1,5 +1,6 @@
 import typing as t
 
+from eth_utils import keccak, to_bytes
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from web3 import Web3
 
@@ -826,18 +827,22 @@ class CreatedMarket(BaseModel):
 
 class ContractPrediction(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
+
     publisher: str = Field(..., alias="publisherAddress")
     ipfs_hash: HexBytes = Field(..., alias="ipfsHash")
     tx_hashes: list[HexBytes] = Field(..., alias="txHashes")
-    estimated_probability_bps: int = Field(..., alias="estimatedProbabilityBps")
+    outcome_hashes: list[HexBytes] = Field(..., alias="outcomeHashes")
+    estimated_probabilities_bps: list[int] = Field(
+        ..., alias="estimatedProbabilitiesBps"
+    )
 
-    @property
-    def estimated_probability(self) -> Probability:
-        return Probability(self.estimated_probability_bps / BPS_CONSTANT)
+    @staticmethod
+    def hash_outcome(outcome: OutcomeStr) -> HexBytes:
+        return HexBytes(keccak(to_bytes(text=outcome)))
 
-    @property
-    def boolean_outcome(self) -> bool:
-        return self.estimated_probability > 0.5
+    def estimated_probability_of_outcome(self, outcome: OutcomeStr) -> Probability:
+        index = self.outcome_hashes.index(self.hash_outcome(outcome))
+        return Probability(self.estimated_probabilities_bps[index] / BPS_CONSTANT)
 
     @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
     @property
@@ -850,7 +855,8 @@ class ContractPrediction(BaseModel):
             publisher=values[0],
             ipfs_hash=values[1],
             tx_hashes=values[2],
-            estimated_probability_bps=values[3],
+            outcome_hashes=values[3],
+            estimated_probabilities_bps=values[4],
         )
 
 

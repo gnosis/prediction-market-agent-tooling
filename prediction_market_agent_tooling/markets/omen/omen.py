@@ -50,6 +50,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OMEN_DEFAULT_MARKET_FEE_PERC,
     REALITY_DEFAULT_FINALIZATION_TIMEOUT,
     Arbitrator,
+    OmenAgentResultMappingContract,
     OmenConditionalTokenContract,
     OmenFixedProductMarketMakerContract,
     OmenFixedProductMarketMakerFactoryContract,
@@ -436,10 +437,12 @@ class OmenAgentMarket(AgentMarket):
         web3: Web3 | None = None,
     ) -> None:
         return store_trades(
+            contract=OmenAgentResultMappingContract(),
             market_id=self.id,
             traded_market=traded_market,
             keys=keys,
             agent_name=agent_name,
+            web3=web3,
         )
 
     @staticmethod

@@ -10,6 +10,9 @@ from prediction_market_agent_tooling.gtypes import (
     CollateralToken,
     private_key_type,
 )
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    METRI_SUPER_GROUP_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     WrappedxDaiContract,
     sDaiContract,
@@ -88,9 +91,7 @@ def test_init_erc4626_erc20_contract_throws_on_unknown_contract(
             True,
         ),
         (
-            Web3.to_checksum_address(
-                "0x7147a7405fcfe5cfa30c6d5363f9f357a317d082"
-            ),  # Circles ERC20 token
+            METRI_SUPER_GROUP_CONTRACT_ADDRESS,
             "balanceOf",
             ["address"],
             True,

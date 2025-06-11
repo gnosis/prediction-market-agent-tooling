@@ -423,15 +423,15 @@ class DeployablePredictionAgent(DeployableAgent):
         if answer is not None:
             self.verify_answer_outcomes(market=market, answer=answer)
 
-        procesesed_market = (
+        processed_market = (
             ProcessedMarket(answer=answer) if answer is not None else None
         )
 
-        self.update_langfuse_trace_by_processed_market(market_type, procesesed_market)
+        self.update_langfuse_trace_by_processed_market(market_type, processed_market)
         logger.info(
-            f"Processed market {market.question=} from {market.url=} with {procesesed_market=}."
+            f"Processed market {market.question=} from {market.url=} with {processed_market=}."
         )
-        return procesesed_market
+        return processed_market
 
     def after_process_market(
         self,

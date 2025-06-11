@@ -117,8 +117,9 @@ def test_add_prediction_with_safe(
     dummy_transaction_hash = "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"  # web3-private-key-ok
     dummy_market_address = Web3.to_checksum_address(ADDRESS_ZERO)
     p = ContractPrediction(
+        market=dummy_market_address,
         tx_hashes=[HexBytes(dummy_transaction_hash)],
-        outcome_hashes=[ContractPrediction.hash_outcome(OutcomeStr("test"))],
+        outcomes=[OutcomeStr("test")],
         estimated_probabilities_bps=[5454],
         ipfs_hash=HexBytes(HASH_ZERO),
         publisher=test_keys.bet_from_address,

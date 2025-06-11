@@ -29,8 +29,9 @@ def main(
     market_address = Web3.to_checksum_address(api_keys.public_key)
     dummy_transaction_hash = "0x3750ffa211dab39b4d0711eb27b02b56a17fa9d257ee549baa3110725fd1d41b"  # web3-private-key-ok
     contract_prediction = ContractPrediction(
+        market=market_address,
         tx_hashes=[HexBytes(dummy_transaction_hash)],
-        outcome_hashes=[ContractPrediction.hash_outcome(OutcomeStr("test"))],
+        outcomes=[OutcomeStr("test")],
         estimated_probabilities_bps=[5454],
         ipfs_hash=HexBytes(dummy_transaction_hash),
         publisher=api_keys.public_key,

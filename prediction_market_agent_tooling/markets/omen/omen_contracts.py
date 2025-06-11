@@ -827,7 +827,7 @@ class _AgentResultMappingContract(ContractOnGnosisChain):
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../../abis/omen_agentresultmapping.abi.json",
+            "../../abis/agentresultmapping.abi.json",
         )
     )
 

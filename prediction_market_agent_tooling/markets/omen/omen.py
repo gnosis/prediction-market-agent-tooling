@@ -438,7 +438,8 @@ class OmenAgentMarket(AgentMarket):
     ) -> None:
         return store_trades(
             contract=OmenAgentResultMappingContract(),
-            market_id=self.id,
+            market_id=Web3.to_checksum_address(self.id),
+            outcomes=self.outcomes,
             traded_market=traded_market,
             keys=keys,
             agent_name=agent_name,

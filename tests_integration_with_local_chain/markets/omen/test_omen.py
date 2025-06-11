@@ -524,8 +524,9 @@ def test_add_predictions(local_web3: Web3, test_keys: APIKeys, ipfs_hash: str) -
         market_address, web3=local_web3
     )
     p = ContractPrediction(
+        market=market_address,
         tx_hashes=[HexBytes(dummy_transaction_hash)],
-        outcome_hashes=[ContractPrediction.hash_outcome(OutcomeStr("test"))],
+        outcomes=[OutcomeStr("test")],
         estimated_probabilities_bps=[5454],
         ipfs_hash=HexBytes(ipfs_hash),
         publisher=test_keys.bet_from_address,

@@ -1,8 +1,15 @@
+from typing import Sequence
+
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import HexBytes, HexStr
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    HexBytes,
+    HexStr,
+    OutcomeStr,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import ProcessedTradedMarket
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -19,7 +26,8 @@ from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
 
 def store_trades(
     contract: _AgentResultMappingContract,
-    market_id: str,
+    market_id: ChecksumAddress,
+    outcomes: Sequence[OutcomeStr],
     traded_market: ProcessedTradedMarket | None,
     keys: APIKeys,
     agent_name: str,
@@ -33,6 +41,9 @@ def store_trades(
     if not probabilities:
         logger.info("Skipping this since no probabilities available.")
         return None
+
+    if all(outcome not in probabilities for outcome in outcomes):
+        raise ValueError("No of the market's outcomes is in the probabilities.")
 
     reasoning = traded_market.answer.reasoning if traded_market.answer.reasoning else ""
 
@@ -49,21 +60,23 @@ def store_trades(
         HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
     ]
 
+    # Dune dashboard expects the probs to be in the same order as on the market.
     probabilities_converted = [
-        (ContractPrediction.hash_outcome(k), int(v * BPS_CONSTANT))
-        for k, v in probabilities.items()
+        (outcome, int(probabilities.get(outcome, 0) * BPS_CONSTANT))
+        for outcome in outcomes
     ]
 
     prediction = ContractPrediction(
+        market=market_id,
         publisher=keys.bet_from_address,
         ipfs_hash=ipfs_hash_decoded,
         tx_hashes=tx_hashes,
-        outcome_hashes=[x[0] for x in probabilities_converted],
+        outcomes=[x[0] for x in probabilities_converted],
         estimated_probabilities_bps=[x[1] for x in probabilities_converted],
     )
     tx_receipt = contract.add_prediction(
         api_keys=keys,
-        market_address=Web3.to_checksum_address(market_id),
+        market_address=market_id,
         prediction=prediction,
         web3=web3,
     )

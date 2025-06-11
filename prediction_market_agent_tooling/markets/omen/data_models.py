@@ -1,6 +1,5 @@
 import typing as t
 
-from eth_utils import keccak, to_bytes
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from web3 import Web3
 
@@ -828,20 +827,42 @@ class CreatedMarket(BaseModel):
 class ContractPrediction(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    market: str | None = Field(
+        None,
+        alias="marketAddress",
+        description="Market's address. Will be None on older records.",
+    )
     publisher: str = Field(..., alias="publisherAddress")
     ipfs_hash: HexBytes = Field(..., alias="ipfsHash")
     tx_hashes: list[HexBytes] = Field(..., alias="txHashes")
-    outcome_hashes: list[HexBytes] = Field(..., alias="outcomeHashes")
+    outcomes: list[OutcomeStr] = Field(...)
     estimated_probabilities_bps: list[int] = Field(
         ..., alias="estimatedProbabilitiesBps"
     )
 
-    @staticmethod
-    def hash_outcome(outcome: OutcomeStr) -> HexBytes:
-        return HexBytes(keccak(to_bytes(text=outcome)))
+    @model_validator(mode="before")
+    @classmethod
+    def handle_legacy_estimated_probability_bps(
+        cls, values: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        # If 'estimatedProbabilityBps' is present and 'outcomes'/'estimatedProbabilitiesBps' are not,
+        # convert to the new format using "Yes" and "No" outcomes.
+        # This allows for backward compatibility with old contract events.
+        if (
+            "estimatedProbabilityBps" in values
+            and "outcomes" not in values
+            and "estimatedProbabilitiesBps" not in values
+        ):
+            prob_bps = values["estimatedProbabilityBps"]
+            values["outcomes"] = [
+                OMEN_TRUE_OUTCOME,
+                OMEN_FALSE_OUTCOME,
+            ]
+            values["estimatedProbabilitiesBps"] = [prob_bps, BPS_CONSTANT - prob_bps]
+        return values
 
     def estimated_probability_of_outcome(self, outcome: OutcomeStr) -> Probability:
-        index = self.outcome_hashes.index(self.hash_outcome(outcome))
+        index = self.outcomes.index(outcome)
         return Probability(self.estimated_probabilities_bps[index] / BPS_CONSTANT)
 
     @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
@@ -852,11 +873,12 @@ class ContractPrediction(BaseModel):
     @staticmethod
     def from_tuple(values: tuple[t.Any, ...]) -> "ContractPrediction":
         return ContractPrediction(
-            publisher=values[0],
-            ipfs_hash=values[1],
-            tx_hashes=values[2],
-            outcome_hashes=values[3],
-            estimated_probabilities_bps=values[4],
+            market=values[0],
+            publisher=values[1],
+            ipfs_hash=values[2],
+            tx_hashes=values[3],
+            outcomes=values[4],
+            estimated_probabilities_bps=values[5],
         )
 
 

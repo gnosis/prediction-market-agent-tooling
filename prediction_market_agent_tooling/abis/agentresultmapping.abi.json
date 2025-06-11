@@ -27,9 +27,9 @@
       },
       {
         "indexed": false,
-        "internalType": "bytes32[]",
-        "name": "outcomeHashes",
-        "type": "bytes32[]"
+        "internalType": "string[]",
+        "name": "outcomes",
+        "type": "string[]"
       },
       {
         "indexed": false,
@@ -60,6 +60,11 @@
         "components": [
           {
             "internalType": "address",
+            "name": "marketAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
             "name": "publisherAddress",
             "type": "address"
           },
@@ -70,9 +75,9 @@
             "type": "bytes32[]"
           },
           {
-            "internalType": "bytes32[]",
-            "name": "outcomeHashes",
-            "type": "bytes32[]"
+            "internalType": "string[]",
+            "name": "outcomes",
+            "type": "string[]"
           },
           {
             "internalType": "uint16[]",
@@ -101,6 +106,11 @@
         "components": [
           {
             "internalType": "address",
+            "name": "marketAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
             "name": "publisherAddress",
             "type": "address"
           },
@@ -111,9 +121,9 @@
             "type": "bytes32[]"
           },
           {
-            "internalType": "bytes32[]",
-            "name": "outcomeHashes",
-            "type": "bytes32[]"
+            "internalType": "string[]",
+            "name": "outcomes",
+            "type": "string[]"
           },
           {
             "internalType": "uint16[]",
@@ -139,6 +149,11 @@
         "components": [
           {
             "internalType": "address",
+            "name": "marketAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
             "name": "publisherAddress",
             "type": "address"
           },
@@ -149,9 +164,9 @@
             "type": "bytes32[]"
           },
           {
-            "internalType": "bytes32[]",
-            "name": "outcomeHashes",
-            "type": "bytes32[]"
+            "internalType": "string[]",
+            "name": "outcomes",
+            "type": "string[]"
           },
           {
             "internalType": "uint16[]",

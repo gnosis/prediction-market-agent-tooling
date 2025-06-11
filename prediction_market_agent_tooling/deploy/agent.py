@@ -385,6 +385,27 @@ class DeployablePredictionAgent(DeployableAgent):
 
         return self.answer_categorical_market(market)
 
+    def verify_answer_outcomes(
+        self, market: AgentMarket, answer: CategoricalProbabilisticAnswer
+    ) -> None:
+        outcomes_from_prob_map = list(answer.probabilities.keys())
+
+        if any(
+            outcome_from_answer not in market.outcomes
+            for outcome_from_answer in outcomes_from_prob_map
+        ):
+            raise ValueError(
+                f"Some of generated outcomes ({outcomes_from_prob_map=}) in probability map doesn't match with market's outcomes ({market.outcomes=})."
+            )
+
+        if any(
+            market_outcome not in outcomes_from_prob_map
+            for market_outcome in market.outcomes
+        ):
+            logger.warning(
+                f"Some of market's outcomes ({market.outcomes=}) isn't included in the probability map ({outcomes_from_prob_map=})."
+            )
+
     def process_market(
         self,
         market_type: MarketType,
@@ -399,16 +420,18 @@ class DeployablePredictionAgent(DeployableAgent):
         answer = self.build_answer(
             market=market, market_type=market_type, verify_market=verify_market
         )
+        if answer is not None:
+            self.verify_answer_outcomes(market=market, answer=answer)
 
-        processed_market = (
+        procesesed_market = (
             ProcessedMarket(answer=answer) if answer is not None else None
         )
 
-        self.update_langfuse_trace_by_processed_market(market_type, processed_market)
+        self.update_langfuse_trace_by_processed_market(market_type, procesesed_market)
         logger.info(
-            f"Processed market {market.question=} from {market.url=} with {answer=}."
+            f"Processed market {market.question=} from {market.url=} with {procesesed_market=}."
         )
-        return processed_market
+        return procesesed_market
 
     def after_process_market(
         self,

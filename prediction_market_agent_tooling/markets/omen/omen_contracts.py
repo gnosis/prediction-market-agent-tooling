@@ -858,13 +858,13 @@ class _AgentResultMappingContract(ContractOnGnosisChain):
 
 class OmenAgentResultMappingContract(_AgentResultMappingContract):
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x558F29Fd2B1bE04B2fd3FD3C1d9a7238d340F85A"
+        "0x99c43743A2dbd406160CC43cf08113b17178789c"
     )
 
 
 class SeerAgentResultMappingContract(_AgentResultMappingContract):
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x7FCF7f4531723a31B335a67f15eDB870291e2125"
+        "0x1aafdfBD38EE92A4a74A44A1614E00894205074e"
     )
 
 

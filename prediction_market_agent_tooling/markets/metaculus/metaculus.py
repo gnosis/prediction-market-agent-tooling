@@ -5,7 +5,6 @@ from pydantic_core.core_schema import FieldValidationInfo
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -43,13 +42,7 @@ class MetaculusAgentMarket(AgentMarket):
         probs: dict[OutcomeStr, Probability],
         info: FieldValidationInfo,
     ) -> dict[OutcomeStr, Probability]:
-        outcomes: t.Sequence[OutcomeStr] = check_not_none(info.data.get("outcomes"))
-        # We don't check for outcomes match because Metaculus has no filled outcomes.
-        total = float(sum(probs.values()))
-        if not 0.999 <= total <= 1.001:
-            # We simply log a warning because for some use-cases (e.g. existing positions), the
-            # markets might be already closed hence no reliable outcome token prices exist anymore.
-            logger.warning(f"Probabilities for market {info.data=} do not sum to 1.")
+        # We don't check for outcomes match here because Metaculus has no filled outcomes.
         return probs
 
     @staticmethod

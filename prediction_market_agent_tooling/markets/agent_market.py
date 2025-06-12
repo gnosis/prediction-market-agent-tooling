@@ -21,7 +21,6 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeWei,
     Probability,
 )
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
     Bet,

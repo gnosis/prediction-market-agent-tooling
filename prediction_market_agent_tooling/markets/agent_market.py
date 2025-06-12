@@ -93,11 +93,6 @@ class AgentMarket(BaseModel):
         outcomes: t.Sequence[OutcomeStr] = check_not_none(info.data.get("outcomes"))
         if set(probs.keys()) != set(outcomes):
             raise ValueError("Keys of `probabilities` must match `outcomes` exactly.")
-        total = float(sum(probs.values()))
-        if not 0.999 <= total <= 1.001:
-            # We simply log a warning because for some use-cases (e.g. existing positions), the
-            # markets might be already closed hence no reliable outcome token prices exist anymore.
-            logger.warning(f"Probabilities for market {info.data=} do not sum to 1.")
         return probs
 
     @field_validator("outcome_token_pool")

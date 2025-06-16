@@ -33,6 +33,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     format_realitio_question,
 )
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    METRI_SUPER_GROUP_CONTRACT_ADDRESS,
     SDAI_CONTRACT_ADDRESS,
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
@@ -433,7 +434,7 @@ class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):
 
 class MetriSuperGroup(ContractERC20OnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x7147A7405fCFe5CFa30c6d5363f9f357a317d082"
+        METRI_SUPER_GROUP_CONTRACT_ADDRESS
     )
 
 

@@ -32,6 +32,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     COWContract,
     EUReContract,
     GNOContract,
+    MetriSuperGroup,
     OmenThumbnailMapping,
     SAFEContract,
     WETHContract,
@@ -60,6 +61,7 @@ SAFE_COLLATERAL_TOKENS = (
     EUReContract(),
     SAFEContract(),
     COWContract(),
+    MetriSuperGroup(),
 )
 SAFE_COLLATERAL_TOKENS_ADDRESSES = tuple(
     contract.address for contract in SAFE_COLLATERAL_TOKENS

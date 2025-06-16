@@ -822,18 +822,14 @@ class OmenRealitioContract(ContractOnGnosisChain):
         return is_pending_arbitration
 
 
-class OmenAgentResultMappingContract(ContractOnGnosisChain):
+class _AgentResultMappingContract(ContractOnGnosisChain):
     # Contract ABI taken from built https://github.com/gnosis/labs-contracts.
 
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "../../abis/omen_agentresultmapping.abi.json",
+            "../../abis/agentresultmapping.abi.json",
         )
-    )
-
-    address: ChecksumAddress = Web3.to_checksum_address(
-        "0x260E1077dEA98e738324A6cEfB0EE9A272eD471a"
     )
 
     def get_predictions(
@@ -859,6 +855,18 @@ class OmenAgentResultMappingContract(ContractOnGnosisChain):
             function_params=[market_address, prediction.model_dump(by_alias=True)],
             web3=web3,
         )
+
+
+class OmenAgentResultMappingContract(_AgentResultMappingContract):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x99c43743A2dbd406160CC43cf08113b17178789c"
+    )
+
+
+class SeerAgentResultMappingContract(_AgentResultMappingContract):
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x1aafdfBD38EE92A4a74A44A1614E00894205074e"
+    )
 
 
 class OmenThumbnailMapping(ContractOnGnosisChain):

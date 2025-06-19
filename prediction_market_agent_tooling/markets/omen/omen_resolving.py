@@ -284,6 +284,9 @@ def omen_resolve_market_tx(
             logger.warning(
                 f"Market {market.url=} not resolved, because `condition not prepared or found`, skipping."
             )
+        elif "payout denominator already set" in str(e):
+            # We can just skip, it's been resolved already.
+            logger.info(f"Market {market.url=} is already resolved.")
         else:
             raise
 

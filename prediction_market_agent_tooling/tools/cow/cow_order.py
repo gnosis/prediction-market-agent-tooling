@@ -205,6 +205,7 @@ def swap_tokens_waiting(
     env: Envs = "prod",
     web3: Web3 | None = None,
     wait_order_complete: bool = True,
+    timeout: timedelta = timedelta(seconds=120),
 ) -> tuple[OrderMetaData | None, CompletedOrder]:
     # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
     return asyncio.run(
@@ -215,6 +216,7 @@ def swap_tokens_waiting(
             api_keys,
             chain,
             env,
+            timeout=timeout,
             web3=web3,
             wait_order_complete=wait_order_complete,
         )
@@ -229,6 +231,7 @@ async def place_swap_order(
     chain: Chain,
     env: Envs,
     slippage_tolerance: float = 0.01,
+    valid_to: int | None = None,
 ) -> CompletedOrder:
     account = api_keys.get_account()
     safe_address = api_keys.safe_address_checksum
@@ -242,6 +245,7 @@ async def place_swap_order(
         chain=chain,
         env=env,
         slippage_tolerance=slippage_tolerance,
+        valid_to=valid_to,
     )
     logger.info(f"Order created: {order}")
 
@@ -299,6 +303,7 @@ async def swap_tokens_waiting_async(
     handle_allowance(
         api_keys=api_keys, sell_token=sell_token, amount_wei=amount_wei, web3=web3
     )
+    valid_to = (utcnow() + timeout).timestamp()
     order = await place_swap_order(
         api_keys=api_keys,
         amount_wei=amount_wei,
@@ -307,6 +312,7 @@ async def swap_tokens_waiting_async(
         chain=chain,
         env=env,
         slippage_tolerance=slippage_tolerance,
+        valid_to=int(valid_to),
     )
     if wait_order_complete:
         order_metadata = await wait_for_order_completion(order=order, timeout=timeout)

@@ -2,6 +2,7 @@ import asyncio
 import typing as t
 from datetime import timedelta
 
+from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.types import TxReceipt
@@ -57,7 +58,6 @@ from prediction_market_agent_tooling.tools.contract import (
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
-    cancel_order,
     get_buy_token_amount_else_raise,
     get_orders_by_owner,
     get_trades_by_owner,
@@ -469,26 +469,29 @@ class SeerAgentMarket(AgentMarket):
         Returns:
             Transaction hash of the successful swap
         """
-        _, order = swap_tokens_waiting(
-            amount_wei=amount_wei,
-            sell_token=sell_token,
-            buy_token=buy_token,
-            api_keys=api_keys,
-            web3=web3,
-            wait_order_complete=False,
-        )
 
         try:
+            _, order = swap_tokens_waiting(
+                amount_wei=amount_wei,
+                sell_token=sell_token,
+                buy_token=buy_token,
+                api_keys=api_keys,
+                web3=web3,
+                wait_order_complete=False,
+                timeout=timedelta(minutes=2),
+            )
             order_metadata = asyncio.run(wait_for_order_completion(order=order))
             logger.debug(
                 f"Swapped {sell_token} for {buy_token}. Order details {order_metadata}"
             )
             return order_metadata.uid.root
 
-        except TimeoutError:
-            # Since timeout occurred, we need to cancel the order before trying to swap again.
-            asyncio.run(cancel_order(order_uids=[order.uid.root], api_keys=api_keys))
-            logger.info("TimeoutError. Trying to swap directly on Swapr pools.")
+        except (TimeoutError, UnexpectedResponseError) as e2:
+            # Note that we don't need to cancel the order because we are setting
+            # timeout and valid_to in the order, thus the order simply expires.
+            logger.info(
+                f"Exception occured when swapping tokens via Cowswap, doing swap via pools. {e2}"
+            )
 
             tx_receipt = SwapPoolHandler(
                 api_keys=api_keys,

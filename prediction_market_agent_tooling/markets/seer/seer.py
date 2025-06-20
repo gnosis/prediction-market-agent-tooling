@@ -2,7 +2,6 @@ import asyncio
 import typing as t
 from datetime import timedelta
 
-from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.types import TxReceipt
@@ -486,11 +485,11 @@ class SeerAgentMarket(AgentMarket):
             )
             return order_metadata.uid.root
 
-        except (TimeoutError, UnexpectedResponseError) as e2:
+        except Exception as e:
             # Note that we don't need to cancel the order because we are setting
             # timeout and valid_to in the order, thus the order simply expires.
             logger.info(
-                f"Exception occured when swapping tokens via Cowswap, doing swap via pools. {e2}"
+                f"Exception occured when swapping tokens via Cowswap, doing swap via pools. {e}"
             )
 
             tx_receipt = SwapPoolHandler(

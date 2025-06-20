@@ -1,8 +1,6 @@
 from web3 import Web3
 
-from prediction_market_agent_tooling.tools.cow.cow_order import (
-    get_orders_by_owner,
-)
+from prediction_market_agent_tooling.tools.cow.cow_order import get_orders_by_owner
 
 
 def test_orders_by_owner() -> None:

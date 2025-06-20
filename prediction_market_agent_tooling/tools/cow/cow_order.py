@@ -333,6 +333,7 @@ async def sign_safe_cow_swap(
 ) -> None:
     order_book_api = get_order_book_api(env, chain)
     posted_order = await order_book_api.get_order_by_uid(order.uid)
+
     CowGPv2SettlementContract(
         address=Web3.to_checksum_address(
             check_not_none(posted_order.settlementContract).root

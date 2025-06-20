@@ -3,7 +3,7 @@ import os
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ABI, HexBytes
+from prediction_market_agent_tooling.gtypes import ABI, ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.tools.contract import (
     ContractOnGnosisChain,
     abi_field_validator,
@@ -17,6 +17,10 @@ class CowGPv2SettlementContract(ContractOnGnosisChain):
             os.path.dirname(os.path.realpath(__file__)),
             "../../abis/gvp2_settlement.abi.json",
         )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
     )
 
     def setPreSignature(

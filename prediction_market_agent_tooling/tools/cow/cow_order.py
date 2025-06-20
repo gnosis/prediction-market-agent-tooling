@@ -55,7 +55,7 @@ from prediction_market_agent_tooling.markets.omen.cow_contracts import (
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.cow.models import MinimalisticToken, Order
-from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class OrderStatusError(Exception):
@@ -334,11 +334,7 @@ async def sign_safe_cow_swap(
     order_book_api = get_order_book_api(env, chain)
     posted_order = await order_book_api.get_order_by_uid(order.uid)
 
-    CowGPv2SettlementContract(
-        address=Web3.to_checksum_address(
-            check_not_none(posted_order.settlementContract).root
-        )
-    ).setPreSignature(
+    CowGPv2SettlementContract().setPreSignature(
         api_keys,
         HexBytes(posted_order.uid.root),
         True,

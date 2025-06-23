@@ -14,13 +14,13 @@ class QuestionType(str, Enum):
 class AggregationItem(BaseModel):
     start_time: DatetimeUTC
     end_time: DatetimeUTC | None
-    forecast_values: list[float] | None
+    forecast_values: list[float] | None = None
     forecaster_count: int
     interval_lower_bounds: list[float] | None
     centers: list[float] | None
     interval_upper_bounds: list[float] | None
-    means: list[float] | None
-    histogram: list[list[float]] | None
+    means: list[float] | None = None
+    histogram: list[list[float]] | None = None
 
 
 class Aggregation(BaseModel):

@@ -23,6 +23,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
     ResolvedBet,
 )
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
@@ -37,8 +41,6 @@ from prediction_market_agent_tooling.tools.utils import (
     utcnow,
 )
 
-OMEN_TRUE_OUTCOME = OutcomeStr("Yes")
-OMEN_FALSE_OUTCOME = OutcomeStr("No")
 OMEN_BINARY_MARKET_OUTCOMES: t.Sequence[OutcomeStr] = [
     OMEN_TRUE_OUTCOME,
     OMEN_FALSE_OUTCOME,

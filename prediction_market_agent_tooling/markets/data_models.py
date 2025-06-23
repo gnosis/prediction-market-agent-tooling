@@ -15,7 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
-from prediction_market_agent_tooling.markets.omen.omen import (
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
 )

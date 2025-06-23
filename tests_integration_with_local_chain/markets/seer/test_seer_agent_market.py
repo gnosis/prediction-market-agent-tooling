@@ -34,8 +34,8 @@ def test_seer_place_bet(
         must_have_prices=False,
     )
     agent_market = check_not_none(agent_market)
-    amount = USD(1.0)
-    # ToDo - Mock cowpy
+    amount = USD(10.0)
+
     with pytest.raises(Exception) as e:
         # We expect an exception from Cow since test accounts don't have enough funds.
         agent_market.place_bet(
@@ -46,7 +46,7 @@ def test_seer_place_bet(
             web3=local_web3,
         )
     # trick to get the wrapped exception from tenacity
-    exception_message = e.value.last_attempt.exception().message  # type: ignore
+    exception_message = e.message  # type: ignore
     assert (
         "InsufficientBalance" in exception_message
         or f"Balance 0 not enough for bet size {amount}" in exception_message
@@ -82,8 +82,6 @@ def test_seer_place_bet_via_pools(
     ), patch(
         "prediction_market_agent_tooling.markets.seer.seer.wait_for_order_completion",
         side_effect=TimeoutError("Mocked timeout error"),
-    ), patch(
-        "prediction_market_agent_tooling.markets.seer.seer.cancel_order"
     ):
         agent_market.place_bet(
             outcome=outcome,

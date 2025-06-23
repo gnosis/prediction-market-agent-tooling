@@ -2,8 +2,8 @@ import asyncio
 import typing as t
 from datetime import timedelta
 
+from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
-from tenacity import RetryError
 from web3 import Web3
 from web3.types import TxReceipt
 
@@ -486,9 +486,9 @@ class SeerAgentMarket(AgentMarket):
             )
             return order_metadata.uid.root
 
-        except RetryError as e:
+        except (UnexpectedResponseError, TimeoutError) as e:
             # We don't retry if not enough balance.
-            if "InsufficientBalance" in e.last_attempt.exception().message:
+            if "InsufficientBalance" in e.message:
                 raise e
             # Note that we don't need to cancel the order because we are setting
             # timeout and valid_to in the order, thus the order simply expires.

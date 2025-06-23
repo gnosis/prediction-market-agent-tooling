@@ -191,6 +191,7 @@ def handle_allowance(
 
 
 @tenacity.retry(
+    reraise=True,
     stop=stop_after_attempt(3),
     wait=wait_fixed(1),
     retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),

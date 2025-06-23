@@ -373,7 +373,8 @@ class DeployablePredictionAgent(DeployableAgent):
                 binary_answer = self.answer_binary_market(market)
                 return (
                     CategoricalProbabilisticAnswer.from_probabilistic_answer(
-                        binary_answer
+                        binary_answer,
+                        market.outcomes,
                     )
                     if binary_answer is not None
                     else None

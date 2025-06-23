@@ -488,7 +488,7 @@ class SeerAgentMarket(AgentMarket):
 
         except (UnexpectedResponseError, TimeoutError) as e:
             # We don't retry if not enough balance.
-            if "InsufficientBalance" in e.message:
+            if "InsufficientBalance" in str(e):
                 raise e
             # Note that we don't need to cancel the order because we are setting
             # timeout and valid_to in the order, thus the order simply expires.

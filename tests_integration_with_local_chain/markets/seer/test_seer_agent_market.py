@@ -42,11 +42,11 @@ def test_seer_place_bet(
             api_keys=test_keys,
             outcome=agent_market.outcomes[0],
             amount=amount,
-            auto_deposit=True,
+            auto_deposit=False,
             web3=local_web3,
         )
     # trick to get the wrapped exception from tenacity
-    exception_message = e.message  # type: ignore
+    exception_message = str(e)  # type: ignore
     assert (
         "InsufficientBalance" in exception_message
         or f"Balance 0 not enough for bet size {amount}" in exception_message

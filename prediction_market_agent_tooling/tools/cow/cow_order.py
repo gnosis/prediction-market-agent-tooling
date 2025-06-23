@@ -55,6 +55,7 @@ from prediction_market_agent_tooling.markets.omen.cow_contracts import (
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.cow.models import MinimalisticToken, Order
+from prediction_market_agent_tooling.tools.cow.semaphore import postgres_rate_limited
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 
@@ -190,6 +191,9 @@ def handle_allowance(
         )
 
 
+@postgres_rate_limited(
+    api_keys=APIKeys(), rate_id="swap_tokens_waiting", interval_seconds=60.0
+)
 @tenacity.retry(
     reraise=True,
     stop=stop_after_attempt(3),

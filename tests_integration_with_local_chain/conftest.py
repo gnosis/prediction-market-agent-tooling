@@ -64,7 +64,9 @@ def eoa_accounts(local_web3: Web3) -> list[TestAccount]:
     # legacy transactions)
     # For ex, see https://gnosis.blockscout.com/address/0x70997970C51812dc3A010C7d01b50e0d17dc79C8?tab=contract_code
     # This account corresponds to foundry account # 1
-    return keep_only_eoa_accounts(ape_accounts.test_accounts, local_web3)
+    # return keep_only_eoa_accounts(ape_accounts.test_accounts, local_web3)
+    # ToDo make sure this is OK
+    return ape_accounts.test_accounts
 
 
 def keep_only_eoa_accounts(

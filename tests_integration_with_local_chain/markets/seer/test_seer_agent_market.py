@@ -35,6 +35,7 @@ def test_seer_place_bet(
     )
     agent_market = check_not_none(agent_market)
     amount = USD(1.0)
+    # ToDo - Mock cowpy
     with pytest.raises(Exception) as e:
         # We expect an exception from Cow since test accounts don't have enough funds.
         agent_market.place_bet(

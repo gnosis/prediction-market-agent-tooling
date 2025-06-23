@@ -23,6 +23,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
     ResolvedBet,
 )
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
@@ -37,8 +41,6 @@ from prediction_market_agent_tooling.tools.utils import (
     utcnow,
 )
 
-OMEN_TRUE_OUTCOME = OutcomeStr("Yes")
-OMEN_FALSE_OUTCOME = OutcomeStr("No")
 OMEN_BINARY_MARKET_OUTCOMES: t.Sequence[OutcomeStr] = [
     OMEN_TRUE_OUTCOME,
     OMEN_FALSE_OUTCOME,
@@ -826,18 +828,44 @@ class CreatedMarket(BaseModel):
 
 class ContractPrediction(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
+
+    market: str | None = Field(
+        None,
+        alias="marketAddress",
+        description="Market's address. Will be None on older records.",
+    )
     publisher: str = Field(..., alias="publisherAddress")
     ipfs_hash: HexBytes = Field(..., alias="ipfsHash")
     tx_hashes: list[HexBytes] = Field(..., alias="txHashes")
-    estimated_probability_bps: int = Field(..., alias="estimatedProbabilityBps")
+    outcomes: list[OutcomeStr] = Field(...)
+    estimated_probabilities_bps: list[int] = Field(
+        ..., alias="estimatedProbabilitiesBps"
+    )
 
-    @property
-    def estimated_probability(self) -> Probability:
-        return Probability(self.estimated_probability_bps / BPS_CONSTANT)
+    @model_validator(mode="before")
+    @classmethod
+    def handle_legacy_estimated_probability_bps(
+        cls, values: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        # If 'estimatedProbabilityBps' is present and 'outcomes'/'estimatedProbabilitiesBps' are not,
+        # convert to the new format using "Yes" and "No" outcomes.
+        # This allows for backward compatibility with old contract events.
+        if (
+            "estimatedProbabilityBps" in values
+            and "outcomes" not in values
+            and "estimatedProbabilitiesBps" not in values
+        ):
+            prob_bps = values["estimatedProbabilityBps"]
+            values["outcomes"] = [
+                OMEN_TRUE_OUTCOME,
+                OMEN_FALSE_OUTCOME,
+            ]
+            values["estimatedProbabilitiesBps"] = [prob_bps, BPS_CONSTANT - prob_bps]
+        return values
 
-    @property
-    def boolean_outcome(self) -> bool:
-        return self.estimated_probability > 0.5
+    def estimated_probability_of_outcome(self, outcome: OutcomeStr) -> Probability:
+        index = self.outcomes.index(outcome)
+        return Probability(self.estimated_probabilities_bps[index] / BPS_CONSTANT)
 
     @computed_field  # type: ignore[prop-decorator] # Mypy issue: https://github.com/python/mypy/issues/14461
     @property
@@ -847,10 +875,12 @@ class ContractPrediction(BaseModel):
     @staticmethod
     def from_tuple(values: tuple[t.Any, ...]) -> "ContractPrediction":
         return ContractPrediction(
-            publisher=values[0],
-            ipfs_hash=values[1],
-            tx_hashes=values[2],
-            estimated_probability_bps=values[3],
+            market=values[0],
+            publisher=values[1],
+            ipfs_hash=values[2],
+            tx_hashes=values[3],
+            outcomes=values[4],
+            estimated_probabilities_bps=values[5],
         )
 
 

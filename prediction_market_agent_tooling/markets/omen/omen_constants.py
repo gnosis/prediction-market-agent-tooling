@@ -1,5 +1,10 @@
 from web3 import Web3
 
+from prediction_market_agent_tooling.gtypes import OutcomeStr
+
+OMEN_TRUE_OUTCOME = OutcomeStr("Yes")
+OMEN_FALSE_OUTCOME = OutcomeStr("No")
+
 WRAPPED_XDAI_CONTRACT_ADDRESS = Web3.to_checksum_address(
     "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
 )

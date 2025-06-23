@@ -8,6 +8,8 @@ from web3.constants import ADDRESS_ZERO
 from prediction_market_agent_tooling.deploy.constants import (
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    UP_OUTCOME_LOWERCASE_IDENTIFIER,
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
@@ -66,6 +68,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.finalizeTs,
             markets_field.wrappedTokens,
             markets_field.collateralToken,
+            markets_field.upperBound,
+            markets_field.lowerBound,
         ]
         return fields
 
@@ -80,6 +84,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei,
         include_conditional_markets: bool = False,
         include_categorical_markets: bool = True,
+        include_scalar_markets: bool = True,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -98,12 +103,12 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case _:
                 raise ValueError(f"Unknown filter {filter_by}")
 
-        if not include_conditional_markets:
+        if not include_conditional_markets and not include_scalar_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
         # We are only interested in binary markets of type YES/NO/Invalid.
         yes_stms, no_stms = {}, {}
-        if not include_categorical_markets:
+        if not include_categorical_markets and not include_scalar_markets:
             # Create single OR conditions with all variations
             yes_stms["or"] = [
                 {"outcomes_contains": [variation]}
@@ -119,6 +124,25 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                     NO_OUTCOME_LOWERCASE_IDENTIFIER,
                     NO_OUTCOME_LOWERCASE_IDENTIFIER.capitalize(),
                     NO_OUTCOME_LOWERCASE_IDENTIFIER.upper(),
+                ]
+            ]
+
+        if not include_categorical_markets and not include_conditional_markets:
+            # Create single OR conditions with all variations
+            yes_stms["or"] = [
+                {"outcomes_contains": [variation]}
+                for variation in [
+                    UP_OUTCOME_LOWERCASE_IDENTIFIER,
+                    UP_OUTCOME_LOWERCASE_IDENTIFIER.capitalize(),
+                    UP_OUTCOME_LOWERCASE_IDENTIFIER.upper(),
+                ]
+            ]
+            no_stms["or"] = [
+                {"outcomes_contains": [variation]}
+                for variation in [
+                    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
+                    DOWN_OUTCOME_LOWERCASE_IDENTIFIER.capitalize(),
+                    DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper(),
                 ]
             ]
 
@@ -159,6 +183,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei = Wei(0),
         include_conditional_markets: bool = True,
         include_categorical_markets: bool = True,
+        include_scalar_markets: bool = True,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
@@ -169,6 +194,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             include_conditional_markets=include_conditional_markets,
             include_categorical_markets=include_categorical_markets,
+            include_scalar_markets=include_scalar_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.

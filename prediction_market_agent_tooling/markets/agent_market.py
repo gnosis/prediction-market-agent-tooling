@@ -14,6 +14,8 @@ from prediction_market_agent_tooling.deploy.constants import (
     INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
+    UP_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
@@ -82,6 +84,8 @@ class AgentMarket(BaseModel):
     url: str
     volume: CollateralToken | None
     fees: MarketFees
+    upper_bound: float | None
+    lower_bound: float | None
 
     @field_validator("probabilities")
     def validate_probabilities(
@@ -165,6 +169,24 @@ class AgentMarket(BaseModel):
 
         return has_yes and has_no
 
+    @property
+    def is_scalar(self) -> bool:
+        # 3 outcomes can also be binary if 3rd outcome is invalid (Seer)
+        if len(self.outcomes) not in [2, 3]:
+            return False
+
+        lowercase_outcomes = [outcome.lower() for outcome in self.outcomes]
+
+        has_up = UP_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
+        has_down = DOWN_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
+
+        if len(lowercase_outcomes) == 3:
+            invalid_outcome = lowercase_outcomes[-1]
+            has_invalid = INVALID_OUTCOME_LOWERCASE_IDENTIFIER in invalid_outcome
+            return has_up and has_down and has_invalid
+
+        return has_up and has_down
+    
     @property
     def p_yes(self) -> Probability:
         probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}

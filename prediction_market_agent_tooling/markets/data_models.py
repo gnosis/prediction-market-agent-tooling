@@ -6,6 +6,8 @@ from pydantic import BaseModel, BeforeValidator, computed_field
 from prediction_market_agent_tooling.deploy.constants import (
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    UP_OUTCOME_LOWERCASE_IDENTIFIER,
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -99,6 +101,31 @@ def to_boolean_outcome(value: str | bool) -> bool:
 
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
+class ScalarProbabilisticAnswer(BaseModel):
+    scalar_quantity: float
+    upperBound: float
+    lowerBound: float
+    confidence: float
+    reasoning: str | None = None
+    logprobs: list[FieldLogprobs] | None = None
+
+    @property
+    def p_up(self) -> Probability:
+        if self.scalar_quantity > self.upperBound:
+            return Probability(1)
+        elif self.scalar_quantity < self.lowerBound:
+            return Probability(0)
+        else:
+            return Probability((self.scalar_quantity - self.lowerBound) / (self.upperBound - self.lowerBound))
+    
+    @property
+    def p_down(self) -> Probability:
+        if self.scalar_quantity < self.lowerBound:  
+            return Probability(1)
+        elif self.scalar_quantity > self.upperBound:
+            return Probability(0)
+        else:
+            return Probability((self.upperBound - self.scalar_quantity) / (self.upperBound - self.lowerBound))
 
 class ProbabilisticAnswer(BaseModel):
     p_yes: Probability
@@ -164,6 +191,29 @@ class CategoricalProbabilisticAnswer(BaseModel):
             confidence=answer.confidence,
             reasoning=answer.reasoning,
         )
+
+    @staticmethod
+    def from_scalar_answer(
+        answer: ScalarProbabilisticAnswer,
+        market_outcomes: Sequence[OutcomeStr] | None = None,
+    ) -> "CategoricalProbabilisticAnswer":
+        return  CategoricalProbabilisticAnswer(
+            probabilities={
+                (
+                    UP_OUTCOME_LOWERCASE_IDENTIFIER
+                    if market_outcomes and UP_OUTCOME_LOWERCASE_IDENTIFIER in market_outcomes
+                    else OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER)
+                ): answer.p_up,
+                (
+                    DOWN_OUTCOME_LOWERCASE_IDENTIFIER
+                    if market_outcomes and DOWN_OUTCOME_LOWERCASE_IDENTIFIER in market_outcomes
+                    else OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER)
+                ): answer.p_down,
+            },
+            confidence=answer.confidence,
+            reasoning=answer.reasoning,
+        )
+
 
     def probability_for_market_outcome(self, market_outcome: OutcomeStr) -> Probability:
         for k, v in self.probabilities.items():

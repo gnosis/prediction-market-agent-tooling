@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 )
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
+    ScalarProbabilisticAnswer,
     ExistingPosition,
     PlacedTrade,
     ProbabilisticAnswer,
@@ -219,6 +220,7 @@ class DeployablePredictionAgent(DeployableAgent):
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.answer_categorical_market = observe()(self.answer_categorical_market)  # type: ignore[method-assign]
+        self.answer_scalar_market = observe()(self.answer_scalar_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
@@ -297,6 +299,9 @@ class DeployablePredictionAgent(DeployableAgent):
     def answer_categorical_market(
         self, market: AgentMarket
     ) -> CategoricalProbabilisticAnswer | None:
+            raise NotImplementedError("This method must be implemented by the subclass")
+
+    def answer_scalar_market(self, market: AgentMarket) -> ScalarProbabilisticAnswer | None:
         raise NotImplementedError("This method must be implemented by the subclass")
 
     def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
@@ -383,7 +388,21 @@ class DeployablePredictionAgent(DeployableAgent):
                 logger.info(
                     "answer_binary_market() not implemented, falling back to answer_categorical_market()"
                 )
-
+        elif market.is_scalar:
+            try:
+                scalar_answer = self.answer_scalar_market(market)
+                return (
+                    CategoricalProbabilisticAnswer.from_scalar_answer(
+                        scalar_answer,
+                        market.outcomes,
+                    )
+                    if scalar_answer is not None
+                    else None
+                )
+            except NotImplementedError:
+                logger.info(
+                    "answer_scalar_market() not implemented, falling back to answer_categorical_market()"
+                )
         return self.answer_categorical_market(market)
 
     def verify_answer_outcomes(

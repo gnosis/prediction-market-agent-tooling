@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_O
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
+    SDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
@@ -73,7 +74,7 @@ def test_kelly_price_impact_works_small_pool(
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.LOWEST_LIQUIDITY,
         # More worthy tokens (e.g. GNO) have way too low liquidity.
-        collateral_token_address_in=(WRAPPED_XDAI_CONTRACT_ADDRESS,),
+        collateral_token_address_in=(SDAI_CONTRACT_ADDRESS,),
     )[0]
     omen_agent_market = OmenAgentMarket.from_data_model(market)
     confidence = 1.0

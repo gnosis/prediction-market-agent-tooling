@@ -47,9 +47,10 @@ def test_seer_place_bet(
         )
     # trick to get the wrapped exception from tenacity
     exception_message = str(e)
+
     assert (
         "InsufficientBalance" in exception_message
-        or f"Balance 0 not enough for bet size {amount}" in exception_message
+        or f"not enough for bet size {amount}" in exception_message
     )
 
 

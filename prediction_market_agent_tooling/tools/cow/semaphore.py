@@ -8,10 +8,13 @@ from sqlmodel import Session, select
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.cow.models import RateLimit
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+FALLBACK_SQL_ENGINE = "sqlite:///rate_limit.db"
 
 
 def postgres_rate_limited(
@@ -23,13 +26,16 @@ def postgres_rate_limited(
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
-                [RateLimit]
+            sqlalchemy_db_url = (
+                api_keys.sqlalchemy_db_url.get_secret_value()
+                if api_keys.SQLALCHEMY_DB_URL
+                else FALLBACK_SQL_ENGINE
             )
 
-            with DBManager(
-                api_keys.sqlalchemy_db_url.get_secret_value()
-            ).get_session() as session:
+            db_manager = DBManager(sqlalchemy_db_url)
+            db_manager.create_tables([RateLimit])
+
+            with db_manager.get_session() as session:
                 limiter.enforce(session)
             return func(*args, **kwargs)
 
@@ -62,10 +68,11 @@ class RateLimiter:
 
                     if result is None:
                         # First time this limiter is used
-                        session.add(RateLimit(id=self.id, last_called_at=utcnow()))
+                        session.add(RateLimit(id=self.id))
                         return
 
-                    elapsed = now - result.last_called_at
+                    last_called_aware = DatetimeUTC.from_datetime(result.last_called_at)
+                    elapsed = now - last_called_aware
                     if elapsed >= self.interval:
                         result.last_called_at = now
                         session.add(result)

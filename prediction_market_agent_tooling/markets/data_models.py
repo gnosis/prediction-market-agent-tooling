@@ -15,6 +15,10 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+)
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
 
@@ -142,13 +146,20 @@ class CategoricalProbabilisticAnswer(BaseModel):
     @staticmethod
     def from_probabilistic_answer(
         answer: ProbabilisticAnswer,
+        market_outcomes: Sequence[OutcomeStr] | None = None,
     ) -> "CategoricalProbabilisticAnswer":
         return CategoricalProbabilisticAnswer(
             probabilities={
-                OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER): answer.p_yes,
-                OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER): Probability(
-                    1 - answer.p_yes
-                ),
+                (
+                    OMEN_TRUE_OUTCOME
+                    if market_outcomes and OMEN_TRUE_OUTCOME in market_outcomes
+                    else OutcomeStr(YES_OUTCOME_LOWERCASE_IDENTIFIER)
+                ): answer.p_yes,
+                (
+                    OMEN_FALSE_OUTCOME
+                    if market_outcomes and OMEN_FALSE_OUTCOME in market_outcomes
+                    else OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER)
+                ): Probability(1 - answer.p_yes),
             },
             confidence=answer.confidence,
             reasoning=answer.reasoning,

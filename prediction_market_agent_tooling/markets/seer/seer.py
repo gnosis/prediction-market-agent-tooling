@@ -28,9 +28,13 @@ from prediction_market_agent_tooling.markets.agent_market import (
     ProcessedTradedMarket,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
 from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    SeerAgentResultMappingContract,
+)
 from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
@@ -113,7 +117,15 @@ class SeerAgentMarket(AgentMarket):
         agent_name: str,
         web3: Web3 | None = None,
     ) -> None:
-        pass
+        return store_trades(
+            contract=SeerAgentResultMappingContract(),
+            market_id=Web3.to_checksum_address(self.id),
+            outcomes=self.outcomes,
+            traded_market=traded_market,
+            keys=keys,
+            agent_name=agent_name,
+            web3=web3,
+        )
 
     def get_token_in_usd(self, x: CollateralToken) -> USD:
         return get_token_in_usd(x, self.collateral_token_contract_address_checksummed)

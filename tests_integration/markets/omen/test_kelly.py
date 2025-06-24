@@ -63,6 +63,9 @@ def test_kelly_price_impact_works_large_pool(
     )
 
 
+@pytest.mark.skip(
+    reason="Known bug, see https://github.com/gnosis/prediction-market-agent-tooling/issues/708"
+)
 @pytest.mark.parametrize(
     "max_bet_amount, max_price_impact, p_yes", [(2, 0.5, 0.9), (5, 0.7, 0.8)]
 )

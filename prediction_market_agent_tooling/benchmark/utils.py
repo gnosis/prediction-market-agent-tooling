@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
+    ScalarProbabilisticAnswer,
 )
 
 
@@ -14,6 +15,18 @@ def get_most_probable_outcome(
 ) -> OutcomeStr:
     """Returns most probable outcome. If tied, returns first."""
     return max(probability_map, key=lambda k: float(probability_map[k]))
+
+
+class ScalarPrediction(BaseModel):
+    is_predictable: bool = True
+    outcome_prediction: t.Optional[ScalarProbabilisticAnswer] = None
+
+    time: t.Optional[float] = None
+    cost: t.Optional[float] = None
+
+    @property
+    def is_answered(self) -> bool:
+        return self.outcome_prediction is not None
 
 
 class Prediction(BaseModel):

@@ -186,6 +186,16 @@ class AgentMarket(BaseModel):
             return has_up and has_down and has_invalid
 
         return has_up and has_down
+
+    @property
+    def p_up(self) -> Probability:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return check_not_none(probs_lowercase.get(UP_OUTCOME_LOWERCASE_IDENTIFIER))
+
+    @property
+    def p_down(self) -> Probability:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return check_not_none(probs_lowercase.get(DOWN_OUTCOME_LOWERCASE_IDENTIFIER))
     
     @property
     def p_yes(self) -> Probability:

@@ -200,12 +200,12 @@ class CategoricalProbabilisticAnswer(BaseModel):
         return  CategoricalProbabilisticAnswer(
             probabilities={
                 (
-                    UP_OUTCOME_LOWERCASE_IDENTIFIER
+                    OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER)
                     if market_outcomes and UP_OUTCOME_LOWERCASE_IDENTIFIER in market_outcomes
                     else OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER)
                 ): answer.p_up,
                 (
-                    DOWN_OUTCOME_LOWERCASE_IDENTIFIER
+                    OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER)
                     if market_outcomes and DOWN_OUTCOME_LOWERCASE_IDENTIFIER in market_outcomes
                     else OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER)
                 ): answer.p_down,

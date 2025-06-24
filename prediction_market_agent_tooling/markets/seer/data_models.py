@@ -70,8 +70,8 @@ class SeerMarket(BaseModel):
     payout_reported: bool = Field(alias="payoutReported")
     payout_numerators: list[int] = Field(alias="payoutNumerators")
     outcomes_supply: int = Field(alias="outcomesSupply")
-    upper_bound: float | None = Field(alias="upperBound")
-    lower_bound: float | None = Field(alias="lowerBound")
+    upper_bound: float | None = Field(alias="upperBound", default=None)
+    lower_bound: float | None = Field(alias="lowerBound", default=None)
 
     @property
     def has_valid_answer(self) -> bool:

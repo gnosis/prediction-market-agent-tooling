@@ -346,6 +346,8 @@ class SeerAgentMarket(AgentMarket):
             resolution=None,
             volume=None,
             probabilities=probability_map,
+            upper_bound=model.upper_bound,
+            lower_bound=model.lower_bound,
         )
 
         return market

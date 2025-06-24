@@ -84,8 +84,8 @@ class AgentMarket(BaseModel):
     url: str
     volume: CollateralToken | None
     fees: MarketFees
-    upper_bound: float | None
-    lower_bound: float | None
+    upper_bound: float | None = None
+    lower_bound: float | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(

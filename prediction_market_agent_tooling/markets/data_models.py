@@ -102,7 +102,7 @@ def to_boolean_outcome(value: str | bool) -> bool:
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 class ScalarProbabilisticAnswer(BaseModel):
-    scalar_quantity: float
+    scalar_value: float
     upperBound: float
     lowerBound: float
     confidence: float
@@ -111,21 +111,21 @@ class ScalarProbabilisticAnswer(BaseModel):
 
     @property
     def p_up(self) -> Probability:
-        if self.scalar_quantity > self.upperBound:
+        if self.scalar_value > self.upperBound:
             return Probability(1)
-        elif self.scalar_quantity < self.lowerBound:
+        elif self.scalar_value < self.lowerBound:
             return Probability(0)
         else:
-            return Probability((self.scalar_quantity - self.lowerBound) / (self.upperBound - self.lowerBound))
+            return Probability((self.scalar_value - self.lowerBound) / (self.upperBound - self.lowerBound))
     
     @property
     def p_down(self) -> Probability:
-        if self.scalar_quantity < self.lowerBound:  
+        if self.scalar_value < self.lowerBound:  
             return Probability(1)
-        elif self.scalar_quantity > self.upperBound:
+        elif self.scalar_value > self.upperBound:
             return Probability(0)
         else:
-            return Probability((self.upperBound - self.scalar_quantity) / (self.upperBound - self.lowerBound))
+            return Probability((self.upperBound - self.scalar_value) / (self.upperBound - self.lowerBound))
 
 class ProbabilisticAnswer(BaseModel):
     p_yes: Probability

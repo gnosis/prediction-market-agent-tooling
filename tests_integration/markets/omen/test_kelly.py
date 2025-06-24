@@ -11,8 +11,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
-    WRAPPED_XDAI_CONTRACT_ADDRESS,
     SDAI_CONTRACT_ADDRESS,
+    WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,

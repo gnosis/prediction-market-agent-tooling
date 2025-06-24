@@ -46,7 +46,7 @@ def test_seer_place_bet(
             web3=local_web3,
         )
     # trick to get the wrapped exception from tenacity
-    exception_message = str(e)  # type: ignore
+    exception_message = str(e)
     assert (
         "InsufficientBalance" in exception_message
         or f"Balance 0 not enough for bet size {amount}" in exception_message

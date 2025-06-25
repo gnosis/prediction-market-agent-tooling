@@ -1,7 +1,9 @@
 import hishel
 
+from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 
-class HttpxCachedClient:
+
+class HttpxCachedClient(metaclass=SingletonMeta):
     def __init__(self) -> None:
         storage = hishel.FileStorage(
             ttl=24 * 60 * 60,

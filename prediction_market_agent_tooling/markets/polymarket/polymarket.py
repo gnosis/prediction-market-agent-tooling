@@ -1,6 +1,11 @@
 import typing as t
 
-from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeStr
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    OutcomeStr,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -25,6 +30,7 @@ class PolymarketAgentMarket(AgentMarket):
     """
 
     base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
+    category: str
 
     # Based on https://docs.polymarket.com/#fees, there are currently no fees, except for transactions fees.
     # However they do have `maker_fee_base_rate` and `taker_fee_base_rate`, but impossible to test out our implementation without them actually taking the fees.
@@ -34,10 +40,13 @@ class PolymarketAgentMarket(AgentMarket):
 
     @staticmethod
     def from_data_model(model: PolymarketMarketWithPrices) -> "PolymarketAgentMarket":
+        probabilities = PolymarketAgentMarket.build_probability_map(model)
+
         return PolymarketAgentMarket(
             id=model.id,
             question=model.question,
             description=model.description,
+            category=model.category,
             outcomes=[x.outcome for x in model.tokens],
             resolution=model.resolution,
             created_time=None,
@@ -45,8 +54,14 @@ class PolymarketAgentMarket(AgentMarket):
             url=model.url,
             volume=None,
             outcome_token_pool=None,
-            probabilities={},  # ToDo - Implement when fixing Polymarket
+            probabilities=probabilities,
         )
+
+    @staticmethod
+    def build_probability_map(
+        model: PolymarketMarketWithPrices,
+    ) -> dict[OutcomeStr, Probability]:
+        return {t.outcome: Probability(t.prices.BUY.value) for t in model.tokens}
 
     def get_tiny_bet_amount(self) -> CollateralToken:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")

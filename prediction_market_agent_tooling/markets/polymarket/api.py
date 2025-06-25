@@ -1,6 +1,6 @@
 import typing as t
+from urllib.parse import urljoin
 
-import requests
 import tenacity
 
 from prediction_market_agent_tooling.loggers import logger
@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketTokenWithPrices,
     Prices,
 )
+from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.utils import response_to_model
 
 POLYMARKET_API_BASE_URL = "https://clob.polymarket.com/"
@@ -21,8 +22,8 @@ MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
 
 
 @tenacity.retry(
-    stop=tenacity.stop_after_attempt(5),
-    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(f"get_polymarkets failed, {x.attempt_number=}."),
 )
 def get_polymarkets(
@@ -30,15 +31,17 @@ def get_polymarkets(
     with_rewards: bool = False,
     next_cursor: str | None = None,
 ) -> MarketsEndpointResponse:
-    url = (
-        f"{POLYMARKET_API_BASE_URL}/{'sampling-markets' if with_rewards else 'markets'}"
+    url = urljoin(
+        POLYMARKET_API_BASE_URL, "sampling-markets" if with_rewards else "markets"
     )
     params: dict[str, str | int | float | None] = {
         "limit": min(limit, MARKETS_LIMIT),
     }
     if next_cursor is not None:
         params["next_cursor"] = next_cursor
-    return response_to_model(requests.get(url, params=params), MarketsEndpointResponse)
+    cached_client = HttpxCachedClient().get_client()
+    data = cached_client.get(url, params=params)
+    return response_to_model(data, MarketsEndpointResponse)
 
 
 def get_polymarket_binary_markets(
@@ -87,8 +90,9 @@ def get_polymarket_binary_markets(
 
             # This is pretty slow to do here, but our safest option at the moment. So keep it as the last filter.
             # TODO: Add support for `description` for `AgentMarket` and if it isn't None, use it in addition to the question in all agents. Then this can be removed.
-            if main_markets_only and not market.fetch_if_its_a_main_market():
-                continue
+            # ToDo - investigate
+            # if main_markets_only and not market.fetch_if_its_a_main_market():
+            #    continue
 
             tokens_with_price = get_market_tokens_with_prices(market)
             market_with_prices = PolymarketMarketWithPrices.model_validate(
@@ -110,16 +114,18 @@ def get_polymarket_binary_markets(
 
 
 def get_polymarket_market(condition_id: str) -> PolymarketMarket:
-    url = f"{POLYMARKET_API_BASE_URL}/markets/{condition_id}"
-    return response_to_model(requests.get(url), PolymarketMarket)
+    url = urljoin(POLYMARKET_API_BASE_URL, f"markets/{condition_id}")
+    client = HttpxCachedClient().get_client()
+    return response_to_model(client.get(url), PolymarketMarket)
 
 
 def get_token_price(
     token_id: str, side: t.Literal["buy", "sell"]
 ) -> PolymarketPriceResponse:
-    url = f"{POLYMARKET_API_BASE_URL}/price"
+    url = urljoin(POLYMARKET_API_BASE_URL, "price")
     params = {"token_id": token_id, "side": side}
-    return response_to_model(requests.get(url, params=params), PolymarketPriceResponse)
+    client = HttpxCachedClient().get_client()
+    return response_to_model(client.get(url, params=params), PolymarketPriceResponse)
 
 
 def get_market_tokens_with_prices(

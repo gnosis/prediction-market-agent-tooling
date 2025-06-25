@@ -53,7 +53,9 @@ class PolymarketMarket(BaseModel):
     rewards: PolymarketRewards
     tokens: tuple[PolymarketToken, ...]
     is_50_50_outcome: bool
+    # ToDo - which one?
     categories: list[str] | None = None
+    category: str
     parent_categories: list[str] | None = None
     accepting_orders: bool
 
@@ -99,7 +101,7 @@ class PolymarketMarket(BaseModel):
         # This is a heuristic to filter them out.
         # Warning: This is a very slow operation, as it requires fetching the website. Use it only when necessary.
         full_market = self.fetch_full_market()
-        # `full_market` can be None, if this class come from a multiple Yes/No market, becase then, the constructed URL is invalid (and there is now way to construct an valid one from the data we have).
+        # `full_market` can be None, if this class come from a multiple Yes/No market, because then, the constructed URL is invalid (and there is now way to construct an valid one from the data we have).
         return full_market is not None and full_market.is_main_market
 
 

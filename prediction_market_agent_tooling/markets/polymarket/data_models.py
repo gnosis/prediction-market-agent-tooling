@@ -1,3 +1,5 @@
+import json
+
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import USDC, OutcomeStr, Probability
@@ -8,6 +10,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     PolymarketFullMarket,
     construct_polymarket_url,
 )
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -24,6 +27,43 @@ class PolymarketToken(BaseModel):
     token_id: str
     outcome: OutcomeStr
     winner: bool
+
+
+class PolymarketGammaMarket(BaseModel):
+    conditionId: HexBytes
+    outcomes: str
+    marketMakerAddress: str
+    createdAt: DatetimeUTC
+    updatedAt: DatetimeUTC
+    archived: bool
+    questionId: str | None = None
+    clobTokenIds: str  # int-encoded hex
+    acceptingOrders: bool
+
+    @property
+    def clob_token_ids(self) -> list[HexBytes]:
+        return [HexBytes(int(token_id)) for token_id in json.loads(self.clobTokenIds)]
+
+    @property
+    def outcomes_list(self) -> list[str]:
+        return json.loads(self.outcomes)
+
+
+class PolymarketGammaResponseDataItem(BaseModel):
+    startDate: DatetimeUTC
+    endDate: DatetimeUTC
+    liquidity: float
+    liquidityClob: float
+    markets: list[PolymarketGammaMarket]
+
+
+class PolymarketGammaPagination(BaseModel):
+    hasMore: bool
+
+
+class PolymarketGammaResponse(BaseModel):
+    data: list[PolymarketGammaResponseDataItem]
+    pagination: PolymarketGammaPagination
 
 
 class PolymarketMarket(BaseModel):
@@ -53,9 +93,7 @@ class PolymarketMarket(BaseModel):
     rewards: PolymarketRewards
     tokens: tuple[PolymarketToken, ...]
     is_50_50_outcome: bool
-    # ToDo - which one?
     categories: list[str] | None = None
-    category: str
     parent_categories: list[str] | None = None
     accepting_orders: bool
 

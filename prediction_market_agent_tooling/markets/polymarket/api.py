@@ -13,12 +13,55 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketPriceResponse,
     PolymarketTokenWithPrices,
     Prices,
+    PolymarketGammaResponse,
+    PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
-from prediction_market_agent_tooling.tools.utils import response_to_model
+from prediction_market_agent_tooling.tools.utils import response_to_model, utcnow
 
 POLYMARKET_API_BASE_URL = "https://clob.polymarket.com/"
-MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
+MARKETS_LIMIT = 10  # Polymarket will only return up to 100 markets
+POLYMARKET_GAMMA_API_BASE_URL = "https://gamma-api.polymarket.com/"
+
+
+def get_polymarkets_markets(
+    limit: int,
+    active: bool = True,
+    archived: bool = False,
+    closed: bool = False,
+    ascending: bool = False,
+) -> list[PolymarketGammaResponseDataItem]:
+    client = HttpxCachedClient().get_client()
+    all_markets: list[PolymarketGammaResponseDataItem] = []
+    offset = 0
+    remaining = limit
+
+    while remaining > 0:
+        # Calculate how many items to request in this batch (up to MARKETS_LIMIT or remaining)
+        batch_size = min(remaining, MARKETS_LIMIT)
+
+        url = urljoin(
+            POLYMARKET_GAMMA_API_BASE_URL,
+            f"events/pagination?limit={batch_size}&active={str(active).lower()}&archived={str(archived).lower()}&closed={str(closed).lower()}&order=volume24hr&ascending={str(ascending).lower()}&offset={offset}",
+        )
+
+        r = client.get(url)
+        market_response = response_to_model(r, PolymarketGammaResponse)
+
+        # Add the markets from this batch to our results
+        all_markets.extend(market_response.data)
+
+        # Update counters
+        received = len(market_response.data)
+        offset += received
+        remaining -= received
+
+        # Stop if we've reached our limit or there are no more results
+        if remaining <= 0 or not market_response.pagination.hasMore or received == 0:
+            break
+
+    # Return exactly the number of items requested (in case we got more due to batch size)
+    return all_markets[:limit]
 
 
 @tenacity.retry(
@@ -59,6 +102,7 @@ def get_polymarket_binary_markets(
     next_cursor: str | None = None
 
     while True:
+        print(f"fetching markets... {utcnow()}")
         response = get_polymarkets(
             limit, with_rewards=with_rewards, next_cursor=next_cursor
         )

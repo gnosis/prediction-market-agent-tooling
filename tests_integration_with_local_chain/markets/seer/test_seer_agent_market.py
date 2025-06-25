@@ -45,7 +45,6 @@ def test_seer_place_bet(
             auto_deposit=False,
             web3=local_web3,
         )
-    # trick to get the wrapped exception from tenacity
     exception_message = str(e)
 
     assert (

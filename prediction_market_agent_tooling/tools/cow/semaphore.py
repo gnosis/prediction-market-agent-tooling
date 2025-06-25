@@ -49,11 +49,20 @@ class RateLimiter:
         self.id = id
         self.interval = timedelta(seconds=interval_seconds)
 
-    def enforce(self, session: Session) -> None:
+    def enforce(self, session: Session, timeout_seconds: float = 30.0) -> None:
         """
         Enforces the rate limit inside a transaction.
-        Blocks until allowed.
+        Blocks until allowed or timeout is reached.
+
+        Args:
+            session: The database session to use
+            timeout_seconds: Maximum time in seconds to wait before giving up
+
+        Raises:
+            TimeoutError: If the rate limit cannot be acquired within the timeout period
         """
+        start_time = time.monotonic()
+
         while True:
             try:
                 with session.begin():
@@ -80,7 +89,13 @@ class RateLimiter:
 
                     # Not enough time passed, sleep and retry
                     to_sleep = (self.interval - elapsed).total_seconds()
-                time.sleep(to_sleep)
+                    time.sleep(to_sleep)
             except OperationalError:
                 # Backoff if DB is under contention
-                time.sleep(0.1)
+                elapsed_time = time.monotonic() - start_time
+                if elapsed_time > timeout_seconds:
+                    raise TimeoutError(
+                        f"Could not acquire rate limit '{self.id}' "
+                        f"after {elapsed_time:.1f} seconds due to database contention"
+                    )
+                time.sleep(0.5)

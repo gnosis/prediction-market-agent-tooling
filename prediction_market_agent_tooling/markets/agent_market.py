@@ -11,11 +11,11 @@ from web3 import Web3
 from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
     INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
-    YES_OUTCOME_LOWERCASE_IDENTIFIER,
-    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
+    YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
@@ -84,8 +84,9 @@ class AgentMarket(BaseModel):
     url: str
     volume: CollateralToken | None
     fees: MarketFees
-    upper_bound: float | None = None
-    lower_bound: float | None = None
+
+    upper_bound: int | None = None
+    lower_bound: int | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(
@@ -196,7 +197,7 @@ class AgentMarket(BaseModel):
     def p_down(self) -> Probability:
         probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
         return check_not_none(probs_lowercase.get(DOWN_OUTCOME_LOWERCASE_IDENTIFIER))
-    
+
     @property
     def p_yes(self) -> Probability:
         probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}

@@ -346,11 +346,18 @@ class SeerAgentMarket(AgentMarket):
             resolution=None,
             volume=None,
             probabilities=probability_map,
-            upper_bound=model.upper_bound,
-            lower_bound=model.lower_bound,
+            upper_bound=SeerAgentMarket.convert_from_wei(model.upper_bound),
+            lower_bound=SeerAgentMarket.convert_from_wei(model.lower_bound),
         )
 
         return market
+
+    # TODO Decide how to handle this in the future
+    @staticmethod
+    def convert_from_wei(value: int | None) -> int | None:
+        if value and value >= 10**18:
+            return value // 10**18
+        return value
 
     @staticmethod
     def get_markets(

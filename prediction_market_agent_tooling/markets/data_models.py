@@ -6,8 +6,6 @@ from pydantic import BaseModel, BeforeValidator, computed_field
 from prediction_market_agent_tooling.deploy.constants import (
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
-    UP_OUTCOME_LOWERCASE_IDENTIFIER,
-    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -20,6 +18,11 @@ from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
+)
+from prediction_market_agent_tooling.markets.seer.seer_constants import (
+    DOWN_OUTCOME_SEER_IDENTIFIER,
+    INVALID_RESULT_OUTCOME_SEER_IDENTIFIER,
+    UP_OUTCOME_SEER_IDENTIFIER,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
@@ -101,10 +104,11 @@ def to_boolean_outcome(value: str | bool) -> bool:
 
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
+
 class ScalarProbabilisticAnswer(BaseModel):
     scalar_value: float
-    upperBound: float
-    lowerBound: float
+    upperBound: int
+    lowerBound: int
     confidence: float
     reasoning: str | None = None
     logprobs: list[FieldLogprobs] | None = None
@@ -116,16 +120,23 @@ class ScalarProbabilisticAnswer(BaseModel):
         elif self.scalar_value < self.lowerBound:
             return Probability(0)
         else:
-            return Probability((self.scalar_value - self.lowerBound) / (self.upperBound - self.lowerBound))
-    
+            return Probability(
+                (self.scalar_value - self.lowerBound)
+                / (self.upperBound - self.lowerBound)
+            )
+
     @property
     def p_down(self) -> Probability:
-        if self.scalar_value < self.lowerBound:  
+        if self.scalar_value < self.lowerBound:
             return Probability(1)
         elif self.scalar_value > self.upperBound:
             return Probability(0)
         else:
-            return Probability((self.upperBound - self.scalar_value) / (self.upperBound - self.lowerBound))
+            return Probability(
+                (self.upperBound - self.scalar_value)
+                / (self.upperBound - self.lowerBound)
+            )
+
 
 class ProbabilisticAnswer(BaseModel):
     p_yes: Probability
@@ -197,23 +208,24 @@ class CategoricalProbabilisticAnswer(BaseModel):
         answer: ScalarProbabilisticAnswer,
         market_outcomes: Sequence[OutcomeStr] | None = None,
     ) -> "CategoricalProbabilisticAnswer":
-        return  CategoricalProbabilisticAnswer(
-            probabilities={
-                (
-                    OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER)
-                    if market_outcomes and UP_OUTCOME_LOWERCASE_IDENTIFIER in market_outcomes
-                    else OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER)
-                ): answer.p_up,
-                (
-                    OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER)
-                    if market_outcomes and DOWN_OUTCOME_LOWERCASE_IDENTIFIER in market_outcomes
-                    else OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER)
-                ): answer.p_down,
-            },
+        probabilities = {}
+        if market_outcomes and UP_OUTCOME_SEER_IDENTIFIER in market_outcomes:
+            probabilities[OutcomeStr(UP_OUTCOME_SEER_IDENTIFIER)] = answer.p_up
+        if market_outcomes and DOWN_OUTCOME_SEER_IDENTIFIER in market_outcomes:
+            probabilities[OutcomeStr(DOWN_OUTCOME_SEER_IDENTIFIER)] = answer.p_down
+        if (
+            market_outcomes
+            and INVALID_RESULT_OUTCOME_SEER_IDENTIFIER in market_outcomes
+        ):
+            probabilities[
+                OutcomeStr(INVALID_RESULT_OUTCOME_SEER_IDENTIFIER)
+            ] = Probability(1 - answer.p_up - answer.p_down)
+
+        return CategoricalProbabilisticAnswer(
+            probabilities=probabilities,
             confidence=answer.confidence,
             reasoning=answer.reasoning,
         )
-
 
     def probability_for_market_outcome(self, market_outcome: OutcomeStr) -> Probability:
         for k, v in self.probabilities.items():

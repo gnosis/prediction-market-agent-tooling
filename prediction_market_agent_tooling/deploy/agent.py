@@ -28,10 +28,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
 )
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
-    ScalarProbabilisticAnswer,
     ExistingPosition,
     PlacedTrade,
     ProbabilisticAnswer,
+    ScalarProbabilisticAnswer,
     Trade,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
@@ -299,9 +299,11 @@ class DeployablePredictionAgent(DeployableAgent):
     def answer_categorical_market(
         self, market: AgentMarket
     ) -> CategoricalProbabilisticAnswer | None:
-            raise NotImplementedError("This method must be implemented by the subclass")
+        raise NotImplementedError("This method must be implemented by the subclass")
 
-    def answer_scalar_market(self, market: AgentMarket) -> ScalarProbabilisticAnswer | None:
+    def answer_scalar_market(
+        self, market: AgentMarket
+    ) -> ScalarProbabilisticAnswer | None:
         raise NotImplementedError("This method must be implemented by the subclass")
 
     def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:

@@ -1,7 +1,9 @@
 from pydantic import BaseModel
+from sqlmodel import Field, SQLModel
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class MinimalisticToken(BaseModel):
@@ -14,3 +16,9 @@ class Order(BaseModel):
     sellToken: str
     buyToken: str
     creationDate: DatetimeUTC
+
+
+class RateLimit(SQLModel, table=True):
+    __tablename__ = "rate_limit"
+    id: str = Field(primary_key=True)
+    last_called_at: DatetimeUTC = Field(default_factory=utcnow)

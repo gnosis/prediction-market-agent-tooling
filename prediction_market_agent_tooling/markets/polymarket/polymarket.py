@@ -13,8 +13,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
-    get_polymarkets_with_pagination,
     PolymarketOrderByEnum,
+    get_polymarkets_with_pagination,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponseDataItem,
@@ -42,7 +42,7 @@ class PolymarketAgentMarket(AgentMarket):
     def from_data_model(
         model: PolymarketGammaResponseDataItem,
     ) -> "PolymarketAgentMarket":
-        category = "-".join([i.slug for i in model.tags])
+        "-".join([i.slug for i in model.tags])
         # ToDo - check cases where multiple markets are here
 
         outcomes = model.markets[0].outcomes_list
@@ -95,20 +95,17 @@ class PolymarketAgentMarket(AgentMarket):
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
 
-        ascending: bool | None
+        ascending: bool = False
         order_by: t.Optional[PolymarketOrderByEnum]
         match sort_by:
             case SortBy.NEWEST:
-                ascending = False
                 order_by = PolymarketOrderByEnum.START_DATE
             case SortBy.CLOSING_SOONEST:
                 ascending = True
                 order_by = PolymarketOrderByEnum.END_DATE
             case SortBy.HIGHEST_LIQUIDITY:
-                ascending = False
                 order_by = PolymarketOrderByEnum.LIQUIDITY
             case SortBy.NONE:
-                ascending = None
                 order_by = None
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")

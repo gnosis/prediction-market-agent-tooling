@@ -55,7 +55,8 @@ from prediction_market_agent_tooling.markets.omen.cow_contracts import (
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.cow.models import MinimalisticToken, Order
-from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
+from prediction_market_agent_tooling.tools.cow.semaphore import postgres_rate_limited
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class OrderStatusError(Exception):
@@ -190,7 +191,11 @@ def handle_allowance(
         )
 
 
+@postgres_rate_limited(
+    api_keys=APIKeys(), rate_id="swap_tokens_waiting", interval_seconds=60.0
+)
 @tenacity.retry(
+    reraise=True,
     stop=stop_after_attempt(3),
     wait=wait_fixed(1),
     retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
@@ -205,6 +210,7 @@ def swap_tokens_waiting(
     env: Envs = "prod",
     web3: Web3 | None = None,
     wait_order_complete: bool = True,
+    timeout: timedelta = timedelta(seconds=120),
 ) -> tuple[OrderMetaData | None, CompletedOrder]:
     # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
     return asyncio.run(
@@ -215,6 +221,7 @@ def swap_tokens_waiting(
             api_keys,
             chain,
             env,
+            timeout=timeout,
             web3=web3,
             wait_order_complete=wait_order_complete,
         )
@@ -229,6 +236,7 @@ async def place_swap_order(
     chain: Chain,
     env: Envs,
     slippage_tolerance: float = 0.01,
+    valid_to: int | None = None,
 ) -> CompletedOrder:
     account = api_keys.get_account()
     safe_address = api_keys.safe_address_checksum
@@ -242,6 +250,7 @@ async def place_swap_order(
         chain=chain,
         env=env,
         slippage_tolerance=slippage_tolerance,
+        valid_to=valid_to,
     )
     logger.info(f"Order created: {order}")
 
@@ -299,6 +308,7 @@ async def swap_tokens_waiting_async(
     handle_allowance(
         api_keys=api_keys, sell_token=sell_token, amount_wei=amount_wei, web3=web3
     )
+    valid_to = (utcnow() + timeout).timestamp()
     order = await place_swap_order(
         api_keys=api_keys,
         amount_wei=amount_wei,
@@ -307,6 +317,7 @@ async def swap_tokens_waiting_async(
         chain=chain,
         env=env,
         slippage_tolerance=slippage_tolerance,
+        valid_to=int(valid_to),
     )
     if wait_order_complete:
         order_metadata = await wait_for_order_completion(order=order, timeout=timeout)
@@ -327,11 +338,8 @@ async def sign_safe_cow_swap(
 ) -> None:
     order_book_api = get_order_book_api(env, chain)
     posted_order = await order_book_api.get_order_by_uid(order.uid)
-    CowGPv2SettlementContract(
-        address=Web3.to_checksum_address(
-            check_not_none(posted_order.settlementContract).root
-        )
-    ).setPreSignature(
+
+    CowGPv2SettlementContract().setPreSignature(
         api_keys,
         HexBytes(posted_order.uid.root),
         True,

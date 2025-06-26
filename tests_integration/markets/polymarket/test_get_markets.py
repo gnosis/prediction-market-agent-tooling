@@ -1,39 +1,17 @@
-from prediction_market_agent_tooling.markets.polymarket.api import (
-    get_polymarket_binary_markets,
-    get_polymarket_market,
-)
+from datetime import timedelta
+
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
-def test_get_single_odd_market():
-    # https://polymarket.com/event/presidential-election-winner-2024?tid=1750841800445
-    # ToDo - find condition_id from full_market
-    condition_id = "1750841800445"
-    market = get_polymarket_market(condition_id=condition_id)
-    print(f"{market=}")
-    print("done")
-
-
-def test_get_markets():
-    markets = get_polymarket_binary_markets(
-        limit=10,
-        closed=False,
+def test_get_markets() -> None:
+    limit = 10
+    # We assume there are 10 markets on Polymarkets created in the last 14 days
+    created_after = utcnow() - timedelta(days=14)
+    markets = PolymarketAgentMarket.get_markets(
+        limit=limit, created_after=created_after
     )
 
-    assert len(markets) > 0
-    for m in markets:
-        # ToDo - should we also check category?
-        agent_market = PolymarketAgentMarket.from_data_model(m)
-        assert all(
-            [
-                j is not None
-                for j in [
-                    agent_market.question,
-                    agent_market.close_time,
-                    agent_market.description,
-                    agent_market.url,
-                ]
-            ]
-        )
+    assert len(markets) == limit

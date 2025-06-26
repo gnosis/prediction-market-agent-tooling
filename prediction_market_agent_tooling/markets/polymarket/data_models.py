@@ -32,29 +32,55 @@ class PolymarketToken(BaseModel):
 class PolymarketGammaMarket(BaseModel):
     conditionId: HexBytes
     outcomes: str
+    outcomePrices: str | None = None
     marketMakerAddress: str
     createdAt: DatetimeUTC
     updatedAt: DatetimeUTC
     archived: bool
     questionId: str | None = None
-    clobTokenIds: str  # int-encoded hex
-    acceptingOrders: bool
+    clobTokenIds: str | None = None  # int-encoded hex
 
     @property
     def clob_token_ids(self) -> list[HexBytes]:
+        if not self.clobTokenIds:
+            return []
         return [HexBytes(int(token_id)) for token_id in json.loads(self.clobTokenIds)]
 
     @property
-    def outcomes_list(self) -> list[str]:
-        return json.loads(self.outcomes)
+    def outcomes_list(self) -> list[OutcomeStr]:
+        return [OutcomeStr(i) for i in json.loads(self.outcomes)]
+
+    @property
+    def outcome_prices(self) -> list[float] | None:
+        if not self.outcomePrices:
+            return None
+        return [float(i) for i in json.loads(self.outcomePrices)]
+
+
+class PolymarketGammaTag(BaseModel):
+    label: str
+    slug: str
 
 
 class PolymarketGammaResponseDataItem(BaseModel):
+    id: str
+    slug: str
+    volume: float
     startDate: DatetimeUTC
     endDate: DatetimeUTC
     liquidity: float
     liquidityClob: float
+    title: str
+    description: str
+    archived: bool
+    closed: bool
+    active: bool
     markets: list[PolymarketGammaMarket]
+    tags: list[PolymarketGammaTag]
+
+    @property
+    def url(self) -> str:
+        return construct_polymarket_url(self.slug)
 
 
 class PolymarketGammaPagination(BaseModel):

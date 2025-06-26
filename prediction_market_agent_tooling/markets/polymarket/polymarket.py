@@ -13,10 +13,11 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
-    get_polymarket_binary_markets,
+    get_polymarkets_with_pagination,
+    PolymarketOrderByEnum,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
-    PolymarketMarketWithPrices,
+    PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_BASE_URL,
@@ -30,7 +31,6 @@ class PolymarketAgentMarket(AgentMarket):
     """
 
     base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
-    category: str
 
     # Based on https://docs.polymarket.com/#fees, there are currently no fees, except for transactions fees.
     # However they do have `maker_fee_base_rate` and `taker_fee_base_rate`, but impossible to test out our implementation without them actually taking the fees.
@@ -39,29 +39,32 @@ class PolymarketAgentMarket(AgentMarket):
     fees: MarketFees = MarketFees.get_zero_fees()
 
     @staticmethod
-    def from_data_model(model: PolymarketMarketWithPrices) -> "PolymarketAgentMarket":
-        probabilities = PolymarketAgentMarket.build_probability_map(model)
+    def from_data_model(
+        model: PolymarketGammaResponseDataItem,
+    ) -> "PolymarketAgentMarket":
+        category = "-".join([i.slug for i in model.tags])
+        # ToDo - check cases where multiple markets are here
+
+        outcomes = model.markets[0].outcomes_list
+        outcome_prices = model.markets[0].outcome_prices
+        if not outcome_prices:
+            # We give a best guess
+            outcome_prices = [0.5, 0.5]
+        probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 
         return PolymarketAgentMarket(
             id=model.id,
-            question=model.question,
+            question=model.title,
             description=model.description,
-            category=model.category,
-            outcomes=[x.outcome for x in model.tokens],
-            resolution=model.resolution,
-            created_time=None,
-            close_time=model.end_date_iso,
+            outcomes=outcomes,
+            resolution=None,  # We don't fetch resolution properties
+            created_time=model.startDate,
+            close_time=model.endDate,
             url=model.url,
-            volume=None,
+            volume=CollateralToken(model.volume),
             outcome_token_pool=None,
             probabilities=probabilities,
         )
-
-    @staticmethod
-    def build_probability_map(
-        model: PolymarketMarketWithPrices,
-    ) -> dict[OutcomeStr, Probability]:
-        return {t.outcome: Probability(t.prices.BUY.value) for t in model.tokens}
 
     def get_tiny_bet_amount(self) -> CollateralToken:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
@@ -78,27 +81,47 @@ class PolymarketAgentMarket(AgentMarket):
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
-        if sort_by != SortBy.NONE:
-            raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")
-
-        if created_after is not None:
-            raise ValueError(f"Unsuported created_after for Polymarket.")
-
         closed: bool | None
+        active: bool | None
         if filter_by == FilterBy.OPEN:
+            active = True
             closed = False
         elif filter_by == FilterBy.RESOLVED:
+            active = False
             closed = True
         elif filter_by == FilterBy.NONE:
+            active = None
             closed = None
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
 
-        return [
-            PolymarketAgentMarket.from_data_model(m)
-            for m in get_polymarket_binary_markets(
-                limit=limit,
-                closed=closed,
-                excluded_questions=excluded_questions,
-            )
-        ]
+        ascending: bool | None
+        order_by: t.Optional[PolymarketOrderByEnum]
+        match sort_by:
+            case SortBy.NEWEST:
+                ascending = False
+                order_by = PolymarketOrderByEnum.START_DATE
+            case SortBy.CLOSING_SOONEST:
+                ascending = True
+                order_by = PolymarketOrderByEnum.END_DATE
+            case SortBy.HIGHEST_LIQUIDITY:
+                ascending = False
+                order_by = PolymarketOrderByEnum.LIQUIDITY
+            case SortBy.NONE:
+                ascending = None
+                order_by = None
+            case _:
+                raise ValueError(f"Unknown sort_by: {sort_by}")
+
+        markets = get_polymarkets_with_pagination(
+            limit=limit,
+            closed=closed,
+            active=active,
+            order_by=order_by,
+            ascending=ascending,
+            created_after=created_after,
+            excluded_questions=excluded_questions,
+            only_binary=not fetch_categorical_markets,
+        )
+
+        return [PolymarketAgentMarket.from_data_model(m) for m in markets]

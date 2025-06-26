@@ -24,6 +24,7 @@ class PolymarketOrderByEnum(str, Enum):
     LIQUIDITY = "liquidity"
     START_DATE = "startDate"
     END_DATE = "endDate"
+    VOLUME_24HR = "volume24hr"
 
 
 @tenacity.retry(
@@ -36,13 +37,13 @@ class PolymarketOrderByEnum(str, Enum):
 def get_polymarkets_with_pagination(
     limit: int,
     created_after: t.Optional[DatetimeUTC] = None,
-    only_binary: bool = True,
     active: bool | None = None,
-    archived: bool = False,
     closed: bool | None = None,
     excluded_questions: set[str] | None = None,
-    ascending: bool | None = None,
-    order_by: PolymarketOrderByEnum | None = None,
+    only_binary: bool = True,
+    archived: bool = False,
+    ascending: bool = False,
+    order_by: PolymarketOrderByEnum = PolymarketOrderByEnum.VOLUME_24HR,
 ) -> list[PolymarketGammaResponseDataItem]:
     """
     Binary markets have len(model.markets) == 1.
@@ -64,8 +65,8 @@ def get_polymarkets_with_pagination(
             "active": str(active).lower() if active is not None else None,
             "archived": str(archived).lower(),
             "closed": str(closed).lower() if closed is not None else None,
-            "order": str(order_by).lower() if closed is not None else "volume24hr",
-            "ascending": str(ascending).lower() if closed is not None else "false",
+            "order": str(order_by).lower(),
+            "ascending": str(ascending).lower(),
             "offset": offset,
         }
         query_string = "&".join(f"{k}={v}" for k, v in params.items() if v is not None)

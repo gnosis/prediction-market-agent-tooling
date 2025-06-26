@@ -95,8 +95,7 @@ class PolymarketAgentMarket(AgentMarket):
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
 
-        ascending: bool = False
-        order_by: t.Optional[PolymarketOrderByEnum]
+        ascending: bool = False  # default value
         match sort_by:
             case SortBy.NEWEST:
                 order_by = PolymarketOrderByEnum.START_DATE
@@ -106,7 +105,7 @@ class PolymarketAgentMarket(AgentMarket):
             case SortBy.HIGHEST_LIQUIDITY:
                 order_by = PolymarketOrderByEnum.LIQUIDITY
             case SortBy.NONE:
-                order_by = None
+                order_by = PolymarketOrderByEnum.VOLUME_24HR
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
 

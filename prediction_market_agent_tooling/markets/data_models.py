@@ -20,9 +20,9 @@ from prediction_market_agent_tooling.markets.omen.omen_constants import (
     OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.markets.seer.seer_constants import (
-    DOWN_OUTCOME_SEER_IDENTIFIER,
-    INVALID_RESULT_OUTCOME_SEER_IDENTIFIER,
-    UP_OUTCOME_SEER_IDENTIFIER,
+    DOWN_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
+    INVALID_RESULT_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
+    UP_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
@@ -132,10 +132,7 @@ class ScalarProbabilisticAnswer(BaseModel):
         elif self.scalar_value > self.upperBound:
             return Probability(0)
         else:
-            return Probability(
-                (self.upperBound - self.scalar_value)
-                / (self.upperBound - self.lowerBound)
-            )
+            return Probability(1 - self.p_up)
 
 
 class ProbabilisticAnswer(BaseModel):
@@ -209,16 +206,32 @@ class CategoricalProbabilisticAnswer(BaseModel):
         market_outcomes: Sequence[OutcomeStr] | None = None,
     ) -> "CategoricalProbabilisticAnswer":
         probabilities = {}
-        if market_outcomes and UP_OUTCOME_SEER_IDENTIFIER in market_outcomes:
-            probabilities[OutcomeStr(UP_OUTCOME_SEER_IDENTIFIER)] = answer.p_up
-        if market_outcomes and DOWN_OUTCOME_SEER_IDENTIFIER in market_outcomes:
-            probabilities[OutcomeStr(DOWN_OUTCOME_SEER_IDENTIFIER)] = answer.p_down
+        lowercase_market_outcomes = (
+            [outcome.lower() for outcome in market_outcomes] if market_outcomes else []
+        )
+
+        if not market_outcomes:
+            raise ValueError("Market with no outcomes")
+
+        if not set(
+            [
+                DOWN_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
+                UP_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
+            ]
+        ).issubset(lowercase_market_outcomes):
+            raise ValueError("Market with no outcomes")
+
+        probabilities[OutcomeStr(UP_OUTCOME_SEER_IDENTIFIER_LOWERCASE)] = answer.p_up
+        probabilities[
+            OutcomeStr(DOWN_OUTCOME_SEER_IDENTIFIER_LOWERCASE)
+        ] = answer.p_down
+
         if (
             market_outcomes
-            and INVALID_RESULT_OUTCOME_SEER_IDENTIFIER in market_outcomes
+            and INVALID_RESULT_OUTCOME_SEER_IDENTIFIER_LOWERCASE in market_outcomes
         ):
             probabilities[
-                OutcomeStr(INVALID_RESULT_OUTCOME_SEER_IDENTIFIER)
+                OutcomeStr(INVALID_RESULT_OUTCOME_SEER_IDENTIFIER_LOWERCASE)
             ] = Probability(1 - answer.p_up - answer.p_down)
 
         return CategoricalProbabilisticAnswer(

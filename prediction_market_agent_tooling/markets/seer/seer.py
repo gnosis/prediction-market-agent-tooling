@@ -62,6 +62,7 @@ from prediction_market_agent_tooling.tools.contract import (
     to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
+    NoLiquidityAvailableOnCowException,
     get_buy_token_amount_else_raise,
     get_orders_by_owner,
     get_trades_by_owner,
@@ -367,6 +368,7 @@ class SeerAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
+        fetch_scalar_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
         markets = seer_subgraph.get_markets(
@@ -374,6 +376,7 @@ class SeerAgentMarket(AgentMarket):
             sort_by=sort_by,
             filter_by=filter_by,
             include_categorical_markets=fetch_categorical_markets,
+            include_scalar_markets=fetch_scalar_markets,
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
@@ -505,7 +508,11 @@ class SeerAgentMarket(AgentMarket):
             )
             return order_metadata.uid.root
 
-        except (UnexpectedResponseError, TimeoutError) as e:
+        except (
+            UnexpectedResponseError,
+            TimeoutError,
+            NoLiquidityAvailableOnCowException,
+        ) as e:
             # We don't retry if not enough balance.
             if "InsufficientBalance" in str(e):
                 raise e
@@ -514,6 +521,10 @@ class SeerAgentMarket(AgentMarket):
             logger.info(
                 f"Exception occured when swapping tokens via Cowswap, doing swap via pools. {e}"
             )
+
+            if not self.has_liquidity():
+                logger.error(f"Market {self.id} has no liquidity. Cannot place bet.")
+                raise e from e
 
             tx_receipt = SwapPoolHandler(
                 api_keys=api_keys,

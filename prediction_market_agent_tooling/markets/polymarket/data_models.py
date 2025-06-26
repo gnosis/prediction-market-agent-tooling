@@ -7,7 +7,6 @@ from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
-    PolymarketFullMarket,
     construct_polymarket_url,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -35,7 +34,7 @@ class PolymarketGammaMarket(BaseModel):
     outcomePrices: str | None = None
     marketMakerAddress: str
     createdAt: DatetimeUTC
-    updatedAt: DatetimeUTC
+    updatedAt: DatetimeUTC | None = None
     archived: bool
     questionId: str | None = None
     clobTokenIds: str | None = None  # int-encoded hex
@@ -154,19 +153,6 @@ class PolymarketMarket(BaseModel):
             raise ValueError(
                 f"Should not happen, invalid winner tokens: {winner_tokens}"
             )
-
-    def fetch_full_market(self) -> PolymarketFullMarket | None:
-        return PolymarketFullMarket.fetch_from_url(self.url)
-
-    def fetch_if_its_a_main_market(self) -> bool:
-        # On Polymarket, there are markets that are actually a group of multiple Yes/No markets, for example https://polymarket.com/event/presidential-election-winner-2024.
-        # But API returns them individually, and then we receive questions such as "Will any other Republican Politician win the 2024 US Presidential Election?",
-        # which are naturally unpredictable without futher details.
-        # This is a heuristic to filter them out.
-        # Warning: This is a very slow operation, as it requires fetching the website. Use it only when necessary.
-        full_market = self.fetch_full_market()
-        # `full_market` can be None, if this class come from a multiple Yes/No market, because then, the constructed URL is invalid (and there is now way to construct an valid one from the data we have).
-        return full_market is not None and full_market.is_main_market
 
 
 class MarketsEndpointResponse(BaseModel):

@@ -328,6 +328,13 @@ class DeployablePredictionAgent(DeployableAgent):
             return True
         return False
 
+    @property
+    def fetch_scalar_markets(self) -> bool:
+        # Check if the subclass has implemented the answer_scalar_market method, if yes, fetch scalar markets as well.
+        if self.answer_scalar_market.__wrapped__.__func__ is not DeployablePredictionAgent.answer_scalar_market:  # type: ignore[attr-defined] # This works just fine, but mypy doesn't know about it for some reason.
+            return True
+        return False
+
     def get_markets(
         self,
         market_type: MarketType,
@@ -343,6 +350,7 @@ class DeployablePredictionAgent(DeployableAgent):
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
             fetch_categorical_markets=self.fetch_categorical_markets,
+            fetch_scalar_markets=self.fetch_scalar_markets,
         )
         return available_markets
 
@@ -402,9 +410,7 @@ class DeployablePredictionAgent(DeployableAgent):
                     else None
                 )
             except NotImplementedError:
-                logger.info(
-                    "answer_scalar_market() not implemented, falling back to answer_categorical_market()"
-                )
+                logger.info("answer_scalar_market() not implemented!")
         return self.answer_categorical_market(market)
 
     def verify_answer_outcomes(

@@ -101,7 +101,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei,
         include_conditional_markets: bool = False,
         include_categorical_markets: bool = True,
-        include_scalar_markets: bool = True,
+        include_only_scalar_markets: bool = False,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -120,14 +120,14 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case _:
                 raise ValueError(f"Unknown filter {filter_by}")
 
-        if not include_conditional_markets and not include_scalar_markets:
+        if not include_conditional_markets and not include_only_scalar_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
         yes_stms, no_stms = {}, {}
         exclude_scalar_yes, exclude_scalar_no = {}, {}
 
         # Return scalar markets.
-        if include_scalar_markets:
+        if include_only_scalar_markets:
             # We are interested in scalar markets only - this excludes categorical markets
             yes_stms = SeerSubgraphHandler._create_case_variations_condition(
                 UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
@@ -145,7 +145,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
 
         if (
-            not include_scalar_markets
+            not include_only_scalar_markets
             or include_categorical_markets
             or include_conditional_markets
         ):
@@ -196,7 +196,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei = Wei(0),
         include_conditional_markets: bool = True,
         include_categorical_markets: bool = True,
-        include_scalar_markets: bool = True,
+        include_only_scalar_markets: bool = False,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
@@ -207,7 +207,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             include_conditional_markets=include_conditional_markets,
             include_categorical_markets=include_categorical_markets,
-            include_scalar_markets=include_scalar_markets,
+            include_only_scalar_markets=include_only_scalar_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.

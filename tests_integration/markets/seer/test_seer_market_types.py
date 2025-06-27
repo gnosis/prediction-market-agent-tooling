@@ -37,7 +37,7 @@ def test_get_binary_markets_only(
         filter_by=FilterBy.NONE,
         include_conditional_markets=True,
         include_categorical_markets=False,
-        include_scalar_markets=False,
+        include_only_scalar_markets=False,
     )
 
     assert len(markets) <= 10
@@ -62,7 +62,7 @@ def test_get_scalar_markets_only(
         filter_by=FilterBy.NONE,
         include_conditional_markets=False,
         include_categorical_markets=False,
-        include_scalar_markets=True,
+        include_only_scalar_markets=True,
     )
 
     assert len(markets) <= 10
@@ -87,7 +87,7 @@ def test_get_categorical_markets_only(
         filter_by=FilterBy.NONE,
         include_conditional_markets=False,
         include_categorical_markets=True,
-        include_scalar_markets=False,
+        include_only_scalar_markets=False,
     )
 
     assert len(markets) <= 10
@@ -109,7 +109,7 @@ def test_exclude_scalar_markets(
         filter_by=FilterBy.NONE,
         include_conditional_markets=False,
         include_categorical_markets=True,
-        include_scalar_markets=False,
+        include_only_scalar_markets=False,
     )
 
     assert len(markets) <= 10

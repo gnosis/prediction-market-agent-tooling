@@ -133,4 +133,6 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             condition=market.condition,
             finalized_time=market.finalized_time,
             fees=market.fees,
+            upper_bound=market.upper_bound,
+            lower_bound=market.lower_bound,
         )

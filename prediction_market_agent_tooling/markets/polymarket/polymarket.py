@@ -42,13 +42,12 @@ class PolymarketAgentMarket(AgentMarket):
     def from_data_model(
         model: PolymarketGammaResponseDataItem,
     ) -> "PolymarketAgentMarket":
-        "-".join([i.slug for i in model.tags])
-        # ToDo - check cases where multiple markets are here
+        # If len(model.markets) > 0, this denotes a categorical market.
 
         outcomes = model.markets[0].outcomes_list
         outcome_prices = model.markets[0].outcome_prices
         if not outcome_prices:
-            # We give a best guess
+            # We give random prices
             outcome_prices = [0.5, 0.5]
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 

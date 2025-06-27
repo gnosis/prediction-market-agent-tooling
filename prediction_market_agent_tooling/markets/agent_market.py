@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     OutcomeWei,
     Probability,
+    Wei,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
@@ -85,8 +86,8 @@ class AgentMarket(BaseModel):
     volume: CollateralToken | None
     fees: MarketFees
 
-    upper_bound: int | None = None
-    lower_bound: int | None = None
+    upper_bound: Wei | None = None
+    lower_bound: Wei | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(

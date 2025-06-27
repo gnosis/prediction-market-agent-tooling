@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
+    Wei,
 )
 from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
@@ -104,9 +105,9 @@ Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
 class ScalarProbabilisticAnswer(BaseModel):
-    scalar_value: float
-    upperBound: int
-    lowerBound: int
+    scalar_value: Wei
+    upperBound: Wei
+    lowerBound: Wei
     confidence: float
     reasoning: str | None = None
     logprobs: list[FieldLogprobs] | None = None

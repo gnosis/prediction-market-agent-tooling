@@ -129,10 +129,41 @@ class SeerAgentMarket(AgentMarket):
         )
 
     def get_token_in_usd(self, x: CollateralToken) -> USD:
-        return get_token_in_usd(x, self.collateral_token_contract_address_checksummed)
+        try:
+            return get_token_in_usd(
+                x, self.collateral_token_contract_address_checksummed
+            )
+        except NoLiquidityAvailableOnCowException as e:
+            logger.warning(
+                f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
+            )
+            p = PriceManager.build(HexBytes(HexStr(self.id)))
+            token_price = p.get_token_price_from_pools(
+                token=self.collateral_token_contract_address_checksummed
+            )
+
+            if token_price:
+                return USD(x.value * token_price.value)
+            raise e
 
     def get_usd_in_token(self, x: USD) -> CollateralToken:
-        return get_usd_in_token(x, self.collateral_token_contract_address_checksummed)
+        try:
+            return get_usd_in_token(
+                x, self.collateral_token_contract_address_checksummed
+            )
+        except NoLiquidityAvailableOnCowException as e:
+            logger.warning(
+                f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
+            )
+            p = PriceManager.build(HexBytes(HexStr(self.id)))
+            token_price = p.get_token_price_from_pools(
+                token=self.collateral_token_contract_address_checksummed
+            )
+
+            if token_price:
+                return CollateralToken(x.value * token_price.value)
+
+            raise e
 
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
@@ -347,18 +378,21 @@ class SeerAgentMarket(AgentMarket):
             resolution=None,
             volume=None,
             probabilities=probability_map,
-            upper_bound=SeerAgentMarket.convert_from_wei(model.upper_bound),
-            lower_bound=SeerAgentMarket.convert_from_wei(model.lower_bound),
+            upper_bound=SeerAgentMarket.normalize_value(model.upper_bound)
+            if model.upper_bound
+            else None,
+            lower_bound=SeerAgentMarket.normalize_value(model.lower_bound)
+            if model.lower_bound
+            else None,
         )
 
         return market
 
-    # TODO Decide how to handle this in the future
     @staticmethod
-    def convert_from_wei(value: int | None) -> int | None:
+    def normalize_value(value: int) -> Wei | None:
         if value and value >= 10**18:
-            return value // 10**18
-        return value
+            return Wei(value // 10**18)
+        return Wei(value)
 
     @staticmethod
     def get_markets(

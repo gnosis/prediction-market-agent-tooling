@@ -380,6 +380,7 @@ class OmenAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
+        fetch_scalar_markets: bool = False,
     ) -> t.Sequence["OmenAgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)

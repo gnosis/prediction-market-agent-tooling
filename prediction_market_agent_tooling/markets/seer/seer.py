@@ -376,7 +376,8 @@ class SeerAgentMarket(AgentMarket):
             sort_by=sort_by,
             filter_by=filter_by,
             include_categorical_markets=fetch_categorical_markets,
-            include_scalar_markets=fetch_scalar_markets,
+            include_only_scalar_markets=fetch_scalar_markets,
+            include_conditional_markets=not fetch_scalar_markets,  # scalar markets and conditional are currently exclusive
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which
@@ -524,7 +525,7 @@ class SeerAgentMarket(AgentMarket):
 
             if not self.has_liquidity():
                 logger.error(f"Market {self.id} has no liquidity. Cannot place bet.")
-                raise e from e
+                raise e
 
             tx_receipt = SwapPoolHandler(
                 api_keys=api_keys,

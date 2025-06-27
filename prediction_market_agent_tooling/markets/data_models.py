@@ -4,7 +4,10 @@ from typing import Annotated, Sequence
 from pydantic import BaseModel, BeforeValidator, computed_field
 
 from prediction_market_agent_tooling.deploy.constants import (
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
+    INVALID_RESULT_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -18,11 +21,6 @@ from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
-)
-from prediction_market_agent_tooling.markets.seer.seer_constants import (
-    DOWN_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
-    INVALID_RESULT_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
-    UP_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, check_not_none
 
@@ -203,35 +201,32 @@ class CategoricalProbabilisticAnswer(BaseModel):
     @staticmethod
     def from_scalar_answer(
         answer: ScalarProbabilisticAnswer,
-        market_outcomes: Sequence[OutcomeStr] | None = None,
+        market_outcomes: Sequence[OutcomeStr],
     ) -> "CategoricalProbabilisticAnswer":
         probabilities = {}
         lowercase_market_outcomes = (
             [outcome.lower() for outcome in market_outcomes] if market_outcomes else []
         )
 
-        if not market_outcomes:
-            raise ValueError("Market with no outcomes")
-
         if not set(
             [
-                DOWN_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
-                UP_OUTCOME_SEER_IDENTIFIER_LOWERCASE,
+                DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
+                UP_OUTCOME_LOWERCASE_IDENTIFIER,
             ]
         ).issubset(lowercase_market_outcomes):
             raise ValueError("Market with no outcomes")
 
-        probabilities[OutcomeStr(UP_OUTCOME_SEER_IDENTIFIER_LOWERCASE)] = answer.p_up
+        probabilities[OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER.upper())] = answer.p_up
         probabilities[
-            OutcomeStr(DOWN_OUTCOME_SEER_IDENTIFIER_LOWERCASE)
+            OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper())
         ] = answer.p_down
 
         if (
             market_outcomes
-            and INVALID_RESULT_OUTCOME_SEER_IDENTIFIER_LOWERCASE in market_outcomes
+            and INVALID_RESULT_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_market_outcomes
         ):
             probabilities[
-                OutcomeStr(INVALID_RESULT_OUTCOME_SEER_IDENTIFIER_LOWERCASE)
+                OutcomeStr(INVALID_RESULT_OUTCOME_LOWERCASE_IDENTIFIER.capitalize())
             ] = Probability(1 - answer.p_up - answer.p_down)
 
         return CategoricalProbabilisticAnswer(

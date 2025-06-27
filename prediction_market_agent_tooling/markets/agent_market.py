@@ -369,6 +369,7 @@ class AgentMarket(BaseModel):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
+        fetch_scalar_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 

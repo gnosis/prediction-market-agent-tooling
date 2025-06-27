@@ -71,6 +71,7 @@ def get_single_usd_to_token_rate(token_address: ChecksumAddress) -> CollateralTo
             .convertToShares(CollateralToken(1).as_wei)
             .as_token.value
         )
+    # TODO: handle NoLiquidityAvailableOnCowException somehow
     in_wei = get_buy_token_amount_else_raise(
         sell_amount=CollateralToken(1).as_wei,
         sell_token=WRAPPED_XDAI_CONTRACT_ADDRESS,

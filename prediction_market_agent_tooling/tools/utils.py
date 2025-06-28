@@ -4,6 +4,7 @@ from datetime import datetime
 from math import prod
 from typing import Any, NoReturn, Optional, Type, TypeVar
 
+import httpx
 import pytz
 import requests
 from pydantic import BaseModel, ValidationError
@@ -143,7 +144,9 @@ def get_current_git_url() -> str:
     return git.Repo(search_parent_directories=True).remotes.origin.url
 
 
-def response_to_json(response: requests.models.Response) -> dict[str, Any]:
+def response_to_json(
+    response: requests.models.Response | httpx.Response,
+) -> dict[str, Any]:
     response.raise_for_status()
     response_json: dict[str, Any] = response.json()
     return response_json
@@ -153,7 +156,7 @@ BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 
 
 def response_to_model(
-    response: requests.models.Response, model: Type[BaseModelT]
+    response: requests.models.Response | httpx.Response, model: Type[BaseModelT]
 ) -> BaseModelT:
     response_json = response_to_json(response)
     try:

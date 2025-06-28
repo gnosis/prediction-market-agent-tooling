@@ -188,7 +188,7 @@ def test_get_buy_token_amount(direction: bool) -> None:
     """
     markets = OmenAgentMarket.get_markets(
         limit=10,
-        sort_by=SortBy.CLOSING_SOONEST,
+        sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
     )
     investment_amount = USD(5)

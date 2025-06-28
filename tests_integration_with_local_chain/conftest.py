@@ -60,11 +60,11 @@ def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, N
 
 @pytest.fixture(scope="session")
 def eoa_accounts(local_web3: Web3) -> list[TestAccount]:
-    # We filter out accounts that are smart accounts because our methods `send_xdai_to` fails in that case (we are using
-    # legacy transactions)
-    # For ex, see https://gnosis.blockscout.com/address/0x70997970C51812dc3A010C7d01b50e0d17dc79C8?tab=contract_code
-    # This account corresponds to foundry account # 1
-    return keep_only_eoa_accounts(ape_accounts.test_accounts, local_web3)
+    # Note that the test accounts we use here are EOAs (because we use a different mnemonic).
+    # If we were using anvil standard accounts, we would have to filter out smart accounts.
+    # For example, anvil's acc 1 (https://gnosisscan.io/address/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) delegated access to a smart contract, which sweeps all funds sent to it.
+    # Hence we prefer to use EOA accounts from a different mnemonic than to rely on anvil's standard accounts.
+    return ape_accounts.test_accounts
 
 
 def keep_only_eoa_accounts(

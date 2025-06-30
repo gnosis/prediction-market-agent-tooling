@@ -50,7 +50,9 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 def test_answer_decision(
     prob_multi: dict[OutcomeStr, Probability], expected_direction: OutcomeStr
 ) -> None:
-    betting_strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(0.1))
+    betting_strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+        max_position_amount=USD(0.1)
+    )
     mock_answer = CategoricalProbabilisticAnswer(
         probabilities=prob_multi, confidence=1.0
     )
@@ -93,7 +95,9 @@ def test_rebalance() -> None:
     )
     buy_token_amount = OutcomeToken(10)
     bet_amount = USD(tiny_amount.value) + mock_existing_position.total_amount_current
-    strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=bet_amount)
+    strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+        max_position_amount=bet_amount
+    )
     mock_answer = CategoricalProbabilisticAnswer(
         probabilities={
             OMEN_TRUE_OUTCOME: Probability(0.9),
@@ -129,19 +133,19 @@ def test_rebalance() -> None:
     "strategy, liquidity, bet_proportion_fee, should_raise",
     [
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             1,
             0.02,
             True,  # Should raise because fee will eat the profit.
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.02,
             False,  # Should be okay, because liquidity + fee combo is reasonable.
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.5,
             True,  # Should raise because fee will eat the profit.

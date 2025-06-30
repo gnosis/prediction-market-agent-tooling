@@ -6,6 +6,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    GuaranteedLossError,
     MultiCategoricalMaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -202,5 +203,5 @@ def test_attacking_market(
         trades = strategy.calculate_trades(None, answer, market)
         assert not should_raise, "Should not have raised and return trades normally."
         assert trades, "No trades available."
-    except Exception:
+    except GuaranteedLossError:
         assert should_raise, "Should have raise to prevent placing of bet."

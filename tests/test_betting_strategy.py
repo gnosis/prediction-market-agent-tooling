@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from web3 import Web3
@@ -132,33 +132,57 @@ def test_rebalance() -> None:
 
 
 @pytest.mark.parametrize(
-    "strategy, liquidity, bet_proportion_fee, should_raise",
+    "strategy, liquidity, bet_proportion_fee, should_have_trades, should_raise, disable_cap_to_profitable_position",
     [
         (
             MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             1,
             0.02,
+            True,
             True,  # Should raise because fee will eat the profit.
+            True,  # We need to disabled the profit capping in order to raise.
+        ),
+        (
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            1,
+            0.02,
+            True,
+            False,  # Won't raise because profit capping will trigger.
+            False,
         ),
         (
             MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.02,
+            True,
             False,  # Should be okay, because liquidity + fee combo is reasonable.
+            False,
         ),
         (
             MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.5,
+            True,
             True,  # Should raise because fee will eat the profit.
+            True,  # We need to disabled the profit capping in order to raise.
+        ),
+        (
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            10,
+            0.5,
+            False,  # Won't have trades, because the betting strategy won't do any if they aren't profitable.
+            False,  # Won't raise because profit capping will trigger.
+            False,
         ),
     ],
 )
 def test_attacking_market(
-    strategy: BettingStrategy,
-    liquidity: OutcomeToken,
+    strategy: MultiCategoricalMaxAccuracyBettingStrategy,
+    liquidity: int,
     bet_proportion_fee: float,
+    should_have_trades: bool,
     should_raise: bool,
+    disable_cap_to_profitable_position: bool,
 ) -> None:
     """
     Test if markets with unreasonably low liquidity and/or high fees won't put agent into immediate loss.
@@ -186,8 +210,8 @@ def test_attacking_market(
             OMEN_FALSE_OUTCOME: Probability(0.5),
         },
         outcome_token_pool={
-            OMEN_BINARY_MARKET_OUTCOMES[0]: liquidity,
-            OMEN_BINARY_MARKET_OUTCOMES[1]: liquidity,
+            OMEN_BINARY_MARKET_OUTCOMES[0]: OutcomeToken(liquidity),
+            OMEN_BINARY_MARKET_OUTCOMES[1]: OutcomeToken(liquidity),
         },
         fees=MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee),
     )
@@ -199,9 +223,30 @@ def test_attacking_market(
         confidence=1.0,
     )
 
-    try:
-        trades = strategy.calculate_trades(None, answer, market)
-        assert not should_raise, "Should not have raised and return trades normally."
-        assert trades, "No trades available."
-    except GuaranteedLossError:
-        assert should_raise, "Should have raise to prevent placing of bet."
+    def run_test() -> None:
+        try:
+            trades = strategy.calculate_trades(None, answer, market)
+            assert (
+                not should_raise
+            ), "Should not have raised and return trades normally."
+            assert bool(trades) == should_have_trades
+        except GuaranteedLossError:
+            assert (
+                disable_cap_to_profitable_position
+            ), "This can not happen if it's enabled."
+            assert should_raise, "Should have raise to prevent placing of bet."
+
+    if disable_cap_to_profitable_position:
+        with patch.object(
+            BettingStrategy,
+            "cap_to_profitable_position",
+            return_value=strategy.max_position_amount,
+        ):
+            run_test()
+    else:
+        with patch.object(
+            OmenAgentMarket,
+            "get_liquidity",
+            return_value=CollateralToken(liquidity),
+        ):
+            run_test()

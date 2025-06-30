@@ -238,13 +238,13 @@ def get_objective(
                 max_position_amount=bet_amount
             ),
             MaxAccuracyWithKellyScaledBetsStrategy.__name__: lambda: MaxAccuracyWithKellyScaledBetsStrategy(
-                max_bet_amount=bet_amount
+                max_position_amount=bet_amount
             ),
             MaxExpectedValueBettingStrategy.__name__: lambda: MaxExpectedValueBettingStrategy(
                 max_position_amount=bet_amount
             ),
             KellyBettingStrategy.__name__: lambda: KellyBettingStrategy(
-                max_bet_amount=bet_amount, max_price_impact=max_price_impact
+                max_position_amount=bet_amount, max_price_impact=max_price_impact
             ),
         }
 

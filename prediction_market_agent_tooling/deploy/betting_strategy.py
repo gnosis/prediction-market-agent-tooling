@@ -324,13 +324,13 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: USD, max_price_impact: float | None = None):
-        self.max_bet_amount = max_bet_amount
+    def __init__(self, max_position_amount: USD, max_price_impact: float | None = None):
+        self.max_position_amount = max_position_amount
         self.max_price_impact = max_price_impact
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
-        return self.max_bet_amount
+        return self.max_position_amount
 
     @staticmethod
     def get_kelly_bet(
@@ -392,7 +392,7 @@ class KellyBettingStrategy(BettingStrategy):
 
         kelly_bet = self.get_kelly_bet(
             market=market,
-            max_bet_amount=self.max_bet_amount,
+            max_bet_amount=self.max_position_amount,
             direction=direction,
             other_direction=other_direction,
             answer=answer,
@@ -476,16 +476,16 @@ class KellyBettingStrategy(BettingStrategy):
         return CollateralToken(optimized_bet_amount.x)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount}, max_price_impact={self.max_price_impact})"
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_position_amount}, max_price_impact={self.max_price_impact})"
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: USD):
-        self.max_bet_amount = max_bet_amount
+    def __init__(self, max_position_amount: USD):
+        self.max_position_amount = max_position_amount
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
-        return self.max_bet_amount
+        return self.max_position_amount
 
     def adjust_bet_amount(
         self, existing_position: ExistingPosition | None, market: AgentMarket
@@ -493,7 +493,7 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         existing_position_total_amount = (
             existing_position.total_amount_current if existing_position else USD(0)
         )
-        return self.max_bet_amount + existing_position_total_amount
+        return self.max_position_amount + existing_position_total_amount
 
     def calculate_trades(
         self,
@@ -542,4 +542,4 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         return trades
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount})"
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_position_amount})"

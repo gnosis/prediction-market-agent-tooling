@@ -5,7 +5,6 @@ from pydantic import BaseModel, BeforeValidator, computed_field
 
 from prediction_market_agent_tooling.deploy.constants import (
     DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
-    INVALID_RESULT_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
@@ -224,10 +223,10 @@ class CategoricalProbabilisticAnswer(BaseModel):
 
         if (
             market_outcomes
-            and INVALID_RESULT_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_market_outcomes
+            and INVALID_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_market_outcomes
         ):
             probabilities[
-                OutcomeStr(INVALID_RESULT_OUTCOME_LOWERCASE_IDENTIFIER.capitalize())
+                OutcomeStr(INVALID_OUTCOME_LOWERCASE_IDENTIFIER.capitalize())
             ] = Probability(1 - answer.p_up - answer.p_down)
 
         return CategoricalProbabilisticAnswer(

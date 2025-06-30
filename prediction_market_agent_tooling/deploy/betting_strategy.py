@@ -105,6 +105,18 @@ class BettingStrategy(ABC):
         """
         Use a binary search (tree-based search) to efficiently find the largest profitable bet amount.
         """
+        # First, try it with the desired amount right away.
+        if (
+            market.get_in_usd(
+                check_not_none(
+                    market.get_buy_token_amount(bet_amount, outcome)
+                ).as_token
+            )
+            > bet_amount
+        ):
+            return bet_amount
+
+        # If it wasn't profitable, try binary search to find the highest, but profitable, amount.
         lower = USD(0)
         # It doesn't make sense to try to bet more than the liquidity itself, so override it as maximal value if it's lower.
         upper = min(bet_amount, market.get_in_usd(market.get_liquidity()))

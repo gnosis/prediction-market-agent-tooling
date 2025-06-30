@@ -112,6 +112,7 @@ def test_rebalance() -> None:
     mock_market.get_outcome_str_from_bool.side_effect = mock_outcome_str
     mock_market.get_usd_in_collateral_token = lambda x: CollateralToken(x.value)
     mock_market.get_token_in_usd = lambda x: USD(x.value)
+    mock_market.get_in_usd = lambda x: USD(x.value)
     mock_market.current_p_yes = 0.5
     mock_market.id = "0x123"
     mock_market.outcomes = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]

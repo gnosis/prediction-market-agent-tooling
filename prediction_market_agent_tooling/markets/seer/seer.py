@@ -378,12 +378,8 @@ class SeerAgentMarket(AgentMarket):
             resolution=None,
             volume=None,
             probabilities=probability_map,
-            upper_bound=SeerAgentMarket.normalize_value(model.upper_bound)
-            if model.upper_bound
-            else None,
-            lower_bound=SeerAgentMarket.normalize_value(model.lower_bound)
-            if model.lower_bound
-            else None,
+            upper_bound=model.upper_bound,
+            lower_bound=model.lower_bound,
         )
 
         return market

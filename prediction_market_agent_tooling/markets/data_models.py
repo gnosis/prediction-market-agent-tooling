@@ -8,6 +8,7 @@ from prediction_market_agent_tooling.deploy.constants import (
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    INVALID_OUTCOME_LOWERCASE_IDENTIFIER
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,

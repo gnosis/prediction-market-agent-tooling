@@ -1,11 +1,12 @@
 from datetime import timedelta
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    GuaranteedLossError,
     MultiCategoricalMaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -50,7 +51,9 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 def test_answer_decision(
     prob_multi: dict[OutcomeStr, Probability], expected_direction: OutcomeStr
 ) -> None:
-    betting_strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(0.1))
+    betting_strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+        max_position_amount=USD(0.1)
+    )
     mock_answer = CategoricalProbabilisticAnswer(
         probabilities=prob_multi, confidence=1.0
     )
@@ -93,7 +96,9 @@ def test_rebalance() -> None:
     )
     buy_token_amount = OutcomeToken(10)
     bet_amount = USD(tiny_amount.value) + mock_existing_position.total_amount_current
-    strategy = MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=bet_amount)
+    strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+        max_position_amount=bet_amount
+    )
     mock_answer = CategoricalProbabilisticAnswer(
         probabilities={
             OMEN_TRUE_OUTCOME: Probability(0.9),
@@ -108,6 +113,7 @@ def test_rebalance() -> None:
     mock_market.get_outcome_str_from_bool.side_effect = mock_outcome_str
     mock_market.get_usd_in_collateral_token = lambda x: CollateralToken(x.value)
     mock_market.get_token_in_usd = lambda x: USD(x.value)
+    mock_market.get_in_usd = lambda x: USD(x.value)
     mock_market.current_p_yes = 0.5
     mock_market.id = "0x123"
     mock_market.outcomes = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
@@ -126,33 +132,57 @@ def test_rebalance() -> None:
 
 
 @pytest.mark.parametrize(
-    "strategy, liquidity, bet_proportion_fee, should_raise",
+    "strategy, liquidity, bet_proportion_fee, should_have_trades, should_raise, disable_cap_to_profitable_position",
     [
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             1,
             0.02,
+            True,
             True,  # Should raise because fee will eat the profit.
+            True,  # We need to disabled the profit capping in order to raise.
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            1,
+            0.02,
+            True,
+            False,  # Won't raise because profit capping will trigger.
+            False,
+        ),
+        (
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.02,
+            True,
             False,  # Should be okay, because liquidity + fee combo is reasonable.
+            False,
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=USD(100)),
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.5,
+            True,
             True,  # Should raise because fee will eat the profit.
+            True,  # We need to disabled the profit capping in order to raise.
+        ),
+        (
+            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            10,
+            0.5,
+            False,  # Won't have trades, because the betting strategy won't do any if they aren't profitable.
+            False,  # Won't raise because profit capping will trigger.
+            False,
         ),
     ],
 )
 def test_attacking_market(
-    strategy: BettingStrategy,
-    liquidity: OutcomeToken,
+    strategy: MultiCategoricalMaxAccuracyBettingStrategy,
+    liquidity: int,
     bet_proportion_fee: float,
+    should_have_trades: bool,
     should_raise: bool,
+    disable_cap_to_profitable_position: bool,
 ) -> None:
     """
     Test if markets with unreasonably low liquidity and/or high fees won't put agent into immediate loss.
@@ -180,8 +210,8 @@ def test_attacking_market(
             OMEN_FALSE_OUTCOME: Probability(0.5),
         },
         outcome_token_pool={
-            OMEN_BINARY_MARKET_OUTCOMES[0]: liquidity,
-            OMEN_BINARY_MARKET_OUTCOMES[1]: liquidity,
+            OMEN_BINARY_MARKET_OUTCOMES[0]: OutcomeToken(liquidity),
+            OMEN_BINARY_MARKET_OUTCOMES[1]: OutcomeToken(liquidity),
         },
         fees=MarketFees.get_zero_fees(bet_proportion=bet_proportion_fee),
     )
@@ -193,9 +223,30 @@ def test_attacking_market(
         confidence=1.0,
     )
 
-    try:
-        trades = strategy.calculate_trades(None, answer, market)
-        assert not should_raise, "Should not have raised and return trades normally."
-        assert trades, "No trades available."
-    except Exception:
-        assert should_raise, "Should have raise to prevent placing of bet."
+    def run_test() -> None:
+        try:
+            trades = strategy.calculate_trades(None, answer, market)
+            assert (
+                not should_raise
+            ), "Should not have raised and return trades normally."
+            assert bool(trades) == should_have_trades
+        except GuaranteedLossError:
+            assert (
+                disable_cap_to_profitable_position
+            ), "This can not happen if it's enabled."
+            assert should_raise, "Should have raise to prevent placing of bet."
+
+    if disable_cap_to_profitable_position:
+        with patch.object(
+            BettingStrategy,
+            "cap_to_profitable_position",
+            return_value=strategy.max_position_amount,
+        ):
+            run_test()
+    else:
+        with patch.object(
+            OmenAgentMarket,
+            "get_liquidity",
+            return_value=CollateralToken(liquidity),
+        ):
+            run_test()

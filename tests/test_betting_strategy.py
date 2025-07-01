@@ -73,7 +73,8 @@ def mock_outcome_str(x: bool) -> OutcomeStr:
     return OMEN_TRUE_OUTCOME if x else OMEN_FALSE_OUTCOME
 
 
-def test_rebalance() -> None:
+@pytest.mark.parametrize("take_profit", [True, False])
+def test_rebalance(take_profit: bool) -> None:
     # For simplicity, 1 Token = 1 USD in this test.
     tiny_amount = CollateralToken(0.0001)
     mock_amount = USD(5)
@@ -97,7 +98,8 @@ def test_rebalance() -> None:
     buy_token_amount = OutcomeToken(10)
     bet_amount = USD(tiny_amount.value) + mock_existing_position.total_amount_current
     strategy = MultiCategoricalMaxAccuracyBettingStrategy(
-        max_position_amount=bet_amount
+        max_position_amount=bet_amount,
+        take_profit=take_profit,
     )
     mock_answer = CategoricalProbabilisticAnswer(
         probabilities={
@@ -129,6 +131,66 @@ def test_rebalance() -> None:
     sell_trade = trades[1]
     assert sell_trade.trade_type == TradeType.SELL
     assert sell_trade.amount == mock_amount
+
+
+@pytest.mark.parametrize("take_profit", [True, False])
+def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
+    # For simplicity, 1 Token = 1 USD in this test.
+    tiny_amount = CollateralToken(0.0001)
+    mock_amount = USD(5)
+    liquidity_amount = CollateralToken(100)
+    mock_existing_position = ExistingPosition(
+        market_id="0x123",
+        # For simplicity just mock them all as the same amount.
+        amounts_current={
+            OMEN_TRUE_OUTCOME: mock_amount,
+            OMEN_FALSE_OUTCOME: USD(0),
+        },
+        amounts_potential={
+            OMEN_TRUE_OUTCOME: mock_amount,
+            OMEN_FALSE_OUTCOME: USD(0),
+        },
+        amounts_ot={
+            OMEN_TRUE_OUTCOME: OutcomeToken(mock_amount.value),
+            OMEN_FALSE_OUTCOME: OutcomeToken(0),
+        },
+    )
+    buy_token_amount = OutcomeToken(10)
+    # Divide the existing position two, to simulate that the existing position increased in value.
+    max_position_amount = mock_existing_position.total_amount_current / 2
+    strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+        max_position_amount=max_position_amount,
+        take_profit=take_profit,
+    )
+    mock_answer = CategoricalProbabilisticAnswer(
+        probabilities={
+            OMEN_TRUE_OUTCOME: Probability(0.9),
+            OMEN_FALSE_OUTCOME: Probability(0.1),
+        },
+        confidence=0.5,
+    )
+    mock_market = Mock(OmenAgentMarket, wraps=OmenAgentMarket)
+    mock_market.get_liquidity.return_value = liquidity_amount
+    mock_market.get_tiny_bet_amount.return_value = tiny_amount
+    mock_market.get_buy_token_amount.return_value = buy_token_amount
+    mock_market.get_outcome_str_from_bool.side_effect = mock_outcome_str
+    mock_market.get_usd_in_collateral_token = lambda x: CollateralToken(x.value)
+    mock_market.get_token_in_usd = lambda x: USD(x.value)
+    mock_market.get_in_usd = lambda x: USD(x.value)
+    mock_market.current_p_yes = 0.5
+    mock_market.id = "0x123"
+    mock_market.outcomes = [OMEN_TRUE_OUTCOME, OMEN_FALSE_OUTCOME]
+    mock_market.market_outcome_for_probability_key.side_effect = lambda x: x
+
+    trades = strategy.calculate_trades(mock_existing_position, mock_answer, mock_market)
+    # there should be either 1 sell trade (if not taking profit), or none trades
+    assert len(trades) == (1 if take_profit else 0)
+    if take_profit:
+        sell_trade = trades[0]
+        assert sell_trade.trade_type == TradeType.SELL
+        assert (
+            sell_trade.amount == mock_amount - max_position_amount
+        ), "Should take the profit made by increased value of outcome tokens."
 
 
 @pytest.mark.parametrize(

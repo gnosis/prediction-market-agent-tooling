@@ -72,6 +72,9 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
+from prediction_market_agent_tooling.tools.tokens.slippage import (
+    get_slippage_tolerance_per_token,
+)
 from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
@@ -479,7 +482,7 @@ class SeerAgentMarket(AgentMarket):
         Returns:
             Transaction hash of the successful swap
         """
-
+        slippage_tolerance = get_slippage_tolerance_per_token(buy_token)
         try:
             _, order = swap_tokens_waiting(
                 amount_wei=amount_wei,
@@ -489,6 +492,7 @@ class SeerAgentMarket(AgentMarket):
                 web3=web3,
                 wait_order_complete=False,
                 timeout=timedelta(minutes=2),
+                slippage_tolerance=slippage_tolerance,
             )
             order_metadata = asyncio.run(wait_for_order_completion(order=order))
             logger.debug(

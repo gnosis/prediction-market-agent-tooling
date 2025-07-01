@@ -1,26 +1,5 @@
-from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
-    PolymarketFullMarket,
-)
 from prediction_market_agent_tooling.tools.google_utils import search_google_gcp
-
-
-def find_resolution_on_polymarket(question: str) -> Resolution | None:
-    full_market = find_full_polymarket(question)
-    # TODO: Only main markets are supported right now, add logic for others if needed.
-    return (
-        full_market.main_market.resolution
-        if full_market and full_market.is_main_market
-        else None
-    )
-
-
-def find_full_polymarket(question: str) -> PolymarketFullMarket | None:
-    polymarket_url = find_url_to_polymarket(question)
-    return (
-        PolymarketFullMarket.fetch_from_url(polymarket_url) if polymarket_url else None
-    )
 
 
 def find_url_to_polymarket(question: str) -> str | None:

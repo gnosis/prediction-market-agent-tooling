@@ -1,6 +1,11 @@
 import typing as t
 
-from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeStr
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    CollateralToken,
+    OutcomeStr,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -8,10 +13,11 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
-    get_polymarket_binary_markets,
+    PolymarketOrderByEnum,
+    get_polymarkets_with_pagination,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
-    PolymarketMarketWithPrices,
+    PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_BASE_URL,
@@ -33,19 +39,30 @@ class PolymarketAgentMarket(AgentMarket):
     fees: MarketFees = MarketFees.get_zero_fees()
 
     @staticmethod
-    def from_data_model(model: PolymarketMarketWithPrices) -> "PolymarketAgentMarket":
+    def from_data_model(
+        model: PolymarketGammaResponseDataItem,
+    ) -> "PolymarketAgentMarket":
+        # If len(model.markets) > 0, this denotes a categorical market.
+
+        outcomes = model.markets[0].outcomes_list
+        outcome_prices = model.markets[0].outcome_prices
+        if not outcome_prices:
+            # We give random prices
+            outcome_prices = [0.5, 0.5]
+        probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
+
         return PolymarketAgentMarket(
             id=model.id,
-            question=model.question,
+            question=model.title,
             description=model.description,
-            outcomes=[x.outcome for x in model.tokens],
-            resolution=model.resolution,
-            created_time=None,
-            close_time=model.end_date_iso,
+            outcomes=outcomes,
+            resolution=None,  # We don't fetch resolution properties
+            created_time=model.startDate,
+            close_time=model.endDate,
             url=model.url,
-            volume=None,
+            volume=CollateralToken(model.volume),
             outcome_token_pool=None,
-            probabilities={},  # ToDo - Implement when fixing Polymarket
+            probabilities=probabilities,
         )
 
     def get_tiny_bet_amount(self) -> CollateralToken:
@@ -63,27 +80,43 @@ class PolymarketAgentMarket(AgentMarket):
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
-        if sort_by != SortBy.NONE:
-            raise ValueError(f"Unsuported sort_by {sort_by} for Polymarket.")
-
-        if created_after is not None:
-            raise ValueError(f"Unsuported created_after for Polymarket.")
-
         closed: bool | None
+        active: bool | None
         if filter_by == FilterBy.OPEN:
+            active = True
             closed = False
         elif filter_by == FilterBy.RESOLVED:
+            active = False
             closed = True
         elif filter_by == FilterBy.NONE:
+            active = None
             closed = None
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
 
-        return [
-            PolymarketAgentMarket.from_data_model(m)
-            for m in get_polymarket_binary_markets(
-                limit=limit,
-                closed=closed,
-                excluded_questions=excluded_questions,
-            )
-        ]
+        ascending: bool = False  # default value
+        match sort_by:
+            case SortBy.NEWEST:
+                order_by = PolymarketOrderByEnum.START_DATE
+            case SortBy.CLOSING_SOONEST:
+                ascending = True
+                order_by = PolymarketOrderByEnum.END_DATE
+            case SortBy.HIGHEST_LIQUIDITY:
+                order_by = PolymarketOrderByEnum.LIQUIDITY
+            case SortBy.NONE:
+                order_by = PolymarketOrderByEnum.VOLUME_24HR
+            case _:
+                raise ValueError(f"Unknown sort_by: {sort_by}")
+
+        markets = get_polymarkets_with_pagination(
+            limit=limit,
+            closed=closed,
+            active=active,
+            order_by=order_by,
+            ascending=ascending,
+            created_after=created_after,
+            excluded_questions=excluded_questions,
+            only_binary=not fetch_categorical_markets,
+        )
+
+        return [PolymarketAgentMarket.from_data_model(m) for m in markets]

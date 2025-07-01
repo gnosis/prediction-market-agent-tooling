@@ -346,6 +346,27 @@ class SeerAgentMarket(AgentMarket):
             resolution=None,
             volume=None,
             probabilities=probability_map,
+            parent_market=(
+                SeerAgentMarket.from_data_model_with_subgraph(
+                    model.parent_market, seer_subgraph, must_have_prices
+                )
+                if model.parent_market
+                else None
+            ),
+            child_markets=(
+                [
+                    agent_child_market
+                    for child_market in model.child_markets
+                    if (
+                        agent_child_market := SeerAgentMarket.from_data_model_with_subgraph(
+                            child_market, seer_subgraph, must_have_prices
+                        )
+                    )
+                    is not None
+                ]
+                if model.child_markets
+                else None
+            ),
         )
 
         return market

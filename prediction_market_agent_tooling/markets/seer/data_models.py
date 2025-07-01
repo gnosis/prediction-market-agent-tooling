@@ -2,7 +2,7 @@ import typing as t
 from datetime import timedelta
 from urllib.parse import urljoin
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
@@ -15,9 +15,6 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeWei,
     Web3Wei,
     Wei,
-)
-from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
-    SeerParentMarket,
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
@@ -59,8 +56,9 @@ class SeerMarket(BaseModel):
     outcomes: t.Sequence[OutcomeStr]
     wrapped_tokens: list[HexAddress] = Field(alias="wrappedTokens")
     parent_outcome: int = Field(alias="parentOutcome")
-    parent_market: t.Optional[SeerParentMarket] = Field(
-        alias="parentMarket", default=None
+    parent_market: t.Optional["SeerMarket"] = Field(alias="parentMarket", default=None)
+    child_markets: t.Optional[list["SeerMarket"]] = Field(
+        alias="childMarkets", default=None
     )
     collateral_token: HexAddress = Field(alias="collateralToken")
     condition_id: HexBytes = Field(alias="conditionId")
@@ -125,6 +123,7 @@ class SeerMarket(BaseModel):
     def created_time(self) -> DatetimeUTC:
         return DatetimeUTC.to_datetime_utc(self.block_timestamp)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def url(self) -> str:
         chain_id = RPCConfig().chain_id

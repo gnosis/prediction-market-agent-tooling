@@ -83,6 +83,9 @@ class AgentMarket(BaseModel):
     volume: CollateralToken | None
     fees: MarketFees
 
+    parent_market: t.Optional["AgentMarket"] = None
+    child_markets: t.Optional[list["AgentMarket"]] = None
+
     @field_validator("probabilities")
     def validate_probabilities(
         cls,

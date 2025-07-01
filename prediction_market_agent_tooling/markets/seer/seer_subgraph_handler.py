@@ -47,7 +47,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
         )
 
-    def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
+    def _get_fields_for_markets(
+        self, markets_field: FieldPath, current_level: int = 0, max_level: int = 1
+    ) -> list[FieldPath]:
         fields = [
             markets_field.id,
             markets_field.factory,
@@ -61,12 +63,26 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.payoutNumerators,
             markets_field.hasAnswers,
             markets_field.blockTimestamp,
-            markets_field.parentMarket.id,
             markets_field.openingTs,
             markets_field.finalizeTs,
             markets_field.wrappedTokens,
             markets_field.collateralToken,
+            # TODO: This works in Subgraph, but doesn't work via Subgrounds for some reason.
+            # markets_field.questions.question.id,
+            # markets_field.questions.question.finalize_ts,
+            # markets_field.questions.question.best_answer,
         ]
+        if current_level < max_level:
+            fields.extend(
+                self._get_fields_for_markets(
+                    markets_field.parentMarket, current_level + 1, max_level
+                )
+            )
+            fields.extend(
+                self._get_fields_for_markets(
+                    markets_field.childMarkets, current_level + 1, max_level
+                )
+            )
         return fields
 
     @staticmethod
@@ -78,8 +94,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     def _build_where_statements(
         filter_by: FilterBy,
         outcome_supply_gt_if_open: Wei,
-        include_conditional_markets: bool = False,
+        include_conditional_markets: bool = True,
         include_categorical_markets: bool = True,
+        parent_market_id: HexBytes | None = None,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -100,6 +117,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         if not include_conditional_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
+
+        if parent_market_id:
+            and_stms["parentMarket"] = parent_market_id.hex().lower()
 
         # We are only interested in binary markets of type YES/NO/Invalid.
         yes_stms, no_stms = {}, {}
@@ -159,6 +179,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei = Wei(0),
         include_conditional_markets: bool = True,
         include_categorical_markets: bool = True,
+        parent_market_id: HexBytes | None = None,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
@@ -169,6 +190,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             include_conditional_markets=include_conditional_markets,
             include_categorical_markets=include_categorical_markets,
+            parent_market_id=parent_market_id,
         )
 
         # These values can not be set to `None`, but they can be omitted.

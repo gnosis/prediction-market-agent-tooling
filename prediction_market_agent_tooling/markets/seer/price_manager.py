@@ -92,11 +92,7 @@ class PriceManager:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
             )
-            price_from_pool = self.get_token_price_from_pools(token=token)
-            if price_from_pool is None:
-                raise e
-
-            return price_from_pool
+            return self.get_token_price_from_pools(token=token)
 
     @staticmethod
     def pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:

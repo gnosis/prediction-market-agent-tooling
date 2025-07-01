@@ -32,6 +32,10 @@ from prediction_market_agent_tooling.markets.blockchain_utils import store_trade
 from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    SDAI_CONTRACT_ADDRESS,
+    WRAPPED_XDAI_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     SeerAgentResultMappingContract,
 )
@@ -137,14 +141,17 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            p = PriceManager.build(HexBytes(HexStr(self.id)))
-            token_price = p.get_token_price_from_pools(
-                token=self.collateral_token_contract_address_checksummed
-            )
+            token_price = self.get_colateral_price_from_pools()
+            if token_price is None:
+                raise e
+            return USD(x.value * token_price.value)
 
-            if token_price:
-                return USD(x.value * token_price.value)
-            raise e
+    def get_colateral_price_from_pools(self) -> CollateralToken | None:
+        p = PriceManager.build(HexBytes(HexStr(self.id)))
+        token_price = p.get_token_price_from_pools(token=WRAPPED_XDAI_CONTRACT_ADDRESS)
+        if token_price is None:
+            token_price = p.get_token_price_from_pools(token=SDAI_CONTRACT_ADDRESS)
+        return token_price
 
     def get_usd_in_token(self, x: USD) -> CollateralToken:
         try:
@@ -155,15 +162,10 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            p = PriceManager.build(HexBytes(HexStr(self.id)))
-            token_price = p.get_token_price_from_pools(
-                token=self.collateral_token_contract_address_checksummed
-            )
-
-            if token_price:
-                return CollateralToken(x.value * token_price.value)
-
-            raise e
+            token_price = self.get_colateral_price_from_pools()
+            if not token_price:
+                raise e
+            return CollateralToken(x.value * token_price.value)
 
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr

@@ -258,26 +258,25 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         self, token_address: ChecksumAddress, collateral_address: ChecksumAddress
     ) -> SeerPool | None:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
-        wheres = []
-        wheres.extend(
-            [
+
+        where_argument = {
+            "or": [
                 {
-                    "token0": token_address.lower(),
-                    "token1": collateral_address.lower(),
+                    "token0_": {"id": token_address.lower()},
+                    "token1_": {"id": collateral_address.lower()},
                 },
                 {
-                    "token0": collateral_address.lower(),
-                    "token1": token_address.lower(),
+                    "token0_": {"id": collateral_address.lower()},
+                    "token1_": {"id": token_address.lower()},
                 },
             ]
-        )
-
+        }
         optional_params = {}
         optional_params["orderBy"] = self.swapr_algebra_subgraph.Pool.liquidity
         optional_params["orderDirection"] = "desc"
 
         pools_field = self.swapr_algebra_subgraph.Query.pools(
-            where=unwrap_generic_value({"or": wheres}), **optional_params
+            where=unwrap_generic_value(where_argument), **optional_params
         )
 
         fields = self._get_fields_for_pools(pools_field)

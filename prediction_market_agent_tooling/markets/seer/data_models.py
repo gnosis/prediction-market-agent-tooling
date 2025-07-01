@@ -1,12 +1,11 @@
 import typing as t
 from datetime import timedelta
+from typing import Annotated
 from urllib.parse import urljoin
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from web3 import Web3
 from web3.constants import ADDRESS_ZERO
-from typing import Annotated
-from pydantic import BeforeValidator
 
 from prediction_market_agent_tooling.config import RPCConfig
 from prediction_market_agent_tooling.gtypes import (
@@ -51,14 +50,17 @@ class CreateCategoricalMarketsParams(BaseModel):
 
 SEER_BASE_URL = "https://app.seer.pm"
 
+
 def seer_normalize_wei(value: int | None) -> int | None:
     # See https://github.com/seer-pm/demo/blob/main/web/netlify/edge-functions/utils/common.ts#L22
     if value is None:
         return value
     is_in_wei = value > 1e10
     return value if is_in_wei else value * 10**18
-    
+
+
 SeerNormalizedWei = Annotated[Wei | None, BeforeValidator(seer_normalize_wei)]
+
 
 class SeerMarket(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

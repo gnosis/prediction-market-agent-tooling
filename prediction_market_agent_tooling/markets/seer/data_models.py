@@ -57,9 +57,6 @@ class SeerMarket(BaseModel):
     wrapped_tokens: list[HexAddress] = Field(alias="wrappedTokens")
     parent_outcome: int = Field(alias="parentOutcome")
     parent_market: t.Optional["SeerMarket"] = Field(alias="parentMarket", default=None)
-    child_markets: t.Optional[list["SeerMarket"]] = Field(
-        alias="childMarkets", default=None
-    )
     collateral_token: HexAddress = Field(alias="collateralToken")
     condition_id: HexBytes = Field(alias="conditionId")
     opening_ts: int = Field(alias="openingTs")

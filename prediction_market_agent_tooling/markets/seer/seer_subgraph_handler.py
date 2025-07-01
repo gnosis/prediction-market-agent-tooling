@@ -67,7 +67,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.finalizeTs,
             markets_field.wrappedTokens,
             markets_field.collateralToken,
-            # TODO: This works in Subgraph, but doesn't work via Subgrounds for some reason.
+            # TODO: On the Subgraph, `questions` field is a kind of sub-query, instead of a classic list of values.
+            # See how it is shown on their UI: https://thegraph.com/explorer/subgraphs/B4vyRqJaSHD8dRDb3BFRoAzuBK18c1QQcXq94JbxDxWH?view=Query&chain=arbitrum-one.
+            # And that doesn't work with subgrounds.
             # markets_field.questions.question.id,
             # markets_field.questions.question.finalize_ts,
             # markets_field.questions.question.best_answer,
@@ -78,11 +80,12 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                     markets_field.parentMarket, current_level + 1, max_level
                 )
             )
-            fields.extend(
-                self._get_fields_for_markets(
-                    markets_field.childMarkets, current_level + 1, max_level
-                )
-            )
+            # TODO: Same situation as with `questions` field above.
+            # fields.extend(
+            #     self._get_fields_for_markets(
+            #         markets_field.childMarkets, current_level + 1, max_level
+            #     )
+            # )
         return fields
 
     @staticmethod

@@ -61,6 +61,11 @@ class FilterBy(str, Enum):
     NONE = "none"
 
 
+class ParentMarket(BaseModel):
+    market: "AgentMarket"
+    parent_outcome: int
+
+
 class AgentMarket(BaseModel):
     """
     Common market class that can be created from vendor specific markets.
@@ -83,7 +88,7 @@ class AgentMarket(BaseModel):
     volume: CollateralToken | None
     fees: MarketFees
 
-    parent_market: t.Optional["AgentMarket"] = None
+    parent: ParentMarket | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(

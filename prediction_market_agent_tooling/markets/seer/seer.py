@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
@@ -76,7 +77,7 @@ from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
 SEER_TINY_BET_AMOUNT = USD(0.1)
@@ -346,9 +347,18 @@ class SeerAgentMarket(AgentMarket):
             resolution=None,
             volume=None,
             probabilities=probability_map,
-            parent_market=(
-                SeerAgentMarket.from_data_model_with_subgraph(
-                    model.parent_market, seer_subgraph, must_have_prices
+            parent=(
+                ParentMarket(
+                    market=(
+                        check_not_none(
+                            SeerAgentMarket.from_data_model_with_subgraph(
+                                model.parent_market,
+                                seer_subgraph,
+                                False,
+                            )
+                        )
+                    ),
+                    parent_outcome=model.parent_outcome,
                 )
                 if model.parent_market
                 else None

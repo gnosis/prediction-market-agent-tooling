@@ -22,7 +22,10 @@ from prediction_market_agent_tooling.gtypes import (
     xDai,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
+    SAFE_COLLATERAL_TOKENS_ADDRESSES,
     OmenSubgraphHandler,
+    WrappedxDaiContract,
+    sDaiContract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import prepare_tx, send_xdai_to
 
@@ -30,6 +33,23 @@ from prediction_market_agent_tooling.tools.web3_utils import prepare_tx, send_xd
 @pytest.fixture(autouse=True, scope="session")
 def load_env() -> None:
     load_dotenv()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def force_non_cow_tokens() -> t.Generator[None, None, None]:
+    # With local chain tests, we can work only with tokens that are exchangeable via direct web3 calls,
+    # not via production (Gnosis Chain's mainnet) CoW API calls.
+    original_tokens = SAFE_COLLATERAL_TOKENS_ADDRESSES.copy()
+
+    SAFE_COLLATERAL_TOKENS_ADDRESSES.clear()
+    SAFE_COLLATERAL_TOKENS_ADDRESSES.extend(
+        (sDaiContract().address, WrappedxDaiContract().address)
+    )
+
+    yield
+
+    SAFE_COLLATERAL_TOKENS_ADDRESSES.clear()
+    SAFE_COLLATERAL_TOKENS_ADDRESSES.extend(original_tokens)
 
 
 @pytest.fixture(scope="session")

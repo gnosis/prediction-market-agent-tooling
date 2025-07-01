@@ -53,7 +53,7 @@ from prediction_market_agent_tooling.tools.web3_utils import (
     unwrap_generic_value,
 )
 
-SAFE_COLLATERAL_TOKENS = (
+SAFE_COLLATERAL_TOKENS = [
     WrappedxDaiContract(),
     sDaiContract(),
     GNOContract(),
@@ -62,10 +62,10 @@ SAFE_COLLATERAL_TOKENS = (
     SAFEContract(),
     COWContract(),
     MetriSuperGroup(),
-)
-SAFE_COLLATERAL_TOKENS_ADDRESSES = tuple(
+]
+SAFE_COLLATERAL_TOKENS_ADDRESSES = [
     contract.address for contract in SAFE_COLLATERAL_TOKENS
-)
+]
 
 
 class OmenSubgraphHandler(BaseSubgraphHandler):
@@ -237,7 +237,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         liquidity_bigger_than: Wei | None,
         condition_id_in: list[HexBytes] | None,
         id_in: list[str] | None,
-        collateral_token_address_in: tuple[ChecksumAddress, ...] | None,
+        collateral_token_address_in: t.Sequence[ChecksumAddress] | None,
         category: str | None,
         include_categorical_markets: bool = False,
         include_scalar_markets: bool = False,
@@ -348,7 +348,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         created_after: DatetimeUTC | None = None,
         excluded_questions: set[str] | None = None,  # question titles
         collateral_token_address_in: (
-            tuple[ChecksumAddress, ...] | None
+            t.Sequence[ChecksumAddress] | None
         ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
         creator_in: t.Sequence[HexAddress] | None = None,
@@ -416,7 +416,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         sort_by_field: FieldPath | None = None,
         sort_direction: str | None = None,
         collateral_token_address_in: (
-            tuple[ChecksumAddress, ...] | None
+            t.Sequence[ChecksumAddress] | None
         ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
         category: str | None = None,
         include_categorical_markets: bool = True,

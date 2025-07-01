@@ -1,11 +1,14 @@
 from collections.abc import Sequence
 
+from web3.constants import ADDRESS_ZERO
+
 from prediction_market_agent_tooling.deploy.constants import (
     DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
+from prediction_market_agent_tooling.gtypes import HexAddress, HexStr
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, OutcomeStr
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -28,7 +31,7 @@ def _is_binary_market(outcomes: Sequence[OutcomeStr]) -> bool:
     return has_yes and has_no
 
 
-def test_get_binary_markets_only(
+def test_get_conditional_markets_only(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     """Test that querying for 10 binary markets returns only binary market types."""
@@ -45,12 +48,12 @@ def test_get_binary_markets_only(
     for market in markets:
         # Should be binary markets only
         mid = market.id.hex()
-        assert _is_binary_market(
-            market.outcomes
-        ), f"Market {mid} should be binary, got outcomes: {market.outcomes}"
-        assert not _is_scalar_market(
-            market.outcomes
-        ), f"Market {mid} should not be scalar, got outcomes: {market.outcomes}"
+        assert (
+            market.parent_market is not None
+        ), f"Market {mid} should have a parent market, got parent market: {market.parent_market}"
+        assert (
+            HexAddress(HexStr(market.parent_market.id.hex())) != ADDRESS_ZERO
+        ), f"Market {mid} should not have a parent market, got parent market: {market.parent_market}"
 
 
 def test_get_scalar_markets_only(
@@ -76,6 +79,13 @@ def test_get_scalar_markets_only(
         assert not _is_binary_market(
             market.outcomes
         ), f"Market {mid} should not be binary, got outcomes: {market.outcomes}"
+        does_have_parent_market = (
+            market.parent_market is not None
+            and HexAddress(HexStr(market.parent_market.id.hex())) != ADDRESS_ZERO
+        )
+        assert (
+            not does_have_parent_market
+        ), f"Market {mid} should not have a parent market, got parent market: {market.parent_market}"
 
 
 def test_get_categorical_markets_only(
@@ -107,9 +117,8 @@ def test_exclude_scalar_markets(
     markets = seer_subgraph_handler_test.get_markets(
         limit=10,
         filter_by=FilterBy.NONE,
-        include_conditional_markets=False,
-        include_categorical_markets=True,
-        include_only_scalar_markets=False,
+        include_conditional_markets=True,
+        include_categorical_markets=False,
     )
 
     assert len(markets) <= 10

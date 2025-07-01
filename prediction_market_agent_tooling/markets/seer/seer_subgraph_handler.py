@@ -120,7 +120,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case _:
                 raise ValueError(f"Unknown filter {filter_by}")
 
-        if not include_conditional_markets and not include_only_scalar_markets:
+        if not include_conditional_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
         yes_stms, no_stms = {}, {}

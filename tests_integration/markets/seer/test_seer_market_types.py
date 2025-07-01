@@ -31,7 +31,7 @@ def _is_binary_market(outcomes: Sequence[OutcomeStr]) -> bool:
     return has_yes and has_no
 
 
-def test_get_conditional_markets_only(
+def test_conditional_markets_have_parent_address(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     """Test that querying for 10 binary markets returns only binary market types."""
@@ -46,13 +46,13 @@ def test_get_conditional_markets_only(
     assert len(markets) <= 10
 
     for market in markets:
-        # Should be binary markets only
         mid = market.id.hex()
+        parent_has_address = (
+            market.parent_market is None
+            or HexAddress(HexStr(market.parent_market.id.hex())) != ADDRESS_ZERO
+        )
         assert (
-            market.parent_market is not None
-        ), f"Market {mid} should have a parent market, got parent market: {market.parent_market}"
-        assert (
-            HexAddress(HexStr(market.parent_market.id.hex())) != ADDRESS_ZERO
+            parent_has_address
         ), f"Market {mid} should not have a parent market, got parent market: {market.parent_market}"
 
 

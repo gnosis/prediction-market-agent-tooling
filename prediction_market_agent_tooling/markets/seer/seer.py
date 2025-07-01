@@ -198,9 +198,7 @@ class SeerAgentMarket(AgentMarket):
                 )
             )
 
-            amounts_ot[
-                OutcomeStr(outcome_str)
-            ] = outcome_token_balance_wei.as_outcome_token
+            amounts_ot[outcome_str] = outcome_token_balance_wei.as_outcome_token
 
         amounts_current = {
             k: self.get_token_in_usd(self.get_sell_value_of_outcome_token(k, v))

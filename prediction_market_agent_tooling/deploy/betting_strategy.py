@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
 
+import numpy as np
 from scipy.optimize import minimize_scalar
 
 from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
@@ -94,6 +95,76 @@ class BettingStrategy(ABC):
         )
         return trades
 
+    @staticmethod
+    def cap_to_profitable_bet_amount(
+        market: AgentMarket,
+        bet_amount: USD,
+        outcome: OutcomeStr,
+        iters: int = 10,
+    ) -> USD:
+        """
+        Use a binary search (tree-based search) to efficiently find the largest profitable bet amount.
+        """
+        # First, try it with the desired amount right away.
+        if (
+            market.get_in_usd(
+                check_not_none(
+                    market.get_buy_token_amount(bet_amount, outcome)
+                ).as_token
+            )
+            > bet_amount
+        ):
+            return bet_amount
+
+        # If it wasn't profitable, try binary search to find the highest, but profitable, amount.
+        lower = USD(0)
+        # It doesn't make sense to try to bet more than the liquidity itself, so override it as maximal value if it's lower.
+        upper = min(bet_amount, market.get_in_usd(market.get_liquidity()))
+        best_profitable = USD(0)
+
+        for _ in range(iters):
+            mid = (lower + upper) / 2
+            potential_outcome_value = market.get_in_usd(
+                check_not_none(market.get_buy_token_amount(mid, outcome)).as_token
+            )
+
+            if potential_outcome_value > mid:
+                # Profitable, try higher
+                best_profitable = mid
+                lower = mid
+
+            else:
+                # Not profitable, try lower
+                upper = mid
+
+            # If the search interval is very small, break early
+            if float(upper - lower) < 1e-8:
+                break
+
+        if np.isclose(best_profitable.value, 0):
+            best_profitable = USD(0)
+
+        return best_profitable
+
+    @staticmethod
+    def cap_to_profitable_position(
+        market: AgentMarket,
+        existing_position: USD,
+        wanted_position: USD,
+        outcome_to_bet_on: OutcomeStr,
+    ) -> USD:
+        # If the wanted position is lower, it means the agent is gonna sell and that's profitable always.
+        if wanted_position > existing_position:
+            difference = wanted_position - existing_position
+            # Cap the difference we would like to buy to a profitable one.
+            capped_difference = BettingStrategy.cap_to_profitable_bet_amount(
+                market, difference, outcome_to_bet_on
+            )
+            # Lowered the actual wanted position such that it remains profitable.
+            wanted_position = existing_position + capped_difference
+
+        return wanted_position
+
     def _build_rebalance_trades_from_positions(
         self,
         existing_position: ExistingPosition | None,
@@ -160,12 +231,12 @@ class BettingStrategy(ABC):
 
 
 class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
-    def __init__(self, bet_amount: USD):
-        self.bet_amount = bet_amount
+    def __init__(self, max_position_amount: USD):
+        self.max_position_amount = max_position_amount
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
-        return self.bet_amount
+        return self.max_position_amount
 
     @staticmethod
     def calculate_direction(
@@ -196,11 +267,23 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         """We place bet on only one outcome."""
-
         outcome_to_bet_on = self.calculate_direction(market, answer)
 
+        # Will be lowered if the amount that we would need to buy would be unprofitable.
+        actual_wanted_position = BettingStrategy.cap_to_profitable_position(
+            market,
+            (
+                existing_position.amounts_current.get(outcome_to_bet_on, USD(0))
+                if existing_position
+                else USD(0)
+            ),
+            self.max_position_amount,
+            outcome_to_bet_on,
+        )
+
         target_position = Position(
-            market_id=market.id, amounts_current={outcome_to_bet_on: self.bet_amount}
+            market_id=market.id,
+            amounts_current={outcome_to_bet_on: actual_wanted_position},
         )
         trades = self._build_rebalance_trades_from_positions(
             existing_position=existing_position,
@@ -253,13 +336,13 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: USD, max_price_impact: float | None = None):
-        self.max_bet_amount = max_bet_amount
+    def __init__(self, max_position_amount: USD, max_price_impact: float | None = None):
+        self.max_position_amount = max_position_amount
         self.max_price_impact = max_price_impact
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
-        return self.max_bet_amount
+        return self.max_position_amount
 
     @staticmethod
     def get_kelly_bet(
@@ -321,7 +404,7 @@ class KellyBettingStrategy(BettingStrategy):
 
         kelly_bet = self.get_kelly_bet(
             market=market,
-            max_bet_amount=self.max_bet_amount,
+            max_bet_amount=self.max_position_amount,
             direction=direction,
             other_direction=other_direction,
             answer=answer,
@@ -405,16 +488,16 @@ class KellyBettingStrategy(BettingStrategy):
         return CollateralToken(optimized_bet_amount.x)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount}, max_price_impact={self.max_price_impact})"
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_position_amount}, max_price_impact={self.max_price_impact})"
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
-    def __init__(self, max_bet_amount: USD):
-        self.max_bet_amount = max_bet_amount
+    def __init__(self, max_position_amount: USD):
+        self.max_position_amount = max_position_amount
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
-        return self.max_bet_amount
+        return self.max_position_amount
 
     def adjust_bet_amount(
         self, existing_position: ExistingPosition | None, market: AgentMarket
@@ -422,7 +505,7 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         existing_position_total_amount = (
             existing_position.total_amount_current if existing_position else USD(0)
         )
-        return self.max_bet_amount + existing_position_total_amount
+        return self.max_position_amount + existing_position_total_amount
 
     def calculate_trades(
         self,
@@ -471,4 +554,4 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         return trades
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_bet_amount})"
+        return f"{self.__class__.__name__}(max_bet_amount={self.max_position_amount})"

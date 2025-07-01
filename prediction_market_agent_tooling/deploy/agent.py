@@ -571,7 +571,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         Given the market and prediction, agent uses this method to calculate optimal outcome and bet size.
         """
         total_amount = self.get_total_amount_to_bet(market)
-        return MultiCategoricalMaxAccuracyBettingStrategy(bet_amount=total_amount)
+        return MultiCategoricalMaxAccuracyBettingStrategy(
+            max_position_amount=total_amount
+        )
 
     def build_trades(
         self,

@@ -235,16 +235,16 @@ def get_objective(
 
         strategy_constructors: dict[str, t.Callable[[], BettingStrategy]] = {
             MultiCategoricalMaxAccuracyBettingStrategy.__name__: lambda: MultiCategoricalMaxAccuracyBettingStrategy(
-                bet_amount=bet_amount
+                max_position_amount=bet_amount
             ),
             MaxAccuracyWithKellyScaledBetsStrategy.__name__: lambda: MaxAccuracyWithKellyScaledBetsStrategy(
-                max_bet_amount=bet_amount
+                max_position_amount=bet_amount
             ),
             MaxExpectedValueBettingStrategy.__name__: lambda: MaxExpectedValueBettingStrategy(
-                bet_amount=bet_amount
+                max_position_amount=bet_amount
             ),
             KellyBettingStrategy.__name__: lambda: KellyBettingStrategy(
-                max_bet_amount=bet_amount, max_price_impact=max_price_impact
+                max_position_amount=bet_amount, max_price_impact=max_price_impact
             ),
         }
 

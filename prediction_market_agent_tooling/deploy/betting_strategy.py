@@ -40,6 +40,9 @@ class GuaranteedLossError(RuntimeError):
 
 
 class BettingStrategy(ABC):
+    def __init__(self, take_profit: bool = True) -> None:
+        self.take_profit = take_profit
+
     @abstractmethod
     def calculate_trades(
         self,
@@ -209,10 +212,22 @@ class BettingStrategy(ABC):
             )
 
             diff_amount = target_amount - existing_amount
+
             if diff_amount == 0:
                 continue
 
             trade_type = TradeType.SELL if diff_amount < 0 else TradeType.BUY
+
+            # We work with positions, so imagine following scenario: Agent invested $10 when probs were 50:50,
+            # now the probs are 99:1 and his initial $10 is worth $100.
+            # If `take_profit` is set to False, agent won't sell the $90 to get back to the $10 position.
+            if (
+                not self.take_profit
+                and target_amount > 0
+                and trade_type == TradeType.SELL
+            ):
+                continue
+
             trade = Trade(
                 amount=abs(diff_amount),
                 outcome=outcome,
@@ -231,7 +246,8 @@ class BettingStrategy(ABC):
 
 
 class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
-    def __init__(self, max_position_amount: USD):
+    def __init__(self, max_position_amount: USD, take_profit: bool = True):
+        super().__init__(take_profit=take_profit)
         self.max_position_amount = max_position_amount
 
     @property
@@ -336,7 +352,13 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
 
 
 class KellyBettingStrategy(BettingStrategy):
-    def __init__(self, max_position_amount: USD, max_price_impact: float | None = None):
+    def __init__(
+        self,
+        max_position_amount: USD,
+        max_price_impact: float | None = None,
+        take_profit: bool = True,
+    ):
+        super().__init__(take_profit=take_profit)
         self.max_position_amount = max_position_amount
         self.max_price_impact = max_price_impact
 
@@ -492,7 +514,12 @@ class KellyBettingStrategy(BettingStrategy):
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
-    def __init__(self, max_position_amount: USD):
+    def __init__(
+        self,
+        max_position_amount: USD,
+        take_profit: bool = True,
+    ):
+        super().__init__(take_profit)
         self.max_position_amount = max_position_amount
 
     @property

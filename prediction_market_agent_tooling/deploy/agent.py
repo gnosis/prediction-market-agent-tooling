@@ -44,6 +44,9 @@ from prediction_market_agent_tooling.tools.custom_exceptions import (
 from prediction_market_agent_tooling.tools.is_invalid import is_invalid
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
 from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
+from prediction_market_agent_tooling.tools.rephrase import (
+    rephrase_question_to_unconditioned,
+)
 from prediction_market_agent_tooling.tools.tokens.main_token import (
     MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
 )
@@ -193,6 +196,7 @@ class DeployablePredictionAgent(DeployableAgent):
     trade_on_markets_created_after: DatetimeUTC | None = None
     get_markets_sort_by: SortBy = SortBy.CLOSING_SOONEST
     get_markets_filter_by: FilterBy = FilterBy.OPEN
+    rephrase_conditioned_markets: bool = True
 
     # Agent behaviour when filtering fetched markets
     allow_invalid_questions: bool = False
@@ -220,6 +224,7 @@ class DeployablePredictionAgent(DeployableAgent):
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.answer_categorical_market = observe()(self.answer_categorical_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
+        self.rephrase_market_to_unconditioned = observe()(self.rephrase_market_to_unconditioned)  # type: ignore[method-assign]
 
     def update_langfuse_trace_by_market(
         self, market_type: MarketType, market: AgentMarket
@@ -294,6 +299,31 @@ class DeployablePredictionAgent(DeployableAgent):
 
         return True
 
+    def rephrase_market_to_unconditioned(
+        self,
+        market: AgentMarket,
+    ) -> AgentMarket:
+        """
+        If `rephrase_conditioned_markets` is set to True,
+        this method will be used to rephrase the question to account for the parent's market probability in the agent's decision process.
+        """
+        new = market.model_copy()
+
+        rephrased_question = (
+            rephrase_question_to_unconditioned(
+                market.question,
+                market.parent.market.question,
+                market.parent.market.outcomes[market.parent.parent_outcome],
+            )
+            if market.parent is not None
+            else market.question
+        )
+
+        new.question = rephrased_question
+        new.parent = None
+
+        return new
+
     def answer_categorical_market(
         self, market: AgentMarket
     ) -> CategoricalProbabilisticAnswer | None:
@@ -367,6 +397,9 @@ class DeployablePredictionAgent(DeployableAgent):
             return None
 
         logger.info(f"Answering market '{market.question}'.")
+
+        if self.rephrase_conditioned_markets and market.parent is not None:
+            market = self.rephrase_market_to_unconditioned(market)
 
         if market.is_binary:
             try:

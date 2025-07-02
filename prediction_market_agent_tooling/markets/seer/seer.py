@@ -416,7 +416,7 @@ class SeerAgentMarket(AgentMarket):
             filter_by=filter_by,
             include_categorical_markets=fetch_categorical_markets,
             include_only_scalar_markets=fetch_scalar_markets,
-            include_conditional_markets=not fetch_scalar_markets,  # scalar markets and conditional are currently exclusive
+            include_conditional_markets=False,
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

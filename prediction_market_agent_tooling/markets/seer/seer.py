@@ -212,7 +212,7 @@ class SeerAgentMarket(AgentMarket):
             p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
             price = p.get_token_price_from_pools(token=wrapped_outcome_token)
             if not price:
-                logger.info(f"Could not get price for token {wrapped_outcome_token}")
+                logger.info(f"Could not get price for token from pools for {wrapped_outcome_token}")
                 raise e
             return CollateralToken(price.value * amount.value)
 

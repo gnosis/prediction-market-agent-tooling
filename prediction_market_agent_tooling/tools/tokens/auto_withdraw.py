@@ -9,10 +9,10 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
-from prediction_market_agent_tooling.tools.utils import should_not_happen
 from prediction_market_agent_tooling.tools.tokens.slippage import (
     get_slippage_tolerance_per_token,
 )
+from prediction_market_agent_tooling.tools.utils import should_not_happen
 
 
 def auto_withdraw_collateral_token(

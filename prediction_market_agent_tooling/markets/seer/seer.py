@@ -482,7 +482,7 @@ class SeerAgentMarket(AgentMarket):
         Returns:
             Transaction hash of the successful swap
         """
-        slippage_tolerance = get_slippage_tolerance_per_token(buy_token)
+        slippage_tolerance = get_slippage_tolerance_per_token(sell_token, buy_token)
         try:
             _, order = swap_tokens_waiting(
                 amount_wei=amount_wei,

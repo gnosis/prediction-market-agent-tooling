@@ -10,6 +10,9 @@ from prediction_market_agent_tooling.tools.contract import (
 from prediction_market_agent_tooling.tools.cow.cow_order import swap_tokens_waiting
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
 from prediction_market_agent_tooling.tools.utils import should_not_happen
+from prediction_market_agent_tooling.tools.tokens.slippage import (
+    get_slippage_tolerance_per_token,
+)
 
 
 def auto_withdraw_collateral_token(
@@ -49,12 +52,17 @@ def auto_withdraw_collateral_token(
             f"Swapping {amount_wei.as_token} from {collateral_token_contract.symbol_cached(web3)} into {KEEPING_ERC20_TOKEN.symbol_cached(web3)}"
         )
         # Otherwise, DEX will handle the rest of token swaps.
+        slippage_tolerance = get_slippage_tolerance_per_token(
+            collateral_token_contract.address,
+            KEEPING_ERC20_TOKEN.address,
+        )
         swap_tokens_waiting(
             amount_wei=amount_wei,
             sell_token=collateral_token_contract.address,
             buy_token=KEEPING_ERC20_TOKEN.address,
             api_keys=api_keys,
             web3=web3,
+            slippage_tolerance=slippage_tolerance,
         )
     else:
         should_not_happen("Unsupported ERC20 contract type.")

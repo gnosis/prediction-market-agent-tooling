@@ -197,14 +197,24 @@ class SeerAgentMarket(AgentMarket):
             return CollateralToken.zero()
 
         wrapped_outcome_token = self.get_wrapped_token_for_outcome(outcome)
-
+        try:
         # We calculate how much collateral we would get back if we sold `amount` of outcome token.
-        value_outcome_token_in_collateral = get_buy_token_amount_else_raise(
-            sell_amount=amount.as_outcome_wei.as_wei,
-            sell_token=wrapped_outcome_token,
-            buy_token=self.collateral_token_contract_address_checksummed,
-        )
-        return value_outcome_token_in_collateral.as_token
+            value_outcome_token_in_collateral = get_buy_token_amount_else_raise(
+                sell_amount=amount.as_outcome_wei.as_wei,
+                sell_token=wrapped_outcome_token,
+                buy_token=self.collateral_token_contract_address_checksummed,
+            )
+            return value_outcome_token_in_collateral.as_token
+        except NoLiquidityAvailableOnCowException as e:
+            logger.warning(
+                f"No liquidity available on Cow for {wrapped_outcome_token} -> {self.collateral_token_contract_address_checksummed}."
+            )
+            p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
+            price = p.get_token_price_from_pools(token=wrapped_outcome_token)
+            if not price:
+                logger.info(f"Could not get price for token {wrapped_outcome_token}")
+                raise e
+            return CollateralToken(price.value * amount.value)
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys) -> USD:

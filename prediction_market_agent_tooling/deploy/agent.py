@@ -399,18 +399,15 @@ class DeployablePredictionAgent(DeployableAgent):
                     "answer_binary_market() not implemented, falling back to answer_categorical_market()"
                 )
         elif market.is_scalar:
-            try:
-                scalar_answer = self.answer_scalar_market(market)
-                return (
-                    CategoricalProbabilisticAnswer.from_scalar_answer(
-                        scalar_answer,
-                        market.outcomes,
-                    )
-                    if scalar_answer is not None
-                    else None
+            scalar_answer = self.answer_scalar_market(market)
+            return (
+                CategoricalProbabilisticAnswer.from_scalar_answer(
+                    scalar_answer,
+                    market.outcomes,
                 )
-            except NotImplementedError:
-                logger.info("answer_scalar_market() not implemented!")
+                if scalar_answer is not None
+                else None
+            )
         return self.answer_categorical_market(market)
 
     def verify_answer_outcomes(

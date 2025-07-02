@@ -206,7 +206,7 @@ class CategoricalProbabilisticAnswer(BaseModel):
     ) -> "CategoricalProbabilisticAnswer":
         probabilities = {}
         lowercase_market_outcomes = (
-            [outcome.lower() for outcome in market_outcomes] if market_outcomes else []
+            [outcome.lower() for outcome in market_outcomes]
         )
 
         if not set(

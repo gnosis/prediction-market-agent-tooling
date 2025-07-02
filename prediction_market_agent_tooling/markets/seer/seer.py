@@ -143,14 +143,12 @@ class SeerAgentMarket(AgentMarket):
             )
             token_price = self.get_colateral_price_from_pools()
             if token_price is None:
-                raise e
+                raise RuntimeError("Both CoW and pool-fallback way of getting price failed.") from e
             return USD(x.value * token_price.value)
 
     def get_colateral_price_from_pools(self) -> CollateralToken | None:
         p = PriceManager.build(HexBytes(HexStr(self.id)))
-        token_price = p.get_token_price_from_pools(token=WRAPPED_XDAI_CONTRACT_ADDRESS)
-        if token_price is None:
-            token_price = p.get_token_price_from_pools(token=SDAI_CONTRACT_ADDRESS)
+        token_price = p.get_token_price_from_pools(token=SDAI_CONTRACT_ADDRESS)
         return token_price
 
     def get_usd_in_token(self, x: USD) -> CollateralToken:
@@ -164,8 +162,8 @@ class SeerAgentMarket(AgentMarket):
             )
             token_price = self.get_colateral_price_from_pools()
             if not token_price:
-                raise e
-            return CollateralToken(x.value * token_price.value)
+                raise RuntimeError("Both CoW and pool-fallback way of getting price failed.") from e
+            return CollateralToken(x.value / token_price.value)
 
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
@@ -385,12 +383,6 @@ class SeerAgentMarket(AgentMarket):
         )
 
         return market
-
-    @staticmethod
-    def normalize_value(value: int) -> Wei | None:
-        if value and value >= 10**18:
-            return Wei(value // 10**18)
-        return Wei(value)
 
     @staticmethod
     def get_markets(

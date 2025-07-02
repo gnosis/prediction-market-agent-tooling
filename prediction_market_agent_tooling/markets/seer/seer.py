@@ -34,7 +34,6 @@ from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     SDAI_CONTRACT_ADDRESS,
-    WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     SeerAgentResultMappingContract,
@@ -143,7 +142,9 @@ class SeerAgentMarket(AgentMarket):
             )
             token_price = self.get_colateral_price_from_pools()
             if token_price is None:
-                raise RuntimeError("Both CoW and pool-fallback way of getting price failed.") from e
+                raise RuntimeError(
+                    "Both CoW and pool-fallback way of getting price failed."
+                ) from e
             return USD(x.value * token_price.value)
 
     def get_colateral_price_from_pools(self) -> CollateralToken | None:
@@ -162,7 +163,9 @@ class SeerAgentMarket(AgentMarket):
             )
             token_price = self.get_colateral_price_from_pools()
             if not token_price:
-                raise RuntimeError("Both CoW and pool-fallback way of getting price failed.") from e
+                raise RuntimeError(
+                    "Both CoW and pool-fallback way of getting price failed."
+                ) from e
             return CollateralToken(x.value / token_price.value)
 
     def get_buy_token_amount(
@@ -198,7 +201,7 @@ class SeerAgentMarket(AgentMarket):
 
         wrapped_outcome_token = self.get_wrapped_token_for_outcome(outcome)
         try:
-        # We calculate how much collateral we would get back if we sold `amount` of outcome token.
+            # We calculate how much collateral we would get back if we sold `amount` of outcome token.
             value_outcome_token_in_collateral = get_buy_token_amount_else_raise(
                 sell_amount=amount.as_outcome_wei.as_wei,
                 sell_token=wrapped_outcome_token,
@@ -212,7 +215,9 @@ class SeerAgentMarket(AgentMarket):
             p = PriceManager.build(market_id=HexBytes(HexStr(self.id)))
             price = p.get_token_price_from_pools(token=wrapped_outcome_token)
             if not price:
-                logger.info(f"Could not get price for token from pools for {wrapped_outcome_token}")
+                logger.info(
+                    f"Could not get price for token from pools for {wrapped_outcome_token}"
+                )
                 raise e
             return CollateralToken(price.value * amount.value)
 

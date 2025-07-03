@@ -140,14 +140,14 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            usd_token_price = self.get_colateral_price_from_pools()
+            usd_token_price = self.get_collateral_price_from_pools()
             if usd_token_price is None:
                 raise RuntimeError(
                     "Both CoW and pool-fallback way of getting price failed."
                 ) from e
             return USD(x.value * usd_token_price.value)
 
-    def get_colateral_price_from_pools(self) -> USD | None:
+    def get_collateral_price_from_pools(self) -> USD | None:
         p = PriceManager.build(HexBytes(HexStr(self.id)))
         token_price = p.get_token_price_from_pools(token=SDAI_CONTRACT_ADDRESS)
         if token_price:
@@ -164,7 +164,7 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            usd_token_price = self.get_colateral_price_from_pools()
+            usd_token_price = self.get_collateral_price_from_pools()
             if not usd_token_price:
                 raise RuntimeError(
                     "Both CoW and pool-fallback way of getting price failed."

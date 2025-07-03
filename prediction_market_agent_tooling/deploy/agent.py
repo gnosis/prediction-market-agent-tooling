@@ -31,6 +31,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
     PlacedTrade,
     ProbabilisticAnswer,
+    ScalarProbabilisticAnswer,
     Trade,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
@@ -223,6 +224,7 @@ class DeployablePredictionAgent(DeployableAgent):
         self.verify_market = observe()(self.verify_market)  # type: ignore[method-assign]
         self.answer_binary_market = observe()(self.answer_binary_market)  # type: ignore[method-assign]
         self.answer_categorical_market = observe()(self.answer_categorical_market)  # type: ignore[method-assign]
+        self.answer_scalar_market = observe()(self.answer_scalar_market)  # type: ignore[method-assign]
         self.process_market = observe()(self.process_market)  # type: ignore[method-assign]
         self.rephrase_market_to_unconditioned = observe()(self.rephrase_market_to_unconditioned)  # type: ignore[method-assign]
 
@@ -329,6 +331,11 @@ class DeployablePredictionAgent(DeployableAgent):
     ) -> CategoricalProbabilisticAnswer | None:
         raise NotImplementedError("This method must be implemented by the subclass")
 
+    def answer_scalar_market(
+        self, market: AgentMarket
+    ) -> ScalarProbabilisticAnswer | None:
+        raise NotImplementedError("This method must be implemented by the subclass")
+
     def answer_binary_market(self, market: AgentMarket) -> ProbabilisticAnswer | None:
         """
         Answer the binary market.
@@ -348,6 +355,12 @@ class DeployablePredictionAgent(DeployableAgent):
             self.answer_categorical_market.__wrapped__.__func__  # type: ignore[attr-defined] # This works just fine, but mypy doesn't know about it for some reason.
             is not DeployablePredictionAgent.answer_categorical_market
         ):
+            return True
+        return False
+
+    def fetch_scalar_markets(self) -> bool:
+        # Check if the subclass has implemented the answer_scalar_market method, if yes, fetch scalar markets as well.
+        if self.answer_scalar_market.__wrapped__.__func__ is not DeployablePredictionAgent.answer_scalar_market:  # type: ignore[attr-defined] # This works just fine, but mypy doesn't know about it for some reason.
             return True
         return False
 
@@ -373,6 +386,7 @@ class DeployablePredictionAgent(DeployableAgent):
             created_after=self.trade_on_markets_created_after,
             fetch_categorical_markets=self.fetch_categorical_markets,
             fetch_conditional_markets=self.fetch_conditional_markets,
+            fetch_scalar_markets=self.fetch_scalar_markets,
         )
         return available_markets
 
@@ -423,7 +437,16 @@ class DeployablePredictionAgent(DeployableAgent):
                 logger.info(
                     "answer_binary_market() not implemented, falling back to answer_categorical_market()"
                 )
-
+        elif market.is_scalar:
+            scalar_answer = self.answer_scalar_market(market)
+            return (
+                CategoricalProbabilisticAnswer.from_scalar_answer(
+                    scalar_answer,
+                    market.outcomes,
+                )
+                if scalar_answer is not None
+                else None
+            )
         return self.answer_categorical_market(market)
 
     def verify_answer_outcomes(

@@ -49,7 +49,8 @@ def test_binary_market_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     markets = seer_subgraph_handler_test.get_markets(
-        include_conditional_markets=True, filter_by=FilterBy.NONE
+        include_conditional_markets=True,
+        filter_by=FilterBy.NONE,
     )
     market_ids = [m.id for m in markets]
     assert BINARY_MARKET_ID in market_ids

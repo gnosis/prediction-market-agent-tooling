@@ -75,6 +75,7 @@ class MetaculusAgentMarket(AgentMarket):
         fetch_categorical_markets: bool = False,
         fetch_conditional_markets: bool = False,
         tournament_id: int | None = None,
+        fetch_scalar_markets: bool = False,
     ) -> t.Sequence["MetaculusAgentMarket"]:
         order_by: str | None
         if sort_by == SortBy.NONE:

@@ -11,8 +11,10 @@ from web3 import Web3
 from prediction_market_agent_tooling.benchmark.utils import get_most_probable_outcome
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
     INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -20,6 +22,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     OutcomeWei,
     Probability,
+    Wei,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
@@ -87,6 +90,9 @@ class AgentMarket(BaseModel):
     url: str
     volume: CollateralToken | None
     fees: MarketFees
+
+    upper_bound: Wei | None = None
+    lower_bound: Wei | None = None
 
     parent: ParentMarket | None = None
 
@@ -171,6 +177,34 @@ class AgentMarket(BaseModel):
             return has_yes and has_no and has_invalid
 
         return has_yes and has_no
+
+    @property
+    def is_scalar(self) -> bool:
+        # 3 outcomes can also be binary if 3rd outcome is invalid (Seer)
+        if len(self.outcomes) not in [2, 3]:
+            return False
+
+        lowercase_outcomes = [outcome.lower() for outcome in self.outcomes]
+
+        has_up = UP_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
+        has_down = DOWN_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_outcomes
+
+        if len(lowercase_outcomes) == 3:
+            invalid_outcome = lowercase_outcomes[-1]
+            has_invalid = INVALID_OUTCOME_LOWERCASE_IDENTIFIER in invalid_outcome
+            return has_up and has_down and has_invalid
+
+        return has_up and has_down
+
+    @property
+    def p_up(self) -> Probability:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return check_not_none(probs_lowercase.get(UP_OUTCOME_LOWERCASE_IDENTIFIER))
+
+    @property
+    def p_down(self) -> Probability:
+        probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
+        return check_not_none(probs_lowercase.get(DOWN_OUTCOME_LOWERCASE_IDENTIFIER))
 
     @property
     def p_yes(self) -> Probability:
@@ -343,6 +377,7 @@ class AgentMarket(BaseModel):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
+        fetch_scalar_markets: bool = False,
         fetch_conditional_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")

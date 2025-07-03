@@ -15,7 +15,16 @@ REPHRASE_QUESTION_PROMPT = """Given the following question of main interest: {qu
 
 But it's conditioned on `{parent_question}` resolving to `{needed_parent_outcome}`.
 
-Rewrite the main question to contain the parent question in the correct form. The main question will be used as a prediction market, so it does need to be rephrased using the parent question properly.
+Rewrite the main question to contain the parent question in the correct form. 
+
+The main question will be used as a prediction market, so it does need to be rephrased using the parent question properly. Such that the probability of the main question also accounts for the conditioned outcome.
+
+For example:
+```
+Main question: What is the probability of <X> happening before <date>?
+Conditioned on: Will <Y> happen before <another-date>?
+Rephrased: What is the joint probability of Y happening before <another-date> and then X happening before <date>?
+```
 
 Output only the rephrased question.
 """
@@ -28,7 +37,7 @@ def rephrase_question_to_unconditioned(
     question: str,
     parent_question: str,
     needed_parent_outcome: str,
-    engine: str = "gpt-4o-2024-08-06",
+    engine: str = "gpt-4.1",
     temperature: float = LLM_SUPER_LOW_TEMPERATURE,
     seed: int = LLM_SEED,
     prompt_template: str = REPHRASE_QUESTION_PROMPT,

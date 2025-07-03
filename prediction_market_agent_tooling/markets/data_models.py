@@ -126,12 +126,7 @@ class ScalarProbabilisticAnswer(BaseModel):
 
     @property
     def p_down(self) -> Probability:
-        if self.scalar_value < self.lowerBound:
-            return Probability(1)
-        elif self.scalar_value > self.upperBound:
-            return Probability(0)
-        else:
-            return Probability(1 - self.p_up)
+        return Probability(1 - self.p_up)
 
 
 class ProbabilisticAnswer(BaseModel):

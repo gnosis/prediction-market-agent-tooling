@@ -6,7 +6,9 @@ from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.deploy.constants import (
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
@@ -66,6 +68,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.finalizeTs,
             markets_field.wrappedTokens,
             markets_field.collateralToken,
+            markets_field.upperBound,
+            markets_field.lowerBound,
         ]
         return fields
 
@@ -75,11 +79,29 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         return [m for m in markets if len(m.outcomes) == 3]
 
     @staticmethod
+    def _create_case_variations_condition(
+        identifier: str,
+        outcome_condition: str = "outcomes_contains",
+        condition: str = "or",
+    ) -> dict[str, list[dict[str, list[str]]]]:
+        return {
+            condition: [
+                {outcome_condition: [variation]}
+                for variation in [
+                    identifier.lower(),
+                    identifier.capitalize(),
+                    identifier.upper(),
+                ]
+            ]
+        }
+
+    @staticmethod
     def _build_where_statements(
         filter_by: FilterBy,
         outcome_supply_gt_if_open: Wei,
         include_conditional_markets: bool = False,
         include_categorical_markets: bool = True,
+        include_only_scalar_markets: bool = False,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -101,28 +123,43 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if not include_conditional_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
-        # We are only interested in binary markets of type YES/NO/Invalid.
         yes_stms, no_stms = {}, {}
-        if not include_categorical_markets:
-            # Create single OR conditions with all variations
-            yes_stms["or"] = [
-                {"outcomes_contains": [variation]}
-                for variation in [
-                    YES_OUTCOME_LOWERCASE_IDENTIFIER,
-                    YES_OUTCOME_LOWERCASE_IDENTIFIER.capitalize(),
-                    YES_OUTCOME_LOWERCASE_IDENTIFIER.upper(),
-                ]
-            ]
-            no_stms["or"] = [
-                {"outcomes_contains": [variation]}
-                for variation in [
-                    NO_OUTCOME_LOWERCASE_IDENTIFIER,
-                    NO_OUTCOME_LOWERCASE_IDENTIFIER.capitalize(),
-                    NO_OUTCOME_LOWERCASE_IDENTIFIER.upper(),
-                ]
-            ]
+        exclude_scalar_yes, exclude_scalar_no = {}, {}
 
-        where_stms: dict[str, t.Any] = {"and": [and_stms, yes_stms, no_stms]}
+        # Return scalar markets.
+        if include_only_scalar_markets:
+            # We are interested in scalar markets only - this excludes categorical markets
+            yes_stms = SeerSubgraphHandler._create_case_variations_condition(
+                UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
+            )
+            no_stms = SeerSubgraphHandler._create_case_variations_condition(
+                DOWN_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
+            )
+        elif include_conditional_markets and not include_categorical_markets:
+            # We are interested in binary markets only
+            yes_stms = SeerSubgraphHandler._create_case_variations_condition(
+                YES_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
+            )
+            no_stms = SeerSubgraphHandler._create_case_variations_condition(
+                NO_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
+            )
+
+        if (
+            not include_only_scalar_markets
+            or include_categorical_markets
+            or include_conditional_markets
+        ):
+            # We should not provide any scalar markets because they are exclusive for categorical markets
+            exclude_scalar_yes = SeerSubgraphHandler._create_case_variations_condition(
+                UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_not_contains", "and"
+            )
+            exclude_scalar_no = SeerSubgraphHandler._create_case_variations_condition(
+                DOWN_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_not_contains", "and"
+            )
+
+        where_stms: dict[str, t.Any] = {
+            "and": [and_stms, yes_stms, no_stms, exclude_scalar_yes, exclude_scalar_no]
+        }
         return where_stms
 
     def _build_sort_params(
@@ -159,6 +196,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei = Wei(0),
         include_conditional_markets: bool = True,
         include_categorical_markets: bool = True,
+        include_only_scalar_markets: bool = False,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
@@ -169,6 +207,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             include_conditional_markets=include_conditional_markets,
             include_categorical_markets=include_categorical_markets,
+            include_only_scalar_markets=include_only_scalar_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.
@@ -219,26 +258,25 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         self, token_address: ChecksumAddress, collateral_address: ChecksumAddress
     ) -> SeerPool | None:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
-        wheres = []
-        wheres.extend(
-            [
+
+        where_argument = {
+            "or": [
                 {
-                    "token0": token_address.lower(),
-                    "token1": collateral_address.lower(),
+                    "token0_": {"id": token_address.lower()},
+                    "token1_": {"id": collateral_address.lower()},
                 },
                 {
-                    "token0": collateral_address.lower(),
-                    "token1": token_address.lower(),
+                    "token0_": {"id": collateral_address.lower()},
+                    "token1_": {"id": token_address.lower()},
                 },
             ]
-        )
-
+        }
         optional_params = {}
         optional_params["orderBy"] = self.swapr_algebra_subgraph.Pool.liquidity
         optional_params["orderDirection"] = "desc"
 
         pools_field = self.swapr_algebra_subgraph.Query.pools(
-            where=unwrap_generic_value({"or": wheres}), **optional_params
+            where=unwrap_generic_value(where_argument), **optional_params
         )
 
         fields = self._get_fields_for_pools(pools_field)

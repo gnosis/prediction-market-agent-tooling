@@ -351,6 +351,12 @@ class DeployablePredictionAgent(DeployableAgent):
             return True
         return False
 
+    @property
+    def fetch_conditional_markets(self) -> bool:
+        # `fetch_conditional_markets` if `rephrase_conditioned_markets` is enabled.
+        # We can expand this method in teh future, when we implement also more complex logic about conditional markets.
+        return self.rephrase_conditioned_markets
+
     def get_markets(
         self,
         market_type: MarketType,
@@ -366,6 +372,7 @@ class DeployablePredictionAgent(DeployableAgent):
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
             fetch_categorical_markets=self.fetch_categorical_markets,
+            fetch_conditional_markets=self.fetch_conditional_markets,
         )
         return available_markets
 

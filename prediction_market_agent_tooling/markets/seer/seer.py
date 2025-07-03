@@ -375,6 +375,7 @@ class SeerAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
+        fetch_conditional_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
         markets = seer_subgraph.get_markets(
@@ -382,6 +383,7 @@ class SeerAgentMarket(AgentMarket):
             sort_by=sort_by,
             filter_by=filter_by,
             include_categorical_markets=fetch_categorical_markets,
+            include_conditional_markets=fetch_conditional_markets,
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

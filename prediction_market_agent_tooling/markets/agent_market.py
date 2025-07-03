@@ -64,6 +64,11 @@ class FilterBy(str, Enum):
     NONE = "none"
 
 
+class ParentMarket(BaseModel):
+    market: "AgentMarket"
+    parent_outcome: int
+
+
 class AgentMarket(BaseModel):
     """
     Common market class that can be created from vendor specific markets.
@@ -88,6 +93,8 @@ class AgentMarket(BaseModel):
 
     upper_bound: Wei | None = None
     lower_bound: Wei | None = None
+
+    parent: ParentMarket | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(
@@ -371,6 +378,7 @@ class AgentMarket(BaseModel):
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
         fetch_scalar_markets: bool = False,
+        fetch_conditional_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 

@@ -140,17 +140,20 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            token_price = self.get_colateral_price_from_pools()
-            if token_price is None:
+            usd_token_price = self.get_colateral_price_from_pools()
+            if usd_token_price is None:
                 raise RuntimeError(
                     "Both CoW and pool-fallback way of getting price failed."
                 ) from e
-            return USD(x.value * token_price.value)
+            return USD(x.value * usd_token_price.value)
 
-    def get_colateral_price_from_pools(self) -> CollateralToken | None:
+    def get_colateral_price_from_pools(self) -> USD | None:
         p = PriceManager.build(HexBytes(HexStr(self.id)))
         token_price = p.get_token_price_from_pools(token=SDAI_CONTRACT_ADDRESS)
-        return token_price
+        if token_price:
+            return get_token_in_usd(token_price, SDAI_CONTRACT_ADDRESS)
+
+        return None
 
     def get_usd_in_token(self, x: USD) -> CollateralToken:
         try:
@@ -161,12 +164,12 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            token_price = self.get_colateral_price_from_pools()
-            if not token_price:
+            usd_token_price = self.get_colateral_price_from_pools()
+            if not usd_token_price:
                 raise RuntimeError(
                     "Both CoW and pool-fallback way of getting price failed."
                 ) from e
-            return CollateralToken(x.value / token_price.value)
+            return CollateralToken(x.value / usd_token_price.value)
 
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr

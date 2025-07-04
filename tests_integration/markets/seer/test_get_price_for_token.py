@@ -27,16 +27,16 @@ def test_get_price_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         CollateralToken(1)
         other_collateral_token = CollateralToken(2)
         # call it once for filling the cache
-        p.get_price_for_token(
+        p.get_amount_of_collateral_in_token(
             token=Web3.to_checksum_address(market.wrapped_tokens[0]),
         )
         # should retrieve the cached value
-        p.get_price_for_token(
+        p.get_amount_of_collateral_in_token(
             token=Web3.to_checksum_address(market.wrapped_tokens[0]),
         )
         mock_get_buy_token_amount.assert_called_once()
         # now we call it with a different collateral token
-        p.get_price_for_token(
+        p.get_amount_of_collateral_in_token(
             token=Web3.to_checksum_address(market.wrapped_tokens[0]),
             collateral_exchange_amount=other_collateral_token,
         )

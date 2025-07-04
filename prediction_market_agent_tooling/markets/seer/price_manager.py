@@ -1,6 +1,7 @@
 import typing as t
 
 from cachetools import TTLCache, cached
+from pydantic import BaseModel
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import (
@@ -18,32 +19,15 @@ from prediction_market_agent_tooling.markets.seer.exceptions import (
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
-from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_buy_token_amount_else_raise,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
-def _make_cache_key(
-    *args: t.Any,
-    token: ChecksumAddress,
-    collateral_exchange_amount: CollateralToken | None = None,
-) -> str:
-    """
-    Generate a unique cache key based on a token address and optional collateral token.
-    """
-
-    if collateral_exchange_amount is None:
-        return f"{token}-no_collateral"
-
-    return "-".join(
-        [
-            token,
-            collateral_exchange_amount.symbol,
-            str(collateral_exchange_amount.value),
-        ]
-    )
+class Prices(BaseModel):
+    priceOfCollateralInAskingToken: CollateralToken
+    priceOfAskingTokenInCollateral: CollateralToken
 
 
 class PriceManager:
@@ -67,8 +51,8 @@ class PriceManager:
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
             )
 
-    @cached(TTLCache(maxsize=100, ttl=5 * 60), key=_make_cache_key)
-    def get_price_for_token(
+    @cached(TTLCache(maxsize=100, ttl=5 * 60))
+    def get_amount_of_collateral_in_token(
         self,
         token: ChecksumAddress,
         collateral_exchange_amount: CollateralToken | None = None,
@@ -79,29 +63,66 @@ class PriceManager:
             else CollateralToken(1)
         )
 
+        if token == self.seer_market.collateral_token_contract_address_checksummed:
+            return collateral_exchange_amount
+
         try:
             buy_token_amount = get_buy_token_amount_else_raise(
                 sell_amount=collateral_exchange_amount.as_wei,
                 sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
             )
-            price = collateral_exchange_amount.as_wei / buy_token_amount
-            return CollateralToken(price)
+            return buy_token_amount.as_token
 
         except Exception as e:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
             )
-            return self.get_token_price_from_pools(token=token)
+            prices = self.get_token_price_from_pools(token=token)
+            return (
+                prices.priceOfCollateralInAskingToken * collateral_exchange_amount
+                if prices
+                else None
+            )
 
-    @staticmethod
-    def pool_token0_matches_token(token: ChecksumAddress, pool: SeerPool) -> bool:
-        return pool.token0.id.hex().lower() == token.lower()
+    @cached(TTLCache(maxsize=100, ttl=5 * 60))
+    def get_amount_of_token_in_collateral(
+        self,
+        token: ChecksumAddress,
+        token_exchange_amount: CollateralToken | None = None,
+    ) -> CollateralToken | None:
+        token_exchange_amount = (
+            token_exchange_amount
+            if token_exchange_amount is not None
+            else CollateralToken(1)
+        )
+
+        if token == self.seer_market.collateral_token_contract_address_checksummed:
+            return token_exchange_amount
+
+        try:
+            buy_collateral_amount = get_buy_token_amount_else_raise(
+                sell_amount=token_exchange_amount.as_wei,
+                sell_token=token,
+                buy_token=self.seer_market.collateral_token_contract_address_checksummed,
+            )
+            return buy_collateral_amount.as_token
+
+        except Exception as e:
+            logger.warning(
+                f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
+            )
+            prices = self.get_token_price_from_pools(token=token)
+            return (
+                prices.priceOfAskingTokenInCollateral * token_exchange_amount
+                if prices
+                else None
+            )
 
     def get_token_price_from_pools(
         self,
         token: ChecksumAddress,
-    ) -> CollateralToken | None:
+    ) -> Prices | None:
         pool = SeerSubgraphHandler().get_pool_by_token(
             token_address=token,
             collateral_address=self.seer_market.collateral_token_contract_address_checksummed,
@@ -114,19 +135,17 @@ class PriceManager:
         # The mapping below is odd but surprisingly the Algebra subgraph delivers the token1Price
         # for the token0 and the token0Price for the token1 pool.
         # For example, in a outcomeYES (token0)/sDAI pool (token1), token1Price is the price of outcomeYES in units of sDAI.
-        price = (
-            pool.token1Price
-            if self.pool_token0_matches_token(token=token, pool=pool)
-            else pool.token0Price
+        return Prices(
+            priceOfAskingTokenInCollateral=pool.token1Price,
+            priceOfCollateralInAskingToken=pool.token0Price,
         )
-        return price
 
     def build_probability_map(self) -> dict[OutcomeStr, Probability]:
         # Inspired by https://github.com/seer-pm/demo/blob/ca682153a6b4d4dd3dcc4ad8bdcbe32202fc8fe7/web/src/hooks/useMarketOdds.ts#L15
         price_data: dict[HexAddress, CollateralToken] = {}
 
         for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
-            price = self.get_price_for_token(
+            price = self.get_amount_of_token_in_collateral(
                 token=Web3.to_checksum_address(wrapped_token),
             )
             # It's okay if invalid (last) outcome has price 0, but not the other outcomes.
@@ -160,6 +179,6 @@ class PriceManager:
             outcome = self.seer_market.outcomes[
                 self.seer_market.wrapped_tokens.index(outcome_token)
             ]
-            normalized_prices[OutcomeStr(outcome)] = new_price
+            normalized_prices[outcome] = new_price
 
         return normalized_prices

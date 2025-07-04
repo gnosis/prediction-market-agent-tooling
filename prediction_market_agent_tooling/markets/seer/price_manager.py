@@ -49,18 +49,15 @@ class PriceManager:
                 f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
             )
 
+    def get_price_for_token(self, token: ChecksumAddress) -> CollateralToken | None:
+        return self.get_amount_of_token_in_collateral(token, CollateralToken(1))
+
     @cached(TTLCache(maxsize=100, ttl=5 * 60))
     def get_amount_of_collateral_in_token(
         self,
         token: ChecksumAddress,
-        collateral_exchange_amount: CollateralToken | None = None,
+        collateral_exchange_amount: CollateralToken,
     ) -> CollateralToken | None:
-        collateral_exchange_amount = (
-            collateral_exchange_amount
-            if collateral_exchange_amount is not None
-            else CollateralToken(1)
-        )
-
         if token == self.seer_market.collateral_token_contract_address_checksummed:
             return collateral_exchange_amount
 
@@ -87,14 +84,8 @@ class PriceManager:
     def get_amount_of_token_in_collateral(
         self,
         token: ChecksumAddress,
-        token_exchange_amount: CollateralToken | None = None,
+        token_exchange_amount: CollateralToken,
     ) -> CollateralToken | None:
-        token_exchange_amount = (
-            token_exchange_amount
-            if token_exchange_amount is not None
-            else CollateralToken(1)
-        )
-
         if token == self.seer_market.collateral_token_contract_address_checksummed:
             return token_exchange_amount
 
@@ -143,7 +134,7 @@ class PriceManager:
         price_data: dict[HexAddress, CollateralToken] = {}
 
         for idx, wrapped_token in enumerate(self.seer_market.wrapped_tokens):
-            price = self.get_amount_of_token_in_collateral(
+            price = self.get_price_for_token(
                 token=Web3.to_checksum_address(wrapped_token),
             )
             # It's okay if invalid (last) outcome has price 0, but not the other outcomes.

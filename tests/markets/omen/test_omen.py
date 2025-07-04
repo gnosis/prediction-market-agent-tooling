@@ -1,4 +1,5 @@
 import sys
+from typing import Sequence
 
 import numpy as np
 import pytest
@@ -303,7 +304,7 @@ def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST,
     filter_by: FilterBy = FilterBy.OPEN,
     collateral_token_address_in: (
-        tuple[ChecksumAddress, ...] | None
+        Sequence[ChecksumAddress] | None
     ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
 ) -> OmenMarket:
     subgraph_handler = OmenSubgraphHandler()

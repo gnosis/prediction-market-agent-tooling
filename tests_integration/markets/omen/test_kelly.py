@@ -25,7 +25,7 @@ from prediction_market_agent_tooling.tools.utils import check_not_none
 
 def test_kelly_price_impact_calculation1() -> None:
     # First case from https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-cpmm
-    kelly = KellyBettingStrategy(max_bet_amount=USD(1), max_price_impact=0.5)
+    kelly = KellyBettingStrategy(max_position_amount=USD(1), max_price_impact=0.5)
     yes = OutcomeToken(10)
     no = OutcomeToken(10)
     bet_amount = CollateralToken(10)
@@ -35,7 +35,7 @@ def test_kelly_price_impact_calculation1() -> None:
 
 def test_kelly_price_impact_calculation2() -> None:
     # Follow-up from first case from https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-cpmm
-    kelly = KellyBettingStrategy(max_bet_amount=USD(1), max_price_impact=0.5)
+    kelly = KellyBettingStrategy(max_position_amount=USD(1), max_price_impact=0.5)
     # after first bet 10 xDAI on Yes, new yes/no
     yes = OutcomeToken(5)
     no = OutcomeToken(20)
@@ -112,7 +112,7 @@ def assert_price_impact_converges(
     )
 
     kelly = KellyBettingStrategy(
-        max_bet_amount=max_bet_amount,
+        max_position_amount=max_bet_amount,
         max_price_impact=max_price_impact,
     )
 

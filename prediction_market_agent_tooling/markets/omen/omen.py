@@ -104,6 +104,7 @@ class OmenAgentMarket(AgentMarket):
 
     collateral_token_contract_address_checksummed: ChecksumAddress
     market_maker_contract_address_checksummed: ChecksumAddress
+    outcome_token_pool: dict[OutcomeStr, OutcomeToken]
     condition: Condition
     finalized_time: DatetimeUTC | None
     created_time: DatetimeUTC
@@ -379,6 +380,7 @@ class OmenAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
+        fetch_scalar_markets: bool = False,
     ) -> t.Sequence["OmenAgentMarket"]:
         return [
             OmenAgentMarket.from_data_model(m)
@@ -620,11 +622,10 @@ class OmenAgentMarket(AgentMarket):
         Note: this is only valid if the market instance's token pool is
         up-to-date with the smart contract.
         """
-        outcome_token_pool = check_not_none(self.outcome_token_pool)
         amount = get_buy_outcome_token_amount(
             investment_amount=self.get_in_token(bet_amount),
             outcome_index=self.get_outcome_index(outcome),
-            pool_balances=[outcome_token_pool[x] for x in self.outcomes],
+            pool_balances=[self.outcome_token_pool[x] for x in self.outcomes],
             fees=self.fees,
         )
         return amount

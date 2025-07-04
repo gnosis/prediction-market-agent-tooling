@@ -93,7 +93,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
 
     def get_job_trade(self, max_bond: USD, result: str) -> Trade:
         # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
-        strategy = KellyBettingStrategy(max_bet_amount=max_bond)
+        strategy = KellyBettingStrategy(max_position_amount=max_bond)
         required_trades = strategy.calculate_trades(
             existing_position=None,
             answer=self.get_job_answer(result),
@@ -133,4 +133,6 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
             condition=market.condition,
             finalized_time=market.finalized_time,
             fees=market.fees,
+            upper_bound=market.upper_bound,
+            lower_bound=market.lower_bound,
         )

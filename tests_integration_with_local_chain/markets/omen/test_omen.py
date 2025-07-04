@@ -1,5 +1,6 @@
 import time
 from datetime import timedelta
+from typing import Sequence
 from unittest.mock import patch
 
 import pytest
@@ -305,7 +306,7 @@ def pick_binary_market(
     sort_by: SortBy = SortBy.CLOSING_SOONEST,
     filter_by: FilterBy = FilterBy.OPEN,
     collateral_token_address_in: (
-        tuple[ChecksumAddress, ...] | None
+        Sequence[ChecksumAddress] | None
     ) = SAFE_COLLATERAL_TOKENS_ADDRESSES,
 ) -> OmenMarket:
     return subgraph_handler.get_omen_markets_simple(

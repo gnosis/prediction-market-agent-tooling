@@ -33,11 +33,7 @@ from cowdao_cowpy.order_book.generated.model import (
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_keys.datatypes import PrivateKey as eth_keys_PrivateKey
-from tenacity import (
-    stop_after_attempt,
-    wait_exponential,
-    wait_fixed,
-)
+from tenacity import stop_after_attempt, wait_exponential, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys

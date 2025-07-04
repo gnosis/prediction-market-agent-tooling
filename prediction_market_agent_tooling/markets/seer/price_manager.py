@@ -1,5 +1,3 @@
-import typing as t
-
 from cachetools import TTLCache, cached
 from pydantic import BaseModel
 from web3 import Web3

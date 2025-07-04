@@ -79,7 +79,7 @@ class SwapPoolHandler:
         amount_out_minimum = self._calculate_amount_out_minimum(
             amount_wei=amount_wei,
             token_in=token_in,
-            price_outcome_token=price_outcome_token,
+            price_outcome_token=price_outcome_token.priceOfCollateralInAskingToken,
         )
 
         p = ExactInputSingleParams(

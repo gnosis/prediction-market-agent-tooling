@@ -135,10 +135,10 @@ class SeerAgentMarket(AgentMarket):
 
     def get_token_in_usd(self, x: CollateralToken) -> USD:
         p = self.get_price_manager()
-        sdai_amount = p.get_amount_of_token_in_collateral(
+        sdai_amount = p.get_amount_of_collateral_in_token(
             # Hard-coded SDAI, because Seer is atm hard-coded it as well, and it's needed in case of fallback to pools. CoW would work with other tokens as well.
             SDAI_CONTRACT_ADDRESS,
-            CollateralToken(x.value),
+            x,
         )
         if sdai_amount is None:
             raise RuntimeError(
@@ -148,7 +148,7 @@ class SeerAgentMarket(AgentMarket):
 
     def get_usd_in_token(self, x: USD) -> CollateralToken:
         p = self.get_price_manager()
-        token_amount = p.get_amount_of_collateral_in_token(
+        token_amount = p.get_amount_of_token_in_collateral(
             # Hard-coded SDAI, because Seer is atm hard-coded it as well, and it's needed in case of fallback to pools. CoW would work with other tokens as well.
             SDAI_CONTRACT_ADDRESS,
             get_usd_in_token(x, SDAI_CONTRACT_ADDRESS),

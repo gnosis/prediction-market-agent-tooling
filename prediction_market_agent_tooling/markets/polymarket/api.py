@@ -1,140 +1,119 @@
 import typing as t
+from enum import Enum
+from urllib.parse import urljoin
 
-import requests
+import httpx
 import tenacity
 
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
-    MarketsEndpointResponse,
-    PolymarketMarket,
-    PolymarketMarketWithPrices,
-    PolymarketPriceResponse,
-    PolymarketTokenWithPrices,
-    Prices,
+    PolymarketGammaResponse,
+    PolymarketGammaResponseDataItem,
 )
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.utils import response_to_model
 
-POLYMARKET_API_BASE_URL = "https://clob.polymarket.com/"
 MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
+POLYMARKET_GAMMA_API_BASE_URL = "https://gamma-api.polymarket.com/"
+
+
+class PolymarketOrderByEnum(str, Enum):
+    LIQUIDITY = "liquidity"
+    START_DATE = "startDate"
+    END_DATE = "endDate"
+    VOLUME_24HR = "volume24hr"
 
 
 @tenacity.retry(
-    stop=tenacity.stop_after_attempt(5),
-    wait=tenacity.wait_chain(*[tenacity.wait_fixed(n) for n in range(1, 6)]),
-    after=lambda x: logger.debug(f"get_polymarkets failed, {x.attempt_number=}."),
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_polymarkets_with_pagination failed, {x.attempt_number=}."
+    ),
 )
-def get_polymarkets(
+def get_polymarkets_with_pagination(
     limit: int,
-    with_rewards: bool = False,
-    next_cursor: str | None = None,
-) -> MarketsEndpointResponse:
-    url = (
-        f"{POLYMARKET_API_BASE_URL}/{'sampling-markets' if with_rewards else 'markets'}"
-    )
-    params: dict[str, str | int | float | None] = {
-        "limit": min(limit, MARKETS_LIMIT),
-    }
-    if next_cursor is not None:
-        params["next_cursor"] = next_cursor
-    return response_to_model(requests.get(url, params=params), MarketsEndpointResponse)
-
-
-def get_polymarket_binary_markets(
-    limit: int,
-    closed: bool | None = False,
+    created_after: t.Optional[DatetimeUTC] = None,
+    active: bool | None = None,
+    closed: bool | None = None,
     excluded_questions: set[str] | None = None,
-    with_rewards: bool = False,
-    main_markets_only: bool = True,
-) -> list[PolymarketMarketWithPrices]:
+    only_binary: bool = True,
+    archived: bool = False,
+    ascending: bool = False,
+    order_by: PolymarketOrderByEnum = PolymarketOrderByEnum.VOLUME_24HR,
+) -> list[PolymarketGammaResponseDataItem]:
     """
-    See https://learn.polymarket.com/trading-rewards for information about rewards.
+    Binary markets have len(model.markets) == 1.
+    Categorical markets have len(model.markets) > 1
     """
+    client: httpx.Client = HttpxCachedClient(ttl=60).get_client()
+    all_markets: list[PolymarketGammaResponseDataItem] = []
+    offset = 0
+    remaining = limit
 
-    all_markets: list[PolymarketMarketWithPrices] = []
-    next_cursor: str | None = None
+    while remaining > 0:
+        # Calculate how many items to request in this batch (up to MARKETS_LIMIT or remaining)
+        # By default we fetch many markets because not possible to filter by binary/categorical
+        batch_size = MARKETS_LIMIT
 
-    while True:
-        response = get_polymarkets(
-            limit, with_rewards=with_rewards, next_cursor=next_cursor
+        # Build query parameters, excluding None values
+        params = {
+            "limit": batch_size,
+            "active": str(active).lower() if active is not None else None,
+            "archived": str(archived).lower(),
+            "closed": str(closed).lower() if closed is not None else None,
+            "order": order_by.value,
+            "ascending": str(ascending).lower(),
+            "offset": offset,
+        }
+        query_string = "&".join(f"{k}={v}" for k, v in params.items() if v is not None)
+        url = urljoin(
+            POLYMARKET_GAMMA_API_BASE_URL,
+            f"events/pagination?{query_string}",
         )
 
-        for market in response.data:
-            # Closed markets means resolved markets.
-            if closed is not None and market.closed != closed:
+        r = client.get(url)
+
+        market_response = response_to_model(r, PolymarketGammaResponse)
+
+        markets_to_add = []
+        for m in market_response.data:
+            if excluded_questions and m.title in excluded_questions:
                 continue
 
-            # Skip markets that are inactive.
-            # Documentation does not provide more details about this, but if API returns them, website gives "Oops...we didn't forecast this".
-            if not market.active:
+            sorted_outcome_list = sorted(m.markets[0].outcomes_list)
+            if only_binary:
+                # We keep markets that are only Yes,No
+                if len(m.markets) > 1 or sorted_outcome_list != [
+                    POLYMARKET_FALSE_OUTCOME,
+                    POLYMARKET_TRUE_OUTCOME,
+                ]:
+                    continue
+
+            if created_after and created_after > m.startDate:
                 continue
 
-            # Skip also those that were archived.
-            # Again nothing about it in documentation and API doesn't seem to return them, but to be safe.
-            if market.archived:
-                continue
+            markets_to_add.append(m)
 
-            if excluded_questions and market.question in excluded_questions:
-                continue
+        if only_binary:
+            markets_to_add = [
+                market for market in market_response.data if len(market.markets) == 1
+            ]
 
-            # Atm we work with binary markets only.
-            if sorted(token.outcome for token in market.tokens) != [
-                POLYMARKET_FALSE_OUTCOME,
-                POLYMARKET_TRUE_OUTCOME,
-            ]:
-                continue
+        # Add the markets from this batch to our results
+        all_markets.extend(markets_to_add)
 
-            # This is pretty slow to do here, but our safest option at the moment. So keep it as the last filter.
-            # TODO: Add support for `description` for `AgentMarket` and if it isn't None, use it in addition to the question in all agents. Then this can be removed.
-            if main_markets_only and not market.fetch_if_its_a_main_market():
-                continue
+        # Update counters
+        received = len(market_response.data)
+        offset += received
+        remaining -= received
 
-            tokens_with_price = get_market_tokens_with_prices(market)
-            market_with_prices = PolymarketMarketWithPrices.model_validate(
-                {**market.model_dump(), "tokens": tokens_with_price}
-            )
-
-            all_markets.append(market_with_prices)
-
-        if len(all_markets) >= limit:
+        # Stop if we've reached our limit or there are no more results
+        if remaining <= 0 or not market_response.pagination.hasMore or received == 0:
             break
 
-        next_cursor = response.next_cursor
-
-        if next_cursor == "LTE=":
-            # 'LTE=' means the end.
-            break
-
+    # Return exactly the number of items requested (in case we got more due to batch size)
     return all_markets[:limit]
-
-
-def get_polymarket_market(condition_id: str) -> PolymarketMarket:
-    url = f"{POLYMARKET_API_BASE_URL}/markets/{condition_id}"
-    return response_to_model(requests.get(url), PolymarketMarket)
-
-
-def get_token_price(
-    token_id: str, side: t.Literal["buy", "sell"]
-) -> PolymarketPriceResponse:
-    url = f"{POLYMARKET_API_BASE_URL}/price"
-    params = {"token_id": token_id, "side": side}
-    return response_to_model(requests.get(url, params=params), PolymarketPriceResponse)
-
-
-def get_market_tokens_with_prices(
-    market: PolymarketMarket,
-) -> list[PolymarketTokenWithPrices]:
-    tokens_with_prices = [
-        PolymarketTokenWithPrices(
-            token_id=token.token_id,
-            outcome=token.outcome,
-            winner=token.winner,
-            prices=Prices(
-                BUY=get_token_price(token.token_id, "buy").price_dec,
-                SELL=get_token_price(token.token_id, "sell").price_dec,
-            ),
-        )
-        for token in market.tokens
-    ]
-    return tokens_with_prices

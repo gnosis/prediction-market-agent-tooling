@@ -76,6 +76,9 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
+from prediction_market_agent_tooling.tools.tokens.slippage import (
+    get_slippage_tolerance_per_token,
+)
 from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
@@ -232,9 +235,7 @@ class SeerAgentMarket(AgentMarket):
     def get_tiny_bet_amount(self) -> CollateralToken:
         return self.get_in_token(SEER_TINY_BET_AMOUNT)
 
-    def get_position_else_raise(
-        self, user_id: str, web3: Web3 | None = None
-    ) -> ExistingPosition:
+    def get_position(self, user_id: str, web3: Web3 | None = None) -> ExistingPosition:
         """
         Fetches position from the user in a given market.
         We ignore the INVALID balances since we are only interested in binary outcomes.
@@ -264,15 +265,6 @@ class SeerAgentMarket(AgentMarket):
             amounts_potential=amounts_potential,
             amounts_ot=amounts_ot,
         )
-
-    def get_position(
-        self, user_id: str, web3: Web3 | None = None
-    ) -> ExistingPosition | None:
-        try:
-            return self.get_position_else_raise(user_id=user_id, web3=web3)
-        except Exception as e:
-            logger.warning(f"Could not get position for user {user_id}, exception {e}")
-            return None
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
@@ -535,7 +527,7 @@ class SeerAgentMarket(AgentMarket):
         Returns:
             Transaction hash of the successful swap
         """
-
+        slippage_tolerance = get_slippage_tolerance_per_token(buy_token)
         try:
             _, order = swap_tokens_waiting(
                 amount_wei=amount_wei,
@@ -545,6 +537,7 @@ class SeerAgentMarket(AgentMarket):
                 web3=web3,
                 wait_order_complete=False,
                 timeout=timedelta(minutes=2),
+                slippage_tolerance=slippage_tolerance,
             )
             order_metadata = asyncio.run(wait_for_order_completion(order=order))
             logger.debug(

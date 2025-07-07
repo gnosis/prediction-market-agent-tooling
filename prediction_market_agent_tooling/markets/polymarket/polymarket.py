@@ -79,6 +79,7 @@ class PolymarketAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
+        fetch_scalar_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         closed: bool | None
         active: bool | None

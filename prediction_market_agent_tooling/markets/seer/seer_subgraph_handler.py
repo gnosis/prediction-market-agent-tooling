@@ -135,7 +135,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             no_stms = SeerSubgraphHandler._create_case_variations_condition(
                 DOWN_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
-        elif include_conditional_markets and not include_categorical_markets:
+        elif not include_categorical_markets:
             # We are interested in binary markets only
             yes_stms = SeerSubgraphHandler._create_case_variations_condition(
                 YES_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
@@ -194,8 +194,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         sort_by: SortBy = SortBy.NONE,
         limit: int | None = None,
         outcome_supply_gt_if_open: Wei = Wei(0),
-        include_conditional_markets: bool = True,
-        include_categorical_markets: bool = True,
+        include_conditional_markets: bool = False,
+        include_categorical_markets: bool = False,
         include_only_scalar_markets: bool = False,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)

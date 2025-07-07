@@ -92,12 +92,10 @@ class SwapPoolHandler:
         )
 
         # make sure user has enough tokens to sell
-        if (
-            balance_collateral_token := ContractERC20OnGnosisChain(
-                address=token_in
-            ).balanceOf(self.api_keys.bet_from_address, web3=web3)
-            < amount_wei
-        ):
+        balance_collateral_token = ContractERC20OnGnosisChain(
+            address=token_in
+        ).balanceOf(self.api_keys.bet_from_address, web3=web3)
+        if balance_collateral_token < amount_wei:
             raise ValueError(
                 f"Balance {balance_collateral_token} of {token_in} insufficient for trade, required {amount_wei}"
             )

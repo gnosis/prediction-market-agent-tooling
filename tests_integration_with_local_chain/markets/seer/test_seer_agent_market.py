@@ -1,9 +1,9 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from ape_test import TestAccount
 from cowdao_cowpy.cow.swap import CompletedOrder
 from cowdao_cowpy.order_book.generated.model import UID
+from eth_account import Account
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -197,18 +197,15 @@ def test_seer_swap_via_pools(local_web3: Web3, test_keys: APIKeys) -> None:
     assert final_outcome_token_balance > initial_outcome_token_balance
 
 
-@pytest.fixture(scope="module")
-def test_keys_with_no_balance(eoa_accounts: list[TestAccount]) -> APIKeys:
-    account = eoa_accounts[-1]
+def test_seer_swap_via_pools_fails_when_no_balance(
+    local_web3: Web3,
+) -> None:
+    account = Account.create()
 
-    return APIKeys(
-        BET_FROM_PRIVATE_KEY=private_key_type(account.private_key), SAFE_ADDRESS=None
+    test_keys_with_no_balance = APIKeys(
+        BET_FROM_PRIVATE_KEY=private_key_type(account.key.hex()), SAFE_ADDRESS=None
     )
 
-
-def test_seer_swap_via_pools_fails_when_no_balance(
-    local_web3: Web3, test_keys_with_no_balance: APIKeys
-) -> None:
     market, sell_token, _, buy_token, amount_wei, _ = prepare_seer_swap_test(
         local_web3, test_keys_with_no_balance, deposit_collateral=False
     )

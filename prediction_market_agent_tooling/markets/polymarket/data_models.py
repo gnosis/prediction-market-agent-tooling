@@ -29,7 +29,7 @@ class PolymarketToken(BaseModel):
 
 
 class PolymarketGammaMarket(BaseModel):
-    conditionId: str
+    conditionId: HexBytes
     outcomes: str
     outcomePrices: str | None = None
     marketMakerAddress: str
@@ -64,11 +64,11 @@ class PolymarketGammaTag(BaseModel):
 class PolymarketGammaResponseDataItem(BaseModel):
     id: str
     slug: str
-    volume: float | None = None
+    volume: float
     startDate: DatetimeUTC
     endDate: DatetimeUTC
-    liquidity: float | None = None
-    liquidityClob: float | None = None
+    liquidity: float
+    liquidityClob: float
     title: str
     description: str
     archived: bool

@@ -13,11 +13,7 @@ from safe_eth.safe.safe import SafeV141
 from web3 import Account, Web3
 from web3._utils.http import construct_user_agent
 
-from prediction_market_agent_tooling.chains import (
-    ETHEREUM_ID,
-    GNOSIS_CHAIN_ID,
-    POLYGON_CHAIN_ID,
-)
+from prediction_market_agent_tooling.chains import ETHEREUM_ID, GNOSIS_CHAIN_ID
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
 from prediction_market_agent_tooling.gtypes import (
     ChainID,
@@ -296,7 +292,6 @@ class RPCConfig(BaseSettings):
     ETHEREUM_RPC_BEARER: SecretStr | None = None
     GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
     GNOSIS_RPC_BEARER: SecretStr | None = None
-    POLYGON_RPC_URL: URI = Field(default=URI("https://polygon-rpc.com"))
     CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
 
     @property
@@ -312,12 +307,6 @@ class RPCConfig(BaseSettings):
         )
 
     @property
-    def polygon_rpc_url(self) -> URI:
-        return check_not_none(
-            self.POLYGON_RPC_URL, "POLYGON_RPC_URL missing in the environment."
-        )
-
-    @property
     def chain_id(self) -> ChainID:
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
@@ -325,7 +314,6 @@ class RPCConfig(BaseSettings):
         return {
             ETHEREUM_ID: self.ethereum_rpc_url,
             GNOSIS_CHAIN_ID: self.gnosis_rpc_url,
-            POLYGON_CHAIN_ID: self.polygon_rpc_url,
         }[chain_id]
 
     def chain_id_to_rpc_bearer(self, chain_id: ChainID) -> SecretStr | None:

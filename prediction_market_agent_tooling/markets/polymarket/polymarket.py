@@ -3,7 +3,6 @@ import typing as t
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
-    HexBytes,
     OutcomeStr,
     Probability,
 )
@@ -13,7 +12,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     MarketFees,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
     get_polymarkets_with_pagination,
@@ -23,9 +21,6 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_BASE_URL,
-)
-from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
-    PolymarketConditionalTokenContract,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
@@ -44,48 +39,28 @@ class PolymarketAgentMarket(AgentMarket):
     fees: MarketFees = MarketFees.get_zero_fees()
 
     @staticmethod
-    def get_resolution_from_data_model(
-        condition_id: HexBytes,
-        outcomes: t.Sequence[OutcomeStr],
-    ) -> Resolution | None:
-        resolved_outcome_idx = (
-            PolymarketConditionalTokenContract().get_resolved_outcome_idx(condition_id)
-        )
-        resolution = (
-            None
-            if resolved_outcome_idx is None
-            else Resolution.from_answer(outcomes[resolved_outcome_idx])
-        )
-        return resolution
-
-    @staticmethod
     def from_data_model(
         model: PolymarketGammaResponseDataItem,
     ) -> "PolymarketAgentMarket":
         # If len(model.markets) > 0, this denotes a categorical market.
 
-        polymarket_market = model.markets[0]
-        outcomes = polymarket_market.outcomes_list
-        outcome_prices = polymarket_market.outcome_prices
+        outcomes = model.markets[0].outcomes_list
+        outcome_prices = model.markets[0].outcome_prices
         if not outcome_prices:
             # We give random prices
             outcome_prices = [0.5, 0.5]
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
-
-        resolution = PolymarketAgentMarket.get_resolution_from_data_model(
-            HexBytes(polymarket_market.conditionId), outcomes
-        )
 
         return PolymarketAgentMarket(
             id=model.id,
             question=model.title,
             description=model.description,
             outcomes=outcomes,
-            resolution=resolution,
+            resolution=None,  # We don't fetch resolution properties
             created_time=model.startDate,
             close_time=model.endDate,
             url=model.url,
-            volume=CollateralToken(model.volume) if model.volume is not None else None,
+            volume=CollateralToken(model.volume),
             outcome_token_pool=None,
             probabilities=probabilities,
         )
@@ -107,12 +82,15 @@ class PolymarketAgentMarket(AgentMarket):
         fetch_scalar_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         closed: bool | None
-
+        active: bool | None
         if filter_by == FilterBy.OPEN:
+            active = True
             closed = False
         elif filter_by == FilterBy.RESOLVED:
+            active = False
             closed = True
         elif filter_by == FilterBy.NONE:
+            active = None
             closed = None
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
@@ -134,6 +112,7 @@ class PolymarketAgentMarket(AgentMarket):
         markets = get_polymarkets_with_pagination(
             limit=limit,
             closed=closed,
+            active=active,
             order_by=order_by,
             ascending=ascending,
             created_after=created_after,

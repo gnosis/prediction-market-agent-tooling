@@ -64,11 +64,11 @@ class PolymarketGammaTag(BaseModel):
 class PolymarketGammaResponseDataItem(BaseModel):
     id: str
     slug: str
-    volume: float
+    volume: float | None = None
     startDate: DatetimeUTC
     endDate: DatetimeUTC
-    liquidity: float
-    liquidityClob: float
+    liquidity: float | None = None
+    liquidityClob: float | None = None
     title: str
     description: str
     archived: bool

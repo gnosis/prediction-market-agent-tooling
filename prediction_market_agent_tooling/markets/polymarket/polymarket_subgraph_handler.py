@@ -27,7 +27,9 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
             )
         )
 
-    def get_conditions(self, condition_ids: list[HexBytes]):
+    def get_conditions(
+        self, condition_ids: list[HexBytes]
+    ) -> list[ConditionSubgraphModel]:
         where_stms = {"id_in": [i.hex() for i in condition_ids]}
         conditions = self.conditions_subgraph.Query.conditions(
             where=where_stms,

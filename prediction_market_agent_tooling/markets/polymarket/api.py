@@ -65,7 +65,7 @@ def get_polymarkets_with_pagination(
             "active": str(active).lower() if active is not None else None,
             "archived": str(archived).lower(),
             "closed": str(closed).lower() if closed is not None else None,
-            "order": str(order_by).lower(),
+            "order": order_by.value,
             "ascending": str(ascending).lower(),
             "offset": offset,
         }
@@ -93,7 +93,7 @@ def get_polymarkets_with_pagination(
                 ]:
                     continue
 
-            if created_after and m.startDate > created_after:
+            if created_after and created_after > m.startDate:
                 continue
 
             markets_to_add.append(m)

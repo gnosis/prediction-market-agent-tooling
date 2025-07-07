@@ -3,6 +3,7 @@ import typing as t
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
+    HexBytes,
     OutcomeStr,
     Probability,
 )
@@ -12,6 +13,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     MarketFees,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
     get_polymarkets_with_pagination,
@@ -22,7 +24,11 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_BASE_URL,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
+    ConditionSubgraphModel,
+    PolymarketSubgraphHandler,
+)
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -39,8 +45,40 @@ class PolymarketAgentMarket(AgentMarket):
     fees: MarketFees = MarketFees.get_zero_fees()
 
     @staticmethod
+    def build_resolution_from_condition(
+        condition_id: HexBytes,
+        condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
+        outcomes: list[OutcomeStr],
+    ) -> Resolution | None:
+        condition_model = condition_model_dict.get(condition_id)
+        if (
+            not condition_model
+            or condition_model.resolutionTimestamp is None
+            or not condition_model.payoutNumerators
+            or not condition_model.payoutDenominator
+        ):
+            return None
+
+        # Currently we only support binary markets, hence we throw an error if we get something else.
+        payout_numerator_indices_gt_0 = [
+            idx
+            for idx, value in enumerate(condition_model.payoutNumerators)
+            if value > 0
+        ]
+        # For a binary market, there should be exactly one payout numerator greater than 0.
+        if len(payout_numerator_indices_gt_0) != 1:
+            raise ValueError(
+                f"Only binary markets are supported. Got payout numerators: {condition_model.payoutNumerators}"
+            )
+
+        # we return the only payout numerator greater than 0 as resolution
+        resolved_outcome = outcomes[payout_numerator_indices_gt_0[0]]
+        return Resolution.from_answer(resolved_outcome)
+
+    @staticmethod
     def from_data_model(
         model: PolymarketGammaResponseDataItem,
+        condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
     ) -> "PolymarketAgentMarket":
         # If len(model.markets) > 0, this denotes a categorical market.
 
@@ -51,16 +89,22 @@ class PolymarketAgentMarket(AgentMarket):
             outcome_prices = [0.5, 0.5]
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 
+        resolution = PolymarketAgentMarket.build_resolution_from_condition(
+            condition_id=model.markets[0].conditionId,
+            condition_model_dict=condition_model_dict,
+            outcomes=outcomes,
+        )
+
         return PolymarketAgentMarket(
             id=model.id,
             question=model.title,
             description=model.description,
             outcomes=outcomes,
-            resolution=None,  # We don't fetch resolution properties
+            resolution=resolution,
             created_time=model.startDate,
             close_time=model.endDate,
             url=model.url,
-            volume=CollateralToken(model.volume),
+            volume=CollateralToken(model.volume) if model.volume else None,
             outcome_token_pool=None,
             probabilities=probabilities,
         )
@@ -82,15 +126,12 @@ class PolymarketAgentMarket(AgentMarket):
         fetch_scalar_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         closed: bool | None
-        active: bool | None
+
         if filter_by == FilterBy.OPEN:
-            active = True
             closed = False
         elif filter_by == FilterBy.RESOLVED:
-            active = False
             closed = True
         elif filter_by == FilterBy.NONE:
-            active = None
             closed = None
         else:
             raise ValueError(f"Unknown filter_by: {filter_by}")
@@ -109,10 +150,10 @@ class PolymarketAgentMarket(AgentMarket):
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
 
+        # closed markets also have property active=True, hence ignoring active.
         markets = get_polymarkets_with_pagination(
             limit=limit,
             closed=closed,
-            active=active,
             order_by=order_by,
             ascending=ascending,
             created_after=created_after,
@@ -120,4 +161,12 @@ class PolymarketAgentMarket(AgentMarket):
             only_binary=not fetch_categorical_markets,
         )
 
-        return [PolymarketAgentMarket.from_data_model(m) for m in markets]
+        condition_models = PolymarketSubgraphHandler().get_conditions(
+            condition_ids=[market.markets[0].conditionId for market in markets]
+        )
+        condition_models_dict = {c.id: c for c in condition_models}
+
+        return [
+            PolymarketAgentMarket.from_data_model(m, condition_models_dict)
+            for m in markets
+        ]

@@ -3,12 +3,15 @@ name: prediction-market-agent-tooling
 plugins:
   - name: foundry
 
-default_ecosystem: gnosis
+#default_ecosystem: gnosis
 
 node:
   gnosis:
     mainnet:
       uri: https://rpc.gnosischain.com
+  polygon:
+    mainnet_polygon:
+      uri: https://polygon-rpc.com
 
 
 networks:
@@ -18,15 +21,26 @@ networks:
        ecosystem: gnosis
        base_ecosystem_plugin: ethereum
        default_provider: node
+     - name: mainnet_polygon                   # Required
+       chain_id: 137                   # Required
+       ecosystem: polygon
+       base_ecosystem_plugin: ethereum
+       default_provider: node
 
 gnosis:
   default_network: gnosis_fork
+
+polygon:
+  default_network: polygon_fork
 
 foundry:
   host: http://localhost:8545/
   fork:
     gnosis:
       mainnet:
+        upstream_provider: node
+    polygon:
+      mainnet_polygon:
         upstream_provider: node
 
 

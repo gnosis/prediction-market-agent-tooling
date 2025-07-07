@@ -7,6 +7,7 @@ from enum import Enum
 from web3 import Web3
 from web3.constants import HASH_ZERO
 
+from prediction_market_agent_tooling.chains import GNOSIS_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
@@ -38,6 +39,7 @@ from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ContractBaseClass,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
@@ -100,7 +102,7 @@ def build_parent_collection_id() -> HexStr:
     return HASH_ZERO  # Taken from Olas
 
 
-class OmenConditionalTokenContract(ContractOnGnosisChain):
+class OmenConditionalTokenContract(ContractBaseClass):
     # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.
     abi: ABI = abi_field_validator(
         os.path.join(
@@ -111,6 +113,7 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce"
     )
+    CHAIN_ID = GNOSIS_CHAIN_ID
 
     def getConditionId(
         self,
@@ -234,6 +237,14 @@ class OmenConditionalTokenContract(ContractOnGnosisChain):
         # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
         payout_for_condition = self.payoutDenominator(condition_id, web3=web3)
         return payout_for_condition > 0
+
+    def payoutNumerators(
+        self, condition_id: HexBytes, idx: int, web3: Web3 | None = None
+    ) -> int:
+        payout_numerator: int = self.call(
+            "payoutNumerators", [condition_id, idx], web3=web3
+        )
+        return payout_numerator
 
     def payoutDenominator(
         self, condition_id: HexBytes, web3: Web3 | None = None

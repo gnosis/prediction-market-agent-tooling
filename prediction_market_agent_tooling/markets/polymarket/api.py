@@ -37,7 +37,6 @@ class PolymarketOrderByEnum(str, Enum):
 def get_polymarkets_with_pagination(
     limit: int,
     created_after: t.Optional[DatetimeUTC] = None,
-    active: bool | None = None,
     closed: bool | None = None,
     excluded_questions: set[str] | None = None,
     only_binary: bool = True,
@@ -60,12 +59,12 @@ def get_polymarkets_with_pagination(
         batch_size = MARKETS_LIMIT
 
         # Build query parameters, excluding None values
+        # active does not play a role (closed markets are also active), hence excluding it.
         params = {
             "limit": batch_size,
-            "active": str(active).lower() if active is not None else None,
             "archived": str(archived).lower(),
             "closed": str(closed).lower() if closed is not None else None,
-            "order": str(order_by).lower(),
+            "order": order_by.value,
             "ascending": str(ascending).lower(),
             "offset": offset,
         }

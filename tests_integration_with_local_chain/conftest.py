@@ -53,6 +53,15 @@ def force_non_cow_tokens() -> t.Generator[None, None, None]:
 
 
 @pytest.fixture(scope="session")
+def polygon_local_web3(chain: ChainManager) -> t.Generator[Web3, None, None]:
+    with chain.network_manager.parse_network_choice(
+        "polygon:mainnet_polygon-fork:foundry"
+    ) as provider:
+        w3 = Web3(Web3.HTTPProvider(provider.http_uri))
+        yield w3
+
+
+@pytest.fixture(scope="session")
 def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, None]:
     print("entering fixture local_web3")
 

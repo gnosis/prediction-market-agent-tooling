@@ -505,6 +505,14 @@ class ContractOnGnosisChain(ContractBaseClass):
     CHAIN_ID = RPCConfig().chain_id
 
 
+class ContractOnPolygonChain(ContractBaseClass):
+    """
+    Contract base class with Gnosis Chain configuration.
+    """
+
+    CHAIN_ID = RPCConfig().chain_id
+
+
 class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):
     """
     Proxy contract base class with Gnosis Chain configuration.

@@ -133,7 +133,7 @@ def test_seer_swap_via_pools(local_web3: Web3, test_keys: APIKeys) -> None:
     )
     auto_deposit_collateral_token(
         collateral_token_contract=collateral_token_contract,
-        collateral_amount_wei_or_usd=Wei(amount_wei.value),
+        collateral_amount_wei_or_usd=amount_wei.as_wei,
         api_keys=test_keys,
         web3=local_web3,
     )

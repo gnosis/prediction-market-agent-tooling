@@ -29,7 +29,7 @@ class PolymarketToken(BaseModel):
 
 
 class PolymarketGammaMarket(BaseModel):
-    conditionId: str
+    conditionId: HexBytes
     outcomes: str
     outcomePrices: str | None = None
     marketMakerAddress: str

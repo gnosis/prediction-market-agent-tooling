@@ -144,12 +144,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 NO_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
 
-        if (
-            not include_only_scalar_markets
-            or include_categorical_markets
-            or include_conditional_markets
-        ):
-            # We should not provide any scalar markets because they are exclusive for categorical markets
+        if not include_only_scalar_markets or include_categorical_markets:
+            # We should not provide any scalar markets because they are exclusive for categorical/binary markets
             exclude_scalar_yes = SeerSubgraphHandler._create_case_variations_condition(
                 UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_not_contains", "and"
             )

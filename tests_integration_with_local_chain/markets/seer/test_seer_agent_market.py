@@ -7,7 +7,6 @@ from eth_account import Account
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
@@ -16,7 +15,6 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     private_key_type,
 )
-
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketType,

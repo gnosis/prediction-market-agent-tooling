@@ -121,12 +121,23 @@ class PriceManager:
             logger.warning(f"Could not find a pool for {token=}")
             return None
 
-        # The mapping below is odd but surprisingly the Algebra subgraph delivers the token1Price
-        # for the token0 and the token0Price for the token1 pool.
-        # For example, in a outcomeYES (token0)/sDAI pool (token1), token1Price is the price of outcomeYES in units of sDAI.
+        if (
+            Web3.to_checksum_address(pool.token0.id)
+            == self.seer_market.collateral_token_contract_address_checksummed
+        ):
+            price_coll_in_asking = (
+                pool.token1Price
+            )  # how many outcome tokens per 1 collateral
+            price_asking_in_coll = (
+                pool.token0Price
+            )  # how many collateral tokens per 1 outcome
+        else:
+            price_coll_in_asking = pool.token0Price
+            price_asking_in_coll = pool.token1Price
+
         return Prices(
-            priceOfAskingTokenInCollateral=pool.token1Price,
-            priceOfCollateralInAskingToken=pool.token0Price,
+            priceOfCollateralInAskingToken=price_coll_in_asking,
+            priceOfAskingTokenInCollateral=price_asking_in_coll,
         )
 
     def build_probability_map(self) -> dict[OutcomeStr, Probability]:

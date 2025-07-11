@@ -4,7 +4,10 @@ from typing import Annotated, Sequence
 from pydantic import BaseModel, BeforeValidator, computed_field
 
 from prediction_market_agent_tooling.deploy.constants import (
+    DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
+    INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
+    UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -13,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
+    Wei,
 )
 from prediction_market_agent_tooling.logprobs_parser import FieldLogprobs
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
@@ -100,6 +104,31 @@ def to_boolean_outcome(value: str | bool) -> bool:
 Decision = Annotated[bool, BeforeValidator(to_boolean_outcome)]
 
 
+class ScalarProbabilisticAnswer(BaseModel):
+    scalar_value: Wei
+    upperBound: Wei
+    lowerBound: Wei
+    confidence: float
+    reasoning: str | None = None
+    logprobs: list[FieldLogprobs] | None = None
+
+    @property
+    def p_up(self) -> Probability:
+        if self.scalar_value > self.upperBound:
+            return Probability(1)
+        elif self.scalar_value < self.lowerBound:
+            return Probability(0)
+        else:
+            return Probability(
+                (self.scalar_value - self.lowerBound)
+                / (self.upperBound - self.lowerBound)
+            )
+
+    @property
+    def p_down(self) -> Probability:
+        return Probability(1 - self.p_up)
+
+
 class ProbabilisticAnswer(BaseModel):
     p_yes: Probability
     confidence: float
@@ -161,6 +190,41 @@ class CategoricalProbabilisticAnswer(BaseModel):
                     else OutcomeStr(NO_OUTCOME_LOWERCASE_IDENTIFIER)
                 ): Probability(1 - answer.p_yes),
             },
+            confidence=answer.confidence,
+            reasoning=answer.reasoning,
+        )
+
+    @staticmethod
+    def from_scalar_answer(
+        answer: ScalarProbabilisticAnswer,
+        market_outcomes: Sequence[OutcomeStr],
+    ) -> "CategoricalProbabilisticAnswer":
+        probabilities = {}
+        lowercase_market_outcomes = [outcome.lower() for outcome in market_outcomes]
+
+        if not set(
+            [
+                DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
+                UP_OUTCOME_LOWERCASE_IDENTIFIER,
+            ]
+        ).issubset(lowercase_market_outcomes):
+            raise ValueError("Market with no outcomes")
+
+        probabilities[OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER.upper())] = answer.p_up
+        probabilities[
+            OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper())
+        ] = answer.p_down
+
+        if (
+            market_outcomes
+            and INVALID_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_market_outcomes
+        ):
+            probabilities[
+                OutcomeStr(INVALID_OUTCOME_LOWERCASE_IDENTIFIER.capitalize())
+            ] = Probability(1 - answer.p_up - answer.p_down)
+
+        return CategoricalProbabilisticAnswer(
+            probabilities=probabilities,
             confidence=answer.confidence,
             reasoning=answer.reasoning,
         )

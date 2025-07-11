@@ -5,14 +5,11 @@ Keep in mind that not all fields were used so far, so there might be some bugs.
 These models are based on what Polymarket's website returns in the response, and `prediction_market_agent_tooling/markets/polymarket/data_models.py` are based on what their API returns.
 """
 
-import json
 import typing as t
 
-import requests
 from pydantic import BaseModel, field_validator
 
 from prediction_market_agent_tooling.gtypes import USDC, HexAddress, OutcomeStr
-from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
@@ -292,57 +289,6 @@ class PolymarketFullMarket(BaseModel):
                 f"Unexpected number of markets in the Polymarket's response, shouldn't happen if you used `is_main_market` filter, please debug: {self.id=}, {self.title=}"
             )
         return self.markets[0]
-
-    @staticmethod
-    def fetch_from_url(url: str) -> "PolymarketFullMarket | None":
-        """
-        Get the full market data from the Polymarket website.
-
-        Returns None if this market's url returns "Oops...we didn't forecast this", see `check_if_its_a_main_market` method for more details.
-
-        Warning: This is a very slow operation, as it requires fetching the website. Use it only when necessary.
-        """
-        logger.info(f"Fetching full market from {url}")
-
-        # Fetch the website as a normal browser would.
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        }
-        content = requests.get(url, headers=headers).text
-
-        # Find the JSON with the data within the content.
-        start_tag = """<script id="__NEXT_DATA__" type="application/json" crossorigin="anonymous">"""
-        start_idx = content.find(start_tag) + len(start_tag)
-        end_idx = content.find("</script>", start_idx)
-        response_data = content[start_idx:end_idx]
-
-        # Parsing.
-        response_dict = json.loads(response_data)
-        response_model = PolymarketWebResponse.model_validate(response_dict)
-
-        full_market_queries = [
-            q
-            for q in response_model.props.pageProps.dehydratedState.queries
-            if isinstance(q.state.data, PolymarketFullMarket)
-        ]
-
-        # We expect either 0 markets (if it doesn't exist) or 1 market.
-        if len(full_market_queries) not in (0, 1):
-            raise ValueError(
-                f"Unexpected number of queries in the response, please check it out and modify the code accordingly: `{response_dict}`"
-            )
-
-        # It will be `PolymarketFullMarket` thanks to the filter above.
-        market = (
-            t.cast(PolymarketFullMarket, full_market_queries[0].state.data)
-            if full_market_queries
-            else None
-        )
-
-        if market is None:
-            logger.warning(f"No polymarket found for {url}")
-
-        return market
 
 
 class PriceSide(BaseModel):

@@ -303,27 +303,25 @@ class DeployablePredictionAgent(DeployableAgent):
 
     def rephrase_market_to_unconditioned(
         self,
-        market: AgentMarket,
+        market_: AgentMarket,
     ) -> AgentMarket:
         """
         If `rephrase_conditioned_markets` is set to True,
         this method will be used to rephrase the question to account for the parent's market probability in the agent's decision process.
         """
-        new = market.model_copy()
+        new = market_.model_copy(deep=True)
 
-        if market.parent is not None and market.parent.market.parent is not None:
-            market.parent.market = self.rephrase_market_to_unconditioned(
-                market.parent.market
-            )
+        if new.parent is not None and new.parent.market.parent is not None:
+            new.parent.market = self.rephrase_market_to_unconditioned(new.parent.market)
 
         rephrased_question = (
             rephrase_question_to_unconditioned(
-                market.question,
-                market.parent.market.question,
-                market.parent.market.outcomes[market.parent.parent_outcome],
+                new.question,
+                new.parent.market.question,
+                new.parent.market.outcomes[new.parent.parent_outcome],
             )
-            if market.parent is not None
-            else market.question
+            if new.parent is not None
+            else new.question
         )
 
         new.question = rephrased_question

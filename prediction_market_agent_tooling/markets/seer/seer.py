@@ -24,6 +24,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
@@ -83,7 +84,7 @@ from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
 SEER_TINY_BET_AMOUNT = USD(0.1)
@@ -391,6 +392,22 @@ class SeerAgentMarket(AgentMarket):
             probabilities=probability_map,
             upper_bound=model.upper_bound,
             lower_bound=model.lower_bound,
+            parent=(
+                ParentMarket(
+                    market=(
+                        check_not_none(
+                            SeerAgentMarket.from_data_model_with_subgraph(
+                                model.parent_market,
+                                seer_subgraph,
+                                False,
+                            )
+                        )
+                    ),
+                    parent_outcome=model.parent_outcome,
+                )
+                if model.parent_market
+                else None
+            ),
         )
 
         return market
@@ -404,6 +421,7 @@ class SeerAgentMarket(AgentMarket):
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
         fetch_scalar_markets: bool = False,
+        fetch_conditional_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
         markets = seer_subgraph.get_markets(
@@ -412,7 +430,7 @@ class SeerAgentMarket(AgentMarket):
             filter_by=filter_by,
             include_categorical_markets=fetch_categorical_markets,
             include_only_scalar_markets=fetch_scalar_markets,
-            include_conditional_markets=False,
+            include_conditional_markets=fetch_conditional_markets,
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

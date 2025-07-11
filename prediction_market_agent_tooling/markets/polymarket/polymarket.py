@@ -124,6 +124,7 @@ class PolymarketAgentMarket(AgentMarket):
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
         fetch_scalar_markets: bool = False,
+        fetch_conditional_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         closed: bool | None
 

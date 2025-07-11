@@ -112,6 +112,7 @@ class ManifoldAgentMarket(AgentMarket):
         excluded_questions: set[str] | None = None,
         fetch_categorical_markets: bool = False,
         fetch_scalar_markets: bool = False,
+        fetch_conditional_markets: bool = False,
     ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None
         if sort_by == SortBy.CLOSING_SOONEST:

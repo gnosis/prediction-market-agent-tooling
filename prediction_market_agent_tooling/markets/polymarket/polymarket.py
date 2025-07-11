@@ -7,6 +7,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     Probability,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
@@ -67,9 +68,11 @@ class PolymarketAgentMarket(AgentMarket):
         ]
         # For a binary market, there should be exactly one payout numerator greater than 0.
         if len(payout_numerator_indices_gt_0) != 1:
-            raise ValueError(
+            # ToDo: implement this when supporting multi-categorical markets
+            logger.warning(
                 f"Only binary markets are supported. Got payout numerators: {condition_model.payoutNumerators}"
             )
+            return Resolution(outcome=None, invalid=False)
 
         # we return the only payout numerator greater than 0 as resolution
         resolved_outcome = outcomes[payout_numerator_indices_gt_0[0]]

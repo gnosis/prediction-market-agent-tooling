@@ -107,12 +107,15 @@ def get_polymarkets_with_pagination(
         all_markets.extend(markets_to_add)
 
         # Update counters
-        received = len(market_response.data)
-        offset += received
-        remaining -= received
+        offset += len(market_response.data)
+        remaining -= len(markets_to_add)
 
         # Stop if we've reached our limit or there are no more results
-        if remaining <= 0 or not market_response.pagination.hasMore or received == 0:
+        if (
+            remaining <= 0
+            or not market_response.pagination.hasMore
+            or len(market_response.data) == 0
+        ):
             break
 
     # Return exactly the number of items requested (in case we got more due to batch size)

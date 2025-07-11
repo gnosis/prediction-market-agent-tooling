@@ -14,6 +14,9 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
+from prediction_market_agent_tooling.tools.tokens.slippage import (
+    get_slippage_tolerance_per_token,
+)
 from prediction_market_agent_tooling.tools.tokens.usd import get_usd_in_token
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
@@ -156,10 +159,14 @@ def auto_deposit_erc20(
             raise ValueError(
                 "Not enough of the source token to sell to get the desired amount of the collateral token."
             )
+    slippage_tolerance = get_slippage_tolerance_per_token(
+        KEEPING_ERC20_TOKEN.address, collateral_token_contract.address
+    )
     swap_tokens_waiting(
         amount_wei=amount_to_sell_wei,
         sell_token=KEEPING_ERC20_TOKEN.address,
         buy_token=collateral_token_contract.address,
         api_keys=api_keys,
         web3=web3,
+        slippage_tolerance=slippage_tolerance,
     )

@@ -1,3 +1,5 @@
+import json
+
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import USDC, OutcomeStr, Probability
@@ -5,9 +7,9 @@ from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
-    PolymarketFullMarket,
     construct_polymarket_url,
 )
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
@@ -24,6 +26,69 @@ class PolymarketToken(BaseModel):
     token_id: str
     outcome: OutcomeStr
     winner: bool
+
+
+class PolymarketGammaMarket(BaseModel):
+    conditionId: HexBytes
+    outcomes: str
+    outcomePrices: str | None = None
+    marketMakerAddress: str
+    createdAt: DatetimeUTC
+    updatedAt: DatetimeUTC | None = None
+    archived: bool
+    questionId: str | None = None
+    clobTokenIds: str | None = None  # int-encoded hex
+
+    @property
+    def clob_token_ids(self) -> list[HexBytes]:
+        if not self.clobTokenIds:
+            return []
+        return [HexBytes(int(token_id)) for token_id in json.loads(self.clobTokenIds)]
+
+    @property
+    def outcomes_list(self) -> list[OutcomeStr]:
+        return [OutcomeStr(i) for i in json.loads(self.outcomes)]
+
+    @property
+    def outcome_prices(self) -> list[float] | None:
+        if not self.outcomePrices:
+            return None
+        return [float(i) for i in json.loads(self.outcomePrices)]
+
+
+class PolymarketGammaTag(BaseModel):
+    label: str
+    slug: str
+
+
+class PolymarketGammaResponseDataItem(BaseModel):
+    id: str
+    slug: str
+    volume: float | None = None
+    startDate: DatetimeUTC
+    endDate: DatetimeUTC
+    liquidity: float | None = None
+    liquidityClob: float | None = None
+    title: str
+    description: str
+    archived: bool
+    closed: bool
+    active: bool
+    markets: list[PolymarketGammaMarket]
+    tags: list[PolymarketGammaTag]
+
+    @property
+    def url(self) -> str:
+        return construct_polymarket_url(self.slug)
+
+
+class PolymarketGammaPagination(BaseModel):
+    hasMore: bool
+
+
+class PolymarketGammaResponse(BaseModel):
+    data: list[PolymarketGammaResponseDataItem]
+    pagination: PolymarketGammaPagination
 
 
 class PolymarketMarket(BaseModel):
@@ -88,19 +153,6 @@ class PolymarketMarket(BaseModel):
             raise ValueError(
                 f"Should not happen, invalid winner tokens: {winner_tokens}"
             )
-
-    def fetch_full_market(self) -> PolymarketFullMarket | None:
-        return PolymarketFullMarket.fetch_from_url(self.url)
-
-    def fetch_if_its_a_main_market(self) -> bool:
-        # On Polymarket, there are markets that are actually a group of multiple Yes/No markets, for example https://polymarket.com/event/presidential-election-winner-2024.
-        # But API returns them individually, and then we receive questions such as "Will any other Republican Politician win the 2024 US Presidential Election?",
-        # which are naturally unpredictable without futher details.
-        # This is a heuristic to filter them out.
-        # Warning: This is a very slow operation, as it requires fetching the website. Use it only when necessary.
-        full_market = self.fetch_full_market()
-        # `full_market` can be None, if this class come from a multiple Yes/No market, becase then, the constructed URL is invalid (and there is now way to construct an valid one from the data we have).
-        return full_market is not None and full_market.is_main_market
 
 
 class MarketsEndpointResponse(BaseModel):

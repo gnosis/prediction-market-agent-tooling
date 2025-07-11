@@ -78,6 +78,9 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
+from prediction_market_agent_tooling.tools.tokens.slippage import (
+    get_slippage_tolerance_per_token,
+)
 from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
@@ -97,6 +100,7 @@ class SeerAgentMarket(AgentMarket):
         None  # Seer markets don't have a description, so just default to None.
     )
     outcomes_supply: int
+    minimum_market_liquidity_required: CollateralToken = CollateralToken(1)
 
     def get_collateral_token_contract(
         self, web3: Web3 | None = None
@@ -492,7 +496,7 @@ class SeerAgentMarket(AgentMarket):
 
     def has_liquidity_for_outcome(self, outcome: OutcomeStr) -> bool:
         liquidity = self.get_liquidity_for_outcome(outcome)
-        return liquidity > CollateralToken(0)
+        return liquidity > self.minimum_market_liquidity_required
 
     def has_liquidity(self) -> bool:
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
@@ -525,7 +529,7 @@ class SeerAgentMarket(AgentMarket):
         Returns:
             Transaction hash of the successful swap
         """
-
+        slippage_tolerance = get_slippage_tolerance_per_token(sell_token, buy_token)
         try:
             _, order = swap_tokens_waiting(
                 amount_wei=amount_wei,
@@ -535,6 +539,7 @@ class SeerAgentMarket(AgentMarket):
                 web3=web3,
                 wait_order_complete=False,
                 timeout=timedelta(minutes=2),
+                slippage_tolerance=slippage_tolerance,
             )
             order_metadata = asyncio.run(wait_for_order_completion(order=order))
             logger.debug(

@@ -70,6 +70,10 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.collateralToken,
             markets_field.upperBound,
             markets_field.lowerBound,
+            # ToDo
+            markets_field.questions,
+            markets_field.questions.question.finalize_ts,
+            markets_field.questions.question.best_answer,
         ]
         return fields
 

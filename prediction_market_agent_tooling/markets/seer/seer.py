@@ -29,7 +29,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
-from prediction_market_agent_tooling.markets.data_models import ExistingPosition
+from prediction_market_agent_tooling.markets.data_models import (
+    ExistingPosition,
+    Resolution,
+)
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
@@ -354,6 +357,25 @@ class SeerAgentMarket(AgentMarket):
         return OmenAgentMarket.verify_operational_balance(api_keys=api_keys)
 
     @staticmethod
+    def build_resolution(model: SeerMarket) -> Resolution | None:
+        # ToDo - fetch templateId from model
+        # if templateId is multi-categorical, use bitmask
+        # else use best answer as int
+        # If 1 question, then we have a resolution.
+        if len(model.questions) == 1:
+            question = model.questions[0]
+            if question.question.finalize_ts > 0:
+                idx = int(question.question.best_answer)
+                outcome = model.outcomes[question.question.best_answer]
+                return Resolution(outcome=outcome, invalid=False)
+                return Resolution()
+        if len(model.questions) > 1:
+            # ToDo - We handle this when we are able to support multi-categorical resolutions.
+            return Resolution(outcome=None, invalid=False)
+
+        return
+
+    @staticmethod
     def from_data_model_with_subgraph(
         model: SeerMarket,
         seer_subgraph: SeerSubgraphHandler,
@@ -372,6 +394,8 @@ class SeerAgentMarket(AgentMarket):
                 # Price calculation failed, so don't return the market
                 return None
 
+        resolution = SeerAgentMarket.build_resolution(model=model)
+
         market = SeerAgentMarket(
             id=model.id.hex(),
             question=model.title,
@@ -386,7 +410,7 @@ class SeerAgentMarket(AgentMarket):
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=None,
             outcomes_supply=model.outcomes_supply,
-            resolution=None,
+            resolution=resolution,
             volume=None,
             probabilities=probability_map,
             upper_bound=model.upper_bound,

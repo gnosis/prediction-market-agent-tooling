@@ -62,6 +62,17 @@ def seer_normalize_wei(value: int | None) -> int | None:
 SeerNormalizedWei = Annotated[Wei | None, BeforeValidator(seer_normalize_wei)]
 
 
+class SeerQuestion(BaseModel):
+    id: HexBytes
+    best_answer: HexBytes
+    finalize_ts: int
+
+
+class SeerQuestions(BaseModel):
+    id: str
+    question: SeerQuestion
+
+
 class SeerMarket(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -74,6 +85,7 @@ class SeerMarket(BaseModel):
     parent_market: t.Optional[SeerParentMarket] = Field(
         alias="parentMarket", default=None
     )
+    template_id: int = Field(alias="templateId")
     collateral_token: HexAddress = Field(alias="collateralToken")
     condition_id: HexBytes = Field(alias="conditionId")
     opening_ts: int = Field(alias="openingTs")
@@ -84,6 +96,7 @@ class SeerMarket(BaseModel):
     outcomes_supply: int = Field(alias="outcomesSupply")
     upper_bound: SeerNormalizedWei = Field(alias="upperBound", default=None)
     lower_bound: SeerNormalizedWei = Field(alias="lowerBound", default=None)
+    questions: list[SeerQuestions]
 
     @property
     def has_valid_answer(self) -> bool:

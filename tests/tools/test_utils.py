@@ -1,10 +1,11 @@
 import numpy as np
-import pytest
 
 from prediction_market_agent_tooling.gtypes import OutcomeToken
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import (
     calculate_sell_amount_in_collateral,
+    answer_to_resolved_outcome_idx,
 )
 
 
@@ -95,3 +96,30 @@ def test_calculate_sell_amount_in_collateral_5() -> None:
         fees=MarketFees.get_zero_fees(),
     )
     assert collateral == 0
+
+
+import pytest
+from hexbytes import HexBytes
+
+
+@pytest.mark.parametrize(
+    "hex_str, length, expected",
+    [
+        # multi-categorical
+        (
+            "0x0000000000000000000000000000000000000000000000000000000000000018",
+            6,
+            [3, 4],
+        ),
+        # outcome 0
+        ("0x0000000000000000000000000000000000000000000000000000000000000000", 2, [0]),
+        # outcome 1
+        ("0x0000000000000000000000000000000000000000000000000000000000000001", 2, [1]),
+    ],
+)
+def test_answer_multi_categorical(
+    hex_str: str, length: int, expected: list[int]
+) -> None:
+    answer = HexBytes(hex_str)
+    result = answer_to_resolved_outcome_idx(answer, length)
+    assert result == expected

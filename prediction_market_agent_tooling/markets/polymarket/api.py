@@ -69,13 +69,14 @@ def get_polymarkets_with_pagination(
             "ascending": str(ascending).lower(),
             "offset": offset,
         }
-        query_string = "&".join(f"{k}={v}" for k, v in params.items() if v is not None)
+        params_not_none = {k: v for k, v in params.items() if v is not None}
         url = urljoin(
             POLYMARKET_GAMMA_API_BASE_URL,
-            f"events/pagination?{query_string}",
+            f"events/pagination",
         )
 
-        r = client.get(url)
+        r = client.get(url, params=params_not_none)
+        r.raise_for_status()
 
         market_response = response_to_model(r, PolymarketGammaResponse)
 
@@ -107,12 +108,15 @@ def get_polymarkets_with_pagination(
         all_markets.extend(markets_to_add)
 
         # Update counters
-        received = len(market_response.data)
-        offset += received
-        remaining -= received
+        offset += len(market_response.data)
+        remaining -= len(markets_to_add)
 
         # Stop if we've reached our limit or there are no more results
-        if remaining <= 0 or not market_response.pagination.hasMore or received == 0:
+        if (
+            remaining <= 0
+            or not market_response.pagination.hasMore
+            or len(market_response.data) == 0
+        ):
             break
 
     # Return exactly the number of items requested (in case we got more due to batch size)

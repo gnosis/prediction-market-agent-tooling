@@ -22,7 +22,7 @@ def test_get_markets() -> None:
 
 
 def test_open_markets() -> None:
-    limit = 20
+    limit = 50
     created_after = utcnow() - timedelta(days=14)
     markets = PolymarketAgentMarket.get_markets(
         limit=limit, filter_by=FilterBy.OPEN, created_after=created_after

@@ -5,7 +5,11 @@ import pytest
 from prediction_market_agent_tooling.deploy.betting_strategy import BettingStrategy
 from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    MarketType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 
 
@@ -26,7 +30,7 @@ def test_on_real_markets(
 ) -> None:
     checked_count = 0  # CoW/pools APIs are flaky, but require at least one sucesful checks across markets and outcomes here.
     markets = market_class.get_markets(
-        limit=5, sort_by=sort_by, fetch_categorical_markets=True
+        limit=5, sort_by=sort_by, market_types=[MarketType.CATEGORICAL]
     )
 
     for market in markets:

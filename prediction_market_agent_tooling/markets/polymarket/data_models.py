@@ -60,7 +60,7 @@ class PolymarketGammaResponseDataItem(BaseModel):
     slug: str
     volume: float | None = None
     startDate: DatetimeUTC
-    endDate: DatetimeUTC
+    endDate: DatetimeUTC | None = None
     liquidity: float | None = None
     liquidityClob: float | None = None
     title: str

@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.gtypes import (
     private_key_type,
 )
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketType,

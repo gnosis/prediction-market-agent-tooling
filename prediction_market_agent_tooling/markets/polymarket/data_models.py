@@ -40,12 +40,6 @@ class PolymarketGammaMarket(BaseModel):
     clobTokenIds: str | None = None  # int-encoded hex
 
     @property
-    def clob_token_ids(self) -> list[HexBytes]:
-        if not self.clobTokenIds:
-            return []
-        return [HexBytes(int(token_id)) for token_id in json.loads(self.clobTokenIds)]
-
-    @property
     def outcomes_list(self) -> list[OutcomeStr]:
         return [OutcomeStr(i) for i in json.loads(self.outcomes)]
 

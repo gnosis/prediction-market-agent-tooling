@@ -69,13 +69,14 @@ def get_polymarkets_with_pagination(
             "ascending": str(ascending).lower(),
             "offset": offset,
         }
-        query_string = "&".join(f"{k}={v}" for k, v in params.items() if v is not None)
+        params_not_none = {k: v for k, v in params.items() if v is not None}
         url = urljoin(
             POLYMARKET_GAMMA_API_BASE_URL,
-            f"events/pagination?{query_string}",
+            f"events/pagination",
         )
 
-        r = client.get(url)
+        r = client.get(url, params=params_not_none)
+        r.raise_for_status()
 
         market_response = response_to_model(r, PolymarketGammaResponse)
 

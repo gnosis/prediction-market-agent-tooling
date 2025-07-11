@@ -311,6 +311,11 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         new = market.model_copy()
 
+        if market.parent is not None and market.parent.market.parent is not None:
+            market.parent.market = self.rephrase_market_to_unconditioned(
+                market.parent.market
+            )
+
         rephrased_question = (
             rephrase_question_to_unconditioned(
                 market.question,

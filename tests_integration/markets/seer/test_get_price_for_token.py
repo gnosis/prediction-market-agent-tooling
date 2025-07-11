@@ -3,7 +3,11 @@ from unittest.mock import patch
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import CollateralToken
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
+    MarketType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -15,7 +19,8 @@ def test_get_price_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         limit=1,
-        include_categorical_markets=True,
+        market_types=[MarketType.CATEGORICAL],
+        include_conditional_markets=True,
     )[0]
 
     with patch(

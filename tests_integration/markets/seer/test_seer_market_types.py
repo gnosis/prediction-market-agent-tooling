@@ -9,7 +9,11 @@ from prediction_market_agent_tooling.deploy.constants import (
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
 from prediction_market_agent_tooling.gtypes import HexAddress, HexStr
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, OutcomeStr
+from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
+    MarketType,
+    OutcomeStr,
+)
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
@@ -39,8 +43,7 @@ def test_conditional_markets_have_parent_address(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=True,
-        include_categorical_markets=False,
-        include_only_scalar_markets=False,
+        market_types=[MarketType.BINARY],
     )
 
     assert len(markets) <= 10
@@ -64,8 +67,7 @@ def test_get_scalar_markets_only(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=False,
-        include_categorical_markets=False,
-        include_only_scalar_markets=True,
+        market_types=[MarketType.SCALAR],
     )
 
     assert len(markets) <= 10
@@ -96,8 +98,7 @@ def test_get_categorical_markets_only(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=False,
-        include_categorical_markets=True,
-        include_only_scalar_markets=False,
+        market_types=[MarketType.CATEGORICAL],
     )
 
     assert len(markets) <= 10
@@ -118,7 +119,7 @@ def test_exclude_scalar_markets(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=True,
-        include_categorical_markets=False,
+        market_types=[MarketType.BINARY],
     )
 
     assert len(markets) <= 10

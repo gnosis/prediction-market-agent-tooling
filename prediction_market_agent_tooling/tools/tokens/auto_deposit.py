@@ -160,7 +160,7 @@ def auto_deposit_erc20(
                 "Not enough of the source token to sell to get the desired amount of the collateral token."
             )
     slippage_tolerance = get_slippage_tolerance_per_token(
-        collateral_token_contract.address
+        KEEPING_ERC20_TOKEN.address, collateral_token_contract.address
     )
     swap_tokens_waiting(
         amount_wei=amount_to_sell_wei,

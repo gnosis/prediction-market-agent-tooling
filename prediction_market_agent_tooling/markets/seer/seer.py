@@ -77,6 +77,9 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
+from prediction_market_agent_tooling.tools.tokens.slippage import (
+    get_slippage_tolerance_per_token,
+)
 from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
@@ -96,6 +99,7 @@ class SeerAgentMarket(AgentMarket):
         None  # Seer markets don't have a description, so just default to None.
     )
     outcomes_supply: int
+    minimum_market_liquidity_required: CollateralToken = CollateralToken(1)
 
     def get_collateral_token_contract(
         self, web3: Web3 | None = None
@@ -141,17 +145,20 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            token_price = self.get_colateral_price_from_pools()
-            if token_price is None:
+            usd_token_price = self.get_collateral_price_from_pools()
+            if usd_token_price is None:
                 raise RuntimeError(
                     "Both CoW and pool-fallback way of getting price failed."
                 ) from e
-            return USD(x.value * token_price.value)
+            return USD(x.value * usd_token_price.value)
 
-    def get_colateral_price_from_pools(self) -> CollateralToken | None:
+    def get_collateral_price_from_pools(self) -> USD | None:
         p = PriceManager.build(HexBytes(HexStr(self.id)))
         token_price = p.get_token_price_from_pools(token=SDAI_CONTRACT_ADDRESS)
-        return token_price
+        if token_price:
+            return get_token_in_usd(token_price, SDAI_CONTRACT_ADDRESS)
+
+        return None
 
     def get_usd_in_token(self, x: USD) -> CollateralToken:
         try:
@@ -162,12 +169,12 @@ class SeerAgentMarket(AgentMarket):
             logger.warning(
                 f"Could not get quote for {self.collateral_token_contract_address_checksummed} from Cow, exception {e=}. Falling back to pools. "
             )
-            token_price = self.get_colateral_price_from_pools()
-            if not token_price:
+            usd_token_price = self.get_collateral_price_from_pools()
+            if not usd_token_price:
                 raise RuntimeError(
                     "Both CoW and pool-fallback way of getting price failed."
                 ) from e
-            return CollateralToken(x.value / token_price.value)
+            return CollateralToken(x.value / usd_token_price.value)
 
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
@@ -229,9 +236,7 @@ class SeerAgentMarket(AgentMarket):
     def get_tiny_bet_amount(self) -> CollateralToken:
         return self.get_in_token(SEER_TINY_BET_AMOUNT)
 
-    def get_position_else_raise(
-        self, user_id: str, web3: Web3 | None = None
-    ) -> ExistingPosition:
+    def get_position(self, user_id: str, web3: Web3 | None = None) -> ExistingPosition:
         """
         Fetches position from the user in a given market.
         We ignore the INVALID balances since we are only interested in binary outcomes.
@@ -261,15 +266,6 @@ class SeerAgentMarket(AgentMarket):
             amounts_potential=amounts_potential,
             amounts_ot=amounts_ot,
         )
-
-    def get_position(
-        self, user_id: str, web3: Web3 | None = None
-    ) -> ExistingPosition | None:
-        try:
-            return self.get_position_else_raise(user_id=user_id, web3=web3)
-        except Exception as e:
-            logger.warning(f"Could not get position for user {user_id}, exception {e}")
-            return None
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
@@ -516,7 +512,7 @@ class SeerAgentMarket(AgentMarket):
 
     def has_liquidity_for_outcome(self, outcome: OutcomeStr) -> bool:
         liquidity = self.get_liquidity_for_outcome(outcome)
-        return liquidity > CollateralToken(0)
+        return liquidity > self.minimum_market_liquidity_required
 
     def has_liquidity(self) -> bool:
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
@@ -549,7 +545,7 @@ class SeerAgentMarket(AgentMarket):
         Returns:
             Transaction hash of the successful swap
         """
-
+        slippage_tolerance = get_slippage_tolerance_per_token(sell_token, buy_token)
         try:
             _, order = swap_tokens_waiting(
                 amount_wei=amount_wei,
@@ -559,6 +555,7 @@ class SeerAgentMarket(AgentMarket):
                 web3=web3,
                 wait_order_complete=False,
                 timeout=timedelta(minutes=2),
+                slippage_tolerance=slippage_tolerance,
             )
             order_metadata = asyncio.run(wait_for_order_completion(order=order))
             logger.debug(

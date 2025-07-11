@@ -671,7 +671,12 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         api_keys = APIKeys()
         user_id = market.get_user_id(api_keys=api_keys)
 
-        existing_position = market.get_position(user_id=user_id)
+        try:
+            existing_position = market.get_position(user_id=user_id)
+        except Exception as e:
+            logger.warning(f"Could not get position for user {user_id}, exception {e}")
+            return None
+
         trades = self.build_trades(
             market=market,
             answer=processed_market.answer,

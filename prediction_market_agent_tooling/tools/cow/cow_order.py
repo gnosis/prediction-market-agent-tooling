@@ -211,6 +211,7 @@ def swap_tokens_waiting(
     web3: Web3 | None = None,
     wait_order_complete: bool = True,
     timeout: timedelta = timedelta(seconds=120),
+    slippage_tolerance: float = 0.01,
 ) -> tuple[OrderMetaData | None, CompletedOrder]:
     # CoW library uses async, so we need to wrap the call in asyncio.run for us to use it.
     return asyncio.run(
@@ -224,6 +225,7 @@ def swap_tokens_waiting(
             timeout=timeout,
             web3=web3,
             wait_order_complete=wait_order_complete,
+            slippage_tolerance=slippage_tolerance,
         )
     )
 

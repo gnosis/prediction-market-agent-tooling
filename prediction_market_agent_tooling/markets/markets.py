@@ -3,11 +3,11 @@ from enum import Enum
 
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
 from prediction_market_agent_tooling.jobs.omen.omen_jobs import OmenJobAgentMarket
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket, FilterBy
 from prediction_market_agent_tooling.markets.agent_market import (
-    AgentMarket,
-    FilterBy,
-    SortBy,
+    MarketType as AgentMarketType,
 )
+from prediction_market_agent_tooling.markets.agent_market import SortBy
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )
@@ -68,7 +68,7 @@ def get_binary_markets(
     sort_by: SortBy = SortBy.NONE,
     excluded_questions: set[str] | None = None,
     created_after: DatetimeUTC | None = None,
-    fetch_scalar_markets: bool = False,
+    market_types: list[AgentMarketType] = [AgentMarketType.BINARY],
 ) -> t.Sequence[AgentMarket]:
     agent_market_class = MARKET_TYPE_TO_AGENT_MARKET[market_type]
     markets = agent_market_class.get_markets(
@@ -77,6 +77,6 @@ def get_binary_markets(
         filter_by=filter_by,
         created_after=created_after,
         excluded_questions=excluded_questions,
-        fetch_scalar_markets=fetch_scalar_markets,
+        market_types=market_types,
     )
     return markets

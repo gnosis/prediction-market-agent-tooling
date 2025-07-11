@@ -7,7 +7,11 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import USD
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
+    MarketType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -25,7 +29,7 @@ def test_seer_place_bet(
         filter_by=FilterBy.OPEN,
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
-        include_categorical_markets=True,
+        market_types=[MarketType.BINARY],
     )
     market_data_model = markets[0]
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
@@ -63,7 +67,7 @@ def test_seer_place_bet_via_pools(
         filter_by=FilterBy.OPEN,
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
-        include_categorical_markets=True,
+        market_types=[MarketType.BINARY],
     )
     market_data_model = markets[0]
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(

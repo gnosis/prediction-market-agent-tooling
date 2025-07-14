@@ -7,7 +7,7 @@ from eth_account import Account
 from eth_typing import ChecksumAddress, HexAddress, HexStr
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import USD, CollateralToken
+from prediction_market_agent_tooling.gtypes import USD, CollateralToken, OutcomeToken
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenBet,
@@ -150,8 +150,14 @@ def test_get_positions_1() -> None:
         position for position in positions if position.market_id == min_position_id
     )
 
+    # Filter for at least 1e-4, because with too low positions,
+    # it seems like the graph isn't returning it correctly.
+    min_amount_position_ot = max(
+        min_amount_position.total_amount_ot, OutcomeToken(0.0001)
+    )
+
     large_positions = OmenAgentMarket.get_positions(
-        user_id=user_address, larger_than=min_amount_position.total_amount_ot
+        user_id=user_address, larger_than=min_amount_position_ot
     )
     # conflicting positions
     # 1 - ExistingPosition(market_id='0x3cab82a2cce239bd4ad3b0620be32b4409fd74c0', amounts_current={'No': USD(1.2833016323746e-05)}, amounts_potential={'No': USD(1.2833016323746e-05)}, amounts_ot={'No': OutcomeToken(1.2833016323746e-05)})

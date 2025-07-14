@@ -159,7 +159,7 @@ class PolymarketAgentMarket(AgentMarket):
             ascending=ascending,
             created_after=created_after,
             excluded_questions=excluded_questions,
-            only_binary=not fetch_categorical_markets,
+            only_binary=market_type is not MarketType.CATEGORICAL,
         )
 
         condition_models = PolymarketSubgraphHandler().get_conditions(

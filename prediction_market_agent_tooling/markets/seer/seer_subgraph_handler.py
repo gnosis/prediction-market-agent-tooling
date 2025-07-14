@@ -1,5 +1,6 @@
 import sys
 import typing as t
+from enum import Enum
 from typing import Any
 
 from subgrounds import FieldPath
@@ -26,6 +27,14 @@ from prediction_market_agent_tooling.markets.seer.subgraph_data_models import Se
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import unwrap_generic_value
+
+
+class TemplateId(int, Enum):
+    """Template IDs used in Reality.eth questions."""
+
+    SCALAR = 1
+    CATEGORICAL = 2
+    MULTICATEGORICAL = 3
 
 
 class SeerSubgraphHandler(BaseSubgraphHandler):
@@ -131,7 +140,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         if market_type == MarketType.SCALAR:
             # Template ID "1" + UP/DOWN outcomes for scalar markets
-            and_stms["templateId"] = 1
+            and_stms["templateId"] = TemplateId.SCALAR
             up_filter = SeerSubgraphHandler._create_case_variations_condition(
                 UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
@@ -142,7 +151,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         elif market_type == MarketType.BINARY:
             # Template ID "2" + YES/NO outcomes for binary markets
-            and_stms["templateId"] = 2
+            and_stms["templateId"] = TemplateId.CATEGORICAL
             yes_filter = SeerSubgraphHandler._create_case_variations_condition(
                 YES_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
@@ -158,8 +167,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_filters.append(
                 {
                     "or": [
-                        {"templateId": 2},
-                        {"templateId": 3},
+                        {"templateId": TemplateId.CATEGORICAL},
+                        {"templateId": TemplateId.MULTICATEGORICAL},
                     ]
                 }
             )

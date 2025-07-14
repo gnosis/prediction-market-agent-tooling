@@ -152,8 +152,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_filters.extend([yes_filter, no_filter])
 
         elif market_type == MarketType.CATEGORICAL:
-            # Template ID 2 OR Template ID 3 (includes both binary and categorical)
-            # Return flat structure to avoid nesting issues
+            # Template ID 2 (categorical) OR Template ID 3 (multi-categorical,
+            # we treat them as categorical for now for simplicity)
+            # https://reality.eth.limo/app/docs/html/contracts.html#templates
             outcome_filters.append(
                 {
                     "or": [

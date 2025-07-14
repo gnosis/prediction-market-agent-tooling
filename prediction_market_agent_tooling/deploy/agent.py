@@ -337,6 +337,15 @@ class DeployablePredictionAgent(DeployableAgent):
             return True
         return False
 
+    @property
+    def agent_market_type(self) -> AgentMarketType:
+        if self.fetch_scalar_markets:
+            return AgentMarketType.SCALAR
+        elif self.fetch_categorical_markets:
+            return AgentMarketType.CATEGORICAL
+        else:
+            return AgentMarketType.BINARY
+
     def get_markets(
         self,
         market_type: MarketType,
@@ -346,12 +355,7 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         cls = market_type.market_class
 
-        if self.fetch_scalar_markets:
-            agent_market_type = AgentMarketType.SCALAR
-        elif self.fetch_categorical_markets:
-            agent_market_type = AgentMarketType.CATEGORICAL
-        else:
-            agent_market_type = AgentMarketType.BINARY
+        agent_market_type = self.agent_market_type
 
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_markets(

@@ -865,7 +865,7 @@ class OmenAgentResultMappingContract(_AgentResultMappingContract):
 
 class SeerAgentResultMappingContract(_AgentResultMappingContract):
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x1aafdfBD38EE92A4a74A44A1614E00894205074e"
+        "0xb94c09b1a21bbcfcd77bc80da309704490c42617"
     )
 
 

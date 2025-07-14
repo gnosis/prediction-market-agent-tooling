@@ -68,6 +68,7 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     NoLiquidityAvailableOnCowException,
     get_buy_token_amount_else_raise,
     get_orders_by_owner,
+    get_trades_by_order_uid,
     get_trades_by_owner,
     swap_tokens_waiting,
     wait_for_order_completion,
@@ -540,10 +541,17 @@ class SeerAgentMarket(AgentMarket):
                 slippage_tolerance=slippage_tolerance,
             )
             order_metadata = asyncio.run(wait_for_order_completion(order=order))
-            logger.debug(
+            logger.info(
                 f"Swapped {sell_token} for {buy_token}. Order details {order_metadata}"
             )
-            return order_metadata.uid.root
+            trades = get_trades_by_order_uid(HexBytes(order_metadata.uid.root))
+            if len(trades) != 1:
+                raise ValueError(
+                    f"Expected exactly 1 trade from {order_metadata=}, but got {len(trades)=}."
+                )
+            cow_tx_hash = trades[0].txHash
+            logger.info(f"TxHash for {order_metadata.uid.root=} is {cow_tx_hash=}.")
+            return cow_tx_hash.hex()
 
         except (
             UnexpectedResponseError,

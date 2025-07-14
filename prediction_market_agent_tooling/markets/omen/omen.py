@@ -25,6 +25,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
+    MarketType,
     ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
@@ -379,9 +380,11 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        fetch_categorical_markets: bool = False,
-        fetch_scalar_markets: bool = False,
+        market_type: MarketType = MarketType.ALL,
+        include_conditional_markets: bool = False,
     ) -> t.Sequence["OmenAgentMarket"]:
+        fetch_categorical_markets = market_type == MarketType.CATEGORICAL
+
         return [
             OmenAgentMarket.from_data_model(m)
             for m in OmenSubgraphHandler().get_omen_markets_simple(

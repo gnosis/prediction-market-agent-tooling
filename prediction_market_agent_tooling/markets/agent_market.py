@@ -376,7 +376,7 @@ class AgentMarket(BaseModel):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_types: list[MarketType] = [MarketType.ALL],
+        market_type: MarketType = MarketType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")

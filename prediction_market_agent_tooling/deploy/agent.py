@@ -347,11 +347,11 @@ class DeployablePredictionAgent(DeployableAgent):
         cls = market_type.market_class
 
         if self.fetch_scalar_markets:
-            market_types = [AgentMarketType.SCALAR]
+            agent_market_type = AgentMarketType.SCALAR
         elif self.fetch_categorical_markets:
-            market_types = [AgentMarketType.CATEGORICAL]
+            agent_market_type = AgentMarketType.CATEGORICAL
         else:
-            market_types = [AgentMarketType.BINARY]
+            agent_market_type = AgentMarketType.BINARY
 
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_markets(
@@ -359,7 +359,7 @@ class DeployablePredictionAgent(DeployableAgent):
             sort_by=self.get_markets_sort_by,
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
-            market_types=market_types,
+            market_type=agent_market_type,
         )
         return available_markets
 

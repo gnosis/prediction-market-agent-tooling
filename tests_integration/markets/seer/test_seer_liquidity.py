@@ -15,7 +15,7 @@ def test_get_liquidity(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
-        market_types=[MarketType.CATEGORICAL],
+        market_type=MarketType.BINARY,
         include_conditional_markets=False,
     )[0]
     # We expect outcomes to have been minted

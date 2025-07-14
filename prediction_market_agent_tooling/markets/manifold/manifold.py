@@ -111,7 +111,7 @@ class ManifoldAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_types: list[MarketType] = [MarketType.ALL],
+        market_type: MarketType = MarketType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None

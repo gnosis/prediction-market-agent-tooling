@@ -19,7 +19,7 @@ def test_get_price_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         limit=1,
-        market_types=[MarketType.CATEGORICAL],
+        market_type=MarketType.BINARY,
         include_conditional_markets=True,
     )[0]
 

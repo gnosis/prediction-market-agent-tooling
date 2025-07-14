@@ -30,7 +30,7 @@ def test_on_real_markets(
 ) -> None:
     checked_count = 0  # CoW/pools APIs are flaky, but require at least one sucesful checks across markets and outcomes here.
     markets = market_class.get_markets(
-        limit=5, sort_by=sort_by, market_types=[MarketType.CATEGORICAL]
+        limit=5, sort_by=sort_by, market_type=MarketType.CATEGORICAL
     )
 
     for market in markets:

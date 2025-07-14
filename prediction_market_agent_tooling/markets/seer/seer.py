@@ -404,7 +404,7 @@ class SeerAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_types: list[MarketType] = [MarketType.ALL],
+        market_type: MarketType = MarketType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
@@ -413,7 +413,7 @@ class SeerAgentMarket(AgentMarket):
             limit=limit,
             sort_by=sort_by,
             filter_by=filter_by,
-            market_types=market_types,
+            market_type=market_type,
             include_conditional_markets=False,
         )
 

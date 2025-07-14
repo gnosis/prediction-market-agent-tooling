@@ -105,7 +105,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         filter_by: FilterBy,
         outcome_supply_gt_if_open: Wei,
         include_conditional_markets: bool = False,
-        market_types: list[MarketType] = [MarketType.ALL],
+        market_type: MarketType = MarketType.ALL,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -127,11 +127,11 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if not include_conditional_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
-        outcome_filters = []
+        outcome_filters: list[dict[str, t.Any]] = []
 
-        if MarketType.SCALAR in market_types:
+        if market_type == MarketType.SCALAR:
             # Template ID "1" + UP/DOWN outcomes for scalar markets
-            and_stms["templateId"] = "1"
+            and_stms["templateId"] = 1
             up_filter = SeerSubgraphHandler._create_case_variations_condition(
                 UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
@@ -140,9 +140,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
             outcome_filters.extend([up_filter, down_filter])
 
-        elif MarketType.BINARY in market_types:
+        elif market_type == MarketType.BINARY:
             # Template ID "2" + YES/NO outcomes for binary markets
-            and_stms["templateId"] = "2"
+            and_stms["templateId"] = 2
             yes_filter = SeerSubgraphHandler._create_case_variations_condition(
                 YES_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
@@ -151,13 +151,21 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
             outcome_filters.extend([yes_filter, no_filter])
 
-        elif MarketType.CATEGORICAL in market_types:
-            # Template ID "2" OR Template ID "3" (includes both binary and categorical)
-            and_stms["or"] = [{"templateId": "2"}, {"templateId": "3"}]
+        elif market_type == MarketType.CATEGORICAL:
+            # Template ID 2 OR Template ID 3 (includes both binary and categorical)
+            # Return flat structure to avoid nesting issues
+            outcome_filters.append(
+                {
+                    "or": [
+                        {"templateId": 2},
+                        {"templateId": 3},
+                    ]
+                }
+            )
 
         # If none specified, don't add any template/outcome filters (returns all types)
 
-        all_filters = [and_stms] + outcome_filters
+        all_filters = [and_stms] + outcome_filters if and_stms else outcome_filters
         where_stms: dict[str, t.Any] = {"and": all_filters}
         return where_stms
 
@@ -193,7 +201,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         sort_by: SortBy = SortBy.NONE,
         limit: int | None = None,
         outcome_supply_gt_if_open: Wei = Wei(0),
-        market_types: list[MarketType] = [MarketType.ALL],
+        market_type: MarketType = MarketType.ALL,
         include_conditional_markets: bool = False,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
@@ -202,7 +210,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             filter_by=filter_by,
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             include_conditional_markets=include_conditional_markets,
-            market_types=market_types,
+            market_type=market_type,
         )
 
         # These values can not be set to `None`, but they can be omitted.

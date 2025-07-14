@@ -380,10 +380,10 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_types: list[MarketType] = [MarketType.ALL],
+        market_type: MarketType = MarketType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["OmenAgentMarket"]:
-        fetch_categorical_markets = MarketType.CATEGORICAL in market_types
+        fetch_categorical_markets = market_type == MarketType.CATEGORICAL
 
         return [
             OmenAgentMarket.from_data_model(m)

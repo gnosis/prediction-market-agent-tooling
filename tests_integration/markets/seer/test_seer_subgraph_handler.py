@@ -107,7 +107,7 @@ def test_binary_markets_retrieved(
         limit=1,
         sort_by=sort_by,
         filter_by=filter_by,
-        market_types=[MarketType.CATEGORICAL],
+        market_type=MarketType.BINARY,
     )
     # We expect at least 1 market for the given filter
     assert markets

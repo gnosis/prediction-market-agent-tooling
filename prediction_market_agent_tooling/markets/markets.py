@@ -68,7 +68,7 @@ def get_binary_markets(
     sort_by: SortBy = SortBy.NONE,
     excluded_questions: set[str] | None = None,
     created_after: DatetimeUTC | None = None,
-    market_types: list[AgentMarketType] = [AgentMarketType.BINARY],
+    agent_market_type: AgentMarketType = AgentMarketType.BINARY,
 ) -> t.Sequence[AgentMarket]:
     agent_market_class = MARKET_TYPE_TO_AGENT_MARKET[market_type]
     markets = agent_market_class.get_markets(
@@ -77,6 +77,6 @@ def get_binary_markets(
         filter_by=filter_by,
         created_after=created_after,
         excluded_questions=excluded_questions,
-        market_types=market_types,
+        market_type=agent_market_type,
     )
     return markets

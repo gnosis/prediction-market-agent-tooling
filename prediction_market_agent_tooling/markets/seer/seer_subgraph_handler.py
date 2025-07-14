@@ -140,7 +140,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         if market_type == MarketType.SCALAR:
             # Template ID "1" + UP/DOWN outcomes for scalar markets
-            and_stms["templateId"] = TemplateId.SCALAR
+            and_stms["templateId"] = TemplateId.SCALAR.value
             up_filter = SeerSubgraphHandler._create_case_variations_condition(
                 UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
@@ -151,7 +151,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         elif market_type == MarketType.BINARY:
             # Template ID "2" + YES/NO outcomes for binary markets
-            and_stms["templateId"] = TemplateId.CATEGORICAL
+            and_stms["templateId"] = TemplateId.CATEGORICAL.value
             yes_filter = SeerSubgraphHandler._create_case_variations_condition(
                 YES_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
@@ -167,8 +167,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_filters.append(
                 {
                     "or": [
-                        {"templateId": TemplateId.CATEGORICAL},
-                        {"templateId": TemplateId.MULTICATEGORICAL},
+                        {"templateId": TemplateId.CATEGORICAL.value},
+                        {"templateId": TemplateId.MULTICATEGORICAL.value},
                     ]
                 }
             )

@@ -64,6 +64,13 @@ class FilterBy(str, Enum):
     NONE = "none"
 
 
+class MarketType(str, Enum):
+    ALL = "all"
+    CATEGORICAL = "categorical"
+    SCALAR = "scalar"
+    BINARY = "binary"
+
+
 class AgentMarket(BaseModel):
     """
     Common market class that can be created from vendor specific markets.
@@ -369,8 +376,8 @@ class AgentMarket(BaseModel):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        fetch_categorical_markets: bool = False,
-        fetch_scalar_markets: bool = False,
+        market_type: MarketType = MarketType.ALL,
+        include_conditional_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 

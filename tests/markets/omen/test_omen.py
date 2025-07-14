@@ -165,7 +165,7 @@ def test_get_positions_1() -> None:
     # Check that the smallest position has been filtered out
     assert all(position.market_id != min_position_id for position in large_positions)
     assert all(
-        position.total_amount_ot > min_amount_position.total_amount_ot
+        position.total_amount_ot > min_amount_position_ot
         for position in large_positions
     )
 

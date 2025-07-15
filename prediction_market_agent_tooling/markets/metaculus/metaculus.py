@@ -67,15 +67,15 @@ class MetaculusAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_markets(  # type: ignore[override]
+    def get_markets(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        tournament_id: int | None = None,
         market_type: MarketType = MarketType.ALL,
         include_conditional_markets: bool = False,
+        tournament_id: int | None = None,
     ) -> t.Sequence["MetaculusAgentMarket"]:
         order_by: str | None
         if sort_by == SortBy.NONE:

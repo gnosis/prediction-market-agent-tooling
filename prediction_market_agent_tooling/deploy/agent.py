@@ -373,6 +373,7 @@ class DeployablePredictionAgent(DeployableAgent):
     @property
     def include_conditional_markets(self) -> bool:
         # TODO: All should work in our code, except that currently CoW most of the time completely fails to swap xDai into outcome tokens of conditioned market.
+        # Enable after https://github.com/gnosis/prediction-market-agent-tooling/issues/748 and/or https://github.com/gnosis/prediction-market-agent-tooling/issues/759 is resolved.
         return False
         # `include_conditional_markets` if `rephrase_conditioned_markets` is enabled.
         # We can expand this method in teh future, when we implement also more complex logic about conditional markets.

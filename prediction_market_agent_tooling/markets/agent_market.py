@@ -64,6 +64,11 @@ class FilterBy(str, Enum):
     NONE = "none"
 
 
+class ParentMarket(BaseModel):
+    market: "AgentMarket"
+    parent_outcome: int
+
+
 class MarketType(str, Enum):
     ALL = "all"
     CATEGORICAL = "categorical"
@@ -95,6 +100,8 @@ class AgentMarket(BaseModel):
 
     upper_bound: Wei | None = None
     lower_bound: Wei | None = None
+
+    parent: ParentMarket | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(

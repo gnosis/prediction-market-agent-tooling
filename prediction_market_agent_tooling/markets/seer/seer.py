@@ -26,6 +26,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketFees,
     MarketType,
+    ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
@@ -86,7 +87,7 @@ from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
 )
-from prediction_market_agent_tooling.tools.utils import utcnow
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
 SEER_TINY_BET_AMOUNT = USD(0.1)
@@ -374,6 +375,22 @@ class SeerAgentMarket(AgentMarket):
             probabilities=probability_map,
             upper_bound=model.upper_bound,
             lower_bound=model.lower_bound,
+            parent=(
+                ParentMarket(
+                    market=(
+                        check_not_none(
+                            SeerAgentMarket.from_data_model_with_subgraph(
+                                model.parent_market,
+                                seer_subgraph,
+                                False,
+                            )
+                        )
+                    ),
+                    parent_outcome=model.parent_outcome,
+                )
+                if model.parent_market
+                else None
+            ),
         )
 
         return market
@@ -395,7 +412,7 @@ class SeerAgentMarket(AgentMarket):
             sort_by=sort_by,
             filter_by=filter_by,
             market_type=market_type,
-            include_conditional_markets=False,
+            include_conditional_markets=include_conditional_markets,
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

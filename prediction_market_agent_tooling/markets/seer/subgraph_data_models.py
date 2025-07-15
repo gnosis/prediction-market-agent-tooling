@@ -58,7 +58,3 @@ class CreateCategoricalMarketsParams(BaseModel):
     )  # typed as int for later .model_dump() usage (if using Wei, other keys also exported)
     opening_time: int = Field(..., alias="openingTime")
     token_names: list[str] = Field(..., alias="tokenNames")
-
-
-class SeerParentMarket(BaseModel):
-    id: HexBytes

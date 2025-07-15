@@ -54,7 +54,7 @@ from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
-from prediction_market_agent_tooling.tools.cow.models import MinimalisticToken, Order
+from prediction_market_agent_tooling.tools.cow.models import MinimalisticTrade, Order
 from prediction_market_agent_tooling.tools.cow.semaphore import postgres_rate_limited
 from prediction_market_agent_tooling.tools.utils import utcnow
 
@@ -355,14 +355,33 @@ async def sign_safe_cow_swap(
 )
 def get_trades_by_owner(
     owner: ChecksumAddress,
-) -> list[MinimalisticToken]:
+) -> list[MinimalisticTrade]:
     # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
     response = httpx.get(
         f"https://api.cow.fi/xdai/api/v1/trades",
         params={"owner": owner},
     )
     response.raise_for_status()
-    return [MinimalisticToken.model_validate(i) for i in response.json()]
+    return [MinimalisticTrade.model_validate(i) for i in response.json()]
+
+
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_trades_by_order_uid failed, {x.attempt_number=}."
+    ),
+)
+def get_trades_by_order_uid(
+    order_uid: HexBytes,
+) -> list[MinimalisticTrade]:
+    # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
+    response = httpx.get(
+        f"https://api.cow.fi/xdai/api/v1/trades",
+        params={"orderUid": order_uid.hex()},
+    )
+    response.raise_for_status()
+    return [MinimalisticTrade.model_validate(i) for i in response.json()]
 
 
 @tenacity.retry(

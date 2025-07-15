@@ -69,6 +69,7 @@ from prediction_market_agent_tooling.tools.contract import (
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     NoLiquidityAvailableOnCowException,
+    OrderStatusError,
     get_orders_by_owner,
     get_trades_by_order_uid,
     get_trades_by_owner,
@@ -550,6 +551,7 @@ class SeerAgentMarket(AgentMarket):
             UnexpectedResponseError,
             TimeoutError,
             NoLiquidityAvailableOnCowException,
+            OrderStatusError,
         ) as e:
             # We don't retry if not enough balance.
             if "InsufficientBalance" in str(e):

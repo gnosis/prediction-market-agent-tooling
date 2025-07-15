@@ -24,6 +24,8 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    MarketFees,
+    MarketType,
     ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
@@ -381,16 +383,16 @@ class SeerAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        fetch_categorical_markets: bool = False,
-        fetch_scalar_markets: bool = False,
+        market_type: MarketType = MarketType.ALL,
+        include_conditional_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
+
         markets = seer_subgraph.get_markets(
             limit=limit,
             sort_by=sort_by,
             filter_by=filter_by,
-            include_categorical_markets=fetch_categorical_markets,
-            include_only_scalar_markets=fetch_scalar_markets,
+            market_type=market_type,
             include_conditional_markets=False,
         )
 

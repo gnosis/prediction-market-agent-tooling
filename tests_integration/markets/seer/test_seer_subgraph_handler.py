@@ -2,7 +2,11 @@ import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import HexBytes
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
+    MarketType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
@@ -100,7 +104,10 @@ def test_binary_markets_retrieved(
     sort_by: SortBy,
 ) -> None:
     markets = seer_subgraph_handler_test.get_markets(
-        limit=1, sort_by=sort_by, filter_by=filter_by, include_categorical_markets=True
+        limit=1,
+        sort_by=sort_by,
+        filter_by=filter_by,
+        market_type=MarketType.BINARY,
     )
     # We expect at least 1 market for the given filter
     assert markets

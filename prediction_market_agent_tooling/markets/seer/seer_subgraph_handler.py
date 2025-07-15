@@ -62,7 +62,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
         )
 
-    def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
+    def _get_fields_for_markets(
+        self, markets_field: FieldPath, current_level: int = 0, max_level: int = 1
+    ) -> list[FieldPath]:
         fields = [
             markets_field.id,
             markets_field.factory,
@@ -76,7 +78,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.payoutNumerators,
             markets_field.hasAnswers,
             markets_field.blockTimestamp,
-            markets_field.parentMarket.id,
             markets_field.openingTs,
             markets_field.finalizeTs,
             markets_field.wrappedTokens,
@@ -84,7 +85,25 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.upperBound,
             markets_field.lowerBound,
             markets_field.templateId,
+            # TODO: On the Subgraph, `questions` field is a kind of sub-query, instead of a classic list of values.
+            # See how it is shown on their UI: https://thegraph.com/explorer/subgraphs/B4vyRqJaSHD8dRDb3BFRoAzuBK18c1QQcXq94JbxDxWH?view=Query&chain=arbitrum-one.
+            # And that doesn't work with subgrounds.
+            # markets_field.questions.question.id,
+            # markets_field.questions.question.finalize_ts,
+            # markets_field.questions.question.best_answer,
         ]
+        if current_level < max_level:
+            fields.extend(
+                self._get_fields_for_markets(
+                    markets_field.parentMarket, current_level + 1, max_level
+                )
+            )
+            # TODO: Same situation as with `questions` field above.
+            # fields.extend(
+            #     self._get_fields_for_markets(
+            #         markets_field.childMarkets, current_level + 1, max_level
+            #     )
+            # )
         return fields
 
     @staticmethod
@@ -115,6 +134,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei,
         include_conditional_markets: bool = False,
         market_type: MarketType = MarketType.ALL,
+        parent_market_id: HexBytes | None = None,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -135,6 +155,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         if not include_conditional_markets:
             and_stms["parentMarket"] = ADDRESS_ZERO.lower()
+
+        if parent_market_id:
+            and_stms["parentMarket"] = parent_market_id.hex().lower()
 
         outcome_filters: list[dict[str, t.Any]] = []
 
@@ -213,14 +236,16 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         outcome_supply_gt_if_open: Wei = Wei(0),
         market_type: MarketType = MarketType.ALL,
         include_conditional_markets: bool = False,
+        parent_market_id: HexBytes | None = None,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
         where_stms = self._build_where_statements(
             filter_by=filter_by,
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
-            include_conditional_markets=include_conditional_markets,
+            parent_market_id=parent_market_id,
             market_type=market_type,
+            include_conditional_markets=include_conditional_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.

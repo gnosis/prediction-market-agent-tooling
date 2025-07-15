@@ -24,9 +24,9 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    ParentMarket,
     MarketFees,
     MarketType,
+    ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,

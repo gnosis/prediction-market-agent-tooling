@@ -68,8 +68,8 @@ class ParentMarket(BaseModel):
     market: "AgentMarket"
     parent_outcome: int
 
-      
- class MarketType(str, Enum):
+
+class MarketType(str, Enum):
     ALL = "all"
     CATEGORICAL = "categorical"
     SCALAR = "scalar"

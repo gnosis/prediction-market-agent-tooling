@@ -371,12 +371,12 @@ class DeployablePredictionAgent(DeployableAgent):
         return False
 
     @property
-    def fetch_conditional_markets(self) -> bool:
-        # `fetch_conditional_markets` if `rephrase_conditioned_markets` is enabled.
+    def include_conditional_markets(self) -> bool:
+        # `include_conditional_markets` if `rephrase_conditioned_markets` is enabled.
         # We can expand this method in teh future, when we implement also more complex logic about conditional markets.
         # Note that conditional market isn't a type of the market like Binary or Categorical, it means that it uses outcome tokens from parent market as a collateral token in this market.
         return self.rephrase_conditioned_markets
-    
+
     @property
     def agent_market_type(self) -> AgentMarketType:
         if self.fetch_scalar_markets:
@@ -404,7 +404,7 @@ class DeployablePredictionAgent(DeployableAgent):
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
             market_type=agent_market_type,
-            fetch_conditional_markets=self.fetch_conditional_markets,
+            include_conditional_markets=self.include_conditional_markets,
         )
         return available_markets
 

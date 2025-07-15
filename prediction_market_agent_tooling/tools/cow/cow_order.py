@@ -192,7 +192,7 @@ def handle_allowance(
     reraise=True,
     stop=stop_after_attempt(3),
     wait=wait_fixed(1),
-    retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
+    retry=tenacity.retry_if_not_exception_type((TimeoutError)),
     after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
 )
 def swap_tokens_waiting(

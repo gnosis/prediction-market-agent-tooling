@@ -19,9 +19,11 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
 )
 from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, xDai
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket, FilterBy
 from prediction_market_agent_tooling.markets.agent_market import (
-    AgentMarket,
-    FilterBy,
+    MarketType as AgentMarketType,
+)
+from prediction_market_agent_tooling.markets.agent_market import (
     ProcessedMarket,
     ProcessedTradedMarket,
     SortBy,
@@ -372,7 +374,17 @@ class DeployablePredictionAgent(DeployableAgent):
     def fetch_conditional_markets(self) -> bool:
         # `fetch_conditional_markets` if `rephrase_conditioned_markets` is enabled.
         # We can expand this method in teh future, when we implement also more complex logic about conditional markets.
+        # Note that conditional market isn't a type of the market like Binary or Categorical, it means that it uses outcome tokens from parent market as a collateral token in this market.
         return self.rephrase_conditioned_markets
+    
+    @property
+    def agent_market_type(self) -> AgentMarketType:
+        if self.fetch_scalar_markets:
+            return AgentMarketType.SCALAR
+        elif self.fetch_categorical_markets:
+            return AgentMarketType.CATEGORICAL
+        else:
+            return AgentMarketType.BINARY
 
     def get_markets(
         self,
@@ -382,15 +394,17 @@ class DeployablePredictionAgent(DeployableAgent):
         Override this method to customize what markets will fetch for processing.
         """
         cls = market_type.market_class
+
+        agent_market_type = self.agent_market_type
+
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_markets(
             limit=self.n_markets_to_fetch,
             sort_by=self.get_markets_sort_by,
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
-            fetch_categorical_markets=self.fetch_categorical_markets,
+            market_type=agent_market_type,
             fetch_conditional_markets=self.fetch_conditional_markets,
-            fetch_scalar_markets=self.fetch_scalar_markets,
         )
         return available_markets
 

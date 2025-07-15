@@ -1,5 +1,6 @@
 import sys
 import typing as t
+from enum import Enum
 from typing import Any
 
 from subgrounds import FieldPath
@@ -13,7 +14,11 @@ from prediction_market_agent_tooling.deploy.constants import (
 )
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
+    MarketType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
@@ -22,6 +27,14 @@ from prediction_market_agent_tooling.markets.seer.subgraph_data_models import Se
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import unwrap_generic_value
+
+
+class TemplateId(int, Enum):
+    """Template IDs used in Reality.eth questions."""
+
+    SCALAR = 1
+    CATEGORICAL = 2
+    MULTICATEGORICAL = 3
 
 
 class SeerSubgraphHandler(BaseSubgraphHandler):
@@ -71,6 +84,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.collateralToken,
             markets_field.upperBound,
             markets_field.lowerBound,
+            markets_field.templateId,
             # TODO: On the Subgraph, `questions` field is a kind of sub-query, instead of a classic list of values.
             # See how it is shown on their UI: https://thegraph.com/explorer/subgraphs/B4vyRqJaSHD8dRDb3BFRoAzuBK18c1QQcXq94JbxDxWH?view=Query&chain=arbitrum-one.
             # And that doesn't work with subgrounds.
@@ -118,10 +132,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     def _build_where_statements(
         filter_by: FilterBy,
         outcome_supply_gt_if_open: Wei,
-        include_conditional_markets: bool = True,
-        include_categorical_markets: bool = True,
+        include_conditional_markets: bool = False,
+        market_type: MarketType = MarketType.ALL,
         parent_market_id: HexBytes | None = None,
-        include_only_scalar_markets: bool = False,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
 
@@ -146,44 +159,47 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if parent_market_id:
             and_stms["parentMarket"] = parent_market_id.hex().lower()
 
-        # We are only interested in binary markets of type YES/NO/Invalid.
-        yes_stms, no_stms = {}, {}
-        exclude_scalar_yes, exclude_scalar_no = {}, {}
+        outcome_filters: list[dict[str, t.Any]] = []
 
-        # Return scalar markets.
-        if include_only_scalar_markets:
-            # We are interested in scalar markets only - this excludes categorical markets
-            yes_stms = SeerSubgraphHandler._create_case_variations_condition(
+        if market_type == MarketType.SCALAR:
+            # Template ID "1" + UP/DOWN outcomes for scalar markets
+            and_stms["templateId"] = TemplateId.SCALAR.value
+            up_filter = SeerSubgraphHandler._create_case_variations_condition(
                 UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
-            no_stms = SeerSubgraphHandler._create_case_variations_condition(
+            down_filter = SeerSubgraphHandler._create_case_variations_condition(
                 DOWN_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
-        elif include_conditional_markets and not include_categorical_markets:
-            # We are interested in binary markets only
-            yes_stms = SeerSubgraphHandler._create_case_variations_condition(
+            outcome_filters.extend([up_filter, down_filter])
+
+        elif market_type == MarketType.BINARY:
+            # Template ID "2" + YES/NO outcomes for binary markets
+            and_stms["templateId"] = TemplateId.CATEGORICAL.value
+            yes_filter = SeerSubgraphHandler._create_case_variations_condition(
                 YES_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
-            no_stms = SeerSubgraphHandler._create_case_variations_condition(
+            no_filter = SeerSubgraphHandler._create_case_variations_condition(
                 NO_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_contains", "or"
             )
+            outcome_filters.extend([yes_filter, no_filter])
 
-        if (
-            not include_only_scalar_markets
-            or include_categorical_markets
-            or include_conditional_markets
-        ):
-            # We should not provide any scalar markets because they are exclusive for categorical markets
-            exclude_scalar_yes = SeerSubgraphHandler._create_case_variations_condition(
-                UP_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_not_contains", "and"
-            )
-            exclude_scalar_no = SeerSubgraphHandler._create_case_variations_condition(
-                DOWN_OUTCOME_LOWERCASE_IDENTIFIER, "outcomes_not_contains", "and"
+        elif market_type == MarketType.CATEGORICAL:
+            # Template ID 2 (categorical) OR Template ID 3 (multi-categorical,
+            # we treat them as categorical for now for simplicity)
+            # https://reality.eth.limo/app/docs/html/contracts.html#templates
+            outcome_filters.append(
+                {
+                    "or": [
+                        {"templateId": TemplateId.CATEGORICAL.value},
+                        {"templateId": TemplateId.MULTICATEGORICAL.value},
+                    ]
+                }
             )
 
-        where_stms: dict[str, t.Any] = {
-            "and": [and_stms, yes_stms, no_stms, exclude_scalar_yes, exclude_scalar_no]
-        }
+        # If none specified, don't add any template/outcome filters (returns all types)
+
+        all_filters = [and_stms] + outcome_filters if and_stms else outcome_filters
+        where_stms: dict[str, t.Any] = {"and": all_filters}
         return where_stms
 
     def _build_sort_params(
@@ -218,22 +234,18 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         sort_by: SortBy = SortBy.NONE,
         limit: int | None = None,
         outcome_supply_gt_if_open: Wei = Wei(0),
-        include_conditional_markets: bool = True,
-        include_categorical_markets: bool = True,
-        include_only_scalar_markets: bool = False,
+        market_type: MarketType = MarketType.ALL,
+        include_conditional_markets: bool = False,
         parent_market_id: HexBytes | None = None,
     ) -> list[SeerMarket]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
-        """Returns markets that contain 2 categories plus an invalid outcome."""
-        # Binary markets on Seer contain 3 outcomes: OutcomeA, outcomeB and an Invalid option.
         where_stms = self._build_where_statements(
             filter_by=filter_by,
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
-            include_conditional_markets=include_conditional_markets,
-            include_categorical_markets=include_categorical_markets,
-            include_only_scalar_markets=include_only_scalar_markets,
             parent_market_id=parent_market_id,
+            market_type=market_type,
+            include_conditional_markets=include_conditional_markets,
         )
 
         # These values can not be set to `None`, but they can be omitted.

@@ -15,7 +15,11 @@ from prediction_market_agent_tooling.gtypes import (
     Wei,
     private_key_type,
 )
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    FilterBy,
+    MarketType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -43,7 +47,7 @@ def test_seer_place_bet(
         filter_by=FilterBy.OPEN,
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
-        include_categorical_markets=True,
+        market_type=MarketType.BINARY,
     )
     market_data_model = markets[0]
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
@@ -81,7 +85,7 @@ def test_seer_place_bet_via_pools(
         filter_by=FilterBy.OPEN,
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
-        include_categorical_markets=True,
+        market_type=MarketType.BINARY,
     )
     market_data_model = markets[0]
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
@@ -126,8 +130,7 @@ def prepare_seer_swap_test(
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
-        fetch_categorical_markets=False,
-        fetch_scalar_markets=False,
+        market_type=MarketType.BINARY,
     )[0]
 
     sell_token = market.collateral_token_contract_address_checksummed

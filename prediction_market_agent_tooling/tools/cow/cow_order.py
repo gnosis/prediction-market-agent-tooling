@@ -33,12 +33,7 @@ from cowdao_cowpy.order_book.generated.model import (
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_keys.datatypes import PrivateKey as eth_keys_PrivateKey
-from tenacity import (
-    retry_if_not_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-    wait_fixed,
-)
+from tenacity import stop_after_attempt, wait_exponential, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -108,7 +103,6 @@ def get_sell_token_amount(
 @tenacity.retry(
     stop=stop_after_attempt(4),
     wait=wait_exponential(min=4, max=10),
-    retry=retry_if_not_exception_type(NoLiquidityAvailableOnCowException),
 )
 def get_quote(
     amount_wei: Wei,

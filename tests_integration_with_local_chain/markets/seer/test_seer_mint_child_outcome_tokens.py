@@ -92,9 +92,6 @@ def test_init_collateral_conditional_market(
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
     )[0]
-    collateral_token_address = Web3.to_checksum_address(
-        "0x27827651fb99f4d241f450e93135cad9fb7831f4"
-    )  # from child market
 
     amount_wei = Wei(xDai(1.0).as_xdai_wei.value)
 
@@ -111,7 +108,7 @@ def test_init_collateral_conditional_market(
     )
     # assert collateral tokens were transferred
     token_balance = ContractERC20OnGnosisChain(
-        address=collateral_token_address
+        address=child_market.collateral_token_contract_address_checksummed
     ).balanceOf(test_keys.bet_from_address, web3=local_web3)
     # >= to account for surplus changes when auto-depositing
     assert token_balance >= amount_wei

@@ -621,6 +621,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         super().initialize_langfuse()
         # Auto-observe all the methods where it makes sense, so that subclassses don't need to do it manually.
         self.build_trades = observe()(self.build_trades)  # type: ignore[method-assign]
+        self.execute_trades = observe()(self.execute_trades)  # type: ignore[method-assign]
 
     def check_min_required_balance_to_trade(self, market: AgentMarket) -> None:
         api_keys = APIKeys()
@@ -666,37 +667,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         trades = strategy.calculate_trades(existing_position, answer, market)
         return trades
 
-    def before_process_market(
-        self, market_type: MarketType, market: AgentMarket
-    ) -> None:
-        super().before_process_market(market_type, market)
-        self.check_min_required_balance_to_trade(market)
-
-    def process_market(
-        self,
-        market_type: MarketType,
-        market: AgentMarket,
-        verify_market: bool = True,
-    ) -> ProcessedTradedMarket | None:
-        processed_market = super().process_market(market_type, market, verify_market)
-        if processed_market is None:
-            return None
-
-        api_keys = APIKeys()
-        user_id = market.get_user_id(api_keys=api_keys)
-
-        try:
-            existing_position = market.get_position(user_id=user_id)
-        except Exception as e:
-            logger.warning(f"Could not get position for user {user_id}, exception {e}")
-            return None
-
-        trades = self.build_trades(
-            market=market,
-            answer=processed_market.answer,
-            existing_position=existing_position,
-        )
-
+    def execute_trades(
+        self, market: AgentMarket, trades: list[Trade]
+    ) -> list[PlacedTrade]:
         # It can take quite some time before agent processes all the markets, recheck here if the market didn't get closed in the meantime, to not error out completely.
         # Unfortunately, we can not just add some room into closing time of the market while fetching them, because liquidity can be removed at any time by the liquidity providers.
         still_tradeable = market.can_be_traded()
@@ -705,7 +678,8 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                 f"Market {market.question=} ({market.url}) was selected to processing, but is not tradeable anymore."
             )
 
-        placed_trades = []
+        placed_trades: list[PlacedTrade] = []
+
         for trade in trades:
             logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
 
@@ -745,6 +719,40 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                 logger.info(
                     f"Trade execution skipped because, {self.place_trades=} or {still_tradeable=}."
                 )
+
+        return placed_trades
+
+    def before_process_market(
+        self, market_type: MarketType, market: AgentMarket
+    ) -> None:
+        super().before_process_market(market_type, market)
+        self.check_min_required_balance_to_trade(market)
+
+    def process_market(
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        verify_market: bool = True,
+    ) -> ProcessedTradedMarket | None:
+        processed_market = super().process_market(market_type, market, verify_market)
+        if processed_market is None:
+            return None
+
+        api_keys = APIKeys()
+        user_id = market.get_user_id(api_keys=api_keys)
+
+        try:
+            existing_position = market.get_position(user_id=user_id)
+        except Exception as e:
+            logger.warning(f"Could not get position for user {user_id}, exception {e}")
+            return None
+
+        trades = self.build_trades(
+            market=market,
+            answer=processed_market.answer,
+            existing_position=existing_position,
+        )
+        placed_trades = self.execute_trades(market, trades)
 
         traded_market = ProcessedTradedMarket(
             answer=processed_market.answer, trades=placed_trades

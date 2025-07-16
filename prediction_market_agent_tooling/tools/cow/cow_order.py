@@ -33,12 +33,7 @@ from cowdao_cowpy.order_book.generated.model import (
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_keys.datatypes import PrivateKey as eth_keys_PrivateKey
-from tenacity import (
-    retry_if_not_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-    wait_fixed,
-)
+from tenacity import stop_after_attempt, wait_exponential, wait_fixed
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -54,7 +49,7 @@ from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
-from prediction_market_agent_tooling.tools.cow.models import MinimalisticToken, Order
+from prediction_market_agent_tooling.tools.cow.models import MinimalisticTrade, Order
 from prediction_market_agent_tooling.tools.cow.semaphore import postgres_rate_limited
 from prediction_market_agent_tooling.tools.utils import utcnow
 
@@ -108,7 +103,6 @@ def get_sell_token_amount(
 @tenacity.retry(
     stop=stop_after_attempt(4),
     wait=wait_exponential(min=4, max=10),
-    retry=retry_if_not_exception_type(NoLiquidityAvailableOnCowException),
 )
 def get_quote(
     amount_wei: Wei,
@@ -198,7 +192,7 @@ def handle_allowance(
     reraise=True,
     stop=stop_after_attempt(3),
     wait=wait_fixed(1),
-    retry=tenacity.retry_if_not_exception_type((TimeoutError, OrderStatusError)),
+    retry=tenacity.retry_if_not_exception_type((TimeoutError)),
     after=lambda x: logger.debug(f"swap_tokens_waiting failed, {x.attempt_number=}."),
 )
 def swap_tokens_waiting(
@@ -355,14 +349,33 @@ async def sign_safe_cow_swap(
 )
 def get_trades_by_owner(
     owner: ChecksumAddress,
-) -> list[MinimalisticToken]:
+) -> list[MinimalisticTrade]:
     # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
     response = httpx.get(
         f"https://api.cow.fi/xdai/api/v1/trades",
         params={"owner": owner},
     )
     response.raise_for_status()
-    return [MinimalisticToken.model_validate(i) for i in response.json()]
+    return [MinimalisticTrade.model_validate(i) for i in response.json()]
+
+
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_trades_by_order_uid failed, {x.attempt_number=}."
+    ),
+)
+def get_trades_by_order_uid(
+    order_uid: HexBytes,
+) -> list[MinimalisticTrade]:
+    # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
+    response = httpx.get(
+        f"https://api.cow.fi/xdai/api/v1/trades",
+        params={"orderUid": order_uid.hex()},
+    )
+    response.raise_for_status()
+    return [MinimalisticTrade.model_validate(i) for i in response.json()]
 
 
 @tenacity.retry(

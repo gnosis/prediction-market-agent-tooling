@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketFees,
     ProcessedMarket,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.metaculus.api import (
@@ -72,8 +73,9 @@ class MetaculusAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
+        question_type: QuestionType = QuestionType.ALL,
+        include_conditional_markets: bool = False,
         tournament_id: int | None = None,
-        fetch_scalar_markets: bool = False,
     ) -> t.Sequence["MetaculusAgentMarket"]:
         order_by: str | None
         if sort_by == SortBy.NONE:

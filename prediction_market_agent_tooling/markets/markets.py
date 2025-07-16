@@ -6,6 +6,7 @@ from prediction_market_agent_tooling.jobs.omen.omen_jobs import OmenJobAgentMark
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.manifold.manifold import (
@@ -68,7 +69,7 @@ def get_binary_markets(
     sort_by: SortBy = SortBy.NONE,
     excluded_questions: set[str] | None = None,
     created_after: DatetimeUTC | None = None,
-    fetch_scalar_markets: bool = False,
+    question_type: QuestionType = QuestionType.BINARY,
 ) -> t.Sequence[AgentMarket]:
     agent_market_class = MARKET_TYPE_TO_AGENT_MARKET[market_type]
     markets = agent_market_class.get_markets(
@@ -77,6 +78,6 @@ def get_binary_markets(
         filter_by=filter_by,
         created_after=created_after,
         excluded_questions=excluded_questions,
-        fetch_scalar_markets=fetch_scalar_markets,
+        question_type=question_type,
     )
     return markets

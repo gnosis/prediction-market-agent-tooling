@@ -11,6 +11,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
@@ -122,8 +123,8 @@ class PolymarketAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        fetch_categorical_markets: bool = False,
-        fetch_scalar_markets: bool = False,
+        question_type: QuestionType = QuestionType.ALL,
+        include_conditional_markets: bool = False,
     ) -> t.Sequence["PolymarketAgentMarket"]:
         closed: bool | None
 
@@ -158,7 +159,7 @@ class PolymarketAgentMarket(AgentMarket):
             ascending=ascending,
             created_after=created_after,
             excluded_questions=excluded_questions,
-            only_binary=not fetch_categorical_markets,
+            only_binary=question_type is not QuestionType.CATEGORICAL,
         )
 
         condition_models = PolymarketSubgraphHandler().get_conditions(

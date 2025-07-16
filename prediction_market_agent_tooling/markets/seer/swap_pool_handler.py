@@ -19,7 +19,6 @@ from prediction_market_agent_tooling.markets.seer.seer_contracts import (
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 
 
 class SwapPoolHandler:
@@ -80,7 +79,7 @@ class SwapPoolHandler:
         amount_out_minimum = self._calculate_amount_out_minimum(
             amount_wei=amount_wei,
             token_in=token_in,
-            price_outcome_token=price_outcome_token,
+            price_outcome_token=price_outcome_token.priceOfCollateralInAskingToken,
         )
 
         p = ExactInputSingleParams(
@@ -90,15 +89,6 @@ class SwapPoolHandler:
             amount_in=amount_wei,
             amount_out_minimum=amount_out_minimum,
         )
-
-        # make sure user has enough tokens to sell
-        balance_collateral_token = ContractERC20OnGnosisChain(
-            address=token_in
-        ).balanceOf(self.api_keys.bet_from_address, web3=web3)
-        if balance_collateral_token < amount_wei:
-            raise ValueError(
-                f"Balance {balance_collateral_token} of {token_in} insufficient for trade, required {amount_wei}"
-            )
 
         tx_receipt = SwaprRouterContract().exact_input_single(
             api_keys=self.api_keys, params=p, web3=web3

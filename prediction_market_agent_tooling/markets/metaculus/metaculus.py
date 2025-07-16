@@ -9,8 +9,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
-    QuestionType,
     ProcessedMarket,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.metaculus.api import (

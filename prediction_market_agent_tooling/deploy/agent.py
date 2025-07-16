@@ -19,11 +19,12 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
 )
 from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, xDai
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, FilterBy
-from prediction_market_agent_tooling.markets.agent_market import QuestionType
 from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
     ProcessedMarket,
     ProcessedTradedMarket,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (

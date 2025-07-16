@@ -3,9 +3,12 @@ from enum import Enum
 
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
 from prediction_market_agent_tooling.jobs.omen.omen_jobs import OmenJobAgentMarket
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, FilterBy
-from prediction_market_agent_tooling.markets.agent_market import QuestionType
-from prediction_market_agent_tooling.markets.agent_market import SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
+    QuestionType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
 )

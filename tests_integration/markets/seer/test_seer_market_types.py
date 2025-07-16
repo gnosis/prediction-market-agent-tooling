@@ -11,8 +11,8 @@ from prediction_market_agent_tooling.deploy.constants import (
 from prediction_market_agent_tooling.gtypes import HexAddress, HexStr
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
-    QuestionType,
     OutcomeStr,
+    QuestionType,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,

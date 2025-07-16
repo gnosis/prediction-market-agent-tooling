@@ -24,7 +24,6 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    MarketFees,
     ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,
@@ -58,6 +57,7 @@ from prediction_market_agent_tooling.markets.seer.seer_contracts import (
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
+    TemplateId,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     NewMarketEvent,
@@ -342,22 +342,22 @@ class SeerAgentMarket(AgentMarket):
 
     @staticmethod
     def build_resolution(model: SeerMarket) -> Resolution | None:
-        # ToDo - fetch templateId from model
-        # if templateId is multi-categorical, use bitmask
-        # else use best answer as int
-        # If 1 question, then we have a resolution.
-        if len(model.questions) == 1:
-            question = model.questions[0]
-            if question.question.finalize_ts > 0:
-                idx = int(question.question.best_answer)
-                outcome = model.outcomes[question.question.best_answer]
-                return Resolution(outcome=outcome, invalid=False)
-                return Resolution()
-        if len(model.questions) > 1:
-            # ToDo - We handle this when we are able to support multi-categorical resolutions.
-            return Resolution(outcome=None, invalid=False)
+        if model.questions[0].question.finalize_ts == 0:
+            # resolution not yet finalized
+            return None
 
-        return
+        if model.template_id != TemplateId.CATEGORICAL.value:
+            logger.warning("Resolution can only be built for categorical markets.")
+            # Future note - for scalar markets, simply fetch best_answer and convert
+            # from hex into int and divide by 1e18 (because Wei).
+            return None
+
+        if len(model.questions) != 1:
+            raise ValueError("Seer categorical markets must have 1 question.")
+
+        question = model.questions[0]
+        outcome = model.outcomes[int(question.question.best_answer)]
+        return Resolution(outcome=outcome, invalid=False)
 
     @staticmethod
     def from_data_model_with_subgraph(

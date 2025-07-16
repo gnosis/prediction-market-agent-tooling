@@ -4,8 +4,8 @@ from prediction_market_agent_tooling.gtypes import OutcomeToken
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import (
-    calculate_sell_amount_in_collateral,
     answer_to_resolved_outcome_idx,
+    calculate_sell_amount_in_collateral,
 )
 
 

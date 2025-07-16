@@ -10,18 +10,17 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
+    OutcomeStr,
     OutcomeToken,
     OutcomeWei,
     Wei,
     private_key_type,
-    OutcomeStr,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     QuestionType,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
@@ -42,7 +41,7 @@ from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 def test_seer_get_resolution(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    market_id = HexBytes("0x83f012A56083CEAA846730f89C69e363230Ae9A6")
+    market_id = HexBytes("0x88146415c797aed96fd8bdf3808af8b0838af31e")
     market = seer_subgraph_handler_test.get_market_by_id(market_id=market_id)
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
         market,

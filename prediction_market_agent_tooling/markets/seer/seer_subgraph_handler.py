@@ -88,7 +88,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.questions.question.finalize_ts,
             markets_field.questions.question.best_answer,
             markets_field.templateId,
-
         ]
         if current_level < max_level:
             fields.extend(

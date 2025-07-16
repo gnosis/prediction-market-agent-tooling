@@ -25,9 +25,9 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
-    MarketType,
     ProcessedMarket,
     ProcessedTradedMarket,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
@@ -380,10 +380,10 @@ class OmenAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_type: MarketType = MarketType.ALL,
+        question_type: QuestionType = QuestionType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["OmenAgentMarket"]:
-        fetch_categorical_markets = market_type == MarketType.CATEGORICAL
+        fetch_categorical_markets = question_type == QuestionType.CATEGORICAL
 
         return [
             OmenAgentMarket.from_data_model(m)

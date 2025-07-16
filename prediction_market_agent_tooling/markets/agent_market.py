@@ -69,7 +69,7 @@ class ParentMarket(BaseModel):
     parent_outcome: int
 
 
-class MarketType(str, Enum):
+class QuestionType(str, Enum):
     ALL = "all"
     CATEGORICAL = "categorical"
     SCALAR = "scalar"
@@ -383,7 +383,7 @@ class AgentMarket(BaseModel):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_type: MarketType = MarketType.ALL,
+        question_type: QuestionType = QuestionType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")

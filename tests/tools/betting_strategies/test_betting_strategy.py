@@ -7,7 +7,7 @@ from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
-    MarketType,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
@@ -30,7 +30,7 @@ def test_on_real_markets(
 ) -> None:
     checked_count = 0  # CoW/pools APIs are flaky, but require at least one sucesful checks across markets and outcomes here.
     markets = market_class.get_markets(
-        limit=5, sort_by=sort_by, market_type=MarketType.CATEGORICAL
+        limit=5, sort_by=sort_by, question_type=QuestionType.CATEGORICAL
     )
 
     for market in markets:

@@ -692,7 +692,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                     case TradeType.SELL:
                         # Get actual value of the position we are going to sell, and if it's less than we wanted to sell, simply sell all of it.
                         current_position = check_not_none(
-                            market.get_position(user_id),
+                            market.get_position(
+                                market.get_user_id(api_keys=self.api_keys)
+                            ),
                             "Should exists if we are going to sell outcomes.",
                         )
 
@@ -738,8 +740,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         if processed_market is None:
             return None
 
-        api_keys = APIKeys()
-        user_id = market.get_user_id(api_keys=api_keys)
+        user_id = market.get_user_id(api_keys=self.api_keys)
 
         try:
             existing_position = market.get_position(user_id=user_id)

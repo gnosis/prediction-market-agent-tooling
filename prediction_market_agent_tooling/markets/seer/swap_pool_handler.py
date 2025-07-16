@@ -19,7 +19,6 @@ from prediction_market_agent_tooling.markets.seer.seer_contracts import (
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
 
 
 class SwapPoolHandler:

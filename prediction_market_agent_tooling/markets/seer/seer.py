@@ -24,7 +24,6 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    MarketFees,
     MarketType,
     ParentMarket,
     ProcessedMarket,
@@ -113,6 +112,57 @@ class SeerAgentMarket(AgentMarket):
                 self.collateral_token_contract_address_checksummed, web3
             )
         )
+
+    def mint_full_set_of_outcome_tokens(
+        self,
+        amount: CollateralToken,
+        api_keys: APIKeys,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        """
+        Mints a full set of outcome tokens for this market.
+
+        Args:
+            amount: Amount of collateral to use for minting
+            api_keys: API keys for transaction signing
+            web3: Optional Web3 instance
+
+        Returns:
+            Transaction receipt
+        """
+        web3 = web3 or RPCConfig().get_web3()
+
+        # Handle conditional market logic
+        self.parent
+        if self.parent_market and self.parent_outcome is not None:
+            # Verify parent outcome is resolved
+            parent_market = SeerAgentMarket.from_data_model_with_subgraph(
+                self.parent_market
+            )
+            if not parent_market.is_resolved():
+                raise ValueError(
+                    "Parent market must be resolved before minting on conditional market"
+                )
+
+            # Verify parent outcome is the one this market is conditioned on
+            if not parent_market.is_outcome_resolved(self.parent_outcome):
+                raise ValueError("Parent outcome is not resolved")
+
+        # Get the GnosisRouter contract
+        router = GnosisRouter()
+
+        # Approve router to spend collateral
+        collateral_contract = self.get_collateral_token_contract(web3)
+        collateral_contract.approve(
+            spender=router.address, amount=amount, api_keys=api_keys, web3=web3
+        )
+
+        # Mint the full set of outcome tokens
+        tx_receipt = router.mint_all_outcomes(
+            market=self.address, amount=amount, api_keys=api_keys, web3=web3
+        )
+
+        return tx_receipt
 
     def store_prediction(
         self,

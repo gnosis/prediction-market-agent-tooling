@@ -20,9 +20,7 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
 from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket, FilterBy
-from prediction_market_agent_tooling.markets.agent_market import (
-    MarketType as AgentMarketType,
-)
+from prediction_market_agent_tooling.markets.agent_market import QuestionType
 from prediction_market_agent_tooling.markets.agent_market import (
     ProcessedMarket,
     ProcessedTradedMarket,
@@ -381,13 +379,13 @@ class DeployablePredictionAgent(DeployableAgent):
         return self.rephrase_conditioned_markets
 
     @property
-    def agent_market_type(self) -> AgentMarketType:
+    def agent_question_type(self) -> QuestionType:
         if self.fetch_scalar_markets:
-            return AgentMarketType.SCALAR
+            return QuestionType.SCALAR
         elif self.fetch_categorical_markets:
-            return AgentMarketType.CATEGORICAL
+            return QuestionType.CATEGORICAL
         else:
-            return AgentMarketType.BINARY
+            return QuestionType.BINARY
 
     def get_markets(
         self,
@@ -398,15 +396,13 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         cls = market_type.market_class
 
-        agent_market_type = self.agent_market_type
-
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_markets(
             limit=self.n_markets_to_fetch,
             sort_by=self.get_markets_sort_by,
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
-            market_type=agent_market_type,
+            question_type=self.agent_question_type,
             include_conditional_markets=self.include_conditional_markets,
         )
         return available_markets

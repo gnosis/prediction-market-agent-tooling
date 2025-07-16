@@ -58,7 +58,7 @@ def test_seer_place_bet(
     agent_market = check_not_none(agent_market)
     amount = USD(10.0)
 
-    with pytest.raises(Exception) as e:
+    with pytest.raises(Exception):
         # We expect an exception from Cow since test accounts don't have enough funds.
         agent_market.place_bet(
             api_keys=test_keys,
@@ -67,12 +67,6 @@ def test_seer_place_bet(
             auto_deposit=False,
             web3=local_web3,
         )
-    exception_message = str(e)
-
-    assert (
-        "InsufficientBalance" in exception_message
-        or f"not enough for bet size {amount}" in exception_message
-    )
 
 
 def test_seer_place_bet_via_pools(

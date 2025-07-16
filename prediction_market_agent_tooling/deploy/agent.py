@@ -6,6 +6,7 @@ from enum import Enum
 from functools import cached_property
 
 from pydantic import computed_field
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
@@ -207,6 +208,8 @@ class DeployablePredictionAgent(DeployableAgent):
     min_balance_to_keep_in_native_currency: xDai | None = (
         MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES
     )
+
+    just_warn_on_unexpected_model_behavior: bool = False
 
     # Only Metaculus allows to post predictions without trading (buying/selling of outcome tokens).
     supported_markets: t.Sequence[MarketType] = [MarketType.METACULUS]
@@ -499,9 +502,18 @@ class DeployablePredictionAgent(DeployableAgent):
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
         )
 
-        answer = self.build_answer(
-            market=market, market_type=market_type, verify_market=verify_market
-        )
+        try:
+            answer = self.build_answer(
+                market=market, market_type=market_type, verify_market=verify_market
+            )
+        except UnexpectedModelBehavior:
+            (
+                logger.warning
+                if self.just_warn_on_unexpected_model_behavior
+                else logger.exception
+            )(f"Unexpected model behaviour in {self.__class__.__name__}.")
+            answer = None
+
         if answer is not None:
             self.verify_answer_outcomes(market=market, answer=answer)
 

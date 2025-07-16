@@ -602,14 +602,6 @@ class SeerAgentMarket(AgentMarket):
                 collateral_contract, amount_wei, api_keys, web3
             )
 
-        collateral_balance = collateral_contract.balanceOf(
-            api_keys.bet_from_address, web3=web3
-        )
-        if collateral_balance < amount_wei:
-            raise ValueError(
-                f"Balance {collateral_balance} not enough for bet size {amount}"
-            )
-
         return self._swap_tokens_with_fallback(
             sell_token=collateral_contract.address,
             buy_token=outcome_token,

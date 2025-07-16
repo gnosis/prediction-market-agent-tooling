@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
-    MarketType,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.manifold.api import (
@@ -111,7 +111,7 @@ class ManifoldAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_type: MarketType = MarketType.ALL,
+        question_type: QuestionType = QuestionType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None

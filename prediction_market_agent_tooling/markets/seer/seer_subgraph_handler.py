@@ -16,7 +16,7 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
-    MarketType,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
@@ -133,7 +133,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         filter_by: FilterBy,
         outcome_supply_gt_if_open: Wei,
         include_conditional_markets: bool = False,
-        market_type: MarketType = MarketType.ALL,
+        question_type: QuestionType = QuestionType.ALL,
         parent_market_id: HexBytes | None = None,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
@@ -161,7 +161,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         outcome_filters: list[dict[str, t.Any]] = []
 
-        if market_type == MarketType.SCALAR:
+        if question_type == QuestionType.SCALAR:
             # Template ID "1" + UP/DOWN outcomes for scalar markets
             and_stms["templateId"] = TemplateId.SCALAR.value
             up_filter = SeerSubgraphHandler._create_case_variations_condition(
@@ -172,7 +172,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
             outcome_filters.extend([up_filter, down_filter])
 
-        elif market_type == MarketType.BINARY:
+        elif question_type == QuestionType.BINARY:
             # Template ID "2" + YES/NO outcomes for binary markets
             and_stms["templateId"] = TemplateId.CATEGORICAL.value
             yes_filter = SeerSubgraphHandler._create_case_variations_condition(
@@ -183,7 +183,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
             outcome_filters.extend([yes_filter, no_filter])
 
-        elif market_type == MarketType.CATEGORICAL:
+        elif question_type == QuestionType.CATEGORICAL:
             # Template ID 2 (categorical) OR Template ID 3 (multi-categorical,
             # we treat them as categorical for now for simplicity)
             # https://reality.eth.limo/app/docs/html/contracts.html#templates
@@ -234,7 +234,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         sort_by: SortBy = SortBy.NONE,
         limit: int | None = None,
         outcome_supply_gt_if_open: Wei = Wei(0),
-        market_type: MarketType = MarketType.ALL,
+        question_type: QuestionType = QuestionType.ALL,
         include_conditional_markets: bool = False,
         parent_market_id: HexBytes | None = None,
     ) -> list[SeerMarket]:
@@ -244,7 +244,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             filter_by=filter_by,
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             parent_market_id=parent_market_id,
-            market_type=market_type,
+            question_type=question_type,
             include_conditional_markets=include_conditional_markets,
         )
 

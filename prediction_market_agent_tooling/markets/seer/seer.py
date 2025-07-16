@@ -25,7 +25,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     ConditionalFilterType,
     FilterBy,
-    MarketType,
     ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,

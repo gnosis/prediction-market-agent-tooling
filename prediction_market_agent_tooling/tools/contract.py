@@ -413,6 +413,14 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
         return self.convertToShares(amount, web3=web3)
 
 
+class ContractWrapped1155BaseClass(ContractERC20BaseClass):
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "../abis/erc1155.abi.json"
+        )
+    )
+
+
 class OwnableContract(ContractBaseClass):
     abi: ABI = abi_field_validator(
         os.path.join(
@@ -533,6 +541,12 @@ class ContractDepositableWrapperERC20OnGnosisChain(
     """
 
 
+class ContractWrapped1155OnGnosisChain(
+    ContractWrapped1155BaseClass, ContractERC20OnGnosisChain
+):
+    pass
+
+
 class ContractERC4626OnGnosisChain(
     ContractERC4626BaseClass, ContractERC20OnGnosisChain
 ):
@@ -626,6 +640,11 @@ def contract_implements_function(
                 function_name=function_name,
                 web3=web3,
                 function_arg_types=function_arg_types,
+            ) or seer_minimal_proxy_implements_function(
+                contract_address=contract_address,
+                function_name=function_name,
+                web3=web3,
+                function_arg_types=function_arg_types,
             )
 
     return implements
@@ -644,6 +663,29 @@ def minimal_proxy_implements_function(
         # Recurse into singleton
         return contract_implements_function(
             Web3.to_checksum_address(singleton_address),
+            function_name=function_name,
+            web3=web3,
+            function_arg_types=function_arg_types,
+            look_for_proxy_contract=False,
+        )
+    except DecodingError:
+        logger.info(f"Error decoding contract address for singleton")
+        return False
+
+
+def seer_minimal_proxy_implements_function(
+    contract_address: ChecksumAddress,
+    function_name: str,
+    web3: Web3,
+    function_arg_types: list[str] | None = None,
+) -> bool:
+    try:
+        # Read address between specific indices to find logic contract
+        bytecode = web3.eth.get_code(contract_address)
+        logic_contract_address = bytecode[11:31]
+
+        return contract_implements_function(
+            Web3.to_checksum_address(logic_contract_address),
             function_name=function_name,
             web3=web3,
             function_arg_types=function_arg_types,
@@ -675,6 +717,13 @@ def init_collateral_token_contract(
 
     elif contract_implements_function(
         address,
+        "multiToken",
+        web3=web3,
+    ):
+        return ContractWrapped1155BaseClass(address=address)
+
+    elif contract_implements_function(
+        address,
         "balanceOf",
         web3=web3,
         function_arg_types=["address"],
@@ -694,6 +743,8 @@ def to_gnosis_chain_contract(
         return ContractERC4626OnGnosisChain(address=contract.address)
     elif isinstance(contract, ContractDepositableWrapperERC20BaseClass):
         return ContractDepositableWrapperERC20OnGnosisChain(address=contract.address)
+    elif isinstance(contract, ContractWrapped1155BaseClass):
+        return ContractWrapped1155OnGnosisChain(address=contract.address)
     elif isinstance(contract, ContractERC20BaseClass):
         return ContractERC20OnGnosisChain(address=contract.address)
     else:

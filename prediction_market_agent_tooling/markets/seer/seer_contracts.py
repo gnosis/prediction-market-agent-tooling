@@ -6,10 +6,10 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
-    Wei,
     ChecksumAddress,
     OutcomeStr,
     TxReceipt,
+    Wei,
     xDai,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (

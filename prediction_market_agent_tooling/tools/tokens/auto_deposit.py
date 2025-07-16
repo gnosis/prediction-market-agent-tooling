@@ -192,12 +192,9 @@ def mint_full_set(
     api_keys: APIKeys,
     web3: Web3 | None,
 ) -> None:
-    # For minting collateral from a Gnosis market, it normally involves:
-    # 0. Make sure you have enough collateral token (from the market itself).
-    # 1. Router has enough allowance to sell collateral token and mint full outcome set.
-    # 2. Router splits collateral.
     router = GnosisRouter()
-
+    # We need to fetch the parent's market collateral token, to split it and get the collateral token
+    # of the child market.
     seer_subgraph_handler = SeerSubgraphHandler()
     market = seer_subgraph_handler.get_market_by_wrapped_token(
         token=collateral_token_contract.address

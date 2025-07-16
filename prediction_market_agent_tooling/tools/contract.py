@@ -717,7 +717,7 @@ def init_collateral_token_contract(
 
     elif contract_implements_function(
         address,
-        "multiToken",
+        "tokenId",
         web3=web3,
     ):
         return ContractWrapped1155BaseClass(address=address)

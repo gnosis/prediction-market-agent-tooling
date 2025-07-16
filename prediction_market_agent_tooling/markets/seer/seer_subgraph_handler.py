@@ -22,7 +22,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
-from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
+from prediction_market_agent_tooling.markets.seer.data_models import (
+    SeerMarket,
+    SeerMarketQuestions,
+)
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
@@ -84,9 +87,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.collateralToken,
             markets_field.upperBound,
             markets_field.lowerBound,
-            markets_field.questions,
-            markets_field.questions.question.finalize_ts,
-            markets_field.questions.question.best_answer,
+            # markets_field.questions.question.id,
+            # markets_field.questions.question.finalize_ts,
+            # markets_field.questions.question.best_answer,
             markets_field.templateId,
         ]
         if current_level < max_level:
@@ -263,6 +266,17 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         return markets
 
+    def get_questions_for_market(
+        self, market_condition_id: HexBytes
+    ) -> list[SeerMarketQuestions]:
+        where = unwrap_generic_value(
+            {"market_": {"conditionId": market_condition_id.hex().lower()}}
+        )
+        markets_field = self.seer_subgraph.Query.marketQuestions(where=where)
+        fields = self._get_fields_for_questions(markets_field)
+        questions = self.do_query(fields=fields, pydantic_model=SeerMarketQuestions)
+        return questions
+
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
         markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())
         fields = self._get_fields_for_markets(markets_field)
@@ -272,6 +286,14 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
             )
         return markets[0]
+
+    def _get_fields_for_questions(self, questions_field: FieldPath) -> list[FieldPath]:
+        fields = [
+            questions_field.question.id,
+            questions_field.question.best_answer,
+            questions_field.question.finalize_ts,
+        ]
+        return fields
 
     def _get_fields_for_pools(self, pools_field: FieldPath) -> list[FieldPath]:
         fields = [

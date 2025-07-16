@@ -65,8 +65,7 @@ class SeerQuestion(BaseModel):
     finalize_ts: int
 
 
-class SeerQuestions(BaseModel):
-    id: str
+class SeerMarketQuestions(BaseModel):
     question: SeerQuestion
 
 
@@ -93,7 +92,7 @@ class SeerMarket(BaseModel):
     outcomes_supply: int = Field(alias="outcomesSupply")
     upper_bound: SeerNormalizedWei = Field(alias="upperBound", default=None)
     lower_bound: SeerNormalizedWei = Field(alias="lowerBound", default=None)
-    questions: list[SeerQuestions]
+    # questions: list[SeerQuestions]
 
     @property
     def has_valid_answer(self) -> bool:

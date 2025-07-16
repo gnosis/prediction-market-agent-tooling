@@ -4,7 +4,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
-    MarketType,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
@@ -107,7 +107,7 @@ def test_binary_markets_retrieved(
         limit=1,
         sort_by=sort_by,
         filter_by=filter_by,
-        market_type=MarketType.BINARY,
+        question_type=QuestionType.BINARY,
     )
     # We expect at least 1 market for the given filter
     assert markets

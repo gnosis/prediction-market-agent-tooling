@@ -11,8 +11,8 @@ from prediction_market_agent_tooling.deploy.constants import (
 from prediction_market_agent_tooling.gtypes import HexAddress, HexStr
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
-    MarketType,
     OutcomeStr,
+    QuestionType,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -43,7 +43,7 @@ def test_conditional_markets_have_parent_address(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=True,
-        market_type=MarketType.BINARY,
+        question_type=QuestionType.BINARY,
     )
 
     assert len(markets) <= 10
@@ -67,7 +67,7 @@ def test_get_scalar_markets_only(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=False,
-        market_type=MarketType.SCALAR,
+        question_type=QuestionType.SCALAR,
     )
 
     assert len(markets) <= 10
@@ -98,7 +98,7 @@ def test_get_categorical_markets_only(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=False,
-        market_type=MarketType.CATEGORICAL,
+        question_type=QuestionType.CATEGORICAL,
     )
 
     for market in markets:
@@ -117,7 +117,7 @@ def test_binary_markets_only(
         limit=10,
         filter_by=FilterBy.NONE,
         include_conditional_markets=True,
-        market_type=MarketType.BINARY,
+        question_type=QuestionType.BINARY,
     )
 
     assert len(markets) <= 10

@@ -1,6 +1,6 @@
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
-    MarketType,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
@@ -15,7 +15,7 @@ def test_get_liquidity(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
-        market_type=MarketType.BINARY,
+        question_type=QuestionType.BINARY,
         include_conditional_markets=False,
     )[0]
     # We expect outcomes to have been minted

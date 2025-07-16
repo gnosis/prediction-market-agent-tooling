@@ -25,10 +25,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
     MarketFees,
-    MarketType,
     ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
@@ -402,7 +402,7 @@ class SeerAgentMarket(AgentMarket):
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        market_type: MarketType = MarketType.ALL,
+        question_type: QuestionType = QuestionType.ALL,
         include_conditional_markets: bool = False,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
@@ -411,7 +411,7 @@ class SeerAgentMarket(AgentMarket):
             limit=limit,
             sort_by=sort_by,
             filter_by=filter_by,
-            market_type=market_type,
+            question_type=question_type,
             include_conditional_markets=include_conditional_markets,
         )
 
@@ -600,14 +600,6 @@ class SeerAgentMarket(AgentMarket):
         if auto_deposit:
             auto_deposit_collateral_token(
                 collateral_contract, amount_wei, api_keys, web3
-            )
-
-        collateral_balance = collateral_contract.balanceOf(
-            api_keys.bet_from_address, web3=web3
-        )
-        if collateral_balance < amount_wei:
-            raise ValueError(
-                f"Balance {collateral_balance} not enough for bet size {amount}"
             )
 
         return self._swap_tokens_with_fallback(

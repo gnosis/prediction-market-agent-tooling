@@ -5,7 +5,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.gtypes import CollateralToken
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
-    MarketType,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
@@ -19,7 +19,7 @@ def test_get_price_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         limit=1,
-        market_type=MarketType.BINARY,
+        question_type=QuestionType.BINARY,
         include_conditional_markets=True,
     )[0]
 

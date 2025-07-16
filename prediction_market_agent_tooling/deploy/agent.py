@@ -6,6 +6,7 @@ from enum import Enum
 from functools import cached_property
 
 from pydantic import computed_field
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
@@ -19,13 +20,12 @@ from prediction_market_agent_tooling.deploy.trade_interval import (
 )
 from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, xDai
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, FilterBy
 from prediction_market_agent_tooling.markets.agent_market import (
-    MarketType as AgentMarketType,
-)
-from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    FilterBy,
     ProcessedMarket,
     ProcessedTradedMarket,
+    QuestionType,
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
@@ -209,6 +209,8 @@ class DeployablePredictionAgent(DeployableAgent):
         MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES
     )
 
+    just_warn_on_unexpected_model_behavior: bool = False
+
     # Only Metaculus allows to post predictions without trading (buying/selling of outcome tokens).
     supported_markets: t.Sequence[MarketType] = [MarketType.METACULUS]
 
@@ -381,13 +383,13 @@ class DeployablePredictionAgent(DeployableAgent):
         return self.rephrase_conditioned_markets
 
     @property
-    def agent_market_type(self) -> AgentMarketType:
+    def agent_question_type(self) -> QuestionType:
         if self.fetch_scalar_markets:
-            return AgentMarketType.SCALAR
+            return QuestionType.SCALAR
         elif self.fetch_categorical_markets:
-            return AgentMarketType.CATEGORICAL
+            return QuestionType.CATEGORICAL
         else:
-            return AgentMarketType.BINARY
+            return QuestionType.BINARY
 
     def get_markets(
         self,
@@ -398,15 +400,13 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         cls = market_type.market_class
 
-        agent_market_type = self.agent_market_type
-
         # Fetch the soonest closing markets to choose from
         available_markets = cls.get_markets(
             limit=self.n_markets_to_fetch,
             sort_by=self.get_markets_sort_by,
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
-            market_type=agent_market_type,
+            question_type=self.agent_question_type,
             include_conditional_markets=self.include_conditional_markets,
         )
         return available_markets
@@ -502,9 +502,18 @@ class DeployablePredictionAgent(DeployableAgent):
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
         )
 
-        answer = self.build_answer(
-            market=market, market_type=market_type, verify_market=verify_market
-        )
+        try:
+            answer = self.build_answer(
+                market=market, market_type=market_type, verify_market=verify_market
+            )
+        except UnexpectedModelBehavior:
+            (
+                logger.warning
+                if self.just_warn_on_unexpected_model_behavior
+                else logger.exception
+            )(f"Unexpected model behaviour in {self.__class__.__name__}.")
+            answer = None
+
         if answer is not None:
             self.verify_answer_outcomes(market=market, answer=answer)
 
@@ -624,6 +633,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         super().initialize_langfuse()
         # Auto-observe all the methods where it makes sense, so that subclassses don't need to do it manually.
         self.build_trades = observe()(self.build_trades)  # type: ignore[method-assign]
+        self.execute_trades = observe()(self.execute_trades)  # type: ignore[method-assign]
 
     def check_min_required_balance_to_trade(self, market: AgentMarket) -> None:
         api_keys = APIKeys()
@@ -669,37 +679,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         trades = strategy.calculate_trades(existing_position, answer, market)
         return trades
 
-    def before_process_market(
-        self, market_type: MarketType, market: AgentMarket
-    ) -> None:
-        super().before_process_market(market_type, market)
-        self.check_min_required_balance_to_trade(market)
-
-    def process_market(
-        self,
-        market_type: MarketType,
-        market: AgentMarket,
-        verify_market: bool = True,
-    ) -> ProcessedTradedMarket | None:
-        processed_market = super().process_market(market_type, market, verify_market)
-        if processed_market is None:
-            return None
-
-        api_keys = APIKeys()
-        user_id = market.get_user_id(api_keys=api_keys)
-
-        try:
-            existing_position = market.get_position(user_id=user_id)
-        except Exception as e:
-            logger.warning(f"Could not get position for user {user_id}, exception {e}")
-            return None
-
-        trades = self.build_trades(
-            market=market,
-            answer=processed_market.answer,
-            existing_position=existing_position,
-        )
-
+    def execute_trades(
+        self, market: AgentMarket, trades: list[Trade]
+    ) -> list[PlacedTrade]:
         # It can take quite some time before agent processes all the markets, recheck here if the market didn't get closed in the meantime, to not error out completely.
         # Unfortunately, we can not just add some room into closing time of the market while fetching them, because liquidity can be removed at any time by the liquidity providers.
         still_tradeable = market.can_be_traded()
@@ -708,7 +690,8 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                 f"Market {market.question=} ({market.url}) was selected to processing, but is not tradeable anymore."
             )
 
-        placed_trades = []
+        placed_trades: list[PlacedTrade] = []
+
         for trade in trades:
             logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
 
@@ -721,7 +704,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                     case TradeType.SELL:
                         # Get actual value of the position we are going to sell, and if it's less than we wanted to sell, simply sell all of it.
                         current_position = check_not_none(
-                            market.get_position(user_id),
+                            market.get_position(
+                                market.get_user_id(api_keys=self.api_keys)
+                            ),
                             "Should exists if we are going to sell outcomes.",
                         )
 
@@ -748,6 +733,39 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                 logger.info(
                     f"Trade execution skipped because, {self.place_trades=} or {still_tradeable=}."
                 )
+
+        return placed_trades
+
+    def before_process_market(
+        self, market_type: MarketType, market: AgentMarket
+    ) -> None:
+        super().before_process_market(market_type, market)
+        self.check_min_required_balance_to_trade(market)
+
+    def process_market(
+        self,
+        market_type: MarketType,
+        market: AgentMarket,
+        verify_market: bool = True,
+    ) -> ProcessedTradedMarket | None:
+        processed_market = super().process_market(market_type, market, verify_market)
+        if processed_market is None:
+            return None
+
+        user_id = market.get_user_id(api_keys=self.api_keys)
+
+        try:
+            existing_position = market.get_position(user_id=user_id)
+        except Exception as e:
+            logger.warning(f"Could not get position for user {user_id}, exception {e}")
+            return None
+
+        trades = self.build_trades(
+            market=market,
+            answer=processed_market.answer,
+            existing_position=existing_position,
+        )
+        placed_trades = self.execute_trades(market, trades)
 
         traded_market = ProcessedTradedMarket(
             answer=processed_market.answer, trades=placed_trades

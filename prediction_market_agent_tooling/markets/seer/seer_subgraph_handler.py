@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.deploy.constants import (
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexStr, Wei
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
@@ -291,29 +291,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         fields = self._get_fields_for_questions(markets_field)
         questions = self.do_query(fields=fields, pydantic_model=SeerMarketQuestions)
         return questions
-
-    def dummy(self, market_id: HexBytes) -> list[SeerMarket]:
-        other_market_id = HexBytes(HexStr("0x53b18cb1424400ebb7b58188dc0a9a39638f7cd3"))
-        markets_field = self.seer_subgraph.Query.markets(
-            where={"id_in": [market_id.hex().lower(), other_market_id.hex().lower()]}
-        )
-        fields = self._get_fields_for_markets(markets_field)
-        questions_field = self.seer_subgraph.Query.marketQuestions(
-            where={
-                "market_in": [market_id.hex().lower(), other_market_id.hex().lower()]
-            }
-        )
-        fields2 = [
-            questions_field.id,
-            questions_field.question.id,
-            questions_field.question.best_answer,
-            questions_field.question.finalize_ts,
-            questions_field.market.id,
-        ]
-        result = self.sg.query_json(fields + fields2)
-        items = self._parse_items_from_json(result)
-        models = [SeerMarket.model_validate(i) for i in items]
-        return models
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarketWithQuestions:
         markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())

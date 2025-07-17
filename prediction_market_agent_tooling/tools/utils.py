@@ -21,7 +21,6 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 T = TypeVar("T")
 
@@ -244,39 +243,3 @@ def extract_error_from_retry_error(e: BaseException | RetryError) -> BaseExcepti
     ):
         e = exp_from_retry
     return e
-
-
-def answer_to_resolved_outcome_idx(hex_bytes: HexBytes, length: int = 6) -> list[int]:
-    """
-    Convert a hex string to a list of outcome indices that are set to 1.
-    The binary representation is interpreted in little-endian order, meaning the least
-    significant bit corresponds to the first outcome.
-
-    Args:
-        hex_bytes: HexBytes to convert (e.g., '0x18' or '18')
-        length: Number of bits to consider (number of possible outcomes)
-
-    Returns:
-        List of 0-based indices where the bit is set to 1, in ascending order.
-        Returns [0] if all bits are 0.
-    """
-    # Convert hex to integer
-    num = int(hex_bytes.hex(), 16)
-
-    # Special case: when number is 0, return [0]
-    if num == 0:
-        return [0]
-
-    # Convert to binary, remove '0b' prefix, and pad with leading zeros
-    binary_str = bin(num)[2:].zfill(length)
-
-    # Take only the rightmost 'length' bits
-    binary_str = binary_str[-length:]
-
-    # Reverse the string to make it little-endian
-    binary_str = binary_str[::-1]
-
-    # Get the indices of bits that are set to 1 (0-based)
-    indices = [idx for idx, bit in enumerate(binary_str) if bit == "1"]
-
-    return sorted(indices)

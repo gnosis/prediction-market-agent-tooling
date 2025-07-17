@@ -167,3 +167,52 @@ class SwaprRouterContract(ContractOnGnosisChain):
             function_params=[tuple(dict(params).values())],
             web3=web3,
         )
+
+    def calc_exact_input_single(
+        self,
+        params: ExactInputSingleParams,
+        from_address: ChecksumAddress,
+        api_keys: APIKeys,
+        web3: Web3 | None = None,
+    ) -> Wei:
+        """
+        Simulates exactInputSingle to calculate output token amounts without executing the transaction.
+        Similar to Omen's calcBuyAmount function.
+        
+        Args:
+            params: The swap parameters
+            from_address: Address to simulate the call from (should have sufficient balance)
+            web3: Web3 instance
+        """
+
+        web3 = web3 or self.get_web3()
+        contract = web3.eth.contract(address=self.address, abi=self.abi)
+        
+        erc20_token = ContractERC20OnGnosisChain(address=params.token_in)
+        if (
+            erc20_token.allowance(api_keys.bet_from_address, self.address, web3=web3)
+            < params.amount_in
+        ):
+            erc20_token.approve(api_keys, self.address, params.amount_in, web3=web3)
+
+        try:
+            contract_params = (
+                params.token_in,
+                params.token_out,
+                params.recipient,
+                params.deadline,
+                params.amount_in.value, 
+                params.amount_out_minimum.value, 
+                params.limit_sqrt_price.value, 
+            )
+            
+            # Simulate the call from the specified address
+            output_amount = contract.functions.exactInputSingle(
+                contract_params
+            ).call({'from': from_address})
+            
+            return Wei(output_amount)
+        except Exception as e:
+            # If the simulation fails (e.g., insufficient balance/allowance), 
+            # you might want to handle this gracefully
+            raise ValueError(f"Simulation failed: {e}")

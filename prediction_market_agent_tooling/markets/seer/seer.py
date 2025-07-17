@@ -52,14 +52,12 @@ from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
-from prediction_market_agent_tooling.markets.seer.questions_cache import (
-    SeerQuestionsCache,
-)
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     GnosisRouter,
     SeerMarketFactory,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
+    SeerQuestionsCache,
     SeerSubgraphHandler,
     TemplateId,
 )

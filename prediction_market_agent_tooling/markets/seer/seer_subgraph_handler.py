@@ -1,10 +1,8 @@
 import sys
 import typing as t
-from collections import defaultdict
 from enum import Enum
 from typing import Any
 
-from eth_pydantic_types import HexStr
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
@@ -14,7 +12,7 @@ from prediction_market_agent_tooling.deploy.constants import (
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
 )
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexStr, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
@@ -28,6 +26,9 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     SeerMarketQuestions,
     SeerMarketWithQuestions,
+)
+from prediction_market_agent_tooling.markets.seer.questions_cache import (
+    SeerQuestionsCache,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -265,17 +266,17 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         market_ids = [m.id for m in markets]
-        questions = self.get_questions_for_markets(market_ids)
-
-        # organize questions by property question.market.id
-        questions_by_market_id = defaultdict(list)
-        for q in questions:
-            questions_by_market_id[q.market.id.hex()].append(q)
+        # We fetch questions from all markets and all parents in one go
+        parent_market_ids = [
+            m.parent_market.id for m in markets if m.parent_market is not None
+        ]
+        q = SeerQuestionsCache(seer_subgraph_handler=self)
+        q.fetch_questions(list(set(market_ids + parent_market_ids)))
 
         # Create SeerMarketWithQuestions for each market
         return [
             SeerMarketWithQuestions(
-                **m.model_dump(), questions=questions_by_market_id[m.id.hex()]
+                **m.model_dump(), questions=q.market_id_to_questions[m.id]
             )
             for m in markets
         ]
@@ -322,7 +323,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             raise ValueError(
                 f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
             )
-        questions = self.get_questions_for_markets([market_id])
+        q = SeerQuestionsCache(self)
+        q.fetch_questions([market_id])
+        questions = q.market_id_to_questions[market_id]
         s = SeerMarketWithQuestions.model_validate(
             markets[0].model_dump() | {"questions": questions}
         )

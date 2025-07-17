@@ -1,8 +1,8 @@
 import numpy as np
+import pytest
 
-from prediction_market_agent_tooling.gtypes import OutcomeToken
+from prediction_market_agent_tooling.gtypes import HexBytes, OutcomeToken
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import (
     answer_to_resolved_outcome_idx,
     calculate_sell_amount_in_collateral,
@@ -96,10 +96,6 @@ def test_calculate_sell_amount_in_collateral_5() -> None:
         fees=MarketFees.get_zero_fees(),
     )
     assert collateral == 0
-
-
-import pytest
-from hexbytes import HexBytes
 
 
 @pytest.mark.parametrize(

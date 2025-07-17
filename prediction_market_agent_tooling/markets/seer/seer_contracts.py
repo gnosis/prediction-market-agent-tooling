@@ -24,7 +24,6 @@ from prediction_market_agent_tooling.tools.contract import (
     abi_field_validator,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 
 
 class SeerMarketFactory(ContractOnGnosisChain):
@@ -115,14 +114,6 @@ class GnosisRouter(ContractOnGnosisChain):
             web3=web3,
         )
         return receipt_tx
-
-    def get_winning_outcomes(
-        self, condition_id: HexBytes, web3: Web3 | None = None
-    ) -> t.Sequence[bool]:
-        winning_outcomes: t.Sequence[bool] = self.call(
-            "getWinningOutcomes", [condition_id], web3=web3
-        )
-        return winning_outcomes
 
 
 class SwaprRouterContract(ContractOnGnosisChain):

@@ -52,6 +52,9 @@ from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
+from prediction_market_agent_tooling.markets.seer.questions_cache import (
+    SeerQuestionsCache,
+)
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     GnosisRouter,
     SeerMarketFactory,
@@ -261,7 +264,7 @@ class SeerAgentMarket(AgentMarket):
     @staticmethod
     def _filter_markets_contained_in_trades(
         api_keys: APIKeys,
-        markets: list[SeerMarket],
+        markets: t.Sequence[SeerMarket],
     ) -> list[SeerMarket]:
         """
         We filter the markets using previous trades by the user so that we don't have to process all Seer markets.
@@ -271,7 +274,7 @@ class SeerAgentMarket(AgentMarket):
         traded_tokens = {t.buyToken for t in trades_by_user}.union(
             [t.sellToken for t in trades_by_user]
         )
-        filtered_markets = []
+        filtered_markets: list[SeerMarket] = []
         for market in markets:
             if any(
                 [
@@ -364,23 +367,25 @@ class SeerAgentMarket(AgentMarket):
 
     @staticmethod
     def convert_seer_market_into_market_with_questions(
-        seer_market: SeerMarket,
+        seer_market: SeerMarket, seer_subgraph: SeerSubgraphHandler
     ) -> "SeerMarketWithQuestions":
-        questions = SeerSubgraphHandler().get_questions_for_markets([seer_market.id])
+        q = SeerQuestionsCache(seer_subgraph_handler=seer_subgraph)
+        q.fetch_questions([seer_market.id])
+        questions = q.market_id_to_questions[seer_market.id]
         return SeerMarketWithQuestions(**seer_market.model_dump(), questions=questions)
 
     @staticmethod
     def get_parent(
         model: SeerMarket,
         seer_subgraph: SeerSubgraphHandler,
-    ) -> t.Optional["SeerAgentMarket"]:
+    ) -> t.Optional["ParentMarket"]:
         if not model.parent_market:
             return None
 
         # turn into a market with questions
         parent_market_with_questions = (
             SeerAgentMarket.convert_seer_market_into_market_with_questions(
-                model.parent_market
+                model.parent_market, seer_subgraph=seer_subgraph
             )
         )
 
@@ -459,16 +464,6 @@ class SeerAgentMarket(AgentMarket):
             filter_by=filter_by,
             question_type=question_type,
             include_conditional_markets=include_conditional_markets,
-        )
-
-        # fetch questions
-
-        parent_market_ids = [
-            m.market.parent_market.id if m.market.parent_market else None
-            for m in markets
-        ]
-        questions = seer_subgraph.get_questions_for_markets(
-            parent_market_ids=parent_market_ids
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

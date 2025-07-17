@@ -48,12 +48,14 @@ class CreateCategoricalMarketsParams(BaseModel):
 SEER_BASE_URL = "https://app.seer.pm"
 
 
-def seer_normalize_wei(value: int | dict | None) -> int | None:
+def seer_normalize_wei(value: int | dict[str, t.Any] | None) -> int | None:
     # See https://github.com/seer-pm/demo/blob/main/web/netlify/edge-functions/utils/common.ts#L22
     if value is None:
         return value
-    elif isinstance(value, dict) and value.get("value") is not None:
-        value = value["value"]
+    elif isinstance(value, dict):
+        if value.get("value") is None:
+            raise ValueError(f"Expected a dictionary with a value key, but got {value}")
+        value = int(value["value"])
     is_in_wei = value > 1e10
     return value if is_in_wei else value * 10**18
 

@@ -1,8 +1,10 @@
 import sys
 import typing as t
+from collections import defaultdict
 from enum import Enum
 from typing import Any
 
+from eth_pydantic_types import HexStr
 from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
@@ -25,6 +27,7 @@ from prediction_market_agent_tooling.markets.base_subgraph_handler import (
 from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarket,
     SeerMarketQuestions,
+    SeerMarketWithQuestions,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -87,9 +90,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.collateralToken,
             markets_field.upperBound,
             markets_field.lowerBound,
-            # markets_field.questions.question.id,
-            # markets_field.questions.question.finalize_ts,
-            # markets_field.questions.question.best_answer,
             markets_field.templateId,
         ]
         if current_level < max_level:
@@ -237,7 +237,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         question_type: QuestionType = QuestionType.ALL,
         include_conditional_markets: bool = False,
         parent_market_id: HexBytes | None = None,
-    ) -> list[SeerMarket]:
+    ) -> list[SeerMarketWithQuestions]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
         where_stms = self._build_where_statements(
@@ -264,20 +264,57 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         )
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
-        return markets
+        market_ids = [m.id for m in markets]
+        questions = self.get_questions_for_markets(market_ids)
 
-    def get_questions_for_market(
-        self, market_condition_id: HexBytes
+        # organize questions by property question.market.id
+        questions_by_market_id = defaultdict(list)
+        for q in questions:
+            questions_by_market_id[q.market.id.hex()].append(q)
+
+        # Create SeerMarketWithQuestions for each market
+        return [
+            SeerMarketWithQuestions(
+                **m.model_dump(), questions=questions_by_market_id[m.id.hex()]
+            )
+            for m in markets
+        ]
+
+    def get_questions_for_markets(
+        self, market_ids: list[HexBytes]
     ) -> list[SeerMarketQuestions]:
         where = unwrap_generic_value(
-            {"market_": {"conditionId": market_condition_id.hex().lower()}}
+            {"market_in": [market_id.hex().lower() for market_id in market_ids]}
         )
         markets_field = self.seer_subgraph.Query.marketQuestions(where=where)
         fields = self._get_fields_for_questions(markets_field)
         questions = self.do_query(fields=fields, pydantic_model=SeerMarketQuestions)
         return questions
 
-    def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
+    def dummy(self, market_id: HexBytes) -> list[SeerMarket]:
+        other_market_id = HexBytes(HexStr("0x53b18cb1424400ebb7b58188dc0a9a39638f7cd3"))
+        markets_field = self.seer_subgraph.Query.markets(
+            where={"id_in": [market_id.hex().lower(), other_market_id.hex().lower()]}
+        )
+        fields = self._get_fields_for_markets(markets_field)
+        questions_field = self.seer_subgraph.Query.marketQuestions(
+            where={
+                "market_in": [market_id.hex().lower(), other_market_id.hex().lower()]
+            }
+        )
+        fields2 = [
+            questions_field.id,
+            questions_field.question.id,
+            questions_field.question.best_answer,
+            questions_field.question.finalize_ts,
+            questions_field.market.id,
+        ]
+        result = self.sg.query_json(fields + fields2)
+        items = self._parse_items_from_json(result)
+        models = [SeerMarket.model_validate(i) for i in items]
+        return models
+
+    def get_market_by_id(self, market_id: HexBytes) -> SeerMarketWithQuestions:
         markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
@@ -285,13 +322,18 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             raise ValueError(
                 f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
             )
-        return markets[0]
+        questions = self.get_questions_for_markets([market_id])
+        s = SeerMarketWithQuestions.model_validate(
+            markets[0].model_dump() | {"questions": questions}
+        )
+        return s
 
     def _get_fields_for_questions(self, questions_field: FieldPath) -> list[FieldPath]:
         fields = [
             questions_field.question.id,
             questions_field.question.best_answer,
             questions_field.question.finalize_ts,
+            questions_field.market.id,
         ]
         return fields
 

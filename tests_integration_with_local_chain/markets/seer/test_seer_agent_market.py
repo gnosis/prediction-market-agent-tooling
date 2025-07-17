@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
+    OutcomeStr,
     OutcomeToken,
     OutcomeWei,
     Wei,
@@ -20,6 +21,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     QuestionType,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -39,8 +41,10 @@ from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 def test_seer_get_resolution(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    market_id = HexBytes("0x6e1d0766e75ecd134948379c1c4da69f980b5174")
+    # closed market, answer no
+    market_id = HexBytes("0x83f012a56083ceaa846730f89c69e363230ae9a6")
     market = seer_subgraph_handler_test.get_market_by_id(market_id=market_id)
+    # market = seer_subgraph_handler_test.dummy(market_id=market_id)
     agent_market = SeerAgentMarket.from_data_model_with_subgraph(
         market,
         seer_subgraph=seer_subgraph_handler_test,
@@ -52,12 +56,6 @@ def test_seer_get_resolution(seer_subgraph_handler_test: SeerSubgraphHandler) ->
     assert agent_market.resolution == Resolution(
         outcome=OutcomeStr("No"), invalid=False
     )
-
-    # market_condition_id = HexBytes(
-    #     "0x1363da7a50abdfbf8220a126fec853dc725411f0d1f381ebb031f1f39bc30bdb"
-    # )
-    # qs = seer_subgraph_handler_test.get_questions_for_market(market_condition_id)
-    # assert len(qs) > 0
 
 
 def test_seer_place_bet(

@@ -48,10 +48,12 @@ class CreateCategoricalMarketsParams(BaseModel):
 SEER_BASE_URL = "https://app.seer.pm"
 
 
-def seer_normalize_wei(value: int | None) -> int | None:
+def seer_normalize_wei(value: int | dict | None) -> int | None:
     # See https://github.com/seer-pm/demo/blob/main/web/netlify/edge-functions/utils/common.ts#L22
     if value is None:
         return value
+    elif isinstance(value, dict) and value.get("value") is not None:
+        value = value["value"]
     is_in_wei = value > 1e10
     return value if is_in_wei else value * 10**18
 
@@ -59,14 +61,19 @@ def seer_normalize_wei(value: int | None) -> int | None:
 SeerNormalizedWei = Annotated[Wei | None, BeforeValidator(seer_normalize_wei)]
 
 
-class SeerQuestion(BaseModel):
+class MarketId(BaseModel):
     id: HexBytes
+
+
+class SeerQuestion(BaseModel):
+    id: str
     best_answer: HexBytes
     finalize_ts: int
 
 
 class SeerMarketQuestions(BaseModel):
     question: SeerQuestion
+    market: MarketId
 
 
 class SeerMarket(BaseModel):
@@ -92,7 +99,6 @@ class SeerMarket(BaseModel):
     outcomes_supply: int = Field(alias="outcomesSupply")
     upper_bound: SeerNormalizedWei = Field(alias="upperBound", default=None)
     lower_bound: SeerNormalizedWei = Field(alias="lowerBound", default=None)
-    # questions: list[SeerQuestions]
 
     @property
     def has_valid_answer(self) -> bool:
@@ -153,6 +159,10 @@ class SeerMarket(BaseModel):
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
         return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
+
+
+class SeerMarketWithQuestions(SeerMarket):
+    questions: list[SeerMarketQuestions]
 
 
 class RedeemParams(BaseModel):

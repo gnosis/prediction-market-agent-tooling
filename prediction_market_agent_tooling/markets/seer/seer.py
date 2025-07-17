@@ -46,6 +46,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
+    SeerMarketWithQuestions,
 )
 from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
@@ -341,12 +342,14 @@ class SeerAgentMarket(AgentMarket):
         return OmenAgentMarket.verify_operational_balance(api_keys=api_keys)
 
     @staticmethod
-    def build_resolution(model: SeerMarket) -> Resolution | None:
+    def build_resolution(
+        model: SeerMarketWithQuestions,
+    ) -> Resolution | None:
         if model.questions[0].question.finalize_ts == 0:
             # resolution not yet finalized
             return None
 
-        if model.template_id != TemplateId.CATEGORICAL.value:
+        if model.template_id != TemplateId.CATEGORICAL:
             logger.warning("Resolution can only be built for categorical markets.")
             # Future note - for scalar markets, simply fetch best_answer and convert
             # from hex into int and divide by 1e18 (because Wei).
@@ -356,12 +359,44 @@ class SeerAgentMarket(AgentMarket):
             raise ValueError("Seer categorical markets must have 1 question.")
 
         question = model.questions[0]
-        outcome = model.outcomes[int(question.question.best_answer)]
+        outcome = model.outcomes[int(question.question.best_answer.hex(), 16)]
         return Resolution(outcome=outcome, invalid=False)
 
     @staticmethod
-    def from_data_model_with_subgraph(
+    def convert_seer_market_into_market_with_questions(
+        seer_market: SeerMarket,
+    ) -> "SeerMarketWithQuestions":
+        questions = SeerSubgraphHandler().get_questions_for_markets([seer_market.id])
+        return SeerMarketWithQuestions(**seer_market.model_dump(), questions=questions)
+
+    @staticmethod
+    def get_parent(
         model: SeerMarket,
+        seer_subgraph: SeerSubgraphHandler,
+    ) -> t.Optional["SeerAgentMarket"]:
+        if not model.parent_market:
+            return None
+
+        # turn into a market with questions
+        parent_market_with_questions = (
+            SeerAgentMarket.convert_seer_market_into_market_with_questions(
+                model.parent_market
+            )
+        )
+
+        market_with_questions = check_not_none(
+            SeerAgentMarket.from_data_model_with_subgraph(
+                parent_market_with_questions, seer_subgraph, False
+            )
+        )
+
+        return ParentMarket(
+            market=market_with_questions, parent_outcome=model.parent_outcome
+        )
+
+    @staticmethod
+    def from_data_model_with_subgraph(
+        model: SeerMarketWithQuestions,
         seer_subgraph: SeerSubgraphHandler,
         must_have_prices: bool,
     ) -> t.Optional["SeerAgentMarket"]:
@@ -379,6 +414,8 @@ class SeerAgentMarket(AgentMarket):
                 return None
 
         resolution = SeerAgentMarket.build_resolution(model=model)
+
+        parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
 
         market = SeerAgentMarket(
             id=model.id.hex(),
@@ -399,22 +436,7 @@ class SeerAgentMarket(AgentMarket):
             probabilities=probability_map,
             upper_bound=model.upper_bound,
             lower_bound=model.lower_bound,
-            parent=(
-                ParentMarket(
-                    market=(
-                        check_not_none(
-                            SeerAgentMarket.from_data_model_with_subgraph(
-                                model.parent_market,
-                                seer_subgraph,
-                                False,
-                            )
-                        )
-                    ),
-                    parent_outcome=model.parent_outcome,
-                )
-                if model.parent_market
-                else None
-            ),
+            parent=parent,
         )
 
         return market
@@ -437,6 +459,16 @@ class SeerAgentMarket(AgentMarket):
             filter_by=filter_by,
             question_type=question_type,
             include_conditional_markets=include_conditional_markets,
+        )
+
+        # fetch questions
+
+        parent_market_ids = [
+            m.market.parent_market.id if m.market.parent_market else None
+            for m in markets
+        ]
+        questions = seer_subgraph.get_questions_for_markets(
+            parent_market_ids=parent_market_ids
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

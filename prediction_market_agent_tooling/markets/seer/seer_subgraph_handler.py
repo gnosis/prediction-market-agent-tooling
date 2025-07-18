@@ -389,12 +389,14 @@ class SeerQuestionsCache(metaclass=SingletonMeta):
         ] = defaultdict(list)
         self.seer_subgraph_handler = seer_subgraph_handler or SeerSubgraphHandler()
 
-    def fetch_questions(self, market_ids: list[HexBytes]) -> list[SeerMarketQuestions]:
+    def fetch_questions(self, market_ids: list[HexBytes]) -> None:
         filtered_list = [
             market_id
             for market_id in market_ids
             if market_id not in self.market_id_to_questions
         ]
+        if not filtered_list:
+            return
 
         questions = self.seer_subgraph_handler.get_questions_for_markets(filtered_list)
         # Group questions by market_id
@@ -407,5 +409,3 @@ class SeerQuestionsCache(metaclass=SingletonMeta):
         # Update the cache with the new questions for each market
         for market_id, market_questions in questions_by_market.items():
             self.market_id_to_questions[market_id] = market_questions
-
-        return questions

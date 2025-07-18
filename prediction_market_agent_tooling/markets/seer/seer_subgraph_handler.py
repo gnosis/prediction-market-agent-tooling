@@ -1,5 +1,6 @@
 import sys
 import typing as t
+from collections import defaultdict
 from enum import Enum
 from typing import Any
 
@@ -22,9 +23,14 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
-from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
+from prediction_market_agent_tooling.markets.seer.data_models import (
+    SeerMarket,
+    SeerMarketQuestions,
+    SeerMarketWithQuestions,
+)
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import SeerPool
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 from prediction_market_agent_tooling.tools.utils import to_int_timestamp, utcnow
 from prediction_market_agent_tooling.tools.web3_utils import unwrap_generic_value
 
@@ -85,12 +91,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             markets_field.upperBound,
             markets_field.lowerBound,
             markets_field.templateId,
-            # TODO: On the Subgraph, `questions` field is a kind of sub-query, instead of a classic list of values.
-            # See how it is shown on their UI: https://thegraph.com/explorer/subgraphs/B4vyRqJaSHD8dRDb3BFRoAzuBK18c1QQcXq94JbxDxWH?view=Query&chain=arbitrum-one.
-            # And that doesn't work with subgrounds.
-            # markets_field.questions.question.id,
-            # markets_field.questions.question.finalize_ts,
-            # markets_field.questions.question.best_answer,
         ]
         if current_level < max_level:
             fields.extend(
@@ -237,7 +237,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         question_type: QuestionType = QuestionType.ALL,
         include_conditional_markets: bool = False,
         parent_market_id: HexBytes | None = None,
-    ) -> list[SeerMarket]:
+    ) -> list[SeerMarketWithQuestions]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
 
         where_stms = self._build_where_statements(
@@ -264,9 +264,34 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         )
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
-        return markets
+        market_ids = [m.id for m in markets]
+        # We fetch questions from all markets and all parents in one go
+        parent_market_ids = [
+            m.parent_market.id for m in markets if m.parent_market is not None
+        ]
+        q = SeerQuestionsCache(seer_subgraph_handler=self)
+        q.fetch_questions(list(set(market_ids + parent_market_ids)))
 
-    def get_market_by_id(self, market_id: HexBytes) -> SeerMarket:
+        # Create SeerMarketWithQuestions for each market
+        return [
+            SeerMarketWithQuestions(
+                **m.model_dump(), questions=q.market_id_to_questions[m.id]
+            )
+            for m in markets
+        ]
+
+    def get_questions_for_markets(
+        self, market_ids: list[HexBytes]
+    ) -> list[SeerMarketQuestions]:
+        where = unwrap_generic_value(
+            {"market_in": [market_id.hex().lower() for market_id in market_ids]}
+        )
+        markets_field = self.seer_subgraph.Query.marketQuestions(where=where)
+        fields = self._get_fields_for_questions(markets_field)
+        questions = self.do_query(fields=fields, pydantic_model=SeerMarketQuestions)
+        return questions
+
+    def get_market_by_id(self, market_id: HexBytes) -> SeerMarketWithQuestions:
         markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
@@ -274,7 +299,22 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             raise ValueError(
                 f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
             )
-        return markets[0]
+        q = SeerQuestionsCache(self)
+        q.fetch_questions([market_id])
+        questions = q.market_id_to_questions[market_id]
+        s = SeerMarketWithQuestions.model_validate(
+            markets[0].model_dump() | {"questions": questions}
+        )
+        return s
+
+    def _get_fields_for_questions(self, questions_field: FieldPath) -> list[FieldPath]:
+        fields = [
+            questions_field.question.id,
+            questions_field.question.best_answer,
+            questions_field.question.finalize_ts,
+            questions_field.market.id,
+        ]
+        return fields
 
     def _get_fields_for_pools(self, pools_field: FieldPath) -> list[FieldPath]:
         fields = [
@@ -328,3 +368,44 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             # We select the first one
             return pools[0]
         return None
+
+
+class SeerQuestionsCache(metaclass=SingletonMeta):
+    """A singleton cache for storing and retrieving Seer market questions.
+
+    This class provides an in-memory cache for Seer market questions, preventing
+    redundant subgraph queries by maintaining a mapping of market IDs to their
+    associated questions. It implements the singleton pattern to ensure a single
+    cache instance is used throughout the agent run.
+
+    Attributes:
+        market_id_to_questions: A dictionary mapping market IDs to lists of SeerMarketQuestions
+        seer_subgraph_handler: Handler for interacting with the Seer subgraph
+    """
+
+    def __init__(self, seer_subgraph_handler: SeerSubgraphHandler | None = None):
+        self.market_id_to_questions: dict[
+            HexBytes, list[SeerMarketQuestions]
+        ] = defaultdict(list)
+        self.seer_subgraph_handler = seer_subgraph_handler or SeerSubgraphHandler()
+
+    def fetch_questions(self, market_ids: list[HexBytes]) -> None:
+        filtered_list = [
+            market_id
+            for market_id in market_ids
+            if market_id not in self.market_id_to_questions
+        ]
+        if not filtered_list:
+            return
+
+        questions = self.seer_subgraph_handler.get_questions_for_markets(filtered_list)
+        # Group questions by market_id
+        questions_by_market: dict[HexBytes, list[SeerMarketQuestions]] = defaultdict(
+            list
+        )
+        for q in questions:
+            questions_by_market[q.market.id].append(q)
+
+        # Update the cache with the new questions for each market
+        for market_id, market_questions in questions_by_market.items():
+            self.market_id_to_questions[market_id] = market_questions

@@ -24,7 +24,6 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     FilterBy,
-    MarketFees,
     ParentMarket,
     ProcessedMarket,
     ProcessedTradedMarket,
@@ -32,7 +31,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
-from prediction_market_agent_tooling.markets.data_models import ExistingPosition
+from prediction_market_agent_tooling.markets.data_models import (
+    ExistingPosition,
+    Resolution,
+)
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
@@ -44,6 +46,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
+    SeerMarketWithQuestions,
 )
 from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
@@ -54,7 +57,9 @@ from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     SeerMarketFactory,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
+    SeerQuestionsCache,
     SeerSubgraphHandler,
+    TemplateId,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     NewMarketEvent,
@@ -257,7 +262,7 @@ class SeerAgentMarket(AgentMarket):
     @staticmethod
     def _filter_markets_contained_in_trades(
         api_keys: APIKeys,
-        markets: list[SeerMarket],
+        markets: t.Sequence[SeerMarket],
     ) -> list[SeerMarket]:
         """
         We filter the markets using previous trades by the user so that we don't have to process all Seer markets.
@@ -267,7 +272,7 @@ class SeerAgentMarket(AgentMarket):
         traded_tokens = {t.buyToken for t in trades_by_user}.union(
             [t.sellToken for t in trades_by_user]
         )
-        filtered_markets = []
+        filtered_markets: list[SeerMarket] = []
         for market in markets:
             if any(
                 [
@@ -338,8 +343,63 @@ class SeerAgentMarket(AgentMarket):
         return OmenAgentMarket.verify_operational_balance(api_keys=api_keys)
 
     @staticmethod
-    def from_data_model_with_subgraph(
+    def build_resolution(
+        model: SeerMarketWithQuestions,
+    ) -> Resolution | None:
+        if model.questions[0].question.finalize_ts == 0:
+            # resolution not yet finalized
+            return None
+
+        if model.template_id != TemplateId.CATEGORICAL:
+            logger.warning("Resolution can only be built for categorical markets.")
+            # Future note - for scalar markets, simply fetch best_answer and convert
+            # from hex into int and divide by 1e18 (because Wei).
+            return None
+
+        if len(model.questions) != 1:
+            raise ValueError("Seer categorical markets must have 1 question.")
+
+        question = model.questions[0]
+        outcome = model.outcomes[int(question.question.best_answer.hex(), 16)]
+        return Resolution(outcome=outcome, invalid=False)
+
+    @staticmethod
+    def convert_seer_market_into_market_with_questions(
+        seer_market: SeerMarket, seer_subgraph: SeerSubgraphHandler
+    ) -> "SeerMarketWithQuestions":
+        q = SeerQuestionsCache(seer_subgraph_handler=seer_subgraph)
+        q.fetch_questions([seer_market.id])
+        questions = q.market_id_to_questions[seer_market.id]
+        return SeerMarketWithQuestions(**seer_market.model_dump(), questions=questions)
+
+    @staticmethod
+    def get_parent(
         model: SeerMarket,
+        seer_subgraph: SeerSubgraphHandler,
+    ) -> t.Optional["ParentMarket"]:
+        if not model.parent_market:
+            return None
+
+        # turn into a market with questions
+        parent_market_with_questions = (
+            SeerAgentMarket.convert_seer_market_into_market_with_questions(
+                model.parent_market, seer_subgraph=seer_subgraph
+            )
+        )
+
+        market_with_questions = check_not_none(
+            SeerAgentMarket.from_data_model_with_subgraph(
+                parent_market_with_questions, seer_subgraph, False
+            )
+        )
+
+        return ParentMarket(
+            market=market_with_questions, parent_outcome=model.parent_outcome
+        )
+
+    @staticmethod
+    def from_data_model_with_subgraph(
+        model: SeerMarketWithQuestions,
         seer_subgraph: SeerSubgraphHandler,
         must_have_prices: bool,
     ) -> t.Optional["SeerAgentMarket"]:
@@ -356,6 +416,10 @@ class SeerAgentMarket(AgentMarket):
                 # Price calculation failed, so don't return the market
                 return None
 
+        resolution = SeerAgentMarket.build_resolution(model=model)
+
+        parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
+
         market = SeerAgentMarket(
             id=model.id.hex(),
             question=model.title,
@@ -370,27 +434,12 @@ class SeerAgentMarket(AgentMarket):
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=None,
             outcomes_supply=model.outcomes_supply,
-            resolution=None,
+            resolution=resolution,
             volume=None,
             probabilities=probability_map,
             upper_bound=model.upper_bound,
             lower_bound=model.lower_bound,
-            parent=(
-                ParentMarket(
-                    market=(
-                        check_not_none(
-                            SeerAgentMarket.from_data_model_with_subgraph(
-                                model.parent_market,
-                                seer_subgraph,
-                                False,
-                            )
-                        )
-                    ),
-                    parent_outcome=model.parent_outcome,
-                )
-                if model.parent_market
-                else None
-            ),
+            parent=parent,
         )
 
         return market

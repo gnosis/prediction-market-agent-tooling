@@ -78,7 +78,7 @@ def test_calculate_sell_amount_in_collateral_3() -> None:
 
 def test_calculate_sell_amount_in_collateral_4() -> None:
     with pytest.raises(ValueError) as e:
-        collateral = calculate_sell_amount_in_collateral(
+        calculate_sell_amount_in_collateral(
             shares_to_sell=OutcomeToken(100),
             outcome_index=0,
             pool_balances=[OutcomeToken(10), OutcomeToken(0)],

@@ -195,6 +195,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                     ]
                 }
             )
+        elif question_type == QuestionType.CONDITIONAL:
+            and_stms["parentMarket_not"] = ADDRESS_ZERO.lower()
 
         # If none specified, don't add any template/outcome filters (returns all types)
 
@@ -315,6 +317,19 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             questions_field.market.id,
         ]
         return fields
+
+    def get_market_by_wrapped_token(self, token: ChecksumAddress) -> SeerMarket:
+        where_stms = {"wrappedTokens_contains": [token]}
+        markets_field = self.seer_subgraph.Query.markets(
+            where=unwrap_generic_value(where_stms)
+        )
+        fields = self._get_fields_for_markets(markets_field)
+        markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
+        if len(markets) != 1:
+            raise ValueError(
+                f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
+            )
+        return markets[0]
 
     def _get_fields_for_pools(self, pools_field: FieldPath) -> list[FieldPath]:
         fields = [

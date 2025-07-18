@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     OutcomeStr,
     TxReceipt,
+    Wei,
     xDai,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
@@ -111,6 +112,23 @@ class GnosisRouter(ContractOnGnosisChain):
             api_keys=api_keys,
             function_name="redeemToBase",
             function_params=params_dict,
+            web3=web3,
+        )
+        return receipt_tx
+
+    def split_position(
+        self,
+        api_keys: APIKeys,
+        collateral_token: ChecksumAddress,
+        market_id: ChecksumAddress,
+        amount: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        """Splits collateral token into full set of outcome tokens."""
+        receipt_tx = self.send(
+            api_keys=api_keys,
+            function_name="splitPosition",
+            function_params=[collateral_token, market_id, amount],
             web3=web3,
         )
         return receipt_tx

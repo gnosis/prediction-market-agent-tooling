@@ -167,10 +167,13 @@ def handle_allowance(
     api_keys: APIKeys,
     sell_token: ChecksumAddress,
     amount_wei: Wei,
+    for_address: ChecksumAddress | None = None,
     web3: Web3 | None = None,
 ) -> None:
     # Approve the CoW Swap Vault Relayer to get the sell token only if allowance not sufficient.
-    for_address = Web3.to_checksum_address(CowContractAddress.VAULT_RELAYER.value)
+    for_address = for_address or Web3.to_checksum_address(
+        CowContractAddress.VAULT_RELAYER.value
+    )
     current_allowance = ContractERC20OnGnosisChain(address=sell_token).allowance(
         owner=api_keys.bet_from_address,
         for_address=for_address,

@@ -74,6 +74,7 @@ class QuestionType(str, Enum):
     CATEGORICAL = "categorical"
     SCALAR = "scalar"
     BINARY = "binary"
+    CONDITIONAL = "conditional"
 
 
 class AgentMarket(BaseModel):

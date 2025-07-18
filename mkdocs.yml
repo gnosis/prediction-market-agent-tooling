@@ -1,7 +1,77 @@
 site_name: Prediction Market Agent Tooling
+
 nav:
   - Home: index.md
+  - Prediction Market Agents:
+      - Overview: predictionmarkets.md
+      - Dependencies: dependencies.md
+      - Quickstart: quickstart.md
+  - Agent Development:
+      - Deployable Trader Agent: deployabletraderagent.md
+      - Benchmarker: benchmarker.md
+      - Deploy with Safe: deploywithsafe.md
+  - Reference:
+      - Overview: api/index.md
+      - Core Modules:
+          - Benchmark: api/benchmark.md
+          - Deploy: api/deploy.md
+          - Markets: api/markets.md
+          - Monitor: api/monitor.md
+          - Tools: api/tools.md
+          - Configuration: api/config.md
+          - Global Types: api/gtypes.md
   - Contributing: contributing.md
+
 theme:
   name: material
+  features:
+    - navigation.expand
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
 
+repo_url: https://github.com/gnosis/prediction-market-agent-tooling
+repo_name: prediction-market-agent-tooling
+
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_if_no_docstring: true
+            separate_signature: true
+            members_order: source
+            docstring_section_style: table
+            show_signature_annotations: true
+            show_bases: true
+            show_inheritance: true
+            show_submodules: true
+            merge_init_into_class: true
+            show_if_no_docstring: true
+            inherited_members: true
+            members: true
+            filters: ["!^_"]
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.emoji

@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, xDai
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
+    ConditionalFilterType,
     FilterBy,
     ProcessedMarket,
     ProcessedTradedMarket,
@@ -373,14 +374,13 @@ class DeployablePredictionAgent(DeployableAgent):
         return False
 
     @property
-    def include_conditional_markets(self) -> bool:
+    def conditional_filter_type(self) -> ConditionalFilterType:
         # TODO: All should work in our code, except that currently CoW most of the time completely fails to swap xDai into outcome tokens of conditioned market.
         # Enable after https://github.com/gnosis/prediction-market-agent-tooling/issues/748 and/or https://github.com/gnosis/prediction-market-agent-tooling/issues/759 is resolved.
-        return False
+        return ConditionalFilterType.ONLY_NOT_CONDITIONAL
         # `include_conditional_markets` if `rephrase_conditioned_markets` is enabled.
         # We can expand this method in teh future, when we implement also more complex logic about conditional markets.
         # Note that conditional market isn't a type of the market like Binary or Categorical, it means that it uses outcome tokens from parent market as a collateral token in this market.
-        return self.rephrase_conditioned_markets
 
     @property
     def agent_question_type(self) -> QuestionType:
@@ -407,7 +407,7 @@ class DeployablePredictionAgent(DeployableAgent):
             filter_by=self.get_markets_filter_by,
             created_after=self.trade_on_markets_created_after,
             question_type=self.agent_question_type,
-            include_conditional_markets=self.include_conditional_markets,
+            conditional_filter_type=self.conditional_filter_type,
         )
         return available_markets
 

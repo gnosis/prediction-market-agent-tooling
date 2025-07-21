@@ -23,6 +23,7 @@ from prediction_market_agent_tooling.gtypes import (
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
+    ConditionalFilterType,
     FilterBy,
     ParentMarket,
     ProcessedMarket,
@@ -452,7 +453,7 @@ class SeerAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         question_type: QuestionType = QuestionType.ALL,
-        include_conditional_markets: bool = False,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
     ) -> t.Sequence["SeerAgentMarket"]:
         seer_subgraph = SeerSubgraphHandler()
 
@@ -461,7 +462,7 @@ class SeerAgentMarket(AgentMarket):
             sort_by=sort_by,
             filter_by=filter_by,
             question_type=question_type,
-            include_conditional_markets=include_conditional_markets,
+            conditional_filter_type=conditional_filter_type,
         )
 
         # We exclude the None values below because `from_data_model_with_subgraph` can return None, which

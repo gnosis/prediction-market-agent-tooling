@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
+    ConditionalFilterType,
     FilterBy,
     MarketFees,
     QuestionType,
@@ -112,7 +113,7 @@ class ManifoldAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         question_type: QuestionType = QuestionType.ALL,
-        include_conditional_markets: bool = False,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
     ) -> t.Sequence["ManifoldAgentMarket"]:
         sort: t.Literal["newest", "close-date"] | None
         if sort_by == SortBy.CLOSING_SOONEST:

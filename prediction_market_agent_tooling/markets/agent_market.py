@@ -76,6 +76,12 @@ class QuestionType(str, Enum):
     BINARY = "binary"
 
 
+class ConditionalFilterType(Enum):
+    ALL = 1
+    ONLY_CONDITIONAL = 2
+    ONLY_NOT_CONDITIONAL = 3
+
+
 class AgentMarket(BaseModel):
     """
     Common market class that can be created from vendor specific markets.
@@ -384,7 +390,7 @@ class AgentMarket(BaseModel):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         question_type: QuestionType = QuestionType.ALL,
-        include_conditional_markets: bool = False,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
     ) -> t.Sequence["AgentMarket"]:
         raise NotImplementedError("Subclasses must implement this method")
 

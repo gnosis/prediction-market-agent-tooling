@@ -3,6 +3,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Wei, xDai
 from prediction_market_agent_tooling.markets.agent_market import (
+    ConditionalFilterType,
     FilterBy,
     QuestionType,
     SortBy,
@@ -87,8 +88,7 @@ def test_init_collateral_conditional_market(
 ) -> None:
     # It should mint collateral tokens from parent market.
     child_market = seer_subgraph_handler_test.get_markets(
-        question_type=QuestionType.CONDITIONAL,
-        include_conditional_markets=True,
+        conditional_filter_type=ConditionalFilterType.ONLY_CONDITIONAL,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
     )[0]

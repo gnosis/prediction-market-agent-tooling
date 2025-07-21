@@ -16,6 +16,7 @@ from prediction_market_agent_tooling.deploy.constants import (
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
+    ConditionalFilterType,
     FilterBy,
     QuestionType,
     SortBy,
@@ -132,8 +133,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     def _build_where_statements(
         filter_by: FilterBy,
         outcome_supply_gt_if_open: Wei,
-        include_conditional_markets: bool = False,
         question_type: QuestionType = QuestionType.ALL,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
         parent_market_id: HexBytes | None = None,
     ) -> dict[Any, Any]:
         now = to_int_timestamp(utcnow())
@@ -152,9 +153,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 pass
             case _:
                 raise ValueError(f"Unknown filter {filter_by}")
-
-        if not include_conditional_markets:
-            and_stms["parentMarket"] = ADDRESS_ZERO.lower()
 
         if parent_market_id:
             and_stms["parentMarket"] = parent_market_id.hex().lower()
@@ -195,12 +193,22 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                     ]
                 }
             )
-        elif question_type == QuestionType.CONDITIONAL:
-            and_stms["parentMarket_not"] = ADDRESS_ZERO.lower()
 
-        # If none specified, don't add any template/outcome filters (returns all types)
+        # Build filters for conditional_filter type
+        conditional_filter = {}
+        match conditional_filter_type:
+            case ConditionalFilterType.ONLY_CONDITIONAL:
+                conditional_filter["parentMarket_not"] = ADDRESS_ZERO.lower()
+            case ConditionalFilterType.ONLY_NOT_CONDITIONAL:
+                conditional_filter["parentMarket"] = ADDRESS_ZERO.lower()
+            case ConditionalFilterType.ALL:
+                pass
+            case _:
+                raise ValueError(
+                    f"Unknown conditional filter {conditional_filter_type}"
+                )
 
-        all_filters = [and_stms] + outcome_filters if and_stms else outcome_filters
+        all_filters = outcome_filters + [and_stms, conditional_filter]
         where_stms: dict[str, t.Any] = {"and": all_filters}
         return where_stms
 
@@ -237,7 +245,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         limit: int | None = None,
         outcome_supply_gt_if_open: Wei = Wei(0),
         question_type: QuestionType = QuestionType.ALL,
-        include_conditional_markets: bool = False,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
         parent_market_id: HexBytes | None = None,
     ) -> list[SeerMarketWithQuestions]:
         sort_direction, sort_by_field = self._build_sort_params(sort_by)
@@ -247,7 +255,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             outcome_supply_gt_if_open=outcome_supply_gt_if_open,
             parent_market_id=parent_market_id,
             question_type=question_type,
-            include_conditional_markets=include_conditional_markets,
+            conditional_filter_type=conditional_filter_type,
         )
 
         # These values can not be set to `None`, but they can be omitted.

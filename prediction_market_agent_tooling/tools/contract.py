@@ -689,6 +689,8 @@ def seer_minimal_proxy_implements_function(
         # Read address between specific indices to find logic contract
         bytecode = web3.eth.get_code(contract_address)
         logic_contract_address = bytecode[11:31]
+        if not Web3.is_address(logic_contract_address):
+            return False
 
         return contract_implements_function(
             Web3.to_checksum_address(logic_contract_address),

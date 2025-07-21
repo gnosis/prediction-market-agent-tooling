@@ -1,7 +1,7 @@
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import Wei, xDai
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
 from prediction_market_agent_tooling.markets.agent_market import (
     ConditionalFilterType,
     FilterBy,
@@ -23,6 +23,17 @@ from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
+
+
+def fetch_wrapped_token_balances(
+    address: ChecksumAddress, wrapped_tokens: list[ChecksumAddress], web3: Web3
+) -> dict[ChecksumAddress, Wei]:
+    return {
+        token_address: ContractERC20OnGnosisChain(address=token_address).balanceOf(
+            for_address=address, web3=web3
+        )
+        for token_address in wrapped_tokens
+    }
 
 
 def test_seer_mint_child_outcome_tokens(
@@ -50,6 +61,13 @@ def test_seer_mint_child_outcome_tokens(
             market_agent.collateral_token_contract_address_checksummed, web3=local_web3
         )
     )
+
+    initial_wrapped_token_balances = fetch_wrapped_token_balances(
+        address=test_keys.bet_from_address,
+        wrapped_tokens=market_agent.wrapped_tokens,
+        web3=local_web3,
+    )
+
     auto_deposit_collateral_token(
         collateral_token_contract=collateral_token_contract,
         collateral_amount_wei_or_usd=amount_wei,
@@ -74,11 +92,17 @@ def test_seer_mint_child_outcome_tokens(
     )
 
     # Assert outcome tokens were transferred
+    final_wrapped_token_balances = fetch_wrapped_token_balances(
+        address=test_keys.bet_from_address,
+        wrapped_tokens=market_agent.wrapped_tokens,
+        web3=local_web3,
+    )
+
     for token_address in market_agent.wrapped_tokens:
-        token_balance = ContractERC20OnGnosisChain(address=token_address).balanceOf(
-            test_keys.bet_from_address, web3=local_web3
-        )
-        assert token_balance == amount_wei
+        initial_token_balance: Wei = initial_wrapped_token_balances[token_address]
+        final_token_balance: Wei = final_wrapped_token_balances[token_address]
+        minted_token_balance = final_token_balance - initial_token_balance
+        assert minted_token_balance == amount_wei
 
 
 def test_init_collateral_conditional_market(

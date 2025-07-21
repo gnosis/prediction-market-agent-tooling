@@ -65,9 +65,6 @@ def auto_deposit_collateral_token(
             collateral_token_contract, collateral_amount_wei, api_keys, web3
         )
 
-    elif isinstance(collateral_token_contract, ContractERC20OnGnosisChain):
-        mint_full_set(collateral_token_contract, collateral_amount_wei, api_keys, web3)
-
     else:
         should_not_happen("Unsupported ERC20 contract type.")
 

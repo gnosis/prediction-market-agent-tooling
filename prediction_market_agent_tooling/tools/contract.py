@@ -414,6 +414,12 @@ class ContractERC4626BaseClass(ContractERC20BaseClass):
 
 
 class ContractWrapped1155BaseClass(ContractERC20BaseClass):
+    """Wrapped 1155 contract from Seer (https://gnosisscan.io/address/0x2f9c49974ad8b9b31424d9dc812667b16310ca50#readContract)
+    Source code - https://github.com/seer-pm/demo/blob/main/contracts/src/interaction/1155-to-20/Wrapped1155Factory.sol#L224
+    This contract inherits from ERC20 and contains additional properties, such as multiToken (conditional Token contract implementation)
+    and tokenId (token identifier). Goal is to wrap individual tokens into a standalone ERC20 token.
+    """
+
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "../abis/erc1155.abi.json"
@@ -692,7 +698,7 @@ def seer_minimal_proxy_implements_function(
             look_for_proxy_contract=False,
         )
     except DecodingError:
-        logger.info(f"Error decoding contract address for singleton")
+        logger.info("Error decoding contract address on seer minimal proxy")
         return False
 
 
@@ -717,7 +723,7 @@ def init_collateral_token_contract(
 
     elif contract_implements_function(
         address,
-        "tokenId",
+        "multiToken",
         web3=web3,
     ):
         return ContractWrapped1155BaseClass(address=address)

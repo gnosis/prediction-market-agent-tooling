@@ -48,15 +48,34 @@ class CreateCategoricalMarketsParams(BaseModel):
 SEER_BASE_URL = "https://app.seer.pm"
 
 
-def seer_normalize_wei(value: int | None) -> int | None:
+def seer_normalize_wei(value: int | dict[str, t.Any] | None) -> int | None:
     # See https://github.com/seer-pm/demo/blob/main/web/netlify/edge-functions/utils/common.ts#L22
     if value is None:
         return value
+    elif isinstance(value, dict):
+        if value.get("value") is None:
+            raise ValueError(f"Expected a dictionary with a value key, but got {value}")
+        value = int(value["value"])
     is_in_wei = value > 1e10
     return value if is_in_wei else value * 10**18
 
 
 SeerNormalizedWei = Annotated[Wei | None, BeforeValidator(seer_normalize_wei)]
+
+
+class MarketId(BaseModel):
+    id: HexBytes
+
+
+class SeerQuestion(BaseModel):
+    id: str
+    best_answer: HexBytes
+    finalize_ts: int
+
+
+class SeerMarketQuestions(BaseModel):
+    question: SeerQuestion
+    market: MarketId
 
 
 class SeerMarket(BaseModel):
@@ -71,6 +90,7 @@ class SeerMarket(BaseModel):
         alias="parentOutcome", description="It comes as 0 from non-conditioned markets."
     )
     parent_market: t.Optional["SeerMarket"] = Field(alias="parentMarket", default=None)
+    template_id: int = Field(alias="templateId")
     collateral_token: HexAddress = Field(alias="collateralToken")
     condition_id: HexBytes = Field(alias="conditionId")
     opening_ts: int = Field(alias="openingTs")
@@ -141,6 +161,10 @@ class SeerMarket(BaseModel):
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
         return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
+
+
+class SeerMarketWithQuestions(SeerMarket):
+    questions: list[SeerMarketQuestions]
 
 
 class RedeemParams(BaseModel):

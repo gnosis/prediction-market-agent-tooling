@@ -84,7 +84,7 @@ class BettingStrategy(ABC):
 
                 if outcome_tokens_to_get_in_usd <= trade.amount:
                     raise GuaranteedLossError(
-                        f"Trade {trade=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}. Halting execution."
+                        f"Trade {trade=} on market {market.url=} would result in guaranteed loss by getting only {outcome_tokens_to_get=}. Halting execution."
                     )
 
             clean_trades.append(trade)

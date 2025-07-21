@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import Annotated, Sequence
+from typing import Annotated, Any, Sequence
 
-from pydantic import BaseModel, BeforeValidator, computed_field
+from pydantic import BaseModel, BeforeValidator, computed_field, model_validator
 
 from prediction_market_agent_tooling.deploy.constants import (
     DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
@@ -157,6 +157,15 @@ class CategoricalProbabilisticAnswer(BaseModel):
     confidence: float
     reasoning: str | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _model_validator(cls, data: Any) -> Any:
+        if "p_yes" in data:
+            return CategoricalProbabilisticAnswer.from_probabilistic_answer(
+                ProbabilisticAnswer.model_validate(data)
+            ).model_dump()
+        return data
+
     @property
     def probable_resolution(self) -> Resolution:
         most_likely_outcome = max(
@@ -211,9 +220,9 @@ class CategoricalProbabilisticAnswer(BaseModel):
             raise ValueError("Market with no outcomes")
 
         probabilities[OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER.upper())] = answer.p_up
-        probabilities[
-            OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper())
-        ] = answer.p_down
+        probabilities[OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper())] = (
+            answer.p_down
+        )
 
         if (
             market_outcomes
@@ -289,6 +298,17 @@ class Trade(BaseModel):
     trade_type: TradeType
     outcome: OutcomeStr
     amount: USD
+
+    @model_validator(mode="before")
+    @classmethod
+    def _model_validator(cls, data: Any) -> Any:
+        if isinstance(data["outcome"], bool):
+            data["outcome"] = (
+                YES_OUTCOME_LOWERCASE_IDENTIFIER
+                if data["outcome"]
+                else NO_OUTCOME_LOWERCASE_IDENTIFIER
+            )
+        return data
 
 
 class PlacedTrade(Trade):

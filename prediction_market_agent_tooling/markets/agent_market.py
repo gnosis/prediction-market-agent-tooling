@@ -147,6 +147,23 @@ class AgentMarket(BaseModel):
         if "fees" not in data and "fee" in data:
             data["fees"] = MarketFees(absolute=0.0, bet_proportion=data["fee"])
             del data["fee"]
+        # Backward compatibility for older `AgentMarket` without `probabilities`.
+        if "probabilities" not in data and "current_p_yes" in data:
+            yes_outcome = data["outcomes"][
+                [o.lower() for o in data["outcomes"]].index(
+                    YES_OUTCOME_LOWERCASE_IDENTIFIER
+                )
+            ]
+            no_outcome = data["outcomes"][
+                [o.lower() for o in data["outcomes"]].index(
+                    NO_OUTCOME_LOWERCASE_IDENTIFIER
+                )
+            ]
+            data["probabilities"] = {
+                yes_outcome: data["current_p_yes"],
+                no_outcome: 1 - data["current_p_yes"],
+            }
+            del data["current_p_yes"]
         return data
 
     def market_outcome_for_probability_key(

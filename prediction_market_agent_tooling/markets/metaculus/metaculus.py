@@ -7,6 +7,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
+    ConditionalFilterType,
     FilterBy,
     MarketFees,
     ProcessedMarket,
@@ -74,7 +75,7 @@ class MetaculusAgentMarket(AgentMarket):
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
         question_type: QuestionType = QuestionType.ALL,
-        include_conditional_markets: bool = False,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
         tournament_id: int | None = None,
     ) -> t.Sequence["MetaculusAgentMarket"]:
         order_by: str | None

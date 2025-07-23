@@ -1,6 +1,7 @@
 import asyncio
 import typing as t
 from datetime import timedelta
+from functools import cache
 
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
@@ -541,6 +542,7 @@ class SeerAgentMarket(AgentMarket):
         liquidity = self.get_liquidity_for_outcome(outcome)
         return liquidity > self.minimum_market_liquidity_required
 
+    @cache
     def has_liquidity(self) -> bool:
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
         return all(

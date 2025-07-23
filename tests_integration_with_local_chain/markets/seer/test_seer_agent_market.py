@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
+    OutcomeStr,
     OutcomeToken,
     OutcomeWei,
     Wei,
@@ -20,6 +21,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
     QuestionType,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -31,10 +33,29 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
+
+
+def test_seer_get_resolution(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
+    # closed market, answer no
+    market_id = HexBytes("0x83f012a56083ceaa846730f89c69e363230ae9a6")
+    market = seer_subgraph_handler_test.get_market_by_id(market_id=market_id)
+    # market = seer_subgraph_handler_test.dummy(market_id=market_id)
+    agent_market = SeerAgentMarket.from_data_model_with_subgraph(
+        market,
+        seer_subgraph=seer_subgraph_handler_test,
+        must_have_prices=False,
+    )
+    agent_market = check_not_none(agent_market)
+    assert market.is_resolved
+    assert agent_market.is_resolved()
+    assert agent_market.resolution == Resolution(
+        outcome=OutcomeStr("No"), invalid=False
+    )
 
 
 def test_seer_place_bet(

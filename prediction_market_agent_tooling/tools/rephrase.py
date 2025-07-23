@@ -33,7 +33,7 @@ Output only the rephrased question.
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 @observe()
 @db_cache
-def rephrase_question_to_unconditioned(
+def rephrase_question_to_unconditional(
     question: str,
     parent_question: str,
     needed_parent_outcome: str,

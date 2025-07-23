@@ -3,6 +3,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.agent_market import (
+    ConditionalFilterType,
     FilterBy,
     QuestionType,
     SortBy,
@@ -33,7 +34,8 @@ def test_conditional_market_not_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     markets = seer_subgraph_handler_test.get_markets(
-        include_conditional_markets=False, filter_by=FilterBy.NONE
+        conditional_filter_type=ConditionalFilterType.ONLY_NOT_CONDITIONAL,
+        filter_by=FilterBy.NONE,
     )
     market_ids = [m.id for m in markets]
     assert CONDITIONAL_MARKET_ID not in market_ids
@@ -43,7 +45,7 @@ def test_conditional_market_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     markets = seer_subgraph_handler_test.get_markets(
-        include_conditional_markets=True, filter_by=FilterBy.NONE
+        conditional_filter_type=ConditionalFilterType.ALL, filter_by=FilterBy.NONE
     )
     market_ids = [m.id for m in markets]
     assert CONDITIONAL_MARKET_ID in market_ids
@@ -53,7 +55,7 @@ def test_binary_market_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     markets = seer_subgraph_handler_test.get_markets(
-        include_conditional_markets=True,
+        conditional_filter_type=ConditionalFilterType.ALL,
         filter_by=FilterBy.NONE,
     )
     market_ids = [m.id for m in markets]

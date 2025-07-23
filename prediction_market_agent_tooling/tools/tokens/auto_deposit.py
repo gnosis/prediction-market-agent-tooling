@@ -3,14 +3,22 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import USD, Wei
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.seer.seer_contracts import GnosisRouter
+from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
+    SeerSubgraphHandler,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractDepositableWrapperERC20BaseClass,
     ContractERC20BaseClass,
     ContractERC20OnGnosisChain,
     ContractERC4626BaseClass,
+    ContractWrapped1155BaseClass,
+    init_collateral_token_contract,
+    to_gnosis_chain_contract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_sell_token_amount,
+    handle_allowance,
     swap_tokens_waiting,
 )
 from prediction_market_agent_tooling.tools.tokens.main_token import KEEPING_ERC20_TOKEN
@@ -48,6 +56,9 @@ def auto_deposit_collateral_token(
         auto_deposit_erc4626(
             collateral_token_contract, collateral_amount_wei, api_keys, web3
         )
+
+    elif isinstance(collateral_token_contract, ContractWrapped1155BaseClass):
+        mint_full_set(collateral_token_contract, collateral_amount_wei, api_keys, web3)
 
     elif isinstance(collateral_token_contract, ContractERC20BaseClass):
         auto_deposit_erc20(
@@ -169,4 +180,50 @@ def auto_deposit_erc20(
         api_keys=api_keys,
         web3=web3,
         slippage_tolerance=slippage_tolerance,
+    )
+
+
+def mint_full_set(
+    collateral_token_contract: ContractERC20BaseClass,
+    collateral_amount_wei: Wei,
+    api_keys: APIKeys,
+    web3: Web3 | None,
+) -> None:
+    router = GnosisRouter()
+    # We need to fetch the parent's market collateral token, to split it and get the collateral token
+    # of the child market.
+    seer_subgraph_handler = SeerSubgraphHandler()
+    market = seer_subgraph_handler.get_market_by_wrapped_token(
+        token=collateral_token_contract.address
+    )
+    market_collateral_token = Web3.to_checksum_address(market.collateral_token)
+
+    balance_market_collateral = ContractERC20OnGnosisChain(
+        address=market_collateral_token
+    ).balanceOf(for_address=api_keys.bet_from_address, web3=web3)
+    if balance_market_collateral < collateral_amount_wei:
+        logger.debug(
+            f"Not enough collateral token in the market. Expected {collateral_amount_wei} but got {balance_market_collateral}. Auto-depositing market collateral."
+        )
+        market_collateral_token_contract = to_gnosis_chain_contract(
+            init_collateral_token_contract(market_collateral_token, web3=web3)
+        )
+        auto_deposit_collateral_token(
+            market_collateral_token_contract, collateral_amount_wei, api_keys, web3
+        )
+
+    handle_allowance(
+        api_keys=api_keys,
+        sell_token=market_collateral_token,
+        amount_wei=collateral_amount_wei,
+        for_address=router.address,
+        web3=web3,
+    )
+
+    router.split_position(
+        api_keys=api_keys,
+        collateral_token=market_collateral_token,
+        market_id=Web3.to_checksum_address(market.id),
+        amount=collateral_amount_wei,
+        web3=web3,
     )

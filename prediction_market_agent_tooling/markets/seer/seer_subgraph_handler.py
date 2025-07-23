@@ -341,19 +341,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             )
         return markets[0]
 
-    def get_market_by_wrapped_token(self, token: ChecksumAddress) -> SeerMarket:
-        where_stms = {"wrappedTokens_contains": [token]}
-        markets_field = self.seer_subgraph.Query.markets(
-            where=unwrap_generic_value(where_stms)
-        )
-        fields = self._get_fields_for_markets(markets_field)
-        markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
-        if len(markets) != 1:
-            raise ValueError(
-                f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
-            )
-        return markets[0]
-
     def _get_fields_for_pools(self, pools_field: FieldPath) -> list[FieldPath]:
         fields = [
             pools_field.id,
@@ -361,12 +348,14 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             pools_field.sqrtPrice,
             pools_field.token0Price,
             pools_field.token1Price,
+            pools_field.totalValueLockedToken0,
             pools_field.token0.id,
             pools_field.token0.name,
             pools_field.token0.symbol,
             pools_field.token1.id,
             pools_field.token1.name,
             pools_field.token1.symbol,
+            pools_field.totalValueLockedToken1,
         ]
         return fields
 

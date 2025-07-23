@@ -19,6 +19,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeWei,
     Wei,
     xDai,
+    Probability
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -234,6 +235,8 @@ class SeerAgentMarket(AgentMarket):
         amounts_ot: dict[OutcomeStr, OutcomeToken] = {}
 
         for outcome_str, wrapped_token in zip(self.outcomes, self.wrapped_tokens):
+            if self.probabilities[outcome_str] == 0:
+                continue
             outcome_token_balance_wei = OutcomeWei.from_wei(
                 ContractERC20OnGnosisChain(address=wrapped_token).balanceOf(
                     for_address=Web3.to_checksum_address(user_id), web3=web3
@@ -407,19 +410,29 @@ class SeerAgentMarket(AgentMarket):
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
 
         probability_map = {}
-        try:
-            probability_map = price_manager.build_probability_map()
-        except PriceCalculationError as e:
-            logger.info(
-                f"Error when calculating probabilities for market {model.id.hex()} - {e}"
-            )
-            if must_have_prices:
-                # Price calculation failed, so don't return the market
-                return None
-
         resolution = SeerAgentMarket.build_resolution(model=model)
-
         parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
+        wrapped_tokens = [Web3.to_checksum_address(i) for i in model.wrapped_tokens]
+
+        wrapped_tokens_with_supply = [
+            (token, SeerSubgraphHandler().get_pool_by_token(token, model.collateral_token_contract_address_checksummed))
+            for token in wrapped_tokens
+        ]
+        wrapped_tokens_with_supply = [(token, pool) for token, pool in wrapped_tokens_with_supply if pool is not None]
+
+        outcome_token_pool = {}
+        for token, pool in wrapped_tokens_with_supply:
+            if HexBytes(token) == HexBytes(pool.token1.id):
+                outcome_token_pool[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = OutcomeToken(pool.totalValueLockedToken0)
+                probability_map[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = Probability(round(pool.token0Price, 2))
+            else:
+                outcome_token_pool[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = OutcomeToken(pool.totalValueLockedToken1)
+                probability_map[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = Probability(round(pool.token1Price, 2))
+
+        for outcome in model.outcomes:
+            if outcome not in outcome_token_pool:
+                outcome_token_pool[outcome] = OutcomeWei(0).as_outcome_token
+                probability_map[outcome] = Probability(0)
 
         market = SeerAgentMarket(
             id=model.id.hex(),
@@ -431,9 +444,9 @@ class SeerAgentMarket(AgentMarket):
             condition_id=model.condition_id,
             url=model.url,
             close_time=model.close_time,
-            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
+            wrapped_tokens=wrapped_tokens,
             fees=MarketFees.get_zero_fees(),
-            outcome_token_pool=None,
+            outcome_token_pool=outcome_token_pool,
             outcomes_supply=model.outcomes_supply,
             resolution=resolution,
             volume=None,
@@ -441,6 +454,7 @@ class SeerAgentMarket(AgentMarket):
             upper_bound=model.upper_bound,
             lower_bound=model.lower_bound,
             parent=parent,
+            template_id=model.template_id,
         )
 
         return market

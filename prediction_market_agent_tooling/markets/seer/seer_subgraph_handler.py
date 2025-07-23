@@ -346,12 +346,14 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             pools_field.sqrtPrice,
             pools_field.token0Price,
             pools_field.token1Price,
+            pools_field.totalValueLockedToken0,
             pools_field.token0.id,
             pools_field.token0.name,
             pools_field.token0.symbol,
             pools_field.token1.id,
             pools_field.token1.name,
             pools_field.token1.symbol,
+            pools_field.totalValueLockedToken1,
         ]
         return fields
 

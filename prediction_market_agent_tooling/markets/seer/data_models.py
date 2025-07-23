@@ -113,6 +113,10 @@ class SeerMarket(BaseModel):
     @property
     def is_resolved(self) -> bool:
         return self.payout_reported
+    
+    @property
+    def is_multiresult(self) -> bool:
+        return self.template_id == 3 or self.template_id == 1 and len(self.outcomes)>3
 
     @property
     def is_resolved_with_valid_answer(self) -> bool:

@@ -1,15 +1,17 @@
+from datetime import timedelta
+
 import hishel
 import httpx
 
 from prediction_market_agent_tooling.tools.singleton import SingletonMeta
 
-ONE_DAY_IN_SECONDS = 60 * 60 * 24
+ONE_DAY = timedelta(days=1)
 
 
 class HttpxCachedClient(metaclass=SingletonMeta):
-    def __init__(self, ttl: int = ONE_DAY_IN_SECONDS) -> None:
+    def __init__(self, ttl: timedelta = ONE_DAY) -> None:
         storage = hishel.FileStorage(
-            ttl=ttl,
+            ttl=ttl.total_seconds(),
             check_ttl_every=60,
         )
         controller = hishel.Controller(force_cache=True)

@@ -98,14 +98,16 @@ def get_polymarkets_with_pagination(
                 ]:
                     continue
 
-            if created_after and created_after > m.startDate:
+            if not m.startDate or (created_after and created_after > m.startDate):
                 continue
 
             markets_to_add.append(m)
 
         if only_binary:
             markets_to_add = [
-                market for market in markets_to_add if len(market.markets) == 1
+                market
+                for market in markets_to_add
+                if market.markets is not None and len(market.markets) == 1
             ]
 
         # Add the markets from this batch to our results

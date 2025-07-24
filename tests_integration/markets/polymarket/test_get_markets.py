@@ -1,10 +1,10 @@
 from datetime import timedelta
 
 from prediction_market_agent_tooling.markets.agent_market import (
-    FilterBy,
-    SortBy,
-    QuestionType,
     ConditionalFilterType,
+    FilterBy,
+    QuestionType,
+    SortBy,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,

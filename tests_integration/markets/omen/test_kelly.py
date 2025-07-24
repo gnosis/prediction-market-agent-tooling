@@ -8,10 +8,12 @@ from prediction_market_agent_tooling.markets.agent_market import (
     MarketFees,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.omen.data_models import OMEN_TRUE_OUTCOME
+from prediction_market_agent_tooling.markets.omen.data_models import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+)
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
-    SDAI_CONTRACT_ADDRESS,
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
@@ -63,11 +65,13 @@ def test_kelly_price_impact_works_large_pool(
     )
 
 
-@pytest.mark.skip(
-    reason="Known bug, see https://github.com/gnosis/prediction-market-agent-tooling/issues/708"
-)
 @pytest.mark.parametrize(
-    "max_bet_amount, max_price_impact, p_yes", [(2, 0.5, 0.9), (5, 0.7, 0.8)]
+    "max_bet_amount, max_price_impact, p_yes",
+    [
+        (2, 0.5, 0.9),
+        (5, 0.7, 0.8),
+        (50, 0.9, 0.8),
+    ],
 )
 def test_kelly_price_impact_works_small_pool(
     max_bet_amount: float, max_price_impact: float, p_yes: float
@@ -76,8 +80,6 @@ def test_kelly_price_impact_works_small_pool(
         limit=1,
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.LOWEST_LIQUIDITY,
-        # More worthy tokens (e.g. GNO) have way too low liquidity.
-        collateral_token_address_in=(SDAI_CONTRACT_ADDRESS,),
     )[0]
     omen_agent_market = OmenAgentMarket.from_data_model(market)
     confidence = 1.0
@@ -116,8 +118,7 @@ def assert_price_impact_converges(
         max_price_impact=max_price_impact,
     )
 
-    # not sure about direction, trying out Yes
-    direction = OMEN_TRUE_OUTCOME
+    direction = OMEN_TRUE_OUTCOME if kelly_bet.direction else OMEN_FALSE_OUTCOME
     outcome_idx = omen_agent_market.get_outcome_index(direction)
 
     max_price_impact_bet_amount = kelly.calculate_bet_amount_for_price_impact(

@@ -1,4 +1,5 @@
 import typing as t
+from datetime import timedelta
 from enum import Enum
 from urllib.parse import urljoin
 
@@ -49,7 +50,7 @@ def get_polymarkets_with_pagination(
     Binary markets have len(model.markets) == 1.
     Categorical markets have len(model.markets) > 1
     """
-    client: httpx.Client = HttpxCachedClient(ttl=60).get_client()
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
     all_markets: list[PolymarketGammaResponseDataItem] = []
     offset = 0
     remaining = limit

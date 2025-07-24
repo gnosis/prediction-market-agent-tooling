@@ -8,6 +8,7 @@ import tenacity
 from eth_typing import HexAddress, HexStr
 from langfuse import Langfuse
 from pydantic import BaseModel
+from tqdm import tqdm
 from web3.exceptions import TransactionNotFound
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -353,6 +354,17 @@ def run_optuna_study(
 
 
 def main() -> None:
+    """
+    Script to optimize betting strategy of deployed agents.
+
+    Run as
+
+    ```
+    python examples/monitor/match_bets_with_langfuse_traces.py | tee results.md
+    ```
+
+    To see the output and at the same time store it in a file.
+    """
     output_directory = Path("bet_strategy_benchmark")
     output_directory.mkdir(parents=True, exist_ok=True)
 
@@ -369,17 +381,22 @@ def main() -> None:
         "DeployableKnownOutcomeAgent": "pma-knownoutcome",
         "DeployablePredictionProphetGemini20Flash": "prophet-gemini20flash",
         "DeployablePredictionProphetDeepSeekR1": "prophet-deepseekr1",
-        "DeployablePredictionProphetDeepSeekChat": "prophet-deepseekchat",
         "DeployablePredictionProphetGPT4ominiAgent": "pma-prophet-gpt4o-mini",
-        "DeployablePredictionProphetGPTo1": "pma-prophet-o1",
         "DeployablePredictionProphetGPTo3mini": "pma-prophet-o3-mini",
         "DeployablePredictionProphetClaude3OpusAgent": "prophet-claude3-opus",
         "DeployablePredictionProphetClaude35HaikuAgent": "prophet-claude35-haiku",
         "DeployablePredictionProphetClaude35SonnetAgent": "prophet-claude35-sonnet",
+        "DeployablePredictionProphetDeepSeekChat": "prophet-deepseekchat",
+        "DeployablePredictionProphetGPTo1": "pma-prophet-o1",
         "AdvancedAgent": "advanced-agent",
+        "Berlin1PolySentAgent": "berlin1-polysent-agent",
+        "Berlin2OpenaiSearchAgentHigh": "berlin2-search-high",
+        "Berlin2OpenaiSearchAgentVariable": "berlin2-search-var",
+        "GPTRAgent": "gptr-agent",
+        "DeployablePredictionProphetGPT4oAgentCategorical": "pma-prophetgpt4o-categorical",
     }
 
-    httpx_client = HttpxCachedClient().get_client()
+    httpx_client = HttpxCachedClient(ttl=timedelta(days=7)).get_client()
 
     overall_md = ""
 
@@ -425,7 +442,7 @@ def main() -> None:
             # 2. The day when we used customized betting strategies: https://github.com/gnosis/prediction-market-agent/pull/494
             utc_datetime(2024, 10, 5),
             # However, Langfuse doesn't allow to filter only for traces for a specific agent, so limit only to last N months of data to speed up the process.
-            utcnow() - timedelta(days=60),
+            utcnow() - timedelta(days=45),
         )
 
         langfuse = Langfuse(
@@ -487,7 +504,9 @@ def main() -> None:
             0
         ), CollateralToken(0)
 
-        for fold_idx, (_, test_bets_with_traces) in enumerate(folds):
+        for fold_idx, (_, test_bets_with_traces) in enumerate(
+            tqdm(folds, desc="Optuna studies")
+        ):
             used_training_folds = [train for train, _ in folds[: fold_idx + 1]]
             k_study_on_train, testing_metrics = run_optuna_study(
                 used_training_folds,
@@ -502,8 +521,8 @@ def main() -> None:
             print(
                 f"[{fold_idx+1} / {len(folds)}] Best value for {agent_name} (params: {k_study_best_trial.params}, n train bets: {sum(1 for fold in used_training_folds for _ in fold)}, n test bets: {len(test_bets_with_traces)}): "
                 f"Training maximization: {k_study_best_trial.values} "
-                f"Testing profit: {testing_metrics.total_simulated_profit:.2f} "
-                f"Original profit on Testing: {testing_metrics.total_bet_profit:.2f} "
+                f"Testing profit: {testing_metrics.total_simulated_profit.value:.2f} "
+                f"Original profit on Testing: {testing_metrics.total_bet_profit.value:.2f} "
                 f"(testing dates {test_bets_with_traces[0].bet.created_time.date()} to {test_bets_with_traces[-1].bet.created_time.date()})"
             )
 

@@ -219,13 +219,15 @@ def get_objective(
     tx_block_cache: TransactionBlockCache,
 ) -> t.Callable[[optuna.trial.Trial], list[float]]:
     def objective(trial: optuna.trial.Trial) -> list[float]:
+        strategy_names = [
+            MultiCategoricalMaxAccuracyBettingStrategy.__name__,
+            MaxAccuracyWithKellyScaledBetsStrategy.__name__,
+            MaxExpectedValueBettingStrategy.__name__,
+            KellyBettingStrategy.__name__,
+        ]
         strategy_name = trial.suggest_categorical(
             "strategy_name",
-            [
-                MultiCategoricalMaxAccuracyBettingStrategy.__name__,
-                MaxAccuracyWithKellyScaledBetsStrategy.__name__,
-                KellyBettingStrategy.__name__,
-            ],
+            strategy_names,
         )
         bet_amount = USD(trial.suggest_float("bet_amount", 0, upper_bet_amount))
         max_price_impact = (
@@ -248,6 +250,9 @@ def get_objective(
                 max_position_amount=bet_amount, max_price_impact=max_price_impact
             ),
         }
+        assert sorted(strategy_names) == sorted(
+            strategy_constructors.keys()
+        ), "Some strategy missing in the resperctive object."
 
         strategy_constructor = strategy_constructors.get(strategy_name)
         if strategy_constructor is None:

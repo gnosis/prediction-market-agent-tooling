@@ -1,5 +1,10 @@
 import typing as t
 
+import cachetools
+from cachetools.keys import methodkey
+from web3 import Web3
+
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,
@@ -31,8 +36,13 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_hand
     ConditionSubgraphModel,
     PolymarketSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.utils import check_not_none
+
+shared_cache: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
+    maxsize=256, ttl=10 * 60
+)
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -180,3 +190,17 @@ class PolymarketAgentMarket(AgentMarket):
             PolymarketAgentMarket.from_data_model(m, condition_models_dict)
             for m in markets
         ]
+
+    @cachetools.cached(cache=shared_cache, key=methodkey)
+    def get_polygon_web3(self) -> Web3:
+        # ToDo
+        w3 = Web3(Web3.HTTPProvider("https://polygon-rpc.com"))
+        return w3
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        # ToDo
+        return get_balances(
+            # Use `public_key`, not `bet_from_address` because transaction costs are paid from the EOA wallet.
+            api_keys.public_key,
+        ).xdai > xDai(0.001)

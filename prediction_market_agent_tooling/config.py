@@ -332,7 +332,7 @@ class RPCConfig(BaseSettings):
         return {
             ETHEREUM_ID: self.ETHEREUM_RPC_BEARER,
             GNOSIS_CHAIN_ID: self.GNOSIS_RPC_BEARER,
-        }[chain_id]
+        }.get(chain_id)
 
     def get_web3(self) -> Web3:
         headers = {

@@ -83,6 +83,9 @@ def get_polymarkets_with_pagination(
 
         markets_to_add = []
         for m in market_response.data:
+            # Some Polymarket markets are missing the markets field
+            if m.markets is None:
+                continue
             if excluded_questions and m.title in excluded_questions:
                 continue
 
@@ -95,14 +98,16 @@ def get_polymarkets_with_pagination(
                 ]:
                     continue
 
-            if created_after and created_after > m.startDate:
+            if not m.startDate or (created_after and created_after > m.startDate):
                 continue
 
             markets_to_add.append(m)
 
         if only_binary:
             markets_to_add = [
-                market for market in market_response.data if len(market.markets) == 1
+                market
+                for market in markets_to_add
+                if market.markets is not None and len(market.markets) == 1
             ]
 
         # Add the markets from this batch to our results

@@ -1,6 +1,11 @@
 from datetime import timedelta
 
-from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
+from prediction_market_agent_tooling.markets.agent_market import (
+    ConditionalFilterType,
+    FilterBy,
+    QuestionType,
+    SortBy,
+)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
@@ -29,3 +34,18 @@ def test_open_markets() -> None:
     )
     assert len(markets) == limit
     assert not all([m.is_closed() for m in markets])
+
+
+def test_many_markets() -> None:
+    limit = 1000
+    # bad market, see slug
+    # 'who-will-win-the-pacers-v-hornets-game-on-october-20th'
+    polymarket_markets = PolymarketAgentMarket.get_markets(
+        limit=limit,
+        filter_by=FilterBy.RESOLVED,
+        sort_by=SortBy.NONE,
+        question_type=QuestionType.BINARY,
+        conditional_filter_type=ConditionalFilterType.ONLY_NOT_CONDITIONAL,
+    )
+
+    assert len(polymarket_markets) == limit

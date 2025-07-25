@@ -20,7 +20,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.omen.omen_contracts import USDCContract
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
     get_polymarkets_with_pagination,
@@ -30,6 +29,9 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
     POLYMARKET_BASE_URL,
+)
+from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
+    USDCContract,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
     ConditionSubgraphModel,

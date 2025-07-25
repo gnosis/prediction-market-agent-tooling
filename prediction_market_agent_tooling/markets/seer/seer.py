@@ -3,7 +3,6 @@ import typing as t
 from datetime import timedelta
 
 import cachetools
-from cachetools.keys import methodkey
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
 from web3 import Web3
@@ -548,7 +547,7 @@ class SeerAgentMarket(AgentMarket):
         liquidity = self.get_liquidity_for_outcome(outcome)
         return liquidity > self.minimum_market_liquidity_required
 
-    @cachetools.cached(cache=shared_cache, key=methodkey)
+    @cachetools.cached(cache=shared_cache, key=lambda self: self.id)
     def has_liquidity(self) -> bool:
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
         return all(

@@ -74,6 +74,7 @@ class QuestionType(str, Enum):
     CATEGORICAL = "categorical"
     SCALAR = "scalar"
     BINARY = "binary"
+    CONDITIONAL = "conditional"
 
 
 class ConditionalFilterType(Enum):
@@ -108,6 +109,8 @@ class AgentMarket(BaseModel):
     lower_bound: Wei | None = None
 
     parent: ParentMarket | None = None
+
+    template_id: int | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(
@@ -225,6 +228,10 @@ class AgentMarket(BaseModel):
             return has_up and has_down and has_invalid
 
         return has_up and has_down
+
+    @property
+    def is_multiresult(self) -> bool:
+        return self.template_id == 3 or self.template_id == 1 and len(self.outcomes)>3
 
     @property
     def p_up(self) -> Probability:

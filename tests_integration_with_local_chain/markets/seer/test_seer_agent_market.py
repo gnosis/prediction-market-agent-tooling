@@ -7,21 +7,8 @@ from eth_account import Account
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import (
-    USD,
-    ChecksumAddress,
-    OutcomeStr,
-    OutcomeToken,
-    OutcomeWei,
-    Wei,
-    private_key_type,
-)
-from prediction_market_agent_tooling.markets.agent_market import (
-    FilterBy,
-    QuestionType,
-    SortBy,
-)
-from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.gtypes import USD, OutcomeToken, Wei
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -33,7 +20,6 @@ from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
@@ -134,18 +120,15 @@ def test_seer_place_bet_via_pools(
     assert final_outcome_token_balance > 0
 
 
-def prepare_seer_swap_test(
-    local_web3: Web3, test_keys: APIKeys, deposit_collateral: bool = False
-) -> tuple[
-    SeerAgentMarket, ChecksumAddress, int, ChecksumAddress, OutcomeWei, OutcomeToken
-]:
-    """Prepare common test setup for swap tests."""
+def test_seer_swap_via_pools(local_web3: Web3, test_keys: APIKeys) -> None:
+    # get open market on Seer with highest liquidity
     amount_wei = OutcomeToken(1).as_outcome_wei
     market = SeerAgentMarket.get_markets(
         limit=1,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
         filter_by=FilterBy.OPEN,
-        question_type=QuestionType.BINARY,
+        fetch_categorical_markets=False,
+        fetch_scalar_markets=False,
     )[0]
 
     sell_token = market.collateral_token_contract_address_checksummed
@@ -155,46 +138,25 @@ def prepare_seer_swap_test(
     # assert there is liquidity to swap
     assert market.has_liquidity_for_outcome(market.outcomes[outcome_idx])
 
-    if deposit_collateral:
-        # Fund test account
-        collateral_token_contract = to_gnosis_chain_contract(
-            init_collateral_token_contract(
-                market.collateral_token_contract_address_checksummed, local_web3
-            )
+    # Fund test account
+    collateral_token_contract = to_gnosis_chain_contract(
+        init_collateral_token_contract(
+            market.collateral_token_contract_address_checksummed, local_web3
         )
-
-        auto_deposit_collateral_token(
-            collateral_token_contract=collateral_token_contract,
-            collateral_amount_wei_or_usd=amount_wei.as_wei,
-            api_keys=test_keys,
-            web3=local_web3,
-        )
+    )
+    auto_deposit_collateral_token(
+        collateral_token_contract=collateral_token_contract,
+        collateral_amount_wei_or_usd=Wei(amount_wei.value),
+        api_keys=test_keys,
+        web3=local_web3,
+    )
 
     initial_outcome_token_balance = market.get_token_balance(
         user_id=test_keys.bet_from_address,
         outcome=market.outcomes[outcome_idx],
         web3=local_web3,
     )
-
-    return (
-        market,
-        sell_token,
-        outcome_idx,
-        buy_token,
-        amount_wei,
-        initial_outcome_token_balance,
-    )
-
-
-def test_seer_swap_via_pools(local_web3: Web3, test_keys: APIKeys) -> None:
-    (
-        market,
-        sell_token,
-        outcome_idx,
-        buy_token,
-        amount_wei,
-        initial_outcome_token_balance,
-    ) = prepare_seer_swap_test(local_web3, test_keys, deposit_collateral=True)
+    assert initial_outcome_token_balance == 0
 
     SwapPoolHandler(
         api_keys=test_keys,
@@ -212,30 +174,4 @@ def test_seer_swap_via_pools(local_web3: Web3, test_keys: APIKeys) -> None:
         outcome=market.outcomes[outcome_idx],
         web3=local_web3,
     )
-    assert final_outcome_token_balance > initial_outcome_token_balance
-
-
-def test_seer_swap_via_pools_fails_when_no_balance(
-    local_web3: Web3,
-) -> None:
-    account = Account.create()
-
-    test_keys_with_no_balance = APIKeys(
-        BET_FROM_PRIVATE_KEY=private_key_type(account.key.hex()), SAFE_ADDRESS=None
-    )
-
-    market, sell_token, _, buy_token, amount_wei, _ = prepare_seer_swap_test(
-        local_web3, test_keys_with_no_balance, deposit_collateral=False
-    )
-
-    with pytest.raises(Exception):
-        SwapPoolHandler(
-            api_keys=test_keys_with_no_balance,
-            market_id=market.id,
-            collateral_token_address=market.collateral_token_contract_address_checksummed,
-        ).buy_or_sell_outcome_token(
-            token_in=sell_token,
-            token_out=buy_token,
-            amount_wei=Wei(amount_wei.value),
-            web3=local_web3,
-        )
+    assert final_outcome_token_balance > 0

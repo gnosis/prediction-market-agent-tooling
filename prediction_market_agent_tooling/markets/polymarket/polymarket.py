@@ -1,6 +1,7 @@
 import typing as t
 
 import cachetools
+from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -9,6 +10,9 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     OutcomeStr,
     Probability,
+    Wei,
+    xDai,
+    OutcomeToken,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -19,10 +23,14 @@ from prediction_market_agent_tooling.markets.agent_market import (
     QuestionType,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.data_models import (
+    Resolution,
+    ExistingPosition,
+)
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
     get_polymarkets_with_pagination,
+    get_user_positions,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponseDataItem,
@@ -57,6 +65,7 @@ class PolymarketAgentMarket(AgentMarket):
     # But then in the new subgraph API, they have `fee: BigInt! (Percentage fee of trades taken by market maker. A 2% fee is represented as 2*10^16)`.
     # TODO: Check out the fees while integrating the subgraph API or if we implement placing of bets on Polymarket.
     fees: MarketFees = MarketFees.get_zero_fees()
+    condition_id: HexBytes
 
     @staticmethod
     def build_resolution_from_condition(
@@ -105,14 +114,16 @@ class PolymarketAgentMarket(AgentMarket):
             outcome_prices = [0.5, 0.5]
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 
+        condition_id = markets[0].conditionId
         resolution = PolymarketAgentMarket.build_resolution_from_condition(
-            condition_id=markets[0].conditionId,
+            condition_id=condition_id,
             condition_model_dict=condition_model_dict,
             outcomes=outcomes,
         )
 
         return PolymarketAgentMarket(
             id=model.id,
+            condition_id=condition_id,
             question=model.title,
             description=model.description,
             outcomes=outcomes,
@@ -191,10 +202,69 @@ class PolymarketAgentMarket(AgentMarket):
             for m in markets
         ]
 
+    def ensure_min_native_balance(
+        self,
+        min_required_balance: xDai,
+        multiplier: float = 3.0,
+        web3: Web3 | None = None,
+    ) -> None:
+        balance_collateral = USDCContract().balanceOf(
+            for_address=APIKeys().public_key, web3=web3
+        )
+        min_required_balance_wei = Wei(min_required_balance.as_xdai_wei.value)
+        if balance_collateral < min_required_balance_wei:
+            raise EnvironmentError(
+                f"USDC balance {balance_collateral} < {min_required_balance_wei=}"
+            )
+
+    @staticmethod
+    def redeem_winnings(api_keys: APIKeys) -> None:
+        # ToDo - get user positions (check Polymarket API or subgraph)
+        # conditional_token_contract = PolymarketConditionalTokenContract()
+        # redeem_event = conditional_token_contract.redeemPositions(
+        #     api_keys=api_keys,
+        #     collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
+        #     condition_id=condition_id,
+        #     index_sets=user_position.position.indexSets,
+        #     web3=web3,
+        # )
+        pass
+
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
         # USDC is the only collateral token supported by Polymarket
-        return (
-            USDCContract().balanceOf(for_address=api_keys.public_key)
-            > CollateralToken(0.001).as_wei
+        return USDCContract().balanceOf(for_address=api_keys.public_key) > Wei(
+            0.001 * 10**6
+        )
+
+    def get_position(
+        self, user_id: str, web3: Web3 | None = None
+    ) -> ExistingPosition | None:
+        """
+        Fetches position from the user in a given market.
+        """
+        # ToDo - make sure logic works with example market
+        positions = get_user_positions(
+            user_id=Web3.to_checksum_address(user_id), condition_ids=[self.condition_id]
+        )
+        if not positions:
+            return None
+
+        amounts_ot = {i: OutcomeToken(0) for i in self.outcomes}
+        amounts_potential = {i: USD(0) for i in self.outcomes}
+        amounts_current = {i: USD(0) for i in self.outcomes}
+
+        for p in positions:
+            if p.conditionId != self.id:
+                continue
+
+            amounts_potential[OutcomeStr(p.outcome)] = USD(p.size)
+            amounts_ot[OutcomeStr(p.outcome)] = OutcomeToken(p.curPrice)
+            amounts_current[OutcomeStr(p.outcome)] = USD(p.currentValue)
+
+        return ExistingPosition(
+            amounts_potential=amounts_potential,
+            amounts_ot=amounts_ot,
+            market_id=self.id,
+            amounts_current=amounts_current,
         )

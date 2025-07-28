@@ -417,12 +417,11 @@ class DeployablePredictionAgent(DeployableAgent):
         api_keys = APIKeys()
 
         if market_type.is_blockchain_market:
-            # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
+            # Ensure we have enough native token balance for transaction fees
             if self.min_balance_to_keep_in_native_currency is not None:
-                send_keeping_token_to_eoa_xdai(
-                    api_keys,
+                market.ensure_min_native_balance(
                     min_required_balance=self.min_balance_to_keep_in_native_currency,
-                    multiplier=3,
+                    multiplier=3.0,
                 )
 
     def build_answer(

@@ -37,7 +37,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
+    send_keeping_token_to_eoa_xdai,
+)
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     SDAI_CONTRACT_ADDRESS,
 )
@@ -257,10 +260,6 @@ class SeerAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_user_id(api_keys: APIKeys) -> str:
-        return OmenAgentMarket.get_user_id(api_keys)
-
-    @staticmethod
     def _filter_markets_contained_in_trades(
         api_keys: APIKeys,
         markets: t.Sequence[SeerMarket],
@@ -338,6 +337,17 @@ class SeerAgentMarket(AgentMarket):
                 return True
 
         return False
+
+    def ensure_min_native_balance(
+        self,
+        min_required_balance: xDai,
+        multiplier: float = 3.0,
+    ) -> None:
+        send_keeping_token_to_eoa_xdai(
+            api_keys=APIKeys(),
+            min_required_balance=min_required_balance,
+            multiplier=multiplier,
+        )
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

@@ -186,3 +186,17 @@ class PolymarketMarketWithPrices(PolymarketMarket):
         raise ValueError(
             "Should not happen, as we filter only for binary markets in get_polymarket_binary_markets."
         )
+
+
+class PolymarketPositionResponse(BaseModel):
+    slug: str
+    eventSlug: str
+    proxyWallet: str
+    asset: str
+    conditionId: str
+    size: float
+    currentValue: float
+    cashPnl: float
+    redeemable: bool
+    outcome: str
+    outcomeIndex: int

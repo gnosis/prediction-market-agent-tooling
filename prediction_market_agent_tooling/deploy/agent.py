@@ -38,9 +38,6 @@ from prediction_market_agent_tooling.markets.data_models import (
     Trade,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.markets.omen.omen import (
-    send_keeping_token_to_eoa_xdai,
-)
 from prediction_market_agent_tooling.tools.custom_exceptions import (
     CantPayForGasError,
     OutOfFundsError,
@@ -414,7 +411,7 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         Executed before processing of each market.
         """
-        api_keys = APIKeys()
+        APIKeys()
 
         if market_type.is_blockchain_market:
             # Ensure we have enough native token balance for transaction fees

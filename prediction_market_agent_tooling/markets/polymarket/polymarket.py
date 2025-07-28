@@ -10,10 +10,10 @@ from prediction_market_agent_tooling.gtypes import (
     CollateralToken,
     HexBytes,
     OutcomeStr,
+    OutcomeToken,
     Probability,
     Wei,
     xDai,
-    OutcomeToken,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -25,12 +25,14 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
-    Resolution,
     ExistingPosition,
+    Resolution,
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
+    PolymarketPriceSideEnum,
     get_polymarkets_with_pagination,
+    get_token_price,
     get_user_positions,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
@@ -69,6 +71,7 @@ class PolymarketAgentMarket(AgentMarket):
     fees: MarketFees = MarketFees.get_zero_fees()
     condition_id: HexBytes
     liquidity_usd: USD
+    token_ids: list[HexBytes]
 
     @staticmethod
     def collateral_token_address() -> ChecksumAddress:
@@ -142,6 +145,7 @@ class PolymarketAgentMarket(AgentMarket):
             outcome_token_pool=None,
             probabilities=probabilities,
             liquidity_usd=USD(model.liquidity),
+            token_ids=markets[0].token_ids,
         )
 
     def get_tiny_bet_amount(self) -> CollateralToken:
@@ -291,3 +295,35 @@ class PolymarketAgentMarket(AgentMarket):
             market_id=self.id,
             amounts_current=amounts_current,
         )
+
+    def get_buy_token_amount(
+        self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
+    ) -> OutcomeToken | None:
+        """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
+
+        if outcome_str not in self.outcomes:
+            raise ValueError(
+                f"Outcome {outcome_str} not found in market outcomes {self.outcomes}"
+            )
+
+        outcome_idx = self.outcomes.index(outcome_str)
+        token_id = int(self.token_ids[outcome_idx].hex(), 16)
+        price = get_token_price(token_id=token_id, side=PolymarketPriceSideEnum.BUY)
+        # we work with floats since USD and Collateral are the same on Polymarket
+        buy_token_amount = bet_amount.value / price.value
+        return OutcomeToken(buy_token_amount)
+
+    def buy_tokens(self, outcome: OutcomeStr, amount: USD) -> str:
+        # ToDo - Implement me, see https://github.com/Polymarket/py-clob-client/blob/main/examples/market_buy_order.py
+        raise NotImplementedError("Implement me")
+
+    def sell_tokens(
+        self,
+        outcome: OutcomeStr,
+        amount: USD | OutcomeToken,
+        auto_withdraw: bool = True,
+        api_keys: APIKeys | None = None,
+        web3: Web3 | None = None,
+    ) -> str:
+        # ToDo - Implement me, see https://github.com/Polymarket/py-clob-client/blob/main/examples/market_buy_order.py
+        raise NotImplementedError("Implement me")

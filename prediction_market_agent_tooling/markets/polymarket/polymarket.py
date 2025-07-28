@@ -6,6 +6,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
+    ChecksumAddress,
     CollateralToken,
     HexBytes,
     OutcomeStr,
@@ -46,6 +47,7 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_hand
     PolymarketSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.tokens.usd import get_token_in_usd
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 shared_cache: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
@@ -66,6 +68,11 @@ class PolymarketAgentMarket(AgentMarket):
     # TODO: Check out the fees while integrating the subgraph API or if we implement placing of bets on Polymarket.
     fees: MarketFees = MarketFees.get_zero_fees()
     condition_id: HexBytes
+    liquidity_usd: USD
+
+    @staticmethod
+    def collateral_token_address() -> ChecksumAddress:
+        return USDCContract().address
 
     @staticmethod
     def build_resolution_from_condition(
@@ -134,10 +141,24 @@ class PolymarketAgentMarket(AgentMarket):
             volume=CollateralToken(model.volume) if model.volume else None,
             outcome_token_pool=None,
             probabilities=probabilities,
+            liquidity_usd=USD(model.liquidity),
         )
 
     def get_tiny_bet_amount(self) -> CollateralToken:
-        raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
+        return CollateralToken(0.1)
+
+    def get_token_in_usd(self, x: CollateralToken) -> USD:
+        return get_token_in_usd(x, self.collateral_token_address())
+
+    @staticmethod
+    def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> USD:
+        usdc_balance_wei = USDCContract().balanceOf(
+            for_address=api_keys.public_key, web3=web3
+        )
+        return USD(usdc_balance_wei.value * 1e-6)
+
+    def get_liquidity(self, web3: Web3 | None = None) -> CollateralToken:
+        return CollateralToken(self.liquidity_usd.value)
 
     def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
         raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
@@ -208,13 +229,15 @@ class PolymarketAgentMarket(AgentMarket):
         multiplier: float = 3.0,
         web3: Web3 | None = None,
     ) -> None:
+        # ToDo - add decimals property to some contracts.
         balance_collateral = USDCContract().balanceOf(
             for_address=APIKeys().public_key, web3=web3
         )
-        min_required_balance_wei = Wei(min_required_balance.as_xdai_wei.value)
-        if balance_collateral < min_required_balance_wei:
+        # USDC has 6 decimals, xDAI has 18. We convert from Wei into atomic units.
+        balance_collateral_atomic = CollateralToken(balance_collateral / 1e6)
+        if balance_collateral_atomic < min_required_balance.as_token:
             raise EnvironmentError(
-                f"USDC balance {balance_collateral} < {min_required_balance_wei=}"
+                f"USDC balance {balance_collateral_atomic} < {min_required_balance.as_token=}"
             )
 
     @staticmethod

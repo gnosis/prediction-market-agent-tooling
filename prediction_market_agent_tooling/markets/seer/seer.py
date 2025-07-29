@@ -100,7 +100,7 @@ from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 SEER_TINY_BET_AMOUNT = USD(0.1)
 
 
-shared_cache: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
+SHARED_CACHE: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
     maxsize=256, ttl=10 * 60
 )
 
@@ -547,7 +547,7 @@ class SeerAgentMarket(AgentMarket):
         liquidity = self.get_liquidity_for_outcome(outcome)
         return liquidity > self.minimum_market_liquidity_required
 
-    @cachetools.cached(cache=shared_cache, key=lambda self: self.id)
+    @cachetools.cached(cache=SHARED_CACHE, key=lambda self: f"has_liquidity_{self.id}")
     def has_liquidity(self) -> bool:
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
         return all(

@@ -113,3 +113,4 @@ def test_binary_markets_retrieved(
     )
     # We expect at least 1 market for the given filter
     assert markets
+    assert markets[0].questions is not None

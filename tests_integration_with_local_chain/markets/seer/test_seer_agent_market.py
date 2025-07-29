@@ -135,18 +135,30 @@ def test_seer_place_bet_via_pools(
 
 
 def prepare_seer_swap_test(
-    local_web3: Web3, test_keys: APIKeys, deposit_collateral: bool = False
+    local_web3: Web3,
+    test_keys: APIKeys,
+    deposit_collateral: bool = False,
+    market_id: HexBytes | None = None,
 ) -> tuple[
     SeerAgentMarket, ChecksumAddress, int, ChecksumAddress, OutcomeWei, OutcomeToken
 ]:
     """Prepare common test setup for swap tests."""
     amount_wei = OutcomeToken(1).as_outcome_wei
-    market = SeerAgentMarket.get_markets(
-        limit=1,
-        sort_by=SortBy.HIGHEST_LIQUIDITY,
-        filter_by=FilterBy.OPEN,
-        question_type=QuestionType.BINARY,
-    )[0]
+    market = (
+        SeerAgentMarket.get_markets(
+            limit=1,
+            sort_by=SortBy.HIGHEST_LIQUIDITY,
+            filter_by=FilterBy.OPEN,
+            question_type=QuestionType.BINARY,
+        )[0]
+        if market_id is None
+        else SeerAgentMarket.from_data_model_with_subgraph(
+            SeerSubgraphHandler().get_market_by_id(market_id),
+            SeerSubgraphHandler(),
+            True,
+        )
+    )
+    assert market is not None
 
     sell_token = market.collateral_token_contract_address_checksummed
     outcome_idx = 0
@@ -231,6 +243,31 @@ def test_seer_swap_via_pools_fails_when_no_balance(
     with pytest.raises(Exception):
         SwapPoolHandler(
             api_keys=test_keys_with_no_balance,
+            market_id=market.id,
+            collateral_token_address=market.collateral_token_contract_address_checksummed,
+        ).buy_or_sell_outcome_token(
+            token_in=sell_token,
+            token_out=buy_token,
+            amount_wei=Wei(amount_wei.value),
+            web3=local_web3,
+        )
+
+
+def test_seer_swap_via_pools_fails_when_token_prices_are_zero(
+    local_web3: Web3,
+    test_keys: APIKeys,
+) -> None:
+    market, sell_token, _, buy_token, amount_wei, _ = prepare_seer_swap_test(
+        local_web3,
+        test_keys,
+        deposit_collateral=False,
+        # For this market, pools return token prices as zero, see https://github.com/gnosis/prediction-market-agent-tooling/pull/811.
+        market_id=HexBytes("0x5c2972948d7dbce22ce2112d851f099358359771"),
+    )
+
+    with pytest.raises(ValueError, match="Could not find price for"):
+        SwapPoolHandler(
+            api_keys=test_keys,
             market_id=market.id,
             collateral_token_address=market.collateral_token_contract_address_checksummed,
         ).buy_or_sell_outcome_token(

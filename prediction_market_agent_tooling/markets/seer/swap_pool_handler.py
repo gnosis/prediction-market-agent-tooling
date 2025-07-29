@@ -71,7 +71,10 @@ class SwapPoolHandler:
         price_outcome_token = PriceManager.build(
             HexBytes(HexStr(self.market_id))
         ).get_token_price_from_pools(token=outcome_token)
-        if not price_outcome_token:
+        if (
+            not price_outcome_token
+            or not price_outcome_token.priceOfCollateralInAskingToken
+        ):
             raise ValueError(
                 f"Could not find price for {outcome_token=} and {self.collateral_token_address}"
             )

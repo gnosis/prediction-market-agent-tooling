@@ -30,10 +30,12 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
-    PolymarketPriceSideEnum,
     get_polymarkets_with_pagination,
-    get_token_price,
     get_user_positions,
+)
+from prediction_market_agent_tooling.markets.polymarket.clob_manager import (
+    ClobManager,
+    PolymarketPriceSideEnum,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponseDataItem,
@@ -308,22 +310,39 @@ class PolymarketAgentMarket(AgentMarket):
 
         outcome_idx = self.outcomes.index(outcome_str)
         token_id = int(self.token_ids[outcome_idx].hex(), 16)
-        price = get_token_price(token_id=token_id, side=PolymarketPriceSideEnum.BUY)
+
+        price = ClobManager(APIKeys()).get_token_price(
+            token_id=token_id, side=PolymarketPriceSideEnum.BUY
+        )
         # we work with floats since USD and Collateral are the same on Polymarket
         buy_token_amount = bet_amount.value / price.value
         return OutcomeToken(buy_token_amount)
 
     def buy_tokens(self, outcome: OutcomeStr, amount: USD) -> str:
-        # ToDo - Implement me, see https://github.com/Polymarket/py-clob-client/blob/main/examples/market_buy_order.py
-        raise NotImplementedError("Implement me")
+        clob_manager = ClobManager(APIKeys())
+        token_id = int(self.token_ids[self.outcomes.index(outcome)].hex(), 16)
+
+        # ToDo - Check if str is the tx hash
+        return clob_manager.place_buy_market_order(
+            token_id=token_id, usdc_amount=amount.value
+        )
 
     def sell_tokens(
         self,
         outcome: OutcomeStr,
         amount: USD | OutcomeToken,
-        auto_withdraw: bool = True,
         api_keys: APIKeys | None = None,
-        web3: Web3 | None = None,
     ) -> str:
-        # ToDo - Implement me, see https://github.com/Polymarket/py-clob-client/blob/main/examples/market_buy_order.py
-        raise NotImplementedError("Implement me")
+        clob_manager = ClobManager(api_keys=api_keys or APIKeys())
+        token_id = int(self.token_ids[self.outcomes.index(outcome)].hex(), 16)
+
+        token_price = clob_manager.get_token_price(
+            token_id=token_id, side=PolymarketPriceSideEnum.SELL
+        )
+        token_shares = amount.value / token_price.value
+
+        # ToDo - Check if str is the tx hash
+        tx_hash = clob_manager.place_sell_market_order(
+            token_id=token_id, token_shares=token_shares
+        )
+        return tx_hash

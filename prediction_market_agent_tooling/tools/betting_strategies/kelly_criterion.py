@@ -1,6 +1,16 @@
+import numpy as np
+from scipy.optimize import minimize
+
 from prediction_market_agent_tooling.gtypes import CollateralToken, OutcomeToken
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
+from prediction_market_agent_tooling.markets.omen.omen import (
+    get_buy_outcome_token_amount,
+)
+from prediction_market_agent_tooling.tools.betting_strategies.utils import (
+    BinaryKellyBet,
+    CategoricalKellyBet,
+)
 
 
 def check_is_valid_probability(probability: float) -> None:
@@ -13,7 +23,7 @@ def get_kelly_bet_simplified(
     market_p_yes: float,
     estimated_p_yes: float,
     confidence: float,
-) -> SimpleBet:
+) -> BinaryKellyBet:
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
 
@@ -54,7 +64,7 @@ def get_kelly_bet_simplified(
     # Ensure bet size is non-negative does not exceed the wallet balance
     bet_size = CollateralToken(min(kelly_fraction * max_bet.value, max_bet.value))
 
-    return SimpleBet(direction=bet_direction, size=bet_size)
+    return BinaryKellyBet(direction=bet_direction, size=bet_size)
 
 
 def get_kelly_bet_full(
@@ -64,7 +74,7 @@ def get_kelly_bet_full(
     confidence: float,
     max_bet: CollateralToken,
     fees: MarketFees,
-) -> SimpleBet:
+) -> BinaryKellyBet:
     """
     Calculate the optimal bet amount using the Kelly Criterion for a binary outcome market.
 
@@ -98,7 +108,7 @@ def get_kelly_bet_full(
     check_is_valid_probability(confidence)
 
     if max_bet == 0:
-        return SimpleBet(size=CollateralToken(0), direction=True)
+        return BinaryKellyBet(size=CollateralToken(0), direction=True)
 
     x = yes_outcome_pool_size.value
     y = no_outcome_pool_size.value
@@ -144,7 +154,156 @@ def get_kelly_bet_full(
     kelly_bet_amount = numerator / denominator
 
     # Clip the bet size to max_bet to account for rounding errors.
-    return SimpleBet(
+    return BinaryKellyBet(
         direction=kelly_bet_amount > 0,
         size=CollateralToken(min(max_bet.value, abs(kelly_bet_amount))),
     )
+
+
+def get_kelly_bets_categorical_simplified(
+    market_probabilities: list[float],
+    estimated_probabilities: list[float],
+    confidence: float,
+    max_bet: CollateralToken,
+    fees: MarketFees,
+) -> list[CategoricalKellyBet]:
+    """
+    Calculate Kelly bets for categorical markets using only market probabilities.
+    Returns a list of CategoricalKellyBet objects, one for each outcome.
+    Considers max_bet across all outcomes together.
+    Indicates both buying (long) and shorting (selling) by allowing negative bet sizes.
+    """
+    assert len(market_probabilities) == len(
+        estimated_probabilities
+    ), "Mismatch in number of outcomes"
+
+    f = 1 - fees.bet_proportion
+
+    total_kelly_fraction = 0.0
+    kelly_fractions = []
+
+    for i in range(len(market_probabilities)):
+        p_i = estimated_probabilities[i] * confidence
+        m_i = max(market_probabilities[i], 1e-10)  # Avoid divisions by zero.
+        odds_i = (1 / m_i) - 1
+
+        kelly_fraction = (p_i * (odds_i + 1) - 1) / odds_i
+        kelly_fraction *= f
+        kelly_fractions.append(kelly_fraction)
+        total_kelly_fraction += abs(kelly_fraction)
+
+    bets = []
+    for i, kelly_fraction in enumerate(kelly_fractions):
+        if total_kelly_fraction > 0:  # Avoid divisions by zero.
+            bet_size = (kelly_fraction / total_kelly_fraction) * max_bet.value
+        else:
+            bet_size = 0.0
+        bets.append(CategoricalKellyBet(index=i, size=CollateralToken(bet_size)))
+
+    return bets
+
+
+def get_kelly_bets_categorical_full(
+    outcome_pool_sizes: list[OutcomeToken],
+    estimated_probabilities: list[float],
+    confidence: float,
+    max_bet: CollateralToken,
+    fees: MarketFees,
+) -> list[CategoricalKellyBet]:
+    """
+    Calculate Kelly bets for categorical markets using joint optimization over all outcomes,
+    splitting the max bet between all possible outcomes to maximize expected log utility.
+    Returns a list of CategoricalKellyBet objects, one for each outcome.
+    Handles both buying (long) and shorting (selling) by allowing negative bet sizes.
+    If the agent's probabilities are very close to the market's, returns all-zero bets.
+    """
+    assert len(outcome_pool_sizes) == len(
+        estimated_probabilities
+    ), "Mismatch in number of outcomes"
+
+    market_probabilities = AgentMarket.compute_fpmm_probabilities(
+        [x.as_outcome_wei for x in outcome_pool_sizes]
+    )
+    n = len(outcome_pool_sizes)
+    max_bet_value = max_bet.value
+
+    if all(
+        abs(estimated_probabilities[i] - market_probabilities[i]) < 1e-3
+        for i in range(n)
+    ):
+        return [
+            CategoricalKellyBet(index=i, size=CollateralToken(0.0)) for i in range(n)
+        ]
+
+    def compute_payouts(bets: list[float]) -> list[float]:
+        payouts: list[float] = []
+        for i in range(n):
+            payout = 0.0
+            if bets[i] >= 0:
+                # If bet on i is positive, we buy outcome i
+                payout += get_buy_outcome_token_amount(
+                    CollateralToken(bets[i]), i, outcome_pool_sizes, fees
+                ).value
+            else:
+                # If bet is negative, we "short" outcome i by buying all other outcomes
+                for j in range(n):
+                    if j == i:
+                        continue
+                    payout += get_buy_outcome_token_amount(
+                        CollateralToken(abs(bets[i]) / (n - 1)),
+                        j,
+                        outcome_pool_sizes,
+                        fees,
+                    ).value
+            payouts.append(payout)
+        return payouts
+
+    def neg_expected_log_utility(bets: list[float]) -> float:
+        payouts = compute_payouts(bets)
+        log_utils = [np.log(1 + payout) for payout in payouts]
+        # Expected log utility: sum over outcomes of p_i * log_utility_i
+        expected_log_utility: float = sum(
+            estimated_probabilities[i] * confidence * log_utils[i] for i in range(n)
+        )
+        # Return negative for minimization
+        return -expected_log_utility
+
+    # Initial guess as either buying or selling equal amount, based on market vs. agent's probs
+    x0 = np.array(
+        [
+            max_bet_value
+            / n
+            * (1 if estimated_probabilities[i] >= market_probabilities[i] else -1)
+            for i in range(n)
+        ]
+    )
+
+    constraints = [
+        # We can not bet more than `max_bet_value`
+        {"type": "ineq", "fun": lambda bets: max_bet_value - np.sum(np.abs(bets))},
+        # The sum of bets can not just cancel each other out
+        {
+            "type": "ineq",
+            "fun": lambda bets: np.abs(np.sum(bets)) - 1e-3,
+        },
+    ]
+
+    res = minimize(
+        neg_expected_log_utility,
+        x0,
+        method="SLSQP",
+        bounds=[(-max_bet_value, max_bet_value) for _ in range(n)],
+        constraints=constraints,
+        options={"maxiter": 10000},
+    )
+
+    if not res.success:
+        raise RuntimeError(f"Joint optimization failed: {res.message}")
+
+    bet_vector = res.x
+    bets = [
+        CategoricalKellyBet(index=i, size=CollateralToken(bet_vector[i]))
+        for i in range(n)
+    ]
+
+    return bets

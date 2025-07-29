@@ -15,12 +15,13 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent import AnsweredEnum, MarketType
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    BinaryKellyBettingStrategy,
+    CategoricalKellyBettingStrategy,
+    CategoricalMaxAccuracyBettingStrategy,
     CategoricalProbabilisticAnswer,
     GuaranteedLossError,
-    KellyBettingStrategy,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MaxExpectedValueBettingStrategy,
-    MultiCategoricalMaxAccuracyBettingStrategy,
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -41,6 +42,7 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     get_omen_market_by_market_id_cached,
 )
+from prediction_market_agent_tooling.tools._generic_value import _GenericValue
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
@@ -222,20 +224,32 @@ def get_objective(
         strategy_name = trial.suggest_categorical(
             "strategy_name",
             [
-                MultiCategoricalMaxAccuracyBettingStrategy.__name__,
+                CategoricalMaxAccuracyBettingStrategy.__name__,
                 MaxAccuracyWithKellyScaledBetsStrategy.__name__,
-                KellyBettingStrategy.__name__,
+                MaxExpectedValueBettingStrategy.__name__,
+                BinaryKellyBettingStrategy.__name__,
+                CategoricalKellyBettingStrategy.__name__,
             ],
         )
         bet_amount = USD(trial.suggest_float("bet_amount", 0, upper_bet_amount))
         max_price_impact = (
             trial.suggest_float("max_price_impact", 0, upper_max_price_impact)
-            if strategy_name == KellyBettingStrategy.__name__
+            if strategy_name == BinaryKellyBettingStrategy.__name__
             else None
+        )
+        force_simplified_calculation = (
+            trial.suggest_categorical("force_simplified_calculation", [True, False])
+            if strategy_name
+            in (
+                BinaryKellyBettingStrategy.__name__,
+                CategoricalKellyBettingStrategy.__name__,
+            )
+            # Just default to False if not using Kelly, as it doesn't matter.
+            else False
         )
 
         strategy_constructors: dict[str, t.Callable[[], BettingStrategy]] = {
-            MultiCategoricalMaxAccuracyBettingStrategy.__name__: lambda: MultiCategoricalMaxAccuracyBettingStrategy(
+            CategoricalMaxAccuracyBettingStrategy.__name__: lambda: CategoricalMaxAccuracyBettingStrategy(
                 max_position_amount=bet_amount
             ),
             MaxAccuracyWithKellyScaledBetsStrategy.__name__: lambda: MaxAccuracyWithKellyScaledBetsStrategy(
@@ -244,8 +258,14 @@ def get_objective(
             MaxExpectedValueBettingStrategy.__name__: lambda: MaxExpectedValueBettingStrategy(
                 max_position_amount=bet_amount
             ),
-            KellyBettingStrategy.__name__: lambda: KellyBettingStrategy(
-                max_position_amount=bet_amount, max_price_impact=max_price_impact
+            BinaryKellyBettingStrategy.__name__: lambda: BinaryKellyBettingStrategy(
+                max_position_amount=bet_amount,
+                max_price_impact=max_price_impact,
+                force_simplified_calculation=force_simplified_calculation,
+            ),
+            CategoricalKellyBettingStrategy.__name__: lambda: CategoricalKellyBettingStrategy(
+                max_position_amount=bet_amount,
+                force_simplified_calculation=force_simplified_calculation,
             ),
         }
 
@@ -259,7 +279,13 @@ def get_objective(
         )
 
         trial.set_user_attr("per_bet_details", per_bet_details[-1])
-        trial.set_user_attr("metrics_dict", metrics[-1].model_dump())
+        trial.set_user_attr(
+            "metrics_dict",
+            {
+                k: (v.value if isinstance(v, _GenericValue) else v)
+                for k, v in metrics[-1]
+            },
+        )
         trial.set_user_attr("strategy", strategy)
 
         if bets[0][0].bet.created_time > bets[-1][0].bet.created_time:
@@ -360,7 +386,7 @@ def main() -> None:
     Run as
 
     ```
-    python examples/monitor/match_bets_with_langfuse_traces.py | tee results.md
+    python scripts/optimize_betting_strategy.py | tee results.md
     ```
 
     To see the output and at the same time store it in a file.
@@ -370,35 +396,36 @@ def main() -> None:
 
     # Get the private keys for the agents from GCP Secret Manager
     agent_gcp_secret_map = {
-        "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
-        "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+        # "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
+        # "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
         "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
-        "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
-        "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
-        "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
-        "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
-        "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
-        "DeployableKnownOutcomeAgent": "pma-knownoutcome",
-        "DeployablePredictionProphetGemini20Flash": "prophet-gemini20flash",
-        "DeployablePredictionProphetDeepSeekR1": "prophet-deepseekr1",
-        "DeployablePredictionProphetGPT4ominiAgent": "pma-prophet-gpt4o-mini",
-        "DeployablePredictionProphetGPTo3mini": "pma-prophet-o3-mini",
-        "DeployablePredictionProphetClaude3OpusAgent": "prophet-claude3-opus",
-        "DeployablePredictionProphetClaude35HaikuAgent": "prophet-claude35-haiku",
-        "DeployablePredictionProphetClaude35SonnetAgent": "prophet-claude35-sonnet",
-        "DeployablePredictionProphetDeepSeekChat": "prophet-deepseekchat",
-        "DeployablePredictionProphetGPTo1": "pma-prophet-o1",
-        "AdvancedAgent": "advanced-agent",
-        "Berlin1PolySentAgent": "berlin1-polysent-agent",
-        "Berlin2OpenaiSearchAgentHigh": "berlin2-search-high",
-        "Berlin2OpenaiSearchAgentVariable": "berlin2-search-var",
-        "GPTRAgent": "gptr-agent",
-        "DeployablePredictionProphetGPT4oAgentCategorical": "pma-prophetgpt4o-categorical",
+        # "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
+        # "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
+        # "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+        # "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+        # "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+        # "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+        # "DeployablePredictionProphetGemini20Flash": "prophet-gemini20flash",
+        # "DeployablePredictionProphetDeepSeekR1": "prophet-deepseekr1",
+        # "DeployablePredictionProphetGPT4ominiAgent": "pma-prophet-gpt4o-mini",
+        # "DeployablePredictionProphetGPTo3mini": "pma-prophet-o3-mini",
+        # "DeployablePredictionProphetClaude3OpusAgent": "prophet-claude3-opus",
+        # "DeployablePredictionProphetClaude35HaikuAgent": "prophet-claude35-haiku",
+        # "DeployablePredictionProphetClaude35SonnetAgent": "prophet-claude35-sonnet",
+        # "DeployablePredictionProphetDeepSeekChat": "prophet-deepseekchat",
+        # "DeployablePredictionProphetGPTo1": "pma-prophet-o1",
+        # "AdvancedAgent": "advanced-agent",
+        # "Berlin1PolySentAgent": "berlin1-polysent-agent",
+        # "Berlin2OpenaiSearchAgentHigh": "berlin2-search-high",
+        # "Berlin2OpenaiSearchAgentVariable": "berlin2-search-var",
+        # "GPTRAgent": "gptr-agent",
+        # "DeployablePredictionProphetGPT4oAgentCategorical": "pma-prophetgpt4o-categorical",
     }
 
     httpx_client = HttpxCachedClient(ttl=timedelta(days=7)).get_client()
 
     overall_md = ""
+    overall_md_per_strategy_class = ""
 
     print("# Agent Bet vs Simulated Bet Comparison")
 
@@ -442,7 +469,9 @@ def main() -> None:
             # 2. The day when we used customized betting strategies: https://github.com/gnosis/prediction-market-agent/pull/494
             utc_datetime(2024, 10, 5),
             # However, Langfuse doesn't allow to filter only for traces for a specific agent, so limit only to last N months of data to speed up the process.
-            utcnow() - timedelta(days=45),
+            (utcnow() - timedelta(days=45)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            ),
         )
 
         langfuse = Langfuse(
@@ -459,6 +488,7 @@ def main() -> None:
             has_output=True,
             client=langfuse,
             tags=[AnsweredEnum.ANSWERED.value, MarketType.OMEN.value],
+            limit=None,
         )
         process_market_traces: list[ProcessMarketTrace] = []
         for trace in traces:
@@ -523,7 +553,8 @@ def main() -> None:
                 f"Training maximization: {k_study_best_trial.values} "
                 f"Testing profit: {testing_metrics.total_simulated_profit.value:.2f} "
                 f"Original profit on Testing: {testing_metrics.total_bet_profit.value:.2f} "
-                f"(testing dates {test_bets_with_traces[0].bet.created_time.date()} to {test_bets_with_traces[-1].bet.created_time.date()})"
+                f"(testing dates {test_bets_with_traces[0].bet.created_time.date()} to {test_bets_with_traces[-1].bet.created_time.date()})",
+                flush=True,
             )
 
             total_simulation_profit += testing_metrics.total_simulated_profit
@@ -563,18 +594,48 @@ def main() -> None:
         print()
 
         simulations_df = pd.DataFrame.from_records(
-            [trial.user_attrs["metrics_dict"] for trial in last_study.trials]
+            [
+                {
+                    "strategy": trial.user_attrs["strategy"],
+                    **trial.user_attrs["metrics_dict"],
+                }
+                for trial in last_study.trials
+            ]
         )
         simulations_df.sort_values(by="maximize", ascending=False, inplace=True)
+
         overall_md += (
             f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"
             + simulations_df.to_markdown(index=False)
         )
 
         with open(
-            output_directory / "match_bets_with_langfuse_traces_overall.md", "w"
+            output_directory / "optimize_betting_strategy_all.md", "w"
         ) as overall_f:
             overall_f.write(overall_md)
+
+        # Create a new DataFrame with deduplicated strategies
+        deduplicated_df = simulations_df.copy()
+        deduplicated_df["strategy"] = deduplicated_df["strategy"].apply(
+            lambda x: (
+                f"{x.__class__.__name__} ({'simplified' if x.force_simplified_calculation else 'full'})"
+                if hasattr(x, "force_simplified_calculation")
+                else x.__class__.__name__
+            )
+        )
+        deduplicated_df = deduplicated_df.loc[
+            deduplicated_df.groupby("strategy")["maximize"].idxmax()
+        ]
+        deduplicated_df.sort_values(by="maximize", ascending=False, inplace=True)
+        overall_md_per_strategy_class += (
+            f"\n\n## {agent_name}\n\n{len(bets_with_traces)} bets\n\n"
+            + deduplicated_df.to_markdown(index=False)
+        )
+
+        with open(
+            output_directory / "optimize_betting_strategy_single_per_class.md", "w"
+        ) as overall_f:
+            overall_f.write(overall_md_per_strategy_class)
 
 
 if __name__ == "__main__":

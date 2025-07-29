@@ -294,7 +294,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         self, market_ids: list[HexBytes]
     ) -> list[SeerMarketQuestions]:
         where = unwrap_generic_value(
-            {"market_in": ["0x" + market_id.hex().lower() for market_id in market_ids]}
+            {"market_in": [market_id.hex().lower() for market_id in market_ids]}
         )
         markets_field = self.seer_subgraph.Query.marketQuestions(where=where)
         fields = self._get_fields_for_questions(markets_field)

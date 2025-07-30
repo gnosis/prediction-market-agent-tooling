@@ -443,8 +443,22 @@ class KellyBettingStrategy(BettingStrategy):
             kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
 
         bet_outcome = direction if kelly_bet.direction else other_direction
+
+        kelly_bet_size_usd = market.get_token_in_usd(kelly_bet_size)
+        existing_amount = (
+            existing_position.amounts_current.get(bet_outcome, USD(0))
+            if existing_position
+            else USD(0)
+        )
+        capped_amount = BettingStrategy.cap_to_profitable_position(
+            market=market,
+            existing_position=existing_amount,
+            wanted_position=existing_amount + kelly_bet_size_usd,
+            outcome_to_bet_on=bet_outcome,
+        )
+
         amounts = {
-            bet_outcome: market.get_token_in_usd(kelly_bet_size),
+            bet_outcome: capped_amount,
         }
         target_position = Position(market_id=market.id, amounts_current=amounts)
         trades = self._build_rebalance_trades_from_positions(

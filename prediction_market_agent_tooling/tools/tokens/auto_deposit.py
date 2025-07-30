@@ -1,4 +1,5 @@
 from web3 import Web3
+from web3.types import ChecksumAddress
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import USD, Wei
@@ -27,7 +28,6 @@ from prediction_market_agent_tooling.tools.tokens.slippage import (
 )
 from prediction_market_agent_tooling.tools.tokens.usd import get_usd_in_token
 from prediction_market_agent_tooling.tools.utils import should_not_happen
-from web3.types import ChecksumAddress
 
 
 def auto_deposit_collateral_token(
@@ -199,7 +199,7 @@ def mint_full_set_for_market(
     balance_market_collateral = ContractERC20OnGnosisChain(
         address=market_collateral_token
     ).balanceOf(for_address=api_keys.bet_from_address, web3=web3)
-    
+
     if balance_market_collateral < collateral_amount_wei:
         logger.debug(
             f"Not enough collateral token in the market. Expected {collateral_amount_wei} but got {balance_market_collateral}. Auto-depositing market collateral."
@@ -236,7 +236,7 @@ def mint_full_set(
     api_keys: APIKeys,
     web3: Web3 | None,
 ) -> None:
-    router = GnosisRouter()
+    GnosisRouter()
     # We need to fetch the parent's market collateral token, to split it and get the collateral token
     # of the child market.
     seer_subgraph_handler = SeerSubgraphHandler()

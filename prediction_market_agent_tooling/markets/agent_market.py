@@ -230,7 +230,7 @@ class AgentMarket(BaseModel):
 
     @property
     def is_multiresult(self) -> bool:
-        return self.template_id == 3 or self.template_id == 1 and len(self.outcomes)>3
+        return self.template_id == 3 or self.template_id == 1 and len(self.outcomes) > 3
 
     @property
     def p_up(self) -> Probability:

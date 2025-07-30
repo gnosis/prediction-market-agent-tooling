@@ -17,9 +17,9 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     OutcomeWei,
+    Probability,
     Wei,
     xDai,
-    Probability
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -49,9 +49,6 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
     SeerMarketWithQuestions,
-)
-from prediction_market_agent_tooling.markets.seer.exceptions import (
-    PriceCalculationError,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
@@ -235,7 +232,7 @@ class SeerAgentMarket(AgentMarket):
         amounts_ot: dict[OutcomeStr, OutcomeToken] = {}
 
         for outcome_str, wrapped_token in zip(self.outcomes, self.wrapped_tokens):
-            if self.probabilities[outcome_str] == 0:
+            if self.probabilities[outcome_str] == Probability(0):
                 continue
             outcome_token_balance_wei = OutcomeWei.from_wei(
                 ContractERC20OnGnosisChain(address=wrapped_token).balanceOf(
@@ -415,19 +412,46 @@ class SeerAgentMarket(AgentMarket):
         wrapped_tokens = [Web3.to_checksum_address(i) for i in model.wrapped_tokens]
 
         wrapped_tokens_with_supply = [
-            (token, SeerSubgraphHandler().get_pool_by_token(token, model.collateral_token_contract_address_checksummed))
+            (
+                token,
+                SeerSubgraphHandler().get_pool_by_token(
+                    token, model.collateral_token_contract_address_checksummed
+                ),
+            )
             for token in wrapped_tokens
         ]
-        wrapped_tokens_with_supply = [(token, pool) for token, pool in wrapped_tokens_with_supply if pool is not None]
+        wrapped_tokens_with_supply = [
+            (token, pool)
+            for token, pool in wrapped_tokens_with_supply
+            if pool is not None
+        ]
 
         outcome_token_pool = {}
         for token, pool in wrapped_tokens_with_supply:
+            if pool is None or pool.token1.id is None or pool.token0.id is None:
+                continue
             if HexBytes(token) == HexBytes(pool.token1.id):
-                outcome_token_pool[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = OutcomeToken(pool.totalValueLockedToken0)
-                probability_map[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = Probability(round(pool.token0Price, 2))
+                outcome_token_pool[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = (
+                    OutcomeToken(pool.totalValueLockedToken0)
+                    if pool.totalValueLockedToken0 is not None
+                    else OutcomeToken(0)
+                )
+                probability_map[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = Probability(round(pool.token0Price, 2).value)
             else:
-                outcome_token_pool[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = OutcomeToken(pool.totalValueLockedToken1)
-                probability_map[OutcomeStr(model.outcomes[wrapped_tokens.index(token)])] = Probability(round(pool.token1Price, 2))
+                outcome_token_pool[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = (
+                    OutcomeToken(pool.totalValueLockedToken1)
+                    if pool.totalValueLockedToken1 is not None
+                    else OutcomeToken(0)
+                )
+                probability_map[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = Probability(round(pool.token1Price, 2).value)
 
         for outcome in model.outcomes:
             if outcome not in outcome_token_pool:

@@ -60,6 +60,15 @@ class HexBytes(HexBytesBase, BaseHex):
         value = hex_str[2:] if hex_str.startswith("0x") else hex_str
         return super().fromhex(value)
 
+    def hex(
+        self,
+        sep: t.Union[str, bytes] | None = None,
+        bytes_per_sep: t.SupportsIndex = 1,
+    ) -> str:
+        """We enforce a 0x prefix."""
+        x = super().hex(sep, bytes_per_sep)  # type: ignore[arg-type]
+        return x if x.startswith("0x") else "0x" + x
+
     @classmethod
     def __eth_pydantic_validate__(
         cls, value: t.Any, info: ValidationInfo | None = None

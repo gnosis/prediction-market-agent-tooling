@@ -61,10 +61,12 @@ class HexBytes(HexBytesBase, BaseHex):
         return super().fromhex(value)
 
     def hex(
-        self, sep: t.Union[str, bytes] = None, bytes_per_sep: t.SupportsIndex = 1
+        self,
+        sep: t.Union[str, bytes] | None = None,
+        bytes_per_sep: t.SupportsIndex = 1,
     ) -> str:
         """We enforce a 0x prefix."""
-        x = super().hex()
+        x = super().hex(sep, bytes_per_sep)  # type: ignore[arg-type]
         return x if x.startswith("0x") else "0x" + x
 
     @classmethod

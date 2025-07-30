@@ -1,5 +1,6 @@
 import typing as t
 from datetime import timedelta
+from functools import partial
 from pathlib import Path
 
 import optuna
@@ -214,6 +215,25 @@ def group_datetime(dt: DatetimeUTC) -> tuple[int, int]:
     return dt.year, week_number
 
 
+def early_stopping_callback(
+    study: optuna.Study, trial: optuna.trial.Trial, early_stopping_rounds: int
+) -> None:
+    best_trial = choose_best_trial(study)
+
+    current_trial_number = trial.number
+    best_trial_number = best_trial.number
+    if current_trial_number == best_trial_number:
+        print(f"New best round at {current_trial_number=}.", flush=True)
+
+    should_stop = (current_trial_number - best_trial_number) >= early_stopping_rounds
+    if should_stop:
+        print(
+            f"Early stopping detected. No improvement at {current_trial_number=}, after {early_stopping_rounds=}.",
+            flush=True,
+        )
+        study.stop()
+
+
 def get_objective(
     bets: list[list[ResolvedBetWithTrace]],
     upper_bet_amount: float,
@@ -236,6 +256,18 @@ def get_objective(
             trial.suggest_float("max_price_impact", 0, upper_max_price_impact)
             if strategy_name == BinaryKellyBettingStrategy.__name__
             else None
+        )
+        allow_multiple_bets = (
+            trial.suggest_categorical("allow_multiple_bets", [True, False])
+            if strategy_name == CategoricalKellyBettingStrategy.__name__
+            # Just default to False if not using Kelly, as it doesn't matter.
+            else False
+        )
+        allow_shorting = (
+            trial.suggest_categorical("allow_shorting", [True, False])
+            if strategy_name == CategoricalKellyBettingStrategy.__name__
+            # Just default to False if not using Kelly, as it doesn't matter.
+            else False
         )
         force_simplified_calculation = (
             trial.suggest_categorical("force_simplified_calculation", [True, False])
@@ -265,6 +297,8 @@ def get_objective(
             ),
             CategoricalKellyBettingStrategy.__name__: lambda: CategoricalKellyBettingStrategy(
                 max_position_amount=bet_amount,
+                allow_multiple_bets=allow_multiple_bets,
+                allow_shorting=allow_shorting,
                 force_simplified_calculation=force_simplified_calculation,
             ),
         }
@@ -353,13 +387,18 @@ def choose_best_trial(study: optuna.Study) -> "FrozenTrial":
 
 
 def run_optuna_study(
+    study_name: str,
     train_bets_with_traces: list[list[ResolvedBetWithTrace]],
     test_bets_with_traces: list[ResolvedBetWithTrace],
     upper_bet_amount: float,
     upper_max_price_impact: float,
     tx_block_cache: TransactionBlockCache,
 ) -> tuple[optuna.Study, SimulatedLifetimeDetail]:
-    study = optuna.create_study(directions=["maximize" for _ in train_bets_with_traces])
+    study = optuna.create_study(
+        study_name=study_name,
+        directions=["maximize" for _ in train_bets_with_traces],
+    )
+
     study.optimize(
         get_objective(
             bets=train_bets_with_traces,
@@ -367,9 +406,8 @@ def run_optuna_study(
             upper_max_price_impact=upper_max_price_impact,
             tx_block_cache=tx_block_cache,
         ),
-        # Multiply by number of groups, because with each fold, the optimization gets harder due to the additional metric.
-        n_trials=500 * len(train_bets_with_traces),
-        n_jobs=-1,
+        n_jobs=1,
+        callbacks=[partial(early_stopping_callback, early_stopping_rounds=100)],
     )
     _, testing_metrics = calc_metrics(
         test_bets_with_traces,
@@ -386,7 +424,7 @@ def main() -> None:
     Run as
 
     ```
-    python scripts/optimize_betting_strategy.py | tee results.md
+    python scripts/optimize_betting_strategy.py | tee bet_strategy_benchmark/results.md
     ```
 
     To see the output and at the same time store it in a file.
@@ -422,7 +460,7 @@ def main() -> None:
         # "DeployablePredictionProphetGPT4oAgentCategorical": "pma-prophetgpt4o-categorical",
     }
 
-    httpx_client = HttpxCachedClient(ttl=timedelta(days=7)).get_client()
+    httpx_client = HttpxCachedClient(ttl=timedelta(days=1)).get_client()
 
     overall_md = ""
     overall_md_per_strategy_class = ""
@@ -539,6 +577,7 @@ def main() -> None:
         ):
             used_training_folds = [train for train, _ in folds[: fold_idx + 1]]
             k_study_on_train, testing_metrics = run_optuna_study(
+                f"{agent_name}-train",
                 used_training_folds,
                 test_bets_with_traces,
                 upper_bet_amount,
@@ -550,7 +589,7 @@ def main() -> None:
 
             print(
                 f"[{fold_idx+1} / {len(folds)}] Best value for {agent_name} (params: {k_study_best_trial.params}, n train bets: {sum(1 for fold in used_training_folds for _ in fold)}, n test bets: {len(test_bets_with_traces)}): "
-                f"Training maximization: {k_study_best_trial.values} "
+                f"Training maximization: {k_study_best_trial.values} (no. {k_study_best_trial.number})"
                 f"Testing profit: {testing_metrics.total_simulated_profit.value:.2f} "
                 f"Original profit on Testing: {testing_metrics.total_bet_profit.value:.2f} "
                 f"(testing dates {test_bets_with_traces[0].bet.created_time.date()} to {test_bets_with_traces[-1].bet.created_time.date()})",
@@ -576,6 +615,7 @@ def main() -> None:
             # If the result is negative or very small, there was no chance of being in profit.
             if testing_metrics.maximize < 0:
                 k_study_on_test = run_optuna_study(
+                    f"{agent_name}-test",
                     [
                         test_bets_with_traces  # Not a bug, we really want to test out study on test data itself here.
                     ],
@@ -597,6 +637,7 @@ def main() -> None:
             [
                 {
                     "strategy": trial.user_attrs["strategy"],
+                    "trial_no": trial.number,
                     **trial.user_attrs["metrics_dict"],
                 }
                 for trial in last_study.trials
@@ -617,10 +658,23 @@ def main() -> None:
         # Create a new DataFrame with deduplicated strategies
         deduplicated_df = simulations_df.copy()
         deduplicated_df["strategy"] = deduplicated_df["strategy"].apply(
-            lambda x: (
-                f"{x.__class__.__name__} ({'simplified' if x.force_simplified_calculation else 'full'})"
-                if hasattr(x, "force_simplified_calculation")
-                else x.__class__.__name__
+            lambda x: x.__class__.__name__
+            + (
+                f" {' simplified' if x.force_simplified_calculation else ' full'}"
+                if isinstance(
+                    x, (BinaryKellyBettingStrategy, CategoricalKellyBettingStrategy)
+                )
+                else ""
+            )
+            + (
+                f" {' multi-bets' if x.allow_multiple_bets else ' single-bet'}"
+                if isinstance(x, CategoricalKellyBettingStrategy)
+                else ""
+            )
+            + (
+                f" {' short' if x.allow_shorting else ' no-short'}"
+                if isinstance(x, CategoricalKellyBettingStrategy)
+                else ""
             )
         )
         deduplicated_df = deduplicated_df.loc[

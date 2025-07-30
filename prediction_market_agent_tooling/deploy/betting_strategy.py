@@ -520,7 +520,7 @@ class BinaryKellyBettingStrategy(BettingStrategy):
         return CollateralToken(optimized_bet_amount.x)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}), take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"
+        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}, take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
@@ -587,11 +587,15 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
     def __init__(
         self,
         max_position_amount: USD,
+        allow_multiple_bets: bool,
+        allow_shorting: bool,
         take_profit: bool = True,
         force_simplified_calculation: bool = False,
     ):
         super().__init__(take_profit=take_profit)
         self.max_position_amount = max_position_amount
+        self.allow_multiple_bets = allow_multiple_bets
+        self.allow_shorting = allow_shorting
         self.force_simplified_calculation = force_simplified_calculation
 
     @property
@@ -615,6 +619,8 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
                 confidence=answer.confidence,
                 max_bet=max_bet,
                 fees=market.fees,
+                allow_multiple_bets=self.allow_multiple_bets,
+                allow_shorting=self.allow_shorting,
             )
 
         else:
@@ -628,6 +634,8 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
                 confidence=answer.confidence,
                 max_bet=max_bet,
                 fees=market.fees,
+                allow_multiple_bets=self.allow_multiple_bets,
+                allow_shorting=self.allow_shorting,
             )
 
         return kelly_bets
@@ -667,4 +675,4 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
         return trades
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"
+        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, allow_multiple_bets={self.allow_multiple_bets}, allow_shorting={self.allow_shorting}, take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"

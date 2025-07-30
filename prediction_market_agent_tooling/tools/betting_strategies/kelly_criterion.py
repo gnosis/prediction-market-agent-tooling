@@ -1,7 +1,11 @@
 import numpy as np
 from scipy.optimize import minimize
 
-from prediction_market_agent_tooling.gtypes import CollateralToken, OutcomeToken
+from prediction_market_agent_tooling.gtypes import (
+    CollateralToken,
+    OutcomeToken,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import (
@@ -161,11 +165,14 @@ def get_kelly_bet_full(
 
 
 def get_kelly_bets_categorical_simplified(
-    market_probabilities: list[float],
-    estimated_probabilities: list[float],
+    market_probabilities: list[Probability],
+    estimated_probabilities: list[Probability],
     confidence: float,
     max_bet: CollateralToken,
     fees: MarketFees,
+    allow_multiple_bets: bool,
+    allow_shorting: bool,
+    bet_precision: int = 6,
 ) -> list[CategoricalKellyBet]:
     """
     Calculate Kelly bets for categorical markets using only market probabilities.
@@ -183,32 +190,50 @@ def get_kelly_bets_categorical_simplified(
     kelly_fractions = []
 
     for i in range(len(market_probabilities)):
-        p_i = estimated_probabilities[i] * confidence
+        p_i = estimated_probabilities[i]
         m_i = max(market_probabilities[i], 1e-10)  # Avoid divisions by zero.
         odds_i = (1 / m_i) - 1
 
         kelly_fraction = (p_i * (odds_i + 1) - 1) / odds_i
         kelly_fraction *= f
+        if not allow_shorting:
+            kelly_fraction = max(0, kelly_fraction)
         kelly_fractions.append(kelly_fraction)
         total_kelly_fraction += abs(kelly_fraction)
 
+    best_kelly_fraction_index = max(
+        range(len(kelly_fractions)), key=lambda i: abs(kelly_fractions[i])
+    )
+
     bets = []
     for i, kelly_fraction in enumerate(kelly_fractions):
-        if total_kelly_fraction > 0:  # Avoid divisions by zero.
+        if not allow_multiple_bets:
+            bet_size = (
+                kelly_fraction * max_bet.value if i == best_kelly_fraction_index else 0
+            )
+        elif allow_multiple_bets and total_kelly_fraction > 0:
             bet_size = (kelly_fraction / total_kelly_fraction) * max_bet.value
         else:
             bet_size = 0.0
-        bets.append(CategoricalKellyBet(index=i, size=CollateralToken(bet_size)))
+        bet_size *= confidence
+        bets.append(
+            CategoricalKellyBet(
+                index=i, size=CollateralToken(round(bet_size, bet_precision))
+            )
+        )
 
     return bets
 
 
 def get_kelly_bets_categorical_full(
     outcome_pool_sizes: list[OutcomeToken],
-    estimated_probabilities: list[float],
+    estimated_probabilities: list[Probability],
     confidence: float,
     max_bet: CollateralToken,
     fees: MarketFees,
+    allow_multiple_bets: bool,
+    allow_shorting: bool,
+    bet_precision: int = 6,
 ) -> list[CategoricalKellyBet]:
     """
     Calculate Kelly bets for categorical markets using joint optimization over all outcomes,
@@ -268,13 +293,20 @@ def get_kelly_bets_categorical_full(
         # Return negative for minimization
         return -expected_log_utility
 
-    # Initial guess as either buying or selling equal amount, based on market vs. agent's probs
+    # Use the simple version to estimate the initial bet vector.
     x0 = np.array(
         [
-            max_bet_value
-            / n
-            * (1 if estimated_probabilities[i] >= market_probabilities[i] else -1)
-            for i in range(n)
+            x.size.value
+            for x in get_kelly_bets_categorical_simplified(
+                market_probabilities=market_probabilities,
+                estimated_probabilities=estimated_probabilities,
+                confidence=confidence,
+                max_bet=max_bet,
+                fees=fees,
+                allow_multiple_bets=allow_multiple_bets,
+                allow_shorting=allow_shorting,
+                bet_precision=bet_precision,
+            )
         ]
     )
 
@@ -288,21 +320,36 @@ def get_kelly_bets_categorical_full(
         },
     ]
 
+    if not allow_multiple_bets:
+        # Force solver to produce only one non-zero bet.
+        constraints.append(
+            {
+                "type": "eq",
+                "fun": lambda bets: np.count_nonzero(np.abs(bets) > 1e-8) - 1,
+            }
+        )
+
     res = minimize(
         neg_expected_log_utility,
         x0,
         method="SLSQP",
-        bounds=[(-max_bet_value, max_bet_value) for _ in range(n)],
+        bounds=[
+            ((-max_bet_value if allow_shorting else 0), max_bet_value) for _ in range(n)
+        ],
         constraints=constraints,
         options={"maxiter": 10000},
     )
 
     if not res.success:
-        raise RuntimeError(f"Joint optimization failed: {res.message}")
+        raise RuntimeError(
+            f"Joint optimization failed: {res=} {x0=} {estimated_probabilities=} {confidence=} {market_probabilities=}"
+        )
 
     bet_vector = res.x
     bets = [
-        CategoricalKellyBet(index=i, size=CollateralToken(bet_vector[i]))
+        CategoricalKellyBet(
+            index=i, size=CollateralToken(round(bet_vector[i], bet_precision))
+        )
         for i in range(n)
     ]
 

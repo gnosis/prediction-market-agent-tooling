@@ -453,7 +453,7 @@ class KellyBettingStrategy(BettingStrategy):
         capped_amount = BettingStrategy.cap_to_profitable_position(
             market=market,
             existing_position=existing_amount,
-            wanted_position=existing_amount + kelly_bet_size_usd,
+            wanted_position=kelly_bet_size_usd,
             outcome_to_bet_on=bet_outcome,
         )
 

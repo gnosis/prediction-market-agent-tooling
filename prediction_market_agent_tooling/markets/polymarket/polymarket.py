@@ -48,6 +48,10 @@ class PolymarketAgentMarket(AgentMarket):
     # TODO: Check out the fees while integrating the subgraph API or if we implement placing of bets on Polymarket.
     fees: MarketFees = MarketFees.get_zero_fees()
 
+    @property
+    def is_multiresult(self) -> bool:
+        return False
+
     @staticmethod
     def build_resolution_from_condition(
         condition_id: HexBytes,

@@ -23,6 +23,8 @@ class SeerPool(BaseModel):
     token1: SeerToken
     token0Price: CollateralToken
     token1Price: CollateralToken
+    totalValueLockedToken0: float | None = None
+    totalValueLockedToken1: float | None = None
     sqrtPrice: int
 
 

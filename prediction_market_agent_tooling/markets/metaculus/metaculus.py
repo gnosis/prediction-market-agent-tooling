@@ -38,6 +38,10 @@ class MetaculusAgentMarket(AgentMarket):
     resolution_criteria: str
     fees: MarketFees = MarketFees.get_zero_fees()  # No fees on Metaculus.
 
+    @property
+    def is_multiresult(self) -> bool:
+        return False
+
     @field_validator("probabilities")
     def validate_probabilities(
         cls,

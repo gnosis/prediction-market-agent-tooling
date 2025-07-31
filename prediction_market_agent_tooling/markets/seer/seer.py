@@ -108,6 +108,11 @@ class SeerAgentMarket(AgentMarket):
     outcomes_supply: int
     minimum_market_liquidity_required: CollateralToken = CollateralToken(1)
 
+    @property
+    def is_multiresult(self) -> bool:
+        # Use the same logic as in the data model
+        return self.template_id == 3 or self.template_id == 1 and len(self.outcomes) > 3
+
     def get_collateral_token_contract(
         self, web3: Web3 | None = None
     ) -> ContractERC20OnGnosisChain:
@@ -406,57 +411,14 @@ class SeerAgentMarket(AgentMarket):
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
 
-        probability_map = {}
-        resolution = SeerAgentMarket.build_resolution(model=model)
-        parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
-        wrapped_tokens = [Web3.to_checksum_address(i) for i in model.wrapped_tokens]
-
-        wrapped_tokens_with_supply = [
-            (
-                token,
-                SeerSubgraphHandler().get_pool_by_token(
-                    token, model.collateral_token_contract_address_checksummed
-                ),
-            )
-            for token in wrapped_tokens
+        wrapped_tokens = [
+            Web3.to_checksum_address(i)
+            for i in price_manager.seer_market.wrapped_tokens
         ]
-        wrapped_tokens_with_supply = [
-            (token, pool)
-            for token, pool in wrapped_tokens_with_supply
-            if pool is not None
-        ]
-
-        outcome_token_pool = {}
-        for token, pool in wrapped_tokens_with_supply:
-            if pool is None or pool.token1.id is None or pool.token0.id is None:
-                continue
-            if HexBytes(token) == HexBytes(pool.token1.id):
-                outcome_token_pool[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = (
-                    OutcomeToken(pool.totalValueLockedToken0)
-                    if pool.totalValueLockedToken0 is not None
-                    else OutcomeToken(0)
-                )
-                probability_map[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = Probability(round(pool.token0Price, 2).value)
-            else:
-                outcome_token_pool[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = (
-                    OutcomeToken(pool.totalValueLockedToken1)
-                    if pool.totalValueLockedToken1 is not None
-                    else OutcomeToken(0)
-                )
-                probability_map[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = Probability(round(pool.token1Price, 2).value)
-
-        for outcome in model.outcomes:
-            if outcome not in outcome_token_pool:
-                outcome_token_pool[outcome] = OutcomeWei(0).as_outcome_token
-                probability_map[outcome] = Probability(0)
+        (
+            probability_map,
+            outcome_token_pool,
+        ) = price_manager.build_initial_probs_from_pool(model, wrapped_tokens)
 
         market = SeerAgentMarket(
             id=model.id.hex(),
@@ -472,12 +434,12 @@ class SeerAgentMarket(AgentMarket):
             fees=MarketFees.get_zero_fees(),
             outcome_token_pool=outcome_token_pool,
             outcomes_supply=model.outcomes_supply,
-            resolution=resolution,
+            resolution=SeerAgentMarket.build_resolution(model=model),
             volume=None,
             probabilities=probability_map,
             upper_bound=model.upper_bound,
             lower_bound=model.lower_bound,
-            parent=parent,
+            parent=SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph),
             template_id=model.template_id,
         )
 

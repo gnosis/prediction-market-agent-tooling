@@ -48,6 +48,10 @@ class ManifoldAgentMarket(AgentMarket):
     # We restrict Manifold to binary markets, hence current_p_yes always defined.
     current_p_yes: Probability
 
+    @property
+    def is_multiresult(self) -> bool:
+        return False
+
     def get_last_trade_p_yes(self) -> Probability:
         """On Manifold, probablities aren't updated after the closure, so we can just use the current probability"""
         return self.current_p_yes

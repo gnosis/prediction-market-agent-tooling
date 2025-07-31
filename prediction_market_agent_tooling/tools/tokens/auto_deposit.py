@@ -236,7 +236,6 @@ def mint_full_set(
     api_keys: APIKeys,
     web3: Web3 | None,
 ) -> None:
-    GnosisRouter()
     # We need to fetch the parent's market collateral token, to split it and get the collateral token
     # of the child market.
     seer_subgraph_handler = SeerSubgraphHandler()

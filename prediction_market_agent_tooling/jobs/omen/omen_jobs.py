@@ -25,6 +25,10 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
     CATEGORY = "jobs"
 
     @property
+    def is_multiresult(self) -> bool:
+        return False
+
+    @property
     def job(self) -> str:
         """Omen market's have only question, so that's where the job description is."""
         return self.question

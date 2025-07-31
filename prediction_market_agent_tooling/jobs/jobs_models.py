@@ -33,6 +33,10 @@ class JobAgentMarket(AgentMarket, ABC):
     CATEGORY: t.ClassVar[str]
 
     @property
+    def is_multiresult(self) -> bool:
+        return False
+
+    @property
     @abstractmethod
     def job(self) -> str:
         """Holds description of the job that needs to be done."""

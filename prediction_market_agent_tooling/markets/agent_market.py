@@ -1,4 +1,5 @@
 import typing as t
+from abc import abstractproperty
 from datetime import timedelta
 from enum import Enum
 from math import prod
@@ -229,10 +230,6 @@ class AgentMarket(BaseModel):
         return has_up and has_down
 
     @property
-    def is_multiresult(self) -> bool:
-        return self.template_id == 3 or self.template_id == 1 and len(self.outcomes) > 3
-
-    @property
     def p_up(self) -> Probability:
         probs_lowercase = {o.lower(): p for o, p in self.probabilities.items()}
         return check_not_none(probs_lowercase.get(UP_OUTCOME_LOWERCASE_IDENTIFIER))
@@ -262,6 +259,10 @@ class AgentMarket(BaseModel):
         else:
             outcome = get_most_probable_outcome(self.probabilities)
             return Resolution(outcome=outcome, invalid=False)
+
+    @abstractproperty
+    def is_multiresult(self) -> bool:
+        pass
 
     def get_last_trade_p_yes(self) -> Probability | None:
         """

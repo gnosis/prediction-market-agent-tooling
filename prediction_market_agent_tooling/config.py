@@ -338,7 +338,9 @@ class RPCConfig(BaseSettings):
     def get_web3(self) -> Web3:
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": construct_user_agent(str(type(self))),
+            "User-Agent": construct_user_agent(
+                str(type(self)), self.__class__.__name__
+            ),
         }
         if bearer := self.chain_id_to_rpc_bearer(self.chain_id):
             headers["Authorization"] = f"Bearer {bearer.get_secret_value()}"

@@ -628,6 +628,14 @@ class ConditionalTokenContract(ContractBaseClass):
         )
         return balance
 
+    def isApprovedForAll(
+        self,
+        owner: ChecksumAddress,
+        for_address: ChecksumAddress,
+        web3: Web3 | None = None,
+    ) -> bool:
+        return self.call("isApprovedForAll", [owner, for_address], web3=web3)
+
     def getCollectionId(
         self,
         parent_collection_id: HexStr,

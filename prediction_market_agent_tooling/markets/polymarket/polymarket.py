@@ -23,6 +23,8 @@ from prediction_market_agent_tooling.markets.agent_market import (
     MarketFees,
     QuestionType,
     SortBy,
+    ProcessedMarket,
+    ProcessedTradedMarket,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
@@ -37,11 +39,12 @@ from prediction_market_agent_tooling.markets.polymarket.clob_manager import (
     ClobManager,
     PolymarketPriceSideEnum,
 )
-from prediction_market_agent_tooling.markets.polymarket.data_models import (
-    PolymarketGammaResponseDataItem,
+from prediction_market_agent_tooling.markets.polymarket.constants import (
+    POLYMARKET_TINY_BET_AMOUNT,
 )
-from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
+from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_BASE_URL,
+    PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
     USDCContract,
@@ -73,7 +76,9 @@ class PolymarketAgentMarket(AgentMarket):
     fees: MarketFees = MarketFees.get_zero_fees()
     condition_id: HexBytes
     liquidity_usd: USD
-    token_ids: list[HexBytes]
+    token_ids: list[int]
+    closed_flag_from_polymarket: bool
+    active_flag_from_polymarket: bool
 
     @staticmethod
     def collateral_token_address() -> ChecksumAddress:
@@ -112,17 +117,22 @@ class PolymarketAgentMarket(AgentMarket):
         resolved_outcome = outcomes[payout_numerator_indices_gt_0[0]]
         return Resolution.from_answer(resolved_outcome)
 
+    def get_token_id_for_outcome(self, outcome: OutcomeStr) -> int:
+        outcome_idx = self.outcomes.index(outcome)
+        return self.token_ids[outcome_idx]
+
     @staticmethod
     def from_data_model(
         model: PolymarketGammaResponseDataItem,
         condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
-    ) -> "PolymarketAgentMarket":
+    ) -> t.Optional["PolymarketAgentMarket"]:
         # If len(model.markets) > 0, this denotes a categorical market.
         markets = check_not_none(model.markets)
         outcomes = markets[0].outcomes_list
         outcome_prices = markets[0].outcome_prices
         if not outcome_prices:
             # We give random prices
+            # ToDo - Filter out markets without prices, maybe use clob_client.get_price
             outcome_prices = [0.5, 0.5]
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 
@@ -142,6 +152,8 @@ class PolymarketAgentMarket(AgentMarket):
             resolution=resolution,
             created_time=model.startDate,
             close_time=model.endDate,
+            closed_flag_from_polymarket=model.closed,
+            active_flag_from_polymarket=model.active,
             url=model.url,
             volume=CollateralToken(model.volume) if model.volume else None,
             outcome_token_pool=None,
@@ -151,7 +163,7 @@ class PolymarketAgentMarket(AgentMarket):
         )
 
     def get_tiny_bet_amount(self) -> CollateralToken:
-        return CollateralToken(0.1)
+        return CollateralToken(POLYMARKET_TINY_BET_AMOUNT.value)
 
     def get_token_in_usd(self, x: CollateralToken) -> USD:
         return get_token_in_usd(x, self.collateral_token_address())
@@ -193,7 +205,8 @@ class PolymarketAgentMarket(AgentMarket):
         ascending: bool = False  # default value
         match sort_by:
             case SortBy.NEWEST:
-                order_by = PolymarketOrderByEnum.START_DATE
+                order_by = PolymarketOrderByEnum.END_DATE
+                ascending = True
             case SortBy.CLOSING_SOONEST:
                 ascending = True
                 order_by = PolymarketOrderByEnum.END_DATE
@@ -224,10 +237,17 @@ class PolymarketAgentMarket(AgentMarket):
         )
         condition_models_dict = {c.id: c for c in condition_models}
 
-        return [
-            PolymarketAgentMarket.from_data_model(m, condition_models_dict)
+        markets = [
+            market
             for m in markets
+            if (
+                market := PolymarketAgentMarket.from_data_model(
+                    m, condition_models_dict
+                )
+            )
+            is not None
         ]
+        return markets
 
     def ensure_min_native_balance(
         self,
@@ -266,6 +286,28 @@ class PolymarketAgentMarket(AgentMarket):
             0.001 * 10**6
         )
 
+    def store_prediction(
+        self,
+        processed_market: ProcessedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
+    ) -> None:
+        pass
+
+    def store_trades(
+        self,
+        traded_market: ProcessedTradedMarket | None,
+        keys: APIKeys,
+        agent_name: str,
+        web3: Web3 | None = None,
+    ) -> None:
+        logger.info("Storing trades deactivated for Polymarket.")
+        # Understand how market_id can be represented. Condition_id could work but length doesn't seem to match.
+        pass
+
+    def get_user_url(cls, keys: APIKeys) -> str:
+        return f"https://polymarket.com/{keys.public_key}"
+
     def get_position(
         self, user_id: str, web3: Web3 | None = None
     ) -> ExistingPosition | None:
@@ -298,9 +340,12 @@ class PolymarketAgentMarket(AgentMarket):
             amounts_current=amounts_current,
         )
 
+    def can_be_traded(self) -> bool:
+        return self.active_flag_from_polymarket and not self.closed_flag_from_polymarket
+
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr
-    ) -> OutcomeToken | None:
+    ) -> OutcomeToken:
         """Returns number of outcome tokens returned for a given bet expressed in collateral units."""
 
         if outcome_str not in self.outcomes:
@@ -308,24 +353,31 @@ class PolymarketAgentMarket(AgentMarket):
                 f"Outcome {outcome_str} not found in market outcomes {self.outcomes}"
             )
 
-        outcome_idx = self.outcomes.index(outcome_str)
-        token_id = int(self.token_ids[outcome_idx].hex(), 16)
+        token_id = self.get_token_id_for_outcome(outcome_str)
 
         price = ClobManager(APIKeys()).get_token_price(
             token_id=token_id, side=PolymarketPriceSideEnum.BUY
         )
+        if not price:
+            raise ValueError(
+                f"Could not get price for outcome {outcome_str} with token_id {token_id}"
+            )
+
         # we work with floats since USD and Collateral are the same on Polymarket
         buy_token_amount = bet_amount.value / price.value
         return OutcomeToken(buy_token_amount)
 
     def buy_tokens(self, outcome: OutcomeStr, amount: USD) -> str:
         clob_manager = ClobManager(APIKeys())
-        token_id = int(self.token_ids[self.outcomes.index(outcome)].hex(), 16)
+        token_id = self.get_token_id_for_outcome(outcome)
 
-        # ToDo - Check if str is the tx hash
-        return clob_manager.place_buy_market_order(
+        created_order = clob_manager.place_buy_market_order(
             token_id=token_id, usdc_amount=amount.value
         )
+        if not created_order.success:
+            raise ValueError(f"Error creating order: {created_order}")
+
+        return created_order.transactionsHashes[0].hex()
 
     def sell_tokens(
         self,
@@ -334,7 +386,7 @@ class PolymarketAgentMarket(AgentMarket):
         api_keys: APIKeys | None = None,
     ) -> str:
         clob_manager = ClobManager(api_keys=api_keys or APIKeys())
-        token_id = int(self.token_ids[self.outcomes.index(outcome)].hex(), 16)
+        token_id = self.get_token_id_for_outcome(outcome)
 
         token_price = clob_manager.get_token_price(
             token_id=token_id, side=PolymarketPriceSideEnum.SELL

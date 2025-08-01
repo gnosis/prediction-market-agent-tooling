@@ -1,4 +1,5 @@
 import typing as t
+from typing import SupportsIndex
 
 from hexbytes import HexBytes as HexBytesBase
 from pydantic import GetJsonSchemaHandler
@@ -59,6 +60,17 @@ class HexBytes(HexBytesBase, BaseHex):
     def fromhex(cls, hex_str: str) -> "HexBytes":
         value = hex_str[2:] if hex_str.startswith("0x") else hex_str
         return super().fromhex(value)
+
+    def hex(
+        self, sep: t.Union[str, bytes] = None, bytes_per_sep: "SupportsIndex" = 1
+    ) -> str:
+        result = super().hex()
+        if isinstance(result, str) and result.startswith("0x"):
+            return result
+        return f"0x{result}"
+
+    def __repr__(self) -> str:
+        return f'HexBytes("{self.hex()}")'
 
     @classmethod
     def __eth_pydantic_validate__(

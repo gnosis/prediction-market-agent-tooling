@@ -166,7 +166,8 @@ def get_buy_token_amount_else_raise(
 def handle_allowance(
     api_keys: APIKeys,
     sell_token: ChecksumAddress,
-    amount_wei: Wei,
+    amount_to_check_wei: Wei,
+    amount_to_set_wei: Wei | None = None,
     for_address: ChecksumAddress | None = None,
     web3: Web3 | None = None,
 ) -> None:
@@ -179,11 +180,12 @@ def handle_allowance(
         for_address=for_address,
         web3=web3,
     )
-    if current_allowance < amount_wei:
+    if current_allowance < amount_to_check_wei:
+        amount_to_set_wei = amount_to_set_wei or amount_to_check_wei
         ContractERC20OnGnosisChain(address=sell_token).approve(
             api_keys,
             for_address=for_address,
-            amount_wei=amount_wei,
+            amount_wei=amount_to_set_wei,
             web3=web3,
         )
 
@@ -305,7 +307,10 @@ async def swap_tokens_waiting_async(
     wait_order_complete: bool = True,
 ) -> tuple[OrderMetaData | None, CompletedOrder]:
     handle_allowance(
-        api_keys=api_keys, sell_token=sell_token, amount_wei=amount_wei, web3=web3
+        api_keys=api_keys,
+        sell_token=sell_token,
+        amount_to_check_wei=amount_wei,
+        web3=web3,
     )
     valid_to = (utcnow() + timeout).timestamp()
     order = await place_swap_order(

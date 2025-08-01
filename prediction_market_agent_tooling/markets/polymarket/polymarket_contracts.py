@@ -1,5 +1,7 @@
 from web3 import Web3
 
+from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
+from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.tools.contract import (
     ConditionalTokenContract,
@@ -9,8 +11,9 @@ from prediction_market_agent_tooling.tools.contract import (
 
 
 class USDCContract(ContractERC20BaseClass, ContractOnPolygonChain):
+    # USDC.e is used by Polymarket.
     address: ChecksumAddress = Web3.to_checksum_address(
-        "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"
+        "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
     )
 
 
@@ -20,3 +23,15 @@ class PolymarketConditionalTokenContract(
     address: ChecksumAddress = Web3.to_checksum_address(
         "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045"
     )
+    CHAIN_ID = POLYGON_CHAIN_ID
+
+    def approve_if_not_approved(
+        self, api_keys: APIKeys, for_address: ChecksumAddress, web3: Web3 | None = None
+    ) -> None:
+        is_approved = self.isApprovedForAll(
+            owner=api_keys.public_key, for_address=for_address, web3=web3
+        )
+        if not is_approved:
+            self.setApprovalForAll(
+                api_keys=api_keys, for_address=for_address, approve=True, web3=web3
+            )

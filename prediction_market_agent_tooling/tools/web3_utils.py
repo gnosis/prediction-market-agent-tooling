@@ -286,7 +286,7 @@ def sign_send_and_get_receipt_tx(
         tx_params_new, private_key=from_private_key.get_secret_value()
     )
     # Send the signed transaction.
-    send_tx = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
     # And wait for the receipt.
     receipt_tx = web3.eth.wait_for_transaction_receipt(send_tx, timeout=timeout)
     # Verify it didn't fail.

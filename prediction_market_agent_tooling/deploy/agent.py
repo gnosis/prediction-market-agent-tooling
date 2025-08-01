@@ -489,7 +489,7 @@ class DeployablePredictionAgent(DeployableAgent):
         market_type: MarketType,
         market: AgentMarket,
         verify_market: bool = True,
-    ) -> ProcessedMarket | None:
+    ) -> ProcessedTradedMarket | None:
         self.update_langfuse_trace_by_market(market_type, market)
         logger.info(
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
@@ -511,7 +511,9 @@ class DeployablePredictionAgent(DeployableAgent):
             self.verify_answer_outcomes(market=market, answer=answer)
 
         processed_market = (
-            ProcessedMarket(answer=answer) if answer is not None else None
+            ProcessedTradedMarket(answer=answer, trades=[])
+            if answer is not None
+            else None
         )
 
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
@@ -560,6 +562,8 @@ class DeployablePredictionAgent(DeployableAgent):
         processed = 0
 
         for market_idx, market in enumerate(available_markets):
+            if market.id == '31384':
+                continue
             logger.info(
                 f"Going to process market {market.url}: {market_idx+1} / {len(available_markets)}."
             )
@@ -567,7 +571,8 @@ class DeployablePredictionAgent(DeployableAgent):
             processed_market = self.process_market(market_type, market)
             self.after_process_market(market_type, market, processed_market)
 
-            if processed_market is not None:
+            if processed_market is not None and processed_market.trades:
+                # We only mark market as processed if trades were placed.
                 processed += 1
 
             if processed == self.bet_on_n_markets_per_run:

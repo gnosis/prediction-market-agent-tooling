@@ -59,16 +59,18 @@ class PolymarketGammaResponseDataItem(BaseModel):
     id: str
     slug: str
     volume: float | None = None
-    startDate: DatetimeUTC
+    startDate: DatetimeUTC | None = None
     endDate: DatetimeUTC | None = None
     liquidity: float | None = None
     liquidityClob: float | None = None
     title: str
-    description: str
+    description: str | None = None
     archived: bool
     closed: bool
     active: bool
-    markets: list[PolymarketGammaMarket]
+    markets: list[
+        PolymarketGammaMarket
+    ] | None = None  # Some Polymarket markets have missing markets field. We skip these markets manually when retrieving.
     tags: list[PolymarketGammaTag]
 
     @property

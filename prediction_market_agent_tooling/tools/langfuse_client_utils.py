@@ -68,6 +68,7 @@ def get_traces_for_agent(
     client: Langfuse,
     to_timestamp: DatetimeUTC | None = None,
     tags: str | list[str] | None = None,
+    limit: int | None = None,
 ) -> list[TraceWithDetails]:
     """
     Fetch agent traces using pagination
@@ -98,6 +99,9 @@ def get_traces_for_agent(
         if has_output:
             agent_traces = [t for t in agent_traces if t.output is not None]
         all_agent_traces.extend(agent_traces)
+        if limit is not None and len(all_agent_traces) >= limit:
+            all_agent_traces = all_agent_traces[:limit]
+            break
     return all_agent_traces
 
 

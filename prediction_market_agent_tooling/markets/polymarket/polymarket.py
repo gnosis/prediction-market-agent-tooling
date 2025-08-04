@@ -7,6 +7,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     Probability,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     ConditionalFilterType,
@@ -31,6 +32,7 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_hand
     PolymarketSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -69,9 +71,11 @@ class PolymarketAgentMarket(AgentMarket):
         ]
         # For a binary market, there should be exactly one payout numerator greater than 0.
         if len(payout_numerator_indices_gt_0) != 1:
-            raise ValueError(
-                f"Only binary markets are supported. Got payout numerators: {condition_model.payoutNumerators}"
+            # These cases involve multi-categorical resolution (to be implemented https://github.com/gnosis/prediction-market-agent-tooling/issues/770)
+            logger.warning(
+                f"Only binary markets are supported. Got payout numerators: {condition_model.payoutNumerators} for condition_id {condition_id.hex()}"
             )
+            return Resolution(outcome=None, invalid=False)
 
         # we return the only payout numerator greater than 0 as resolution
         resolved_outcome = outcomes[payout_numerator_indices_gt_0[0]]
@@ -83,16 +87,16 @@ class PolymarketAgentMarket(AgentMarket):
         condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
     ) -> "PolymarketAgentMarket":
         # If len(model.markets) > 0, this denotes a categorical market.
-
-        outcomes = model.markets[0].outcomes_list
-        outcome_prices = model.markets[0].outcome_prices
+        markets = check_not_none(model.markets)
+        outcomes = markets[0].outcomes_list
+        outcome_prices = markets[0].outcome_prices
         if not outcome_prices:
             # We give random prices
             outcome_prices = [0.5, 0.5]
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 
         resolution = PolymarketAgentMarket.build_resolution_from_condition(
-            condition_id=model.markets[0].conditionId,
+            condition_id=markets[0].conditionId,
             condition_model_dict=condition_model_dict,
             outcomes=outcomes,
         )
@@ -164,7 +168,11 @@ class PolymarketAgentMarket(AgentMarket):
         )
 
         condition_models = PolymarketSubgraphHandler().get_conditions(
-            condition_ids=[market.markets[0].conditionId for market in markets]
+            condition_ids=[
+                market.markets[0].conditionId
+                for market in markets
+                if market.markets is not None
+            ]
         )
         condition_models_dict = {c.id: c for c in condition_models}
 

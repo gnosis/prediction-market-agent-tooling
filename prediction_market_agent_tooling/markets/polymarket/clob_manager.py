@@ -97,15 +97,15 @@ class ClobManager(metaclass=ClobManagerMeta):
         self, token_id: int, amount: float, side: PolymarketPriceSideEnum
     ) -> CreateOrderResult:
         """Internal method to place a market order.
-        
+
         Args:
             token_id: The token ID to trade
             amount: The amount to trade (USDC for BUY, token shares for SELL)
             side: Either BUY or SELL
-            
+
         Returns:
             CreateOrderResult: The result of the order placement
-            
+
         Raises:
             ValueError: If usdc_amount is < 1.0 for BUY orders
         """
@@ -113,29 +113,28 @@ class ClobManager(metaclass=ClobManagerMeta):
             raise ValueError(
                 f"usdc_amounts < 1.0 are not supported by Polymarket, got {amount}"
             )
-            
+
         order_args = MarketOrderArgs(
             token_id=str(token_id),
             amount=amount,
             side=side.value,
         )
-        
+
         signed_order = self.clob_client.create_market_order(order_args)
         resp = self.clob_client.post_order(signed_order, orderType=OrderType.FOK)
         return CreateOrderResult.model_validate(resp)
-        
+
     def place_buy_market_order(
         self, token_id: int, usdc_amount: float
     ) -> CreateOrderResult:
-        """Place a market buy order for the given token with the specified USDC amount. """
+        """Place a market buy order for the given token with the specified USDC amount."""
         return self._place_market_order(token_id, usdc_amount, BUY)
 
-    def place_sell_market_order(self, token_id: int, token_shares: float) -> str:
-        """Place a market sell order for the given token with the specified number of shares. """
-        result = self._place_market_order(token_id, token_shares, SELL)
-        return str(result.id)
-
-    
+    def place_sell_market_order(
+        self, token_id: int, token_shares: float
+    ) -> CreateOrderResult:
+        """Place a market sell order for the given token with the specified number of shares."""
+        return self._place_market_order(token_id, token_shares, SELL)
 
     def __init_approvals(
         self,

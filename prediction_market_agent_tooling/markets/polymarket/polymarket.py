@@ -392,15 +392,19 @@ class PolymarketAgentMarket(AgentMarket):
         """
 
         clob_manager = ClobManager(api_keys=api_keys or APIKeys())
+        token_id = self.get_token_id_for_outcome(outcome)
         token_shares: float
         if isinstance(amount, OutcomeToken):
             token_shares = amount.value / 1e6
         elif isinstance(amount, USD):
-            token_id = self.get_token_id_for_outcome(outcome)
             token_price = clob_manager.get_token_price(
                 token_id=token_id, side=PolymarketPriceSideEnum.SELL
             )
             token_shares = amount.value / token_price.value
+        else:
+            raise ValueError(
+                f"Amount must be of type OutcomeToken or USD, got {type(amount)}"
+            )
 
         token_id = self.get_token_id_for_outcome(outcome)
         created_order = clob_manager.place_sell_market_order(
@@ -410,4 +414,3 @@ class PolymarketAgentMarket(AgentMarket):
             raise ValueError(f"Error creating order: {created_order}")
 
         return created_order.transactionsHashes[0].hex()
-

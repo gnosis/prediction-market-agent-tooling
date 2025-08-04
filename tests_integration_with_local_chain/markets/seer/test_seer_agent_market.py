@@ -135,18 +135,30 @@ def test_seer_place_bet_via_pools(
 
 
 def prepare_seer_swap_test(
-    local_web3: Web3, test_keys: APIKeys, deposit_collateral: bool = False
+    local_web3: Web3,
+    test_keys: APIKeys,
+    deposit_collateral: bool = False,
+    market_id: HexBytes | None = None,
 ) -> tuple[
     SeerAgentMarket, ChecksumAddress, int, ChecksumAddress, OutcomeWei, OutcomeToken
 ]:
     """Prepare common test setup for swap tests."""
     amount_wei = OutcomeToken(1).as_outcome_wei
-    market = SeerAgentMarket.get_markets(
-        limit=1,
-        sort_by=SortBy.HIGHEST_LIQUIDITY,
-        filter_by=FilterBy.OPEN,
-        question_type=QuestionType.BINARY,
-    )[0]
+    market = (
+        SeerAgentMarket.get_markets(
+            limit=1,
+            sort_by=SortBy.HIGHEST_LIQUIDITY,
+            filter_by=FilterBy.OPEN,
+            question_type=QuestionType.BINARY,
+        )[0]
+        if market_id is None
+        else SeerAgentMarket.from_data_model_with_subgraph(
+            SeerSubgraphHandler().get_market_by_id(market_id),
+            SeerSubgraphHandler(),
+            True,
+        )
+    )
+    assert market is not None
 
     sell_token = market.collateral_token_contract_address_checksummed
     outcome_idx = 0

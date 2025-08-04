@@ -562,7 +562,7 @@ class DeployablePredictionAgent(DeployableAgent):
         processed = 0
 
         for market_idx, market in enumerate(available_markets):
-            if market.id == '31384':
+            if market.id != '28623':
                 continue
             logger.info(
                 f"Going to process market {market.url}: {market_idx+1} / {len(available_markets)}."
@@ -691,6 +691,9 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         placed_trades: list[PlacedTrade] = []
 
         for trade in trades:
+            if trade.trade_type == TradeType.BUY:
+                # ToDo remove me
+                continue
             logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
 
             if self.place_trades and still_tradeable:

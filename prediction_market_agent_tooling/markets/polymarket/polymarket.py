@@ -326,11 +326,11 @@ class PolymarketAgentMarket(AgentMarket):
         amounts_current = {i: USD(0) for i in self.outcomes}
 
         for p in positions:
-            if p.conditionId != self.id:
+            if p.conditionId != self.condition_id.hex():
                 continue
 
             amounts_potential[OutcomeStr(p.outcome)] = USD(p.size)
-            amounts_ot[OutcomeStr(p.outcome)] = OutcomeToken(p.curPrice)
+            amounts_ot[OutcomeStr(p.outcome)] = OutcomeToken(p.size * 1e6)
             amounts_current[OutcomeStr(p.outcome)] = USD(p.currentValue)
 
         return ExistingPosition(
@@ -385,16 +385,29 @@ class PolymarketAgentMarket(AgentMarket):
         amount: USD | OutcomeToken,
         api_keys: APIKeys | None = None,
     ) -> str:
+        """
+        Polymarket's API expect shares to be sold. 1 share == 1 outcome token / 1e6.
+        The number of outcome tokens matches the `balanceOf` of the conditionalTokens contract.
+        In comparison, the number of shares match the position.size from the user position.
+        """
+
         clob_manager = ClobManager(api_keys=api_keys or APIKeys())
+        token_shares: float
+        if isinstance(amount, OutcomeToken):
+            token_shares = amount.value / 1e6
+        elif isinstance(amount, USD):
+            token_id = self.get_token_id_for_outcome(outcome)
+            token_price = clob_manager.get_token_price(
+                token_id=token_id, side=PolymarketPriceSideEnum.SELL
+            )
+            token_shares = amount.value / token_price.value
+
         token_id = self.get_token_id_for_outcome(outcome)
-
-        token_price = clob_manager.get_token_price(
-            token_id=token_id, side=PolymarketPriceSideEnum.SELL
-        )
-        token_shares = amount.value / token_price.value
-
-        # ToDo - Check if str is the tx hash
-        tx_hash = clob_manager.place_sell_market_order(
+        created_order = clob_manager.place_sell_market_order(
             token_id=token_id, token_shares=token_shares
         )
-        return tx_hash
+        if not created_order.success:
+            raise ValueError(f"Error creating order: {created_order}")
+
+        return created_order.transactionsHashes[0].hex()
+

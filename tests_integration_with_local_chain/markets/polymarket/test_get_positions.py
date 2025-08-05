@@ -1,8 +1,6 @@
 from web3 import Web3
 
-from prediction_market_agent_tooling.markets.polymarket.api import (
-    get_user_positions,
-)
+from prediction_market_agent_tooling.markets.polymarket.api import get_user_positions
 
 
 def test_get_positions() -> None:

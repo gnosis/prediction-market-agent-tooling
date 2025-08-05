@@ -21,10 +21,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     ConditionalFilterType,
     FilterBy,
     MarketFees,
-    QuestionType,
-    SortBy,
     ProcessedMarket,
     ProcessedTradedMarket,
+    QuestionType,
+    SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
@@ -295,7 +295,6 @@ class PolymarketAgentMarket(AgentMarket):
         logger.info("Storing trades deactivated for Polymarket.")
         # Understand how market_id can be represented.
         # Condition_id could work but length doesn't seem to match.
-        pass
 
     def get_user_url(cls, keys: APIKeys) -> str:
         return f"https://polymarket.com/{keys.public_key}"

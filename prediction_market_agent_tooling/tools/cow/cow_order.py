@@ -48,9 +48,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
 )
-from prediction_market_agent_tooling.tools.contract import (
-    ContractERC20BaseClass,
-)
+from prediction_market_agent_tooling.tools.contract import ContractERC20BaseClass
 from prediction_market_agent_tooling.tools.cow.models import MinimalisticTrade, Order
 from prediction_market_agent_tooling.tools.cow.semaphore import postgres_rate_limited
 from prediction_market_agent_tooling.tools.utils import utcnow

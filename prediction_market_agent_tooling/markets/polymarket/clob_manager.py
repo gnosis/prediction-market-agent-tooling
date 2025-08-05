@@ -3,26 +3,23 @@ from threading import Lock
 from typing import Any, Dict, Type, TypeVar
 
 from py_clob_client.client import ClobClient
-from py_clob_client.clob_types import (
-    MarketOrderArgs,
-    OrderType,
-)
+from py_clob_client.clob_types import MarketOrderArgs, OrderType
 from py_clob_client.order_builder.constants import BUY, SELL
 from pydantic import BaseModel
 from web3 import Web3
 
 from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
-from prediction_market_agent_tooling.gtypes import USD, Wei, HexBytes
+from prediction_market_agent_tooling.gtypes import USD, HexBytes, Wei
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     CTF_EXCHANGE_POLYMARKET,
-    NEG_RISK_EXCHANGE,
     NEG_RISK_ADAPTER,
+    NEG_RISK_EXCHANGE,
     POLYMARKET_TINY_BET_AMOUNT,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
-    USDCeContract,
     PolymarketConditionalTokenContract,
+    USDCeContract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import handle_allowance
 

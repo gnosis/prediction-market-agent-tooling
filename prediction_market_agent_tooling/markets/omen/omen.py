@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import timedelta
 
 import tenacity
+from pydantic import BaseModel
 from tqdm import tqdm
 from web3 import Web3
 
@@ -1323,19 +1324,33 @@ def send_keeping_token_to_eoa_xdai(
         )
 
 
-def get_buy_outcome_token_amount(
+class BuyOutcomeResult(BaseModel):
+    outcome_tokens_received: OutcomeToken
+    new_pool_balances: list[OutcomeToken]
+
+
+def calculate_buy_outcome_token(
     investment_amount: CollateralToken,
     outcome_index: int,
     pool_balances: list[OutcomeToken],
     fees: MarketFees,
-) -> OutcomeToken:
+) -> BuyOutcomeResult:
     """
     Calculates the amount of outcome tokens received for a given investment
+    and returns the new pool balances after the purchase.
 
     Taken from https://github.com/gnosis/conditional-tokens-market-makers/blob/6814c0247c745680bb13298d4f0dd7f5b574d0db/contracts/FixedProductMarketMaker.sol#L264
     """
     if outcome_index >= len(pool_balances):
         raise ValueError("invalid outcome index")
+
+    new_pool_balances = pool_balances.copy()
+
+    if investment_amount == 0:
+        return BuyOutcomeResult(
+            outcome_tokens_received=OutcomeToken(0),
+            new_pool_balances=new_pool_balances,
+        )
 
     investment_amount_minus_fees = fees.get_after_fees(investment_amount)
     investment_amount_minus_fees_as_ot = OutcomeToken(
@@ -1348,17 +1363,39 @@ def get_buy_outcome_token_amount(
     # Calculate the ending balance considering all other outcomes
     for i, pool_balance in enumerate(pool_balances):
         if i != outcome_index:
-            denominator = pool_balance + investment_amount_minus_fees_as_ot
+            new_pool_balances[i] = pool_balance + investment_amount_minus_fees_as_ot
             ending_outcome_balance = OutcomeToken(
-                (ending_outcome_balance * pool_balance / denominator)
+                (ending_outcome_balance * pool_balance / new_pool_balances[i])
             )
+
+    # Update the bought outcome's pool balance
+    new_pool_balances[outcome_index] = ending_outcome_balance
 
     if ending_outcome_balance <= 0:
         raise ValueError("must have non-zero balances")
 
-    result = (
+    outcome_tokens_received = (
         buy_token_pool_balance
         + investment_amount_minus_fees_as_ot
         - ending_outcome_balance
     )
-    return result
+
+    return BuyOutcomeResult(
+        outcome_tokens_received=outcome_tokens_received,
+        new_pool_balances=new_pool_balances,
+    )
+
+
+def get_buy_outcome_token_amount(
+    investment_amount: CollateralToken,
+    outcome_index: int,
+    pool_balances: list[OutcomeToken],
+    fees: MarketFees,
+) -> OutcomeToken:
+    result = calculate_buy_outcome_token(
+        investment_amount=investment_amount,
+        outcome_index=outcome_index,
+        pool_balances=pool_balances,
+        fees=fees,
+    )
+    return result.outcome_tokens_received

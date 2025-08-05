@@ -6,11 +6,24 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
+    QuestionType,
+    SortBy,
+)
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    OMEN_FALSE_OUTCOME,
+    OMEN_TRUE_OUTCOME,
+)
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet_full,
     get_kelly_bet_simplified,
     get_kelly_bets_categorical_full,
     get_kelly_bets_categorical_simplified,
+)
+from prediction_market_agent_tooling.tools.betting_strategies.utils import (
+    BinaryKellyBet,
+    CategoricalKellyBet,
 )
 
 
@@ -176,16 +189,20 @@ def test_kelly_categorical_simplified_overpriced(
 
 
 @pytest.mark.parametrize(
-    "allow_multiple_bets, allow_shorting",
+    "allow_multiple_bets, allow_shorting, multicategorical",
     [
-        (True, True),
-        (True, False),
-        (False, True),
-        (False, False),
+        (True, True, True),
+        (True, False, True),
+        (False, True, True),
+        (False, False, True),
+        (True, True, False),
+        (True, False, False),
+        (False, True, False),
+        (False, False, False),
     ],
 )
 def test_kelly_categorical_full_underpriced(
-    allow_multiple_bets: bool, allow_shorting: bool
+    allow_multiple_bets: bool, allow_shorting: bool, multicategorical: bool
 ) -> None:
     # Market [0.79, 0.21], we think [0.9, 0.1] (first outcome underpriced)
     bets = get_kelly_bets_categorical_full(
@@ -195,29 +212,36 @@ def test_kelly_categorical_full_underpriced(
         ],
         estimated_probabilities=[Probability(0.9), Probability(0.1)],
         confidence=1.0,
-        max_bet=CollateralToken(1),
+        max_bet=CollateralToken(0.5),
         fees=MarketFees(bet_proportion=0.0, absolute=0.0),
         allow_multiple_bets=allow_multiple_bets,
         allow_shorting=allow_shorting,
+        multicategorical=multicategorical,
     )
     assert bets[0].size.value >= 0, bets
-    assert bets[1].size.value <= 0, bets
+    if not multicategorical:
+        # In multicategorical case, it could actually be profitable to bet something on second bet as well.
+        assert bets[1].size.value <= 0, bets
     assert not all(b.size == 0 for b in bets)
     if not allow_shorting:
         assert all(b.size >= 0 for b in bets)
 
 
 @pytest.mark.parametrize(
-    "allow_multiple_bets, allow_shorting",
+    "allow_multiple_bets, allow_shorting, multicategorical",
     [
-        (True, True),
-        (True, False),
-        (False, True),
-        (False, False),
+        (True, True, True),
+        (True, False, True),
+        (False, True, True),
+        (False, False, True),
+        (True, True, False),
+        (True, False, False),
+        (False, True, False),
+        (False, False, False),
     ],
 )
 def test_kelly_categorical_full_fair_price(
-    allow_multiple_bets: bool, allow_shorting: bool
+    allow_multiple_bets: bool, allow_shorting: bool, multicategorical: bool
 ) -> None:
     # Market pools: [500, 500], we think [0.5, 0.5] (fair)
     bets = get_kelly_bets_categorical_full(
@@ -228,6 +252,7 @@ def test_kelly_categorical_full_fair_price(
         fees=MarketFees(bet_proportion=0.0, absolute=0.0),
         allow_multiple_bets=allow_multiple_bets,
         allow_shorting=allow_shorting,
+        multicategorical=multicategorical,
     )
     assert all(abs(b.size.value) < 1e-6 for b in bets), bets
     if not allow_shorting:
@@ -235,16 +260,20 @@ def test_kelly_categorical_full_fair_price(
 
 
 @pytest.mark.parametrize(
-    "allow_multiple_bets, allow_shorting",
+    "allow_multiple_bets, allow_shorting, multicategorical",
     [
-        (True, True),
-        (True, False),
-        (False, True),
-        (False, False),
+        (True, True, True),
+        (True, False, True),
+        (False, True, True),
+        (False, False, True),
+        (True, True, False),
+        (True, False, False),
+        (False, True, False),
+        (False, False, False),
     ],
 )
 def test_kelly_categorical_full_overpriced(
-    allow_multiple_bets: bool, allow_shorting: bool
+    allow_multiple_bets: bool, allow_shorting: bool, multicategorical: bool
 ) -> None:
     # Market [0.79, 0.20], we think [0.4, 0.6] (first outcome overpriced)
     bets = get_kelly_bets_categorical_full(
@@ -254,10 +283,11 @@ def test_kelly_categorical_full_overpriced(
         ],
         estimated_probabilities=[Probability(0.4), Probability(0.6)],
         confidence=1.0,
-        max_bet=CollateralToken(0.5),
+        max_bet=CollateralToken(1),
         fees=MarketFees(bet_proportion=0.0, absolute=0.0),
         allow_multiple_bets=allow_multiple_bets,
         allow_shorting=allow_shorting,
+        multicategorical=multicategorical,
     )
     assert bets[0].size.value <= 0
     assert bets[1].size.value >= 0
@@ -296,3 +326,108 @@ def test_kelly_categorical_simplified_0(
     assert not all(b.size == 0 for b in bets), bets
     if not allow_shorting:
         assert all(b.size >= 0 for b in bets), bets
+
+
+def _compare_bets(
+    market: OmenAgentMarket,
+    categorical_bets: list[CategoricalKellyBet],
+    binary_bet: BinaryKellyBet,
+    max_divergence: float,
+) -> None:
+    non_zero_categorical_bets = [b for b in categorical_bets if abs(b.size.value) > 0]
+    assert (
+        len(non_zero_categorical_bets) == 1
+    ), f"Unexpected amount of bets in {categorical_bets=}"
+
+    category_bet = non_zero_categorical_bets[0]
+
+    # If one bets, other should as well, binary's kelly size is always positive
+    assert (abs(category_bet.size) > 0) == (binary_bet.size > 0), (
+        category_bet,
+        binary_bet,
+        market.url,
+    )
+    # Index zero on Omen markets is generally Yes, ie True direction of binary kelly, this works only if shorting is disabled.
+    assert (category_bet.index == 0) == binary_bet.direction
+    # For binary market, they shouldn't differ too much in the sizes
+    divergence = abs(category_bet.size.value - binary_bet.size.value) / max(
+        category_bet.size.value, binary_bet.size.value
+    )
+    assert divergence < max_divergence, (
+        divergence,
+        category_bet,
+        binary_bet,
+        market.url,
+    )
+
+
+@pytest.mark.parametrize(
+    "estimated_p_yes, confidence",
+    [
+        (0.1, 0.7),
+        (0.5, 0.9),
+        (0.9, 1.0),
+    ],
+)
+def test_compare_kellys_simplified(
+    estimated_p_yes: Probability, confidence: float
+) -> None:
+    max_bet = CollateralToken(5)
+    markets = OmenAgentMarket.get_markets(
+        limit=5, sort_by=SortBy.NONE, question_type=QuestionType.BINARY
+    )
+    for market in markets:
+        categorical_bets = get_kelly_bets_categorical_simplified(
+            market_probabilities=[market.p_yes, market.p_no],
+            estimated_probabilities=[estimated_p_yes, Probability(1 - estimated_p_yes)],
+            confidence=confidence,
+            max_bet=max_bet,
+            # Set as zero to be comparable with binary version.
+            fees=MarketFees.get_zero_fees(),
+            # Set to False to be comparable with binary version.
+            allow_multiple_bets=False,
+            allow_shorting=False,
+        )
+        binary_bet = get_kelly_bet_simplified(
+            max_bet=max_bet,
+            market_p_yes=market.p_yes,
+            estimated_p_yes=estimated_p_yes,
+            confidence=confidence,
+        )
+        _compare_bets(market, categorical_bets, binary_bet, 0.01)
+
+
+@pytest.mark.parametrize(
+    "estimated_p_yes, confidence",
+    [
+        (0.1, 0.7),
+        (0.5, 0.95),
+        (0.9, 1.0),
+    ],
+)
+def test_compare_kellys_full(estimated_p_yes: Probability, confidence: float) -> None:
+    max_bet = CollateralToken(5)
+    markets = OmenAgentMarket.get_markets(
+        limit=5, sort_by=SortBy.NONE, question_type=QuestionType.BINARY
+    )
+    for market in markets:
+        categorical_bets = get_kelly_bets_categorical_full(
+            outcome_pool_sizes=[market.outcome_token_pool[o] for o in market.outcomes],
+            estimated_probabilities=[estimated_p_yes, Probability(1 - estimated_p_yes)],
+            confidence=confidence,
+            max_bet=max_bet,
+            fees=market.fees,
+            # Set to False to be comparable with binary version.
+            allow_multiple_bets=False,
+            allow_shorting=False,
+            multicategorical=False,
+        )
+        binary_bet = get_kelly_bet_full(
+            yes_outcome_pool_size=market.outcome_token_pool[OMEN_TRUE_OUTCOME],
+            no_outcome_pool_size=market.outcome_token_pool[OMEN_FALSE_OUTCOME],
+            estimated_p_yes=estimated_p_yes,
+            confidence=confidence,
+            max_bet=max_bet,
+            fees=market.fees,
+        )
+        _compare_bets(market, categorical_bets, binary_bet, 0.99)

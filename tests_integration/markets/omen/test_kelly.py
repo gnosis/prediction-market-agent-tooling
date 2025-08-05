@@ -124,7 +124,10 @@ def assert_price_impact_converges(
     outcome_idx = omen_agent_market.get_outcome_index(direction)
 
     max_price_impact_bet_amount = kelly.calculate_bet_amount_for_price_impact(
-        omen_agent_market, kelly_bet, direction=direction
+        omen_agent_market,
+        kelly_bet.size,
+        direction=direction,
+        max_price_impact=max_price_impact,
     )
     price_impact = kelly.calculate_price_impact_for_bet_amount(
         outcome_idx=outcome_idx,

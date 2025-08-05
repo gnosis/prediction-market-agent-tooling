@@ -158,7 +158,9 @@ class PolymarketAgentMarket(AgentMarket):
             volume=CollateralToken(model.volume) if model.volume else None,
             outcome_token_pool=None,
             probabilities=probabilities,
-            liquidity_usd=USD(model.liquidity),
+            liquidity_usd=USD(model.liquidity)
+            if model.liquidity is not None
+            else USD(0),
             token_ids=markets[0].token_ids,
         )
 
@@ -237,17 +239,12 @@ class PolymarketAgentMarket(AgentMarket):
         )
         condition_models_dict = {c.id: c for c in condition_models}
 
-        markets = [
-            market
-            for m in markets
-            if (
-                market := PolymarketAgentMarket.from_data_model(
-                    m, condition_models_dict
-                )
-            )
-            is not None
-        ]
-        return markets
+        result_markets: list[PolymarketAgentMarket] = []
+        for m in markets:
+            market = PolymarketAgentMarket.from_data_model(m, condition_models_dict)
+            if market is not None:
+                result_markets.append(market)
+        return result_markets
 
     def ensure_min_native_balance(
         self,
@@ -259,7 +256,7 @@ class PolymarketAgentMarket(AgentMarket):
             for_address=APIKeys().public_key, web3=web3
         )
         # USDC has 6 decimals, xDAI has 18. We convert from Wei into atomic units.
-        balance_collateral_atomic = CollateralToken(balance_collateral / 1e6)
+        balance_collateral_atomic = CollateralToken(float(balance_collateral) / 1e6)
         if balance_collateral_atomic < min_required_balance.as_token:
             raise EnvironmentError(
                 f"USDC balance {balance_collateral_atomic} < {min_required_balance.as_token=}"
@@ -296,6 +293,7 @@ class PolymarketAgentMarket(AgentMarket):
         # Understand how market_id can be represented.
         # Condition_id could work but length doesn't seem to match.
 
+    @classmethod
     def get_user_url(cls, keys: APIKeys) -> str:
         return f"https://polymarket.com/{keys.public_key}"
 

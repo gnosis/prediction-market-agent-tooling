@@ -634,7 +634,10 @@ class ConditionalTokenContract(ContractBaseClass):
         for_address: ChecksumAddress,
         web3: Web3 | None = None,
     ) -> bool:
-        return self.call("isApprovedForAll", [owner, for_address], web3=web3)
+        is_approved: bool = self.call(
+            "isApprovedForAll", [owner, for_address], web3=web3
+        )
+        return is_approved
 
     def getCollectionId(
         self,

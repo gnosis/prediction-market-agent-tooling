@@ -1,4 +1,5 @@
 from web3 import Web3
+from web3.types import RPCEndpoint
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import xDai
@@ -13,7 +14,8 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts imp
 def test_set_approval_for_all(test_keys: APIKeys, polygon_local_web3: Web3) -> None:
     c = PolymarketConditionalTokenContract()
     polygon_local_web3.provider.make_request(
-        "anvil_setBalance", [test_keys.public_key, hex(xDai(1).as_xdai_wei.value)]
+        RPCEndpoint("anvil_setBalance"),
+        [test_keys.public_key, hex(xDai(1).as_xdai_wei.value)],
     )
 
     c.setApprovalForAll(

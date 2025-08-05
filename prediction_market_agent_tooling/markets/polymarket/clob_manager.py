@@ -1,6 +1,6 @@
 from enum import Enum
 from threading import Lock
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Dict
 
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import MarketOrderArgs, OrderType
@@ -55,16 +55,13 @@ class PriceResponse(BaseModel):
     price: float
 
 
-T = TypeVar("T", bound="ClobManager")
-
-
 class ClobManagerMeta(type):
     """Singleton metaclass, one instance per API key's private key."""
 
     _instances: Dict[str, "ClobManager"] = {}
     _lock: Lock = Lock()
 
-    def __call__(cls: Type[T], api_keys: APIKeys, *args: Any, **kwargs: Any) -> T:
+    def __call__(cls, api_keys: APIKeys, *args: Any, **kwargs: Any) -> "ClobManager":
         # Use the API key as the unique identifier for each instance
         key = api_keys.bet_from_private_key.get_secret_value()
         if key not in cls._instances:
@@ -147,7 +144,7 @@ class ClobManager(metaclass=ClobManagerMeta):
         # When setting allowances on Polymarket, it's important to set a large amount, because
         # every trade reduces the allowance by the amount of the trade.
         large_amount_wei = Wei(int(100 * 1e6))  # 100 USDC in Wei
-        amount_to_check_wei = Wei(POLYMARKET_TINY_BET_AMOUNT.value * 1e6)
+        amount_to_check_wei = Wei(int(POLYMARKET_TINY_BET_AMOUNT.value * 1e6))
         ctf = PolymarketConditionalTokenContract()
 
         for target_address in [

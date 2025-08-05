@@ -453,8 +453,11 @@ class BinaryKellyBettingStrategy(BettingStrategy):
             kelly_bet_size = min(kelly_bet.size, max_price_impact_bet_amount)
 
         bet_outcome = direction if kelly_bet.direction else other_direction
+
         amounts = {
-            bet_outcome: market.get_token_in_usd(kelly_bet_size),
+            bet_outcome: BettingStrategy.cap_to_profitable_bet_amount(
+                market, market.get_token_in_usd(kelly_bet_size), bet_outcome
+            ),
         }
         target_position = Position(market_id=market.id, amounts_current=amounts)
         trades = self._build_rebalance_trades_from_positions(

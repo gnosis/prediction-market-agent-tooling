@@ -601,7 +601,7 @@ class SeerAgentMarket(AgentMarket):
                     f"Expected exactly 1 trade from {order_metadata=}, but got {len(trades)=}."
                 )
             cow_tx_hash = trades[0].txHash
-            logger.info(f"TxHash for {order_metadata.uid.root=} is {cow_tx_hash=}.")
+            logger.info(f"TxHash is {cow_tx_hash=} for {order_metadata.uid.root=}.")
             return cow_tx_hash.hex()
 
         except (
@@ -633,7 +633,9 @@ class SeerAgentMarket(AgentMarket):
                 amount_wei=amount_wei,
                 web3=web3,
             )
-            return tx_receipt["transactionHash"].hex()
+            swap_pool_tx_hash = tx_receipt["transactionHash"].hex()
+            logger.info(f"TxHash is {swap_pool_tx_hash=}.")
+            return swap_pool_tx_hash
 
     def place_bet(
         self,

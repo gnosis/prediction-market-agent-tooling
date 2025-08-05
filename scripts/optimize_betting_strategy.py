@@ -434,7 +434,7 @@ def run_optuna_study(
         n_jobs=1,
         # Try to increase early_stopping_rounds if you are not satisfied with optimized result,
         # to see if more time would allow solver to find better solution.
-        callbacks=[partial(early_stopping_callback, early_stopping_rounds=100)],
+        callbacks=[partial(early_stopping_callback, early_stopping_rounds=500)],
     )
     _, testing_metrics = calc_metrics(
         test_bets_with_traces,

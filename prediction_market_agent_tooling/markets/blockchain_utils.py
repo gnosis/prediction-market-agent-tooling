@@ -37,6 +37,10 @@ def store_trades(
         logger.warning(f"No prediction for market {market_id}, not storing anything.")
         return None
 
+    logger.info(
+        f"Storing trades for market {market_id}, with outcomes {outcomes}, {traded_market=}."
+    )
+
     probabilities = traded_market.answer.probabilities
     if not probabilities:
         logger.info("Skipping this since no probabilities available.")
@@ -56,9 +60,7 @@ def store_trades(
         ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
     # tx_hashes must be list of bytes32 (see Solidity contract).
-    tx_hashes = [
-        HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
-    ]
+    tx_hashes = [HexBytes(HexStr(i.id)) for i in traded_market.trades]
 
     # Dune dashboard expects the probs to be in the same order as on the market.
     probabilities_converted = [

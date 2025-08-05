@@ -2,6 +2,7 @@ import asyncio
 import typing as t
 from datetime import timedelta
 
+import cachetools
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
 from web3 import Web3
@@ -97,6 +98,11 @@ from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
 SEER_TINY_BET_AMOUNT = USD(0.1)
+
+
+SHARED_CACHE: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
+    maxsize=256, ttl=10 * 60
+)
 
 
 class SeerAgentMarket(AgentMarket):
@@ -541,6 +547,7 @@ class SeerAgentMarket(AgentMarket):
         liquidity = self.get_liquidity_for_outcome(outcome)
         return liquidity > self.minimum_market_liquidity_required
 
+    @cachetools.cached(cache=SHARED_CACHE, key=lambda self: f"has_liquidity_{self.id}")
     def has_liquidity(self) -> bool:
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
         return all(

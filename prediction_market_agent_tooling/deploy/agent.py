@@ -411,7 +411,6 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         Executed before processing of each market.
         """
-        APIKeys()
 
         if market_type.is_blockchain_market:
             # Ensure we have enough native token balance for transaction fees
@@ -562,8 +561,6 @@ class DeployablePredictionAgent(DeployableAgent):
         processed = 0
 
         for market_idx, market in enumerate(available_markets):
-            if market.id != '28623':
-                continue
             logger.info(
                 f"Going to process market {market.url}: {market_idx+1} / {len(available_markets)}."
             )
@@ -572,7 +569,7 @@ class DeployablePredictionAgent(DeployableAgent):
             self.after_process_market(market_type, market, processed_market)
 
             if processed_market is not None and processed_market.trades:
-                # We only mark market as processed if trades were placed.
+                # We only mark the market as processed if trades were placed.
                 processed += 1
 
             if processed == self.bet_on_n_markets_per_run:
@@ -691,9 +688,6 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         placed_trades: list[PlacedTrade] = []
 
         for trade in trades:
-            if trade.trade_type == TradeType.BUY:
-                # ToDo remove me
-                continue
             logger.info(f"Executing trade {trade} on market {market.id} ({market.url})")
 
             if self.place_trades and still_tradeable:

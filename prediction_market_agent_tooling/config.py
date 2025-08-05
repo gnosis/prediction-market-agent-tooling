@@ -12,6 +12,7 @@ from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Account, Web3
 from web3._utils.http import construct_user_agent
+from web3.middleware import ExtraDataToPOAMiddleware
 
 from prediction_market_agent_tooling.chains import (
     ETHEREUM_ID,
@@ -353,6 +354,15 @@ class RPCConfig(BaseSettings):
                 },
             )
         )
+
+    def get_polygon_web3(self) -> Web3:
+        web3 = self.get_web3()
+        if self.chain_id != POLYGON_CHAIN_ID:
+            raise ValueError(f"Polygon RPC URL {self.chain_id} is not Polygon Mainnet")
+
+        # We need to inject middleware into the Polygon web3 instance (https://web3py.readthedocs.io/en/stable/middleware.html#proof-of-authority)
+        web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+        return web3
 
 
 class CloudCredentials(BaseSettings):

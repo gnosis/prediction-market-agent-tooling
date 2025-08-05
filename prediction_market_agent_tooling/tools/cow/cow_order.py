@@ -48,7 +48,9 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
 )
-from prediction_market_agent_tooling.tools.contract import ContractERC20OnGnosisChain
+from prediction_market_agent_tooling.tools.contract import (
+    ContractERC20BaseClass,
+)
 from prediction_market_agent_tooling.tools.cow.models import MinimalisticTrade, Order
 from prediction_market_agent_tooling.tools.cow.semaphore import postgres_rate_limited
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -175,14 +177,14 @@ def handle_allowance(
     for_address = for_address or Web3.to_checksum_address(
         CowContractAddress.VAULT_RELAYER.value
     )
-    current_allowance = ContractERC20OnGnosisChain(address=sell_token).allowance(
+    current_allowance = ContractERC20BaseClass(address=sell_token).allowance(
         owner=api_keys.bet_from_address,
         for_address=for_address,
         web3=web3,
     )
     if current_allowance < amount_to_check_wei:
         amount_to_set_wei = amount_to_set_wei or amount_to_check_wei
-        ContractERC20OnGnosisChain(address=sell_token).approve(
+        ContractERC20BaseClass(address=sell_token).approve(
             api_keys,
             for_address=for_address,
             amount_wei=amount_to_set_wei,

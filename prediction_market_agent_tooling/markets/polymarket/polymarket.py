@@ -3,7 +3,7 @@ import typing as t
 import cachetools
 from web3 import Web3
 
-from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
@@ -47,7 +47,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
-    USDCContract,
+    USDCeContract,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
     ConditionSubgraphModel,
@@ -82,7 +82,7 @@ class PolymarketAgentMarket(AgentMarket):
 
     @staticmethod
     def collateral_token_address() -> ChecksumAddress:
-        return USDCContract().address
+        return USDCeContract().address
 
     @staticmethod
     def build_resolution_from_condition(
@@ -131,9 +131,9 @@ class PolymarketAgentMarket(AgentMarket):
         outcomes = markets[0].outcomes_list
         outcome_prices = markets[0].outcome_prices
         if not outcome_prices:
-            # We give random prices
-            # ToDo - Filter out markets without prices, maybe use clob_client.get_price
-            outcome_prices = [0.5, 0.5]
+            logger.info(f"Market has no outcome prices. Skipping. {model=}")
+            return None
+
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 
         condition_id = markets[0].conditionId
@@ -170,7 +170,7 @@ class PolymarketAgentMarket(AgentMarket):
 
     @staticmethod
     def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> USD:
-        usdc_balance_wei = USDCContract().balanceOf(
+        usdc_balance_wei = USDCeContract().balanceOf(
             for_address=api_keys.public_key, web3=web3
         )
         return USD(usdc_balance_wei.value * 1e-6)
@@ -255,8 +255,7 @@ class PolymarketAgentMarket(AgentMarket):
         multiplier: float = 3.0,
         web3: Web3 | None = None,
     ) -> None:
-        # ToDo - add decimals property to some contracts.
-        balance_collateral = USDCContract().balanceOf(
+        balance_collateral = USDCeContract().balanceOf(
             for_address=APIKeys().public_key, web3=web3
         )
         # USDC has 6 decimals, xDAI has 18. We convert from Wei into atomic units.
@@ -268,23 +267,15 @@ class PolymarketAgentMarket(AgentMarket):
 
     @staticmethod
     def redeem_winnings(api_keys: APIKeys) -> None:
-        # ToDo - get user positions (check Polymarket API or subgraph)
-        # conditional_token_contract = PolymarketConditionalTokenContract()
-        # redeem_event = conditional_token_contract.redeemPositions(
-        #     api_keys=api_keys,
-        #     collateral_token_address=user_position.position.collateral_token_contract_address_checksummed,
-        #     condition_id=condition_id,
-        #     index_sets=user_position.position.indexSets,
-        #     web3=web3,
-        # )
+        # ToDo - implement me - https://github.com/gnosis/prediction-market-agent-tooling/issues/824
         pass
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
-        # USDC is the only collateral token supported by Polymarket
-        return USDCContract().balanceOf(for_address=api_keys.public_key) > Wei(
-            0.001 * 10**6
-        )
+        """Method for checking if agent has enough funds to pay for gas fees."""
+        web3 = RPCConfig().get_web3()
+        pol_balance: Wei = Wei(web3.eth.get_balance(api_keys.public_key))
+        return pol_balance > Wei(int(0.001 * 1e18))
 
     def store_prediction(
         self,
@@ -302,7 +293,8 @@ class PolymarketAgentMarket(AgentMarket):
         web3: Web3 | None = None,
     ) -> None:
         logger.info("Storing trades deactivated for Polymarket.")
-        # Understand how market_id can be represented. Condition_id could work but length doesn't seem to match.
+        # Understand how market_id can be represented.
+        # Condition_id could work but length doesn't seem to match.
         pass
 
     def get_user_url(cls, keys: APIKeys) -> str:
@@ -314,7 +306,6 @@ class PolymarketAgentMarket(AgentMarket):
         """
         Fetches position from the user in a given market.
         """
-        # ToDo - make sure logic works with example market
         positions = get_user_positions(
             user_id=Web3.to_checksum_address(user_id), condition_ids=[self.condition_id]
         )
@@ -365,6 +356,7 @@ class PolymarketAgentMarket(AgentMarket):
 
         # we work with floats since USD and Collateral are the same on Polymarket
         buy_token_amount = bet_amount.value / price.value
+        logger.info(f"Buy token amount: {buy_token_amount=}")
         return OutcomeToken(buy_token_amount)
 
     def buy_tokens(self, outcome: OutcomeStr, amount: USD) -> str:
@@ -390,11 +382,12 @@ class PolymarketAgentMarket(AgentMarket):
         The number of outcome tokens matches the `balanceOf` of the conditionalTokens contract.
         In comparison, the number of shares match the position.size from the user position.
         """
-
+        logger.info(f"Selling {amount=} from {outcome=}")
         clob_manager = ClobManager(api_keys=api_keys or APIKeys())
         token_id = self.get_token_id_for_outcome(outcome)
         token_shares: float
         if isinstance(amount, OutcomeToken):
+            # We divide by 1e6 to get the number of shares
             token_shares = amount.value / 1e6
         elif isinstance(amount, USD):
             token_price = clob_manager.get_token_price(
@@ -406,7 +399,6 @@ class PolymarketAgentMarket(AgentMarket):
                 f"Amount must be of type OutcomeToken or USD, got {type(amount)}"
             )
 
-        token_id = self.get_token_id_for_outcome(outcome)
         created_order = clob_manager.place_sell_market_order(
             token_id=token_id, token_shares=token_shares
         )

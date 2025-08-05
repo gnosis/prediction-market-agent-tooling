@@ -10,7 +10,6 @@ from py_clob_client.clob_types import (
 from py_clob_client.order_builder.constants import BUY, SELL
 from pydantic import BaseModel
 from web3 import Web3
-from web3.middleware import ExtraDataToPOAMiddleware
 
 from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -22,7 +21,7 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
     POLYMARKET_TINY_BET_AMOUNT,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
-    USDCContract,
+    USDCeContract,
     PolymarketConditionalTokenContract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import handle_allowance
@@ -55,6 +54,10 @@ class CreateOrderResult(BaseModel):
     success: bool
 
 
+class PriceResponse(BaseModel):
+    price: float
+
+
 T = TypeVar("T", bound="ClobManager")
 
 
@@ -77,7 +80,6 @@ class ClobManagerMeta(type):
 
 class ClobManager(metaclass=ClobManagerMeta):
     def __init__(self, api_keys: APIKeys):
-        ### Initialization of a client that trades directly from an EOA.
         self.api_keys = api_keys
         self.clob_client = ClobClient(
             HOST,
@@ -85,13 +87,13 @@ class ClobManager(metaclass=ClobManagerMeta):
             chain_id=POLYGON_CHAIN_ID,
         )
         self.clob_client.set_api_creds(self.clob_client.create_or_derive_api_creds())
-        self.polygon_web3 = Web3(Web3.HTTPProvider(RPCConfig().polygon_rpc_url))
-        self.polygon_web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+        self.polygon_web3 = RPCConfig().get_polygon_web3()
         self.__init_approvals(polygon_web3=self.polygon_web3)
 
     def get_token_price(self, token_id: int, side: PolymarketPriceSideEnum) -> USD:
         price_data = self.clob_client.get_price(token_id=token_id, side=side.value)
-        return USD(float(price_data["price"]))
+        price_item = PriceResponse.model_validate(price_data)
+        return USD(price_item.price)
 
     def _place_market_order(
         self, token_id: int, amount: float, side: PolymarketPriceSideEnum
@@ -143,7 +145,7 @@ class ClobManager(metaclass=ClobManagerMeta):
         # from https://github.com/Polymarket/agents/blob/main/agents/polymarket/polymarket.py#L341
         polygon_web3 = polygon_web3 or self.polygon_web3
 
-        usdc = USDCContract()
+        usdc = USDCeContract()
 
         # When setting allowances on Polymarket, it's important to set a large amount, because
         # every trade reduces the allowance by the amount of the trade.

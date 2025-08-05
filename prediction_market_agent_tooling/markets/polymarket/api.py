@@ -6,12 +6,14 @@ from urllib.parse import urljoin
 import httpx
 import tenacity
 
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
     PolymarketGammaResponse,
     PolymarketGammaResponseDataItem,
+    PolymarketPositionResponse,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
@@ -127,3 +129,25 @@ def get_polymarkets_with_pagination(
 
     # Return exactly the number of items requested (in case we got more due to batch size)
     return all_markets[:limit]
+
+
+def get_user_positions(
+    user_id: ChecksumAddress,
+    condition_ids: list[HexBytes] | None = None,
+    limit: int = 50,
+) -> list[PolymarketPositionResponse]:
+    url = "https://data-api.polymarket.com/positions"
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+
+    params = {
+        "user": user_id,
+        "market": ",".join([i.hex() for i in condition_ids]) if condition_ids else None,
+        "sortBy": "CASHPNL",  # Available options: TOKENS, CURRENT, INITIAL, CASHPNL, PERCENTPNL, TITLE, RESOLVING, PRICE
+    }
+    params = {k: v for k, v in params.items() if v is not None}
+
+    response = client.get(url, params=params)
+    response.raise_for_status()
+    data = response.json()
+    items = [PolymarketPositionResponse.model_validate(d) for d in data]
+    return items

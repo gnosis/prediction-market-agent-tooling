@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.omen.omen_constants import (
     OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ConditionPreparationEvent,
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
@@ -790,13 +791,6 @@ class OmenFixedProductMarketMakerCreationEvent(BaseModel):
         return Web3.to_checksum_address(self.collateralToken)
 
 
-class ConditionPreparationEvent(BaseModel):
-    conditionId: HexBytes
-    oracle: HexAddress
-    questionId: HexBytes
-    outcomeSlotCount: int
-
-
 class FPMMFundingAddedEvent(BaseModel):
     funder: HexAddress
     amountsAdded: list[Wei]
@@ -890,12 +884,3 @@ class IPFSAgentResult(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-
-
-class PayoutRedemptionEvent(BaseModel):
-    redeemer: HexAddress
-    collateralToken: HexAddress
-    parentCollectionId: HexBytes
-    conditionId: HexBytes
-    indexSets: list[int]
-    payout: Wei

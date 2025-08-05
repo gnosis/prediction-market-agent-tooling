@@ -38,9 +38,6 @@ from prediction_market_agent_tooling.markets.data_models import (
     Trade,
 )
 from prediction_market_agent_tooling.markets.markets import MarketType
-from prediction_market_agent_tooling.markets.omen.omen import (
-    send_keeping_token_to_eoa_xdai,
-)
 from prediction_market_agent_tooling.tools.custom_exceptions import (
     CantPayForGasError,
     OutOfFundsError,
@@ -414,15 +411,13 @@ class DeployablePredictionAgent(DeployableAgent):
         """
         Executed before processing of each market.
         """
-        api_keys = APIKeys()
 
         if market_type.is_blockchain_market:
-            # Exchange wxdai back to xdai if the balance is getting low, so we can keep paying for fees.
+            # Ensure we have enough native token balance for transaction fees
             if self.min_balance_to_keep_in_native_currency is not None:
-                send_keeping_token_to_eoa_xdai(
-                    api_keys,
+                market.ensure_min_native_balance(
                     min_required_balance=self.min_balance_to_keep_in_native_currency,
-                    multiplier=3,
+                    multiplier=3.0,
                 )
 
     def build_answer(
@@ -493,7 +488,7 @@ class DeployablePredictionAgent(DeployableAgent):
         market_type: MarketType,
         market: AgentMarket,
         verify_market: bool = True,
-    ) -> ProcessedMarket | None:
+    ) -> ProcessedTradedMarket | None:
         self.update_langfuse_trace_by_market(market_type, market)
         logger.info(
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
@@ -515,7 +510,9 @@ class DeployablePredictionAgent(DeployableAgent):
             self.verify_answer_outcomes(market=market, answer=answer)
 
         processed_market = (
-            ProcessedMarket(answer=answer) if answer is not None else None
+            ProcessedTradedMarket(answer=answer, trades=[])
+            if answer is not None
+            else None
         )
 
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
@@ -571,7 +568,8 @@ class DeployablePredictionAgent(DeployableAgent):
             processed_market = self.process_market(market_type, market)
             self.after_process_market(market_type, market, processed_market)
 
-            if processed_market is not None:
+            if processed_market is not None and processed_market.trades:
+                # We only mark the market as processed if trades were placed.
                 processed += 1
 
             if processed == self.bet_on_n_markets_per_run:

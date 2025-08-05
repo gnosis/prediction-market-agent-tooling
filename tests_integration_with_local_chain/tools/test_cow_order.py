@@ -126,7 +126,7 @@ async def test_cow_cancellation(local_web3: Web3) -> None:
     handle_allowance(
         api_keys=test_keys,
         sell_token=sell_token,
-        amount_wei=amount_wei,
+        amount_to_check_wei=amount_wei,
         web3=local_web3,
     )
     order_book_api = get_order_book_api(env=env, chain=chain)

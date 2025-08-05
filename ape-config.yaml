@@ -9,6 +9,9 @@ node:
   gnosis:
     mainnet:
       uri: https://rpc.gnosischain.com
+  polygon:
+    mainnet:
+      uri: https://polygon-rpc.com
 
 
 networks:
@@ -16,6 +19,11 @@ networks:
      - name: mainnet                   # Required
        chain_id: 100                   # Required
        ecosystem: gnosis
+       base_ecosystem_plugin: ethereum
+       default_provider: node
+     - name: mainnet
+       chain_id: 137
+       ecosystem: polygon
        base_ecosystem_plugin: ethereum
        default_provider: node
 
@@ -26,6 +34,9 @@ foundry:
   host: http://localhost:8545/
   fork:
     gnosis:
+      mainnet:
+        upstream_provider: node
+    polygon:
       mainnet:
         upstream_provider: node
 

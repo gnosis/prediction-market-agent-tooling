@@ -12,8 +12,13 @@ from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Account, Web3
 from web3._utils.http import construct_user_agent
+from web3.middleware import ExtraDataToPOAMiddleware
 
-from prediction_market_agent_tooling.chains import ETHEREUM_ID, GNOSIS_CHAIN_ID
+from prediction_market_agent_tooling.chains import (
+    ETHEREUM_ID,
+    GNOSIS_CHAIN_ID,
+    POLYGON_CHAIN_ID,
+)
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
 from prediction_market_agent_tooling.gtypes import (
     ChainID,
@@ -293,6 +298,8 @@ class RPCConfig(BaseSettings):
     GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
     GNOSIS_RPC_BEARER: SecretStr | None = None
     CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
+    POLYGON_RPC_URL: URI = Field(default=URI("https://polygon-rpc.com"))
+    POLYGON_RPC_BEARER: SecretStr | None = None
 
     @property
     def ethereum_rpc_url(self) -> URI:
@@ -307,6 +314,12 @@ class RPCConfig(BaseSettings):
         )
 
     @property
+    def polygon_rpc_url(self) -> URI:
+        return check_not_none(
+            self.POLYGON_RPC_URL, "GNOSIS_RPC_URL missing in the environment."
+        )
+
+    @property
     def chain_id(self) -> ChainID:
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
@@ -314,18 +327,21 @@ class RPCConfig(BaseSettings):
         return {
             ETHEREUM_ID: self.ethereum_rpc_url,
             GNOSIS_CHAIN_ID: self.gnosis_rpc_url,
+            POLYGON_CHAIN_ID: self.polygon_rpc_url,
         }[chain_id]
 
     def chain_id_to_rpc_bearer(self, chain_id: ChainID) -> SecretStr | None:
         return {
             ETHEREUM_ID: self.ETHEREUM_RPC_BEARER,
             GNOSIS_CHAIN_ID: self.GNOSIS_RPC_BEARER,
-        }[chain_id]
+        }.get(chain_id)
 
     def get_web3(self) -> Web3:
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": construct_user_agent(str(type(self))),
+            "User-Agent": construct_user_agent(
+                str(type(self)), self.__class__.__name__
+            ),
         }
         if bearer := self.chain_id_to_rpc_bearer(self.chain_id):
             headers["Authorization"] = f"Bearer {bearer.get_secret_value()}"
@@ -338,6 +354,15 @@ class RPCConfig(BaseSettings):
                 },
             )
         )
+
+    def get_polygon_web3(self) -> Web3:
+        web3 = self.get_web3()
+        if self.chain_id != POLYGON_CHAIN_ID:
+            raise ValueError(f"Polygon RPC URL {self.chain_id} is not Polygon Mainnet")
+
+        # We need to inject middleware into the Polygon web3 instance (https://web3py.readthedocs.io/en/stable/middleware.html#proof-of-authority)
+        web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+        return web3
 
 
 class CloudCredentials(BaseSettings):

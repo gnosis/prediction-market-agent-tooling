@@ -10,6 +10,9 @@ from prediction_market_agent_tooling.markets.omen.omen_constants import (
     SDAI_CONTRACT_ADDRESS,
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
+from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
+    USDCeContract,
+)
 from prediction_market_agent_tooling.tools.contract import ContractERC4626OnGnosisChain
 from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_buy_token_amount_else_raise,
@@ -39,8 +42,8 @@ def get_token_in_usd(amount: CollateralToken, token_address: ChecksumAddress) ->
 # A short cache to not spam CoW and prevent timeouts, but still have relatively fresh data.
 @cached(TTLCache(maxsize=100, ttl=5 * 60))
 def get_single_token_to_usd_rate(token_address: ChecksumAddress) -> USD:
-    # (w)xDai is a stable coin against USD, so use it to estimate USD worth.
-    if WRAPPED_XDAI_CONTRACT_ADDRESS == token_address:
+    # (w)xDai and USDC are stablecoins pegged to USD, so use it to estimate USD worth.
+    if token_address in [WRAPPED_XDAI_CONTRACT_ADDRESS, USDCeContract().address]:
         return USD(1.0)
     # sDai is ERC4626 with wxDai as asset, we can take the rate directly from there instead of calling CoW.
     if SDAI_CONTRACT_ADDRESS == token_address:

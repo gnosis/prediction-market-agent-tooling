@@ -5,6 +5,7 @@ from datetime import timedelta
 import tenacity
 from tqdm import tqdm
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -42,7 +43,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
     PRESAGIO_BASE_URL,
     Condition,
-    ConditionPreparationEvent,
     CreatedMarket,
     OmenBet,
     OmenMarket,
@@ -59,13 +59,13 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
     WrappedxDaiContract,
-    build_parent_collection_id,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
+    ConditionPreparationEvent,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
@@ -410,6 +410,26 @@ class OmenAgentMarket(AgentMarket):
     def redeem_winnings(api_keys: APIKeys) -> None:
         redeem_from_all_user_positions(api_keys)
 
+    def ensure_min_native_balance(
+        self,
+        min_required_balance: xDai,
+        multiplier: float = 3.0,
+    ) -> None:
+        """
+        Ensure the EOA has at least the minimum required native token balance.
+        If not, transfer wrapped native tokens from the betting address and unwrap them.
+
+        Args:
+            min_required_balance: Minimum required native token balance to maintain
+            multiplier: Multiplier to apply to the required balance to keep as a buffer
+        """
+
+        send_keeping_token_to_eoa_xdai(
+            api_keys=APIKeys(),
+            min_required_balance=min_required_balance,
+            multiplier=multiplier,
+        )
+
     @staticmethod
     def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> USD:
         native_usd = get_xdai_in_usd(
@@ -651,10 +671,6 @@ class OmenAgentMarket(AgentMarket):
     @staticmethod
     def get_user_balance(user_id: str) -> float:
         return float(get_balances(Web3.to_checksum_address(user_id)).total)
-
-    @staticmethod
-    def get_user_id(api_keys: APIKeys) -> str:
-        return api_keys.bet_from_address
 
     def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
         sgh = OmenSubgraphHandler()
@@ -1075,7 +1091,7 @@ def get_conditional_tokens_balance_for_market(
     """
     balance_per_index_set: dict[int, OutcomeWei] = {}
     conditional_token_contract = OmenConditionalTokenContract()
-    parent_collection_id = build_parent_collection_id()
+    parent_collection_id = HASH_ZERO
 
     for index_set in market.condition.index_sets:
         collection_id = conditional_token_contract.getCollectionId(

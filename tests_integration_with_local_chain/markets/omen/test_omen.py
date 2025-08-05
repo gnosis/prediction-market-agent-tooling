@@ -566,7 +566,7 @@ def test_place_bet_with_prev_existing_positions(
         address=conditional_token.address, abi=conditional_token.abi
     )
     # We fetch the transfer single event emitted when outcome tokens were bought
-    ls = conditional_tokens_contract.events.TransferSingle().get_logs()  # type: ignore[attr-defined]
+    ls = conditional_tokens_contract.events.TransferSingle().get_logs()
     pos_id = ls[-1]["args"]["id"]
     # check position
     position_balance = get_position_balance_by_position_id(

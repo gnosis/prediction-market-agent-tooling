@@ -316,7 +316,7 @@ class RPCConfig(BaseSettings):
     @property
     def polygon_rpc_url(self) -> URI:
         return check_not_none(
-            self.POLYGON_RPC_URL, "GNOSIS_RPC_URL missing in the environment."
+            self.POLYGON_RPC_URL, "POLYGON_RPC_URL missing in the environment."
         )
 
     @property

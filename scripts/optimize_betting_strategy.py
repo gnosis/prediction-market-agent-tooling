@@ -460,7 +460,7 @@ python -m poetry run python scripts/optimize_betting_strategy.py name secret | t
     List of commands for our agents (run each in its own tmux session):
 
     ```
-mkdir -p bet_strategy_benchmark
+mkdir -p bet_strategy_benchmark && \
 tmux new-session -d -s DeployablePredictionProphetGPT4TurboFinalAgent 'python -m poetry run python scripts/optimize_betting_strategy.py DeployablePredictionProphetGPT4TurboFinalAgent pma-prophetgpt4turbo-final | tee bet_strategy_benchmark/DeployablePredictionProphetGPT4TurboFinalAgent.md' && \
 tmux new-session -d -s DeployablePredictionProphetGPT4TurboPreviewAgent 'python -m poetry run python scripts/optimize_betting_strategy.py DeployablePredictionProphetGPT4TurboPreviewAgent pma-prophetgpt4 | tee bet_strategy_benchmark/DeployablePredictionProphetGPT4TurboPreviewAgent.md' && \
 tmux new-session -d -s DeployablePredictionProphetGPT4oAgent 'python -m poetry run python scripts/optimize_betting_strategy.py DeployablePredictionProphetGPT4oAgent pma-prophetgpt3 | tee bet_strategy_benchmark/DeployablePredictionProphetGPT4oAgent.md' && \

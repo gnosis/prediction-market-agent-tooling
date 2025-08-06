@@ -358,7 +358,7 @@ class RPCConfig(BaseSettings):
     def get_polygon_web3(self) -> Web3:
         web3 = self.get_web3()
         if self.chain_id != POLYGON_CHAIN_ID:
-            raise ValueError(f"Polygon RPC URL {self.chain_id} is not Polygon Mainnet")
+            raise ValueError(f"Chain ID {self.chain_id} is not Polygon Mainnet")
 
         # We need to inject middleware into the Polygon web3 instance (https://web3py.readthedocs.io/en/stable/middleware.html#proof-of-authority)
         web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)

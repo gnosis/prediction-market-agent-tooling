@@ -24,6 +24,8 @@ class SeerPool(BaseModel):
     token0Price: CollateralToken
     token1Price: CollateralToken
     sqrtPrice: int
+    totalValueLockedToken0: float
+    totalValueLockedToken1: float
 
 
 class NewMarketEvent(BaseModel):

@@ -539,7 +539,7 @@ tmux new-session -d -s DeployablePredictionProphetGPT4oAgentCategorical 'python 
         # 2. The day when we used customized betting strategies: https://github.com/gnosis/prediction-market-agent/pull/494
         utc_datetime(2024, 10, 5),
         # However, Langfuse doesn't allow to filter only for traces for a specific agent, so limit only to last N months of data to speed up the process.
-        (utcnow() - timedelta(days=45)).replace(
+        (utcnow() - timedelta(days=90)).replace(
             hour=0, minute=0, second=0, microsecond=0
         ),
     )

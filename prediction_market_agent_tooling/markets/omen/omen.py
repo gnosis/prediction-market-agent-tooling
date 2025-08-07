@@ -118,6 +118,10 @@ class OmenAgentMarket(AgentMarket):
     )
 
     @property
+    def is_multiresult(self) -> bool:
+        return False
+
+    @property
     def yes_index(self) -> int:
         return self.outcomes.index(OMEN_TRUE_OUTCOME)
 

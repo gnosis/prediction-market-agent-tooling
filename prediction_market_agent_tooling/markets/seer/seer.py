@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     OutcomeWei,
+    Probability,
     Wei,
     xDai,
 )
@@ -49,9 +50,6 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     RedeemParams,
     SeerMarket,
     SeerMarketWithQuestions,
-)
-from prediction_market_agent_tooling.markets.seer.exceptions import (
-    PriceCalculationError,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
@@ -115,6 +113,11 @@ class SeerAgentMarket(AgentMarket):
     )
     outcomes_supply: int
     minimum_market_liquidity_required: CollateralToken = CollateralToken(1)
+
+    @property
+    def is_multiresult(self) -> bool:
+        # Use the same logic as in the data model
+        return self.template_id == 3 or self.template_id == 1 and len(self.outcomes) > 3
 
     def get_collateral_token_contract(
         self, web3: Web3 | None = None
@@ -240,6 +243,8 @@ class SeerAgentMarket(AgentMarket):
         amounts_ot: dict[OutcomeStr, OutcomeToken] = {}
 
         for outcome_str, wrapped_token in zip(self.outcomes, self.wrapped_tokens):
+            if self.probabilities[outcome_str] == Probability(0):
+                continue
             outcome_token_balance_wei = OutcomeWei.from_wei(
                 ContractERC20OnGnosisChain(address=wrapped_token).balanceOf(
                     for_address=Web3.to_checksum_address(user_id), web3=web3
@@ -412,20 +417,14 @@ class SeerAgentMarket(AgentMarket):
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
 
-        probability_map = {}
-        try:
-            probability_map = price_manager.build_probability_map()
-        except PriceCalculationError as e:
-            logger.info(
-                f"Error when calculating probabilities for market {model.id.hex()} - {e}"
-            )
-            if must_have_prices:
-                # Price calculation failed, so don't return the market
-                return None
-
-        resolution = SeerAgentMarket.build_resolution(model=model)
-
-        parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
+        wrapped_tokens = [
+            Web3.to_checksum_address(i)
+            for i in price_manager.seer_market.wrapped_tokens
+        ]
+        (
+            probability_map,
+            outcome_token_pool,
+        ) = price_manager.build_initial_probs_from_pool(model, wrapped_tokens)
 
         market = SeerAgentMarket(
             id=model.id.hex(),
@@ -437,16 +436,17 @@ class SeerAgentMarket(AgentMarket):
             condition_id=model.condition_id,
             url=model.url,
             close_time=model.close_time,
-            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
+            wrapped_tokens=wrapped_tokens,
             fees=MarketFees.get_zero_fees(),
-            outcome_token_pool=None,
+            outcome_token_pool=outcome_token_pool,
             outcomes_supply=model.outcomes_supply,
-            resolution=resolution,
+            resolution=SeerAgentMarket.build_resolution(model=model),
             volume=None,
             probabilities=probability_map,
             upper_bound=model.upper_bound,
             lower_bound=model.lower_bound,
-            parent=parent,
+            parent=SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph),
+            template_id=model.template_id,
         )
 
         return market

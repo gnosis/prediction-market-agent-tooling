@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 
 from prediction_market_agent_tooling.deploy.agent import (
@@ -5,16 +7,15 @@ from prediction_market_agent_tooling.deploy.agent import (
     DeployableTraderAgent,
 )
 from prediction_market_agent_tooling.gtypes import OutcomeStr, OutcomeToken, Probability
-from prediction_market_agent_tooling.markets.agent_market import (
-    AgentMarket,
-    FilterBy,
-    MarketFees,
-    SortBy,
-)
+from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.markets import (
     MARKET_TYPE_TO_AGENT_MARKET,
     MarketType,
 )
+from prediction_market_agent_tooling.markets.polymarket.polymarket import (
+    PolymarketAgentMarket,
+)
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 @pytest.mark.parametrize("market_type", list(MarketType))
@@ -29,7 +30,7 @@ def test_valid_token_pool() -> None:
         OutcomeStr("yes"): Probability(0.5),
         OutcomeStr("no"): Probability(0.5),
     }
-    market = AgentMarket(
+    market = PolymarketAgentMarket(
         id="foo",
         question="bar",
         description=None,
@@ -39,12 +40,11 @@ def test_valid_token_pool() -> None:
             OutcomeStr("no"): OutcomeToken(2.0),
         },
         resolution=None,
-        created_time=None,
-        close_time=None,
+        created_time=utcnow() - timedelta(days=1),
+        close_time=utcnow() + timedelta(days=1),
         probabilities=probability_map,
         url="https://example.com",
         volume=None,
-        fees=MarketFees.get_zero_fees(),
     )
     assert market.has_token_pool() is True
     assert market.get_pool_tokens(OutcomeStr("yes")) == OutcomeToken(1.1)
@@ -57,7 +57,7 @@ def test_invalid_token_pool() -> None:
         OutcomeStr("no"): Probability(0.5),
     }
     with pytest.raises(ValueError) as e:
-        AgentMarket(
+        PolymarketAgentMarket(
             id="foo",
             question="bar",
             description=None,
@@ -67,11 +67,10 @@ def test_invalid_token_pool() -> None:
                 OutcomeStr("qux"): OutcomeToken(2.0),
             },
             resolution=None,
-            created_time=None,
-            close_time=None,
+            created_time=utcnow() - timedelta(days=1),
+            close_time=utcnow() + timedelta(days=1),
             url="https://example.com",
             volume=None,
-            fees=MarketFees.get_zero_fees(),
             probabilities=prob_map,
         )
     assert "do not match outcomes" in str(e.value)

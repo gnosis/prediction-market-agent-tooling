@@ -1,4 +1,5 @@
 import typing as t
+from abc import abstractproperty
 from datetime import timedelta
 from enum import Enum
 from math import prod
@@ -108,6 +109,8 @@ class AgentMarket(BaseModel):
     lower_bound: Wei | None = None
 
     parent: ParentMarket | None = None
+
+    template_id: int | None = None
 
     @field_validator("probabilities")
     def validate_probabilities(
@@ -256,6 +259,10 @@ class AgentMarket(BaseModel):
         else:
             outcome = get_most_probable_outcome(self.probabilities)
             return Resolution(outcome=outcome, invalid=False)
+
+    @abstractproperty
+    def is_multiresult(self) -> bool:
+        pass
 
     def get_last_trade_p_yes(self) -> Probability | None:
         """

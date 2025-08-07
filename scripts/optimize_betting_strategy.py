@@ -229,8 +229,6 @@ def early_stopping_callback(
 
     current_trial_number = trial.number
     best_trial_number = best_trial.number
-    if current_trial_number == best_trial_number:
-        print(f"New best round at {current_trial_number=}.", flush=True)
 
     should_stop = (current_trial_number - best_trial_number) >= early_stopping_rounds
     if should_stop:

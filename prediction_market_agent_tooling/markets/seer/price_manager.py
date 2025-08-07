@@ -220,7 +220,7 @@ class PriceManager:
                 )
                 probability_map[
                     OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = Probability(round(pool.token0Price, 2).value)
+                ] = Probability(pool.token0Price.value)
             else:
                 outcome_token_pool[
                     OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
@@ -231,7 +231,7 @@ class PriceManager:
                 )
                 probability_map[
                     OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = Probability(round(pool.token1Price, 2).value)
+                ] = Probability(pool.token1Price.value)
 
         for outcome in model.outcomes:
             if outcome not in outcome_token_pool:

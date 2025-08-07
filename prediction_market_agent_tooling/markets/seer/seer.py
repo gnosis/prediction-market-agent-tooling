@@ -633,9 +633,9 @@ class SeerAgentMarket(AgentMarket):
                 amount_wei=amount_wei,
                 web3=web3,
             )
-            swap_pool_tx_hash = tx_receipt["transactionHash"].hex()
+            swap_pool_tx_hash = tx_receipt["transactionHash"]
             logger.info(f"TxHash is {swap_pool_tx_hash=}.")
-            return swap_pool_tx_hash
+            return swap_pool_tx_hash.hex()
 
     def place_bet(
         self,

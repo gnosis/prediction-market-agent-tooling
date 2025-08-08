@@ -57,7 +57,7 @@ from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.usd import get_token_in_usd
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
-shared_cache: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
+SHARED_CACHE: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
     maxsize=256, ttl=10 * 60
 )
 

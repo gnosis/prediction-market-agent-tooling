@@ -18,7 +18,6 @@ google-cloud-resource-manager = "^1.12.0"
 functions-framework = "^3.5.0"
 cron-validator = "^1.0.8"
 pydantic = "^2.6.1"
-#web3 = "7.12.1" # safe-eth-py defines https://github.com/safe-global/safe-eth-py/blob/main/requirements.txt
 web3 = ">=6,<8"
 eth-typing = "^5.0.0"
 pydantic-settings = "^2.4.0" #eth-ape limit

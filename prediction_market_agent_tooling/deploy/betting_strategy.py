@@ -387,6 +387,9 @@ class BinaryKellyBettingStrategy(BettingStrategy):
         answer: CategoricalProbabilisticAnswer,
         override_p_yes: float | None = None,
     ) -> BinaryKellyBet:
+        if not market.is_binary:
+            raise ValueError("This strategy is usable only with binary markets.")
+
         estimated_p_yes = (
             answer.probability_for_market_outcome(direction)
             if not override_p_yes

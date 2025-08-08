@@ -9,6 +9,7 @@ from eth_typing import URI
 from eth_utils.currency import MAX_WEI, MIN_WEI
 from pydantic.types import SecretStr
 from safe_eth.eth import EthereumClient
+from safe_eth.eth.ethereum_client import TxSpeed
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -269,6 +270,7 @@ def send_function_on_contract_tx_using_safe(
     tx_hash, tx = safe_tx.execute(
         from_private_key.get_secret_value(),
         tx_nonce=eoa_nonce,
+        eip1559_speed=TxSpeed.FAST,
     )
     receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
     check_tx_receipt(receipt_tx)

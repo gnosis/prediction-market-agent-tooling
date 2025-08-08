@@ -447,7 +447,9 @@ class KellyBettingStrategy(BettingStrategy):
         amounts = {
             bet_outcome: BettingStrategy.cap_to_profitable_bet_amount(
                 market, market.get_token_in_usd(kelly_bet_size), bet_outcome
-            ),
+            )
+            if kelly_bet_size > 0
+            else USD(0),
         }
         target_position = Position(market_id=market.id, amounts_current=amounts)
         trades = self._build_rebalance_trades_from_positions(
@@ -498,9 +500,15 @@ class KellyBettingStrategy(BettingStrategy):
             )
             return kelly_bet.size
 
-        pool_balances = [i.as_outcome_wei for i in market.outcome_token_pool.values()]
+        filtered_pool = {
+            outcome: pool_value
+            for outcome, pool_value in market.outcome_token_pool.items()
+            if INVALID_OUTCOME_LOWERCASE_IDENTIFIER not in outcome.lower()
+        }
+
+        pool_balances = [i.as_outcome_wei for i in filtered_pool.values()]
         # stay float for compatibility with `minimize_scalar`
-        total_pool_balance = sum([i.value for i in market.outcome_token_pool.values()])
+        total_pool_balance = sum([i.value for i in filtered_pool.values()])
 
         # The bounds below have been found to work heuristically.
         optimized_bet_amount = minimize_scalar(

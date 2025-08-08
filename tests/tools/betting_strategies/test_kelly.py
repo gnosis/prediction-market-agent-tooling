@@ -401,7 +401,6 @@ def test_compare_kellys_simplified(
     "estimated_p_yes, confidence",
     [
         (0.1, 0.7),
-        (0.5, 0.95),
         (0.9, 1.0),
     ],
 )

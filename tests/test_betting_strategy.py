@@ -6,9 +6,9 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
+    BinaryKellyBettingStrategy,
+    CategoricalMaxAccuracyBettingStrategy,
     GuaranteedLossError,
-    KellyBettingStrategy,
-    MultiCategoricalMaxAccuracyBettingStrategy,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -52,7 +52,7 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 def test_answer_decision(
     prob_multi: dict[OutcomeStr, Probability], expected_direction: OutcomeStr
 ) -> None:
-    betting_strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+    betting_strategy = CategoricalMaxAccuracyBettingStrategy(
         max_position_amount=USD(0.1)
     )
     mock_answer = CategoricalProbabilisticAnswer(
@@ -98,7 +98,7 @@ def test_rebalance(take_profit: bool) -> None:
     )
     buy_token_amount = OutcomeToken(10)
     bet_amount = USD(tiny_amount.value) + mock_existing_position.total_amount_current
-    strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+    strategy = CategoricalMaxAccuracyBettingStrategy(
         max_position_amount=bet_amount,
         take_profit=take_profit,
     )
@@ -159,7 +159,7 @@ def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
     buy_token_amount = OutcomeToken(10)
     # Divide the existing position two, to simulate that the existing position increased in value.
     max_position_amount = mock_existing_position.total_amount_current / 2
-    strategy = MultiCategoricalMaxAccuracyBettingStrategy(
+    strategy = CategoricalMaxAccuracyBettingStrategy(
         max_position_amount=max_position_amount,
         take_profit=take_profit,
     )
@@ -198,7 +198,7 @@ def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
     "strategy, liquidity, bet_proportion_fee, should_have_trades, should_raise, disable_cap_to_profitable_position",
     [
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            CategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             1,
             0.02,
             True,
@@ -206,7 +206,7 @@ def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
             True,  # We need to disabled the profit capping in order to raise.
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            CategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             1,
             0.02,
             True,
@@ -214,7 +214,7 @@ def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
             False,
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            CategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.02,
             True,
@@ -222,7 +222,7 @@ def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
             False,
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            CategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.5,
             True,
@@ -230,7 +230,7 @@ def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
             True,  # We need to disabled the profit capping in order to raise.
         ),
         (
-            MultiCategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
+            CategoricalMaxAccuracyBettingStrategy(max_position_amount=USD(100)),
             10,
             0.5,
             False,  # Won't have trades, because the betting strategy won't do any if they aren't profitable.
@@ -240,7 +240,7 @@ def test_rebalance_with_higher_position_worth(take_profit: bool) -> None:
     ],
 )
 def test_attacking_market(
-    strategy: MultiCategoricalMaxAccuracyBettingStrategy,
+    strategy: CategoricalMaxAccuracyBettingStrategy,
     liquidity: int,
     bet_proportion_fee: float,
     should_have_trades: bool,
@@ -317,7 +317,7 @@ def test_attacking_market(
 
 def test_kelly_bet_is_capped_when_unprofitable() -> None:
     """Test that Kelly bet is capped when it would result in guaranteed loss."""
-    strategy = KellyBettingStrategy(max_position_amount=USD(100))
+    strategy = BinaryKellyBettingStrategy(max_position_amount=USD(100))
 
     # Mock market that makes large bets unprofitable but small bets profitable
     mock_market = Mock(spec=AgentMarket)
@@ -381,7 +381,7 @@ def test_kelly_bet_is_capped_when_unprofitable() -> None:
 def test_kelly_bet_not_capped_when_profitable() -> None:
     """Test that Kelly bet is not capped when it's already profitable."""
     # Create a Kelly strategy with moderate bet amount
-    strategy = KellyBettingStrategy(max_position_amount=USD(20))
+    strategy = BinaryKellyBettingStrategy(max_position_amount=USD(20))
 
     # Mock market where all bet sizes are profitable
     mock_market = Mock(spec=AgentMarket)

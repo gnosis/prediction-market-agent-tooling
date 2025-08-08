@@ -2,7 +2,7 @@ import typing as t
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
-    KellyBettingStrategy,
+    BinaryKellyBettingStrategy,
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import USD
@@ -93,7 +93,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
 
     def get_job_trade(self, max_bond: USD, result: str) -> Trade:
         # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
-        strategy = KellyBettingStrategy(max_position_amount=max_bond)
+        strategy = BinaryKellyBettingStrategy(max_position_amount=max_bond)
         required_trades = strategy.calculate_trades(
             existing_position=None,
             answer=self.get_job_answer(result),

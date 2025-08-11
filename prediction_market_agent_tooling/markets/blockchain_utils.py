@@ -81,5 +81,5 @@ def store_trades(
         web3=web3,
     )
     logger.info(
-        f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].hex()}."
+        f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].to_0x_hex()}."
     )

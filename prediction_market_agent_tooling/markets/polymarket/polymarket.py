@@ -109,7 +109,7 @@ class PolymarketAgentMarket(AgentMarket):
         if len(payout_numerator_indices_gt_0) != 1:
             # These cases involve multi-categorical resolution (to be implemented https://github.com/gnosis/prediction-market-agent-tooling/issues/770)
             logger.warning(
-                f"Only binary markets are supported. Got payout numerators: {condition_model.payoutNumerators} for condition_id {condition_id.hex()}"
+                f"Only binary markets are supported. Got payout numerators: {condition_model.payoutNumerators} for condition_id {condition_id.to_0x_hex()}"
             )
             return Resolution(outcome=None, invalid=False)
 
@@ -314,7 +314,7 @@ class PolymarketAgentMarket(AgentMarket):
         amounts_current = {i: USD(0) for i in self.outcomes}
 
         for p in positions:
-            if p.conditionId != self.condition_id.hex():
+            if p.conditionId != self.condition_id.to_0x_hex():
                 continue
 
             amounts_potential[OutcomeStr(p.outcome)] = USD(p.size)
@@ -371,7 +371,7 @@ class PolymarketAgentMarket(AgentMarket):
         if not created_order.success:
             raise ValueError(f"Error creating order: {created_order}")
 
-        return created_order.transactionsHashes[0].hex()
+        return created_order.transactionsHashes[0].to_0x_hex()
 
     def sell_tokens(
         self,
@@ -407,4 +407,4 @@ class PolymarketAgentMarket(AgentMarket):
         if not created_order.success:
             raise ValueError(f"Error creating order: {created_order}")
 
-        return created_order.transactionsHashes[0].hex()
+        return created_order.transactionsHashes[0].to_0x_hex()

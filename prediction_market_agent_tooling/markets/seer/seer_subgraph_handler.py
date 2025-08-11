@@ -155,7 +155,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 raise ValueError(f"Unknown filter {filter_by}")
 
         if parent_market_id:
-            and_stms["parentMarket"] = parent_market_id.hex().lower()
+            and_stms["parentMarket"] = parent_market_id.to_0x_hex().lower()
 
         outcome_filters: list[dict[str, t.Any]] = []
 
@@ -294,7 +294,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         self, market_ids: list[HexBytes]
     ) -> list[SeerMarketQuestions]:
         where = unwrap_generic_value(
-            {"market_in": [market_id.hex().lower() for market_id in market_ids]}
+            {"market_in": [market_id.to_0x_hex().lower() for market_id in market_ids]}
         )
         markets_field = self.seer_subgraph.Query.marketQuestions(where=where)
         fields = self._get_fields_for_questions(markets_field)
@@ -302,7 +302,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         return questions
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarketWithQuestions:
-        markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())
+        markets_field = self.seer_subgraph.Query.market(
+            id=market_id.to_0x_hex().lower()
+        )
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         if len(markets) != 1:

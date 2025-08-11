@@ -380,7 +380,7 @@ def get_trades_by_order_uid(
     # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
     response = httpx.get(
         f"https://api.cow.fi/xdai/api/v1/trades",
-        params={"orderUid": order_uid.hex()},
+        params={"orderUid": order_uid.to_0x_hex()},
     )
     response.raise_for_status()
     return [MinimalisticTrade.model_validate(i) for i in response.json()]

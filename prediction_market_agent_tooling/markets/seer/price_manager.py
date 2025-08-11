@@ -46,7 +46,7 @@ class PriceManager:
         price_diff_pct = abs(old_price - normalized_price) / max(old_price, 0.01)
         if price_diff_pct > max_price_diff:
             logger.info(
-                f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
+                f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.to_0x_hex()} "
             )
 
     def get_price_for_token(self, token: ChecksumAddress) -> CollateralToken | None:

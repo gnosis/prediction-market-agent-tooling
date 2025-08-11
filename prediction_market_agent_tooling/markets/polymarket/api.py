@@ -140,7 +140,9 @@ def get_user_positions(
 
     params = {
         "user": user_id,
-        "market": ",".join([i.hex() for i in condition_ids]) if condition_ids else None,
+        "market": ",".join([i.to_0x_hex() for i in condition_ids])
+        if condition_ids
+        else None,
         "sortBy": "CASHPNL",  # Available options: TOKENS, CURRENT, INITIAL, CASHPNL, PERCENTPNL, TITLE, RESOLVING, PRICE
     }
     params = {k: v for k, v in params.items() if v is not None}

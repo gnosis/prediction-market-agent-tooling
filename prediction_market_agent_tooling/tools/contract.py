@@ -844,12 +844,12 @@ def contract_implements_function(
     look_for_proxy_contract: bool = True,
 ) -> bool:
     function_signature = f"{function_name}({','.join(function_arg_types or [])})"
-    function_selector = web3.keccak(text=function_signature)[0:4].hex()[2:]
+    function_selector = web3.keccak(text=function_signature)[0:4].to_0x_hex()[2:]
     # 1. Check directly in bytecode
-    bytecode = web3.eth.get_code(contract_address).hex()
+    bytecode = web3.eth.get_code(contract_address).to_0x_hex()
     if function_selector in bytecode:
         return True
-    contract_code = web3.eth.get_code(contract_address).hex()
+    contract_code = web3.eth.get_code(contract_address).to_0x_hex()
     implements = function_selector in contract_code
 
     # If not found directly and we should check proxies

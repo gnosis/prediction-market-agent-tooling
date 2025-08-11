@@ -324,9 +324,9 @@ class SeerAgentMarket(AgentMarket):
                     amounts=market_balances[market.id],
                 )
                 gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
-                logger.info(f"Redeemed market {market.id.hex()}")
+                logger.info(f"Redeemed market {market.id.to_0x_hex()}")
             except Exception as e:
-                logger.error(f"Failed to redeem market {market.id.hex()}, {e}")
+                logger.error(f"Failed to redeem market {market.id.to_0x_hex()}, {e}")
 
         # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 
@@ -377,7 +377,7 @@ class SeerAgentMarket(AgentMarket):
             raise ValueError("Seer categorical markets must have 1 question.")
 
         question = model.questions[0]
-        outcome = model.outcomes[int(question.question.best_answer.hex(), 16)]
+        outcome = model.outcomes[int(question.question.best_answer.to_0x_hex(), 16)]
         return Resolution(outcome=outcome, invalid=False)
 
     @staticmethod
@@ -427,7 +427,7 @@ class SeerAgentMarket(AgentMarket):
             probability_map = price_manager.build_probability_map()
         except PriceCalculationError as e:
             logger.info(
-                f"Error when calculating probabilities for market {model.id.hex()} - {e}"
+                f"Error when calculating probabilities for market {model.id.to_0x_hex()} - {e}"
             )
             if must_have_prices:
                 # Price calculation failed, so don't return the market
@@ -438,7 +438,7 @@ class SeerAgentMarket(AgentMarket):
         parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
 
         market = SeerAgentMarket(
-            id=model.id.hex(),
+            id=model.id.to_0x_hex(),
             question=model.title,
             creator=model.creator,
             created_time=model.created_time,
@@ -531,7 +531,9 @@ class SeerAgentMarket(AgentMarket):
             )
 
             token_balance = token_contract.balance_of_in_tokens(
-                for_address=Web3.to_checksum_address(HexAddress(HexStr(pool.id.hex()))),
+                for_address=Web3.to_checksum_address(
+                    HexAddress(HexStr(pool.id.to_0x_hex()))
+                ),
                 web3=web3,
             )
             collateral_balance = p.get_amount_of_token_in_collateral(
@@ -612,7 +614,7 @@ class SeerAgentMarket(AgentMarket):
                 )
             cow_tx_hash = trades[0].txHash
             logger.info(f"TxHash for {order_metadata.uid.root=} is {cow_tx_hash=}.")
-            return cow_tx_hash.hex()
+            return cow_tx_hash.to_0x_hex()
 
         except (
             UnexpectedResponseError,
@@ -643,7 +645,7 @@ class SeerAgentMarket(AgentMarket):
                 amount_wei=amount_wei,
                 web3=web3,
             )
-            return tx_receipt["transactionHash"].hex()
+            return tx_receipt["transactionHash"].to_0x_hex()
 
     def place_bet(
         self,

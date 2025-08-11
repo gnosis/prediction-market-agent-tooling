@@ -64,7 +64,7 @@ def test_send_function_on_contract_tx_using_safe(
     if initial_safe_balance < xDai(10).as_xdai_wei.as_wei:
         send_xdai_to(
             web3=local_web3,
-            from_private_key=PrivateKey(SecretStr(account.key.hex())),
+            from_private_key=PrivateKey(SecretStr(account.key.to_0x_hex())),
             to_address=test_safe.address,
             value=xDai(10).as_xdai_wei,
         )

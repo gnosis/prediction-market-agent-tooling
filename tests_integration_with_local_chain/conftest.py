@@ -110,7 +110,8 @@ def keep_only_eoa_accounts(
 ) -> list[TestAccount]:
     return list(
         filter(
-            lambda acc: web3.eth.get_code(account=acc.address).hex() == "0x", accounts
+            lambda acc: web3.eth.get_code(account=acc.address).to_0x_hex() == "0x",
+            accounts,
         )
     )
 

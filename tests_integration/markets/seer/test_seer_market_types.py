@@ -50,10 +50,10 @@ def test_conditional_markets_have_parent_address(
     assert len(markets) <= 10
 
     for market in markets:
-        mid = market.id.hex()
+        mid = market.id.to_0x_hex()
         parent_has_address = (
             market.parent_market is None
-            or HexAddress(HexStr(market.parent_market.id.hex())) != ADDRESS_ZERO
+            or HexAddress(HexStr(market.parent_market.id.to_0x_hex())) != ADDRESS_ZERO
         )
         assert (
             parent_has_address
@@ -75,7 +75,7 @@ def test_get_scalar_markets_only(
 
     for market in markets:
         # Should be scalar markets only
-        mid = market.id.hex()
+        mid = market.id.to_0x_hex()
         assert _is_scalar_market(
             market.outcomes
         ), f"Market {mid} should be scalar, got outcomes: {market.outcomes}"
@@ -84,7 +84,7 @@ def test_get_scalar_markets_only(
         ), f"Market {mid} should not be binary, got outcomes: {market.outcomes}"
         does_have_parent_market = (
             market.parent_market is not None
-            and HexAddress(HexStr(market.parent_market.id.hex())) != ADDRESS_ZERO
+            and HexAddress(HexStr(market.parent_market.id.to_0x_hex())) != ADDRESS_ZERO
         )
         assert (
             not does_have_parent_market
@@ -104,7 +104,7 @@ def test_get_categorical_markets_only(
 
     for market in markets:
         # Categorical markets should not be scalar or binary
-        mid = market.id.hex()
+        mid = market.id.to_0x_hex()
         assert not _is_scalar_market(
             market.outcomes
         ), f"Categorical market {mid} should not be scalar, got outcomes: {market.outcomes}"
@@ -125,7 +125,7 @@ def test_binary_markets_only(
 
     for market in markets:
         # Should not have scalar markets
-        mid = market.id.hex()
+        mid = market.id.to_0x_hex()
         assert not _is_scalar_market(
             market.outcomes
         ), f"Market {mid} should not be scalar when scalar markets are excluded, got outcomes: {market.outcomes}"

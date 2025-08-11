@@ -749,7 +749,7 @@ def omen_buy_outcome_tx(
         web3=web3,
     )
 
-    return tx_receipt["transactionHash"].hex()
+    return tx_receipt["transactionHash"].to_0x_hex()
 
 
 def binary_omen_buy_outcome_tx(
@@ -843,7 +843,7 @@ def omen_sell_outcome_tx(
             web3=web3,
         )
 
-    return tx_receipt["transactionHash"].hex()
+    return tx_receipt["transactionHash"].to_0x_hex()
 
 
 def binary_omen_sell_outcome_tx(

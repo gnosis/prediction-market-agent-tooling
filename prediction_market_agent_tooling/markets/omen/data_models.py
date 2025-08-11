@@ -48,7 +48,7 @@ OMEN_BINARY_MARKET_OUTCOMES: t.Sequence[OutcomeStr] = [
 ]
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 INVALID_ANSWER_HEX_BYTES = HexBytes(INVALID_ANSWER)
-INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.hex())
+INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.to_0x_hex())
 OMEN_BASE_URL = "https://aiomen.eth.limo"
 PRESAGIO_BASE_URL = "https://presagio.pages.dev"
 TEST_CATEGORY = "test"  # This category is hidden on Presagio for testing purposes.
@@ -595,7 +595,7 @@ class OmenBet(BaseModel):
             )
 
         return ResolvedBet(
-            id=self.transactionHash.hex(),
+            id=self.transactionHash.to_0x_hex(),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=self.collateral_amount_token,
             outcome=self.fpmm.outcomes[self.outcomeIndex],

@@ -207,8 +207,8 @@ class PolymarketAgentMarket(AgentMarket):
         ascending: bool = False  # default value
         match sort_by:
             case SortBy.NEWEST:
-                order_by = PolymarketOrderByEnum.END_DATE
-                ascending = True
+                order_by = PolymarketOrderByEnum.START_DATE
+                ascending = False
             case SortBy.CLOSING_SOONEST:
                 ascending = True
                 order_by = PolymarketOrderByEnum.END_DATE
@@ -270,7 +270,7 @@ class PolymarketAgentMarket(AgentMarket):
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
         """Method for checking if agent has enough funds to pay for gas fees."""
-        web3 = RPCConfig().get_web3()
+        web3 = RPCConfig().get_polygon_web3()
         pol_balance: Wei = Wei(web3.eth.get_balance(api_keys.public_key))
         return pol_balance > Wei(int(0.001 * 1e18))
 
@@ -329,7 +329,12 @@ class PolymarketAgentMarket(AgentMarket):
         )
 
     def can_be_traded(self) -> bool:
-        return self.active_flag_from_polymarket and not self.closed_flag_from_polymarket
+        return (
+            self.active_flag_from_polymarket
+            and not self.closed_flag_from_polymarket
+            and self.liquidity_usd
+            > USD(5)  # we conservatively require some positive liquidity to trade on
+        )
 
     def get_buy_token_amount(
         self, bet_amount: USD | CollateralToken, outcome_str: OutcomeStr

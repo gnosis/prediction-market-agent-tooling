@@ -7,5 +7,5 @@ def test_get_positions() -> None:
     better_address = Web3.to_checksum_address(
         "0x461f3e886dca22e561eee224d283e08b8fb47a07"
     )  # one of polymarket most active traders
-    pos = get_user_positions(user_id=better_address, condition_ids=None, limit=50)
+    pos = get_user_positions(user_id=better_address, condition_ids=None)
     assert len(pos) > 0

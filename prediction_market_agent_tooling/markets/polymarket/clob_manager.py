@@ -110,6 +110,9 @@ class ClobManager(metaclass=ClobManagerMeta):
                 f"usdc_amounts < 1.0 are not supported by Polymarket, got {amount}"
             )
 
+        # We check allowances first
+        self.__init_approvals()
+
         order_args = MarketOrderArgs(
             token_id=str(token_id),
             amount=amount,

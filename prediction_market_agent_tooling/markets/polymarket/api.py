@@ -134,7 +134,6 @@ def get_polymarkets_with_pagination(
 def get_user_positions(
     user_id: ChecksumAddress,
     condition_ids: list[HexBytes] | None = None,
-    limit: int = 50,
 ) -> list[PolymarketPositionResponse]:
     url = "https://data-api.polymarket.com/positions"
     client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()

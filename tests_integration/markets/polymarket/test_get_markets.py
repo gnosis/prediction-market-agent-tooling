@@ -65,7 +65,7 @@ def test_get_positions() -> None:
         "0xf2ce8d3897ac5009a131637d3575f1f91c579bd08eecce6ae2b2da0f32bbe6f1"
     )
 
-    positions = get_user_positions(user_id=user_address, limit=100)
+    positions = get_user_positions(user_id=user_address)
     # Oddly enough, they also return related markets. Hence important to filter by conditionId
     # inside PolymarketAgentMarket
     assert len(positions) > 0

@@ -69,8 +69,8 @@ class HexBytes(HexBytesBase, BaseHex):
             return result
         return f"0x{result}"
 
-    def to_0x_hex(self) -> str:
-        return self.hex() if self.hex().startswith("0x") else f"0x{self.hex()}"
+    # def to_0x_hex(self) -> str:
+    #     return self.hex() if self.hex().startswith("0x") else f"0x{self.hex()}"
 
     def __repr__(self) -> str:
         return f'HexBytes("{self.hex()}")'

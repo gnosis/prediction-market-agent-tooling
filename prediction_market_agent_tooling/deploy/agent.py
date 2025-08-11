@@ -25,7 +25,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     ConditionalFilterType,
     FilterBy,
     ProcessedMarket,
-    ProcessedTradedMarket,
     QuestionType,
     SortBy,
 )
@@ -488,7 +487,7 @@ class DeployablePredictionAgent(DeployableAgent):
         market_type: MarketType,
         market: AgentMarket,
         verify_market: bool = True,
-    ) -> ProcessedTradedMarket | None:
+    ) -> ProcessedMarket | None:
         self.update_langfuse_trace_by_market(market_type, market)
         logger.info(
             f"Processing market {market.question=} from {market.url=} with liquidity {market.get_liquidity()}."
@@ -510,9 +509,7 @@ class DeployablePredictionAgent(DeployableAgent):
             self.verify_answer_outcomes(market=market, answer=answer)
 
         processed_market = (
-            ProcessedTradedMarket(answer=answer, trades=[])
-            if answer is not None
-            else None
+            ProcessedMarket(answer=answer, trades=[]) if answer is not None else None
         )
 
         self.update_langfuse_trace_by_processed_market(market_type, processed_market)
@@ -568,8 +565,7 @@ class DeployablePredictionAgent(DeployableAgent):
             processed_market = self.process_market(market_type, market)
             self.after_process_market(market_type, market, processed_market)
 
-            if processed_market is not None and processed_market.trades:
-                # We only mark the market as processed if trades were placed.
+            if processed_market is not None:
                 processed += 1
 
             if processed == self.bet_on_n_markets_per_run:
@@ -742,7 +738,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         market_type: MarketType,
         market: AgentMarket,
         verify_market: bool = True,
-    ) -> ProcessedTradedMarket | None:
+    ) -> ProcessedMarket | None:
         processed_market = super().process_market(market_type, market, verify_market)
         if processed_market is None:
             return None
@@ -762,7 +758,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         )
         placed_trades = self.execute_trades(market, trades)
 
-        traded_market = ProcessedTradedMarket(
+        traded_market = ProcessedMarket(
             answer=processed_market.answer, trades=placed_trades
         )
         logger.info(f"Traded market {market.question=} from {market.url=}.")
@@ -780,10 +776,10 @@ class DeployableTraderAgent(DeployablePredictionAgent):
             market,
             processed_market,
         )
-        if isinstance(processed_market, ProcessedTradedMarket):
-            if self.store_trades:
-                market.store_trades(processed_market, api_keys, self.agent_name)
-            else:
-                logger.info(
-                    f"Trades {processed_market.trades} not stored because {self.store_trades=}."
-                )
+
+        if self.store_trades and processed_market is not None:
+            market.store_trades(processed_market, api_keys, self.agent_name)
+        else:
+            logger.info(
+                f"Trades {processed_market=} not stored because {self.store_trades=}."
+            )

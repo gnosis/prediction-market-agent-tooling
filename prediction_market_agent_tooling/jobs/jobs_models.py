@@ -9,7 +9,7 @@ from prediction_market_agent_tooling.deploy.betting_strategy import (
 from prediction_market_agent_tooling.gtypes import USD, Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
-    ProcessedTradedMarket,
+    ProcessedMarket,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
@@ -64,7 +64,7 @@ class JobAgentMarket(AgentMarket, ABC):
     @abstractmethod
     def submit_job_result(
         self, agent_name: str, max_bond: USD, result: str
-    ) -> ProcessedTradedMarket:
+    ) -> ProcessedMarket:
         """Submit the completed result for this job."""
 
     def to_simple_job(self, max_bond: USD) -> SimpleJob:

@@ -45,9 +45,6 @@ from prediction_market_agent_tooling.tools.utils import (
 
 class ProcessedMarket(BaseModel):
     answer: CategoricalProbabilisticAnswer
-
-
-class ProcessedTradedMarket(ProcessedMarket):
     trades: list[PlacedTrade]
 
 
@@ -451,7 +448,7 @@ class AgentMarket(BaseModel):
 
     def store_trades(
         self,
-        traded_market: ProcessedTradedMarket | None,
+        traded_market: ProcessedMarket | None,
         keys: APIKeys,
         agent_name: str,
         web3: Web3 | None = None,

@@ -22,7 +22,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketFees,
     ProcessedMarket,
-    ProcessedTradedMarket,
     QuestionType,
     SortBy,
 )
@@ -284,7 +283,7 @@ class PolymarketAgentMarket(AgentMarket):
 
     def store_trades(
         self,
-        traded_market: ProcessedTradedMarket | None,
+        traded_market: ProcessedMarket | None,
         keys: APIKeys,
         agent_name: str,
         web3: Web3 | None = None,

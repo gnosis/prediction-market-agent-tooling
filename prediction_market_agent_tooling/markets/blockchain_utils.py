@@ -11,7 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import ProcessedTradedMarket
+from prediction_market_agent_tooling.markets.agent_market import ProcessedMarket
 from prediction_market_agent_tooling.markets.omen.data_models import (
     ContractPrediction,
     IPFSAgentResult,
@@ -28,7 +28,7 @@ def store_trades(
     contract: _AgentResultMappingContract,
     market_id: ChecksumAddress,
     outcomes: Sequence[OutcomeStr],
-    traded_market: ProcessedTradedMarket | None,
+    traded_market: ProcessedMarket | None,
     keys: APIKeys,
     agent_name: str,
     web3: Web3 | None = None,

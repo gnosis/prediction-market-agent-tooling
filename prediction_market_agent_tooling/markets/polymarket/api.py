@@ -131,11 +131,20 @@ def get_polymarkets_with_pagination(
     return all_markets[:limit]
 
 
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_user_positions failed, attempt={x.attempt_number}."
+    ),
+)
 def get_user_positions(
     user_id: ChecksumAddress,
     condition_ids: list[HexBytes] | None = None,
 ) -> list[PolymarketPositionResponse]:
+    """Fetch a user's Polymarket positions; optionally filter by condition IDs."""
     url = "https://data-api.polymarket.com/positions"
+    # ... rest of implementation ...
     client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
 
     params = {

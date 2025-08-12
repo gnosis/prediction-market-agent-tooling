@@ -70,16 +70,15 @@ def polygon_local_web3(
 
 
 @pytest.fixture(scope="session")
-def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, None]:
+def local_web3(
+    load_env: None, chain: ChainManager, eoa_accounts: list[TestAccount]
+) -> t.Generator[Web3, None, None]:
     print("entering fixture local_web3")
 
     if (tenderly_fork_rpc := APIKeys().TENDERLY_FORK_RPC) is not None:
         print("using tenderly rpc")
         w3 = Web3(Web3.HTTPProvider(tenderly_fork_rpc))
         print("funding test accounts on tenderly")
-        eoa_accounts: list[TestAccount] = keep_only_eoa_accounts(
-            ape_accounts.test_accounts, w3
-        )
         fund_account_on_tenderly(
             tenderly_fork_rpc, [a.address for a in eoa_accounts], xDai(1000)
         )
@@ -103,17 +102,6 @@ def eoa_accounts() -> list[TestAccount]:
     # Hence we prefer to use EOA accounts from a different mnemonic than to rely on anvil's standard accounts.
     test_accounts: list[TestAccount] = ape_accounts.test_accounts
     return test_accounts
-
-
-def keep_only_eoa_accounts(
-    accounts: list[TestAccount], web3: Web3
-) -> list[TestAccount]:
-    return list(
-        filter(
-            lambda acc: web3.eth.get_code(account=acc.address).to_0x_hex() == "0x",
-            accounts,
-        )
-    )
 
 
 @pytest.fixture(scope="module")

@@ -420,10 +420,14 @@ class SeerAgentMarket(AgentMarket):
         must_have_prices: bool,
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-
-        probability_map = {}
+        wrapped_tokens = [Web3.to_checksum_address(i) for i in model.wrapped_tokens]
         try:
-            probability_map = price_manager.build_probability_map()
+            (
+                probability_map,
+                outcome_token_pool,
+            ) = price_manager.build_initial_probs_from_pool(
+                model=model, wrapped_tokens=wrapped_tokens
+            )
         except PriceCalculationError as e:
             logger.info(
                 f"Error when calculating probabilities for market {model.id.to_0x_hex()} - {e}"
@@ -446,9 +450,9 @@ class SeerAgentMarket(AgentMarket):
             condition_id=model.condition_id,
             url=model.url,
             close_time=model.close_time,
-            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
+            wrapped_tokens=wrapped_tokens,
             fees=MarketFees.get_zero_fees(),
-            outcome_token_pool=None,
+            outcome_token_pool=outcome_token_pool,
             outcomes_supply=model.outcomes_supply,
             resolution=resolution,
             volume=None,
@@ -612,7 +616,7 @@ class SeerAgentMarket(AgentMarket):
                     f"Expected exactly 1 trade from {order_metadata=}, but got {len(trades)=}."
                 )
             cow_tx_hash = trades[0].txHash
-            logger.info(f"TxHash for {order_metadata.uid.root=} is {cow_tx_hash=}.")
+            logger.info(f"TxHash is {cow_tx_hash=} for {order_metadata.uid.root=}.")
             return cow_tx_hash.to_0x_hex()
 
         except (
@@ -644,7 +648,9 @@ class SeerAgentMarket(AgentMarket):
                 amount_wei=amount_wei,
                 web3=web3,
             )
-            return tx_receipt["transactionHash"].to_0x_hex()
+            swap_pool_tx_hash = tx_receipt["transactionHash"]
+            logger.info(f"TxHash is {swap_pool_tx_hash=}.")
+            return swap_pool_tx_hash.to_0x_hex()
 
     def place_bet(
         self,

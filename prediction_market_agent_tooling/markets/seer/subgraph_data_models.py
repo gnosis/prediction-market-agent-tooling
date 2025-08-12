@@ -1,18 +1,27 @@
 from pydantic import BaseModel, ConfigDict, Field
+from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
     CollateralToken,
     HexAddress,
     HexBytes,
     OutcomeStr,
+    OutcomeToken,
+    Wei,
 )
+from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
 
 class SeerToken(BaseModel):
     id: HexBytes
     name: str
     symbol: str
+
+    @property
+    def address(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.id.hex())
 
 
 class SeerPool(BaseModel):
@@ -24,6 +33,34 @@ class SeerPool(BaseModel):
     token0Price: CollateralToken
     token1Price: CollateralToken
     sqrtPrice: int
+
+
+class SeerSwap(BaseModel):
+    id: str  # It's like "0x73afd8f096096552d72a0b40ea66d2076be136c6a531e2f6b190d151a750271e#32" (note the #32) # web3-private-key-ok
+    recipient: HexAddress
+    sender: HexAddress
+    price: Wei
+    amount0: CollateralToken
+    amount1: CollateralToken
+    token0: SeerToken
+    token1: SeerToken
+    timestamp: int
+
+    @property
+    def timestamp_utc(self) -> DatetimeUTC:
+        return DatetimeUTC.to_datetime_utc(self.timestamp)
+
+    @property
+    def buying_collateral_amount(self) -> CollateralToken:
+        return self.amount0 if self.amount0 > 0 else self.amount1
+
+    @property
+    def received_shares_amount(self) -> OutcomeToken:
+        return (
+            OutcomeToken(abs(self.amount0).value)
+            if self.amount0 < 0
+            else OutcomeToken(abs(self.amount1).value)
+        )
 
 
 class NewMarketEvent(BaseModel):

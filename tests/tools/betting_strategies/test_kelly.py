@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
     QuestionType,
     SortBy,
+    calculate_buy_outcome_token,
 )
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     OMEN_FALSE_OUTCOME,
@@ -205,18 +206,25 @@ def test_kelly_categorical_full_underpriced(
     allow_multiple_bets: bool, allow_shorting: bool, multicategorical: bool
 ) -> None:
     # Market [0.79, 0.21], we think [0.9, 0.1] (first outcome underpriced)
+    pool_sizes = [
+        OutcomeToken(3.598141798265440462),
+        OutcomeToken(13.618140347782145810),
+    ]
+    fees = MarketFees(bet_proportion=0.0, absolute=0.0)
     bets = get_kelly_bets_categorical_full(
-        outcome_pool_sizes=[
-            OutcomeToken(3.598141798265440462),
-            OutcomeToken(13.618140347782145810),
-        ],
+        market_probabilities=OmenAgentMarket.compute_fpmm_probabilities(
+            [x.as_outcome_wei for x in pool_sizes]
+        ),
         estimated_probabilities=[Probability(0.9), Probability(0.1)],
         confidence=1.0,
         max_bet=CollateralToken(0.5),
-        fees=MarketFees(bet_proportion=0.0, absolute=0.0),
+        fees=fees,
         allow_multiple_bets=allow_multiple_bets,
         allow_shorting=allow_shorting,
         multicategorical=multicategorical,
+        get_buy_token_amount=lambda bet_amount, outcome_index: calculate_buy_outcome_token(
+            bet_amount, outcome_index, pool_sizes, fees
+        ).outcome_tokens_received,
     )
     assert bets[0].size.value >= 0, bets
     if not multicategorical:
@@ -244,15 +252,22 @@ def test_kelly_categorical_full_fair_price(
     allow_multiple_bets: bool, allow_shorting: bool, multicategorical: bool
 ) -> None:
     # Market pools: [500, 500], we think [0.5, 0.5] (fair)
+    pool_sizes = [OutcomeToken(500), OutcomeToken(500)]
+    fees = MarketFees(bet_proportion=0.0, absolute=0.0)
     bets = get_kelly_bets_categorical_full(
-        outcome_pool_sizes=[OutcomeToken(500), OutcomeToken(500)],
+        market_probabilities=OmenAgentMarket.compute_fpmm_probabilities(
+            [x.as_outcome_wei for x in pool_sizes]
+        ),
         estimated_probabilities=[Probability(0.5), Probability(0.5)],
         confidence=1.0,
         max_bet=CollateralToken(1),
-        fees=MarketFees(bet_proportion=0.0, absolute=0.0),
+        fees=fees,
         allow_multiple_bets=allow_multiple_bets,
         allow_shorting=allow_shorting,
         multicategorical=multicategorical,
+        get_buy_token_amount=lambda bet_amount, outcome_index: calculate_buy_outcome_token(
+            bet_amount, outcome_index, pool_sizes, fees
+        ).outcome_tokens_received,
     )
     assert all(abs(b.size.value) < 1e-6 for b in bets), bets
     if not allow_shorting:
@@ -276,18 +291,25 @@ def test_kelly_categorical_full_overpriced(
     allow_multiple_bets: bool, allow_shorting: bool, multicategorical: bool
 ) -> None:
     # Market [0.79, 0.20], we think [0.4, 0.6] (first outcome overpriced)
+    pool_sizes = [
+        OutcomeToken(3.598141798265440462),
+        OutcomeToken(13.618140347782145810),
+    ]
+    fees = MarketFees(bet_proportion=0.0, absolute=0.0)
     bets = get_kelly_bets_categorical_full(
-        outcome_pool_sizes=[
-            OutcomeToken(3.598141798265440462),
-            OutcomeToken(13.618140347782145810),
-        ],
+        market_probabilities=OmenAgentMarket.compute_fpmm_probabilities(
+            [x.as_outcome_wei for x in pool_sizes]
+        ),
         estimated_probabilities=[Probability(0.4), Probability(0.6)],
         confidence=1.0,
         max_bet=CollateralToken(1),
-        fees=MarketFees(bet_proportion=0.0, absolute=0.0),
+        fees=fees,
         allow_multiple_bets=allow_multiple_bets,
         allow_shorting=allow_shorting,
         multicategorical=multicategorical,
+        get_buy_token_amount=lambda bet_amount, outcome_index: calculate_buy_outcome_token(
+            bet_amount, outcome_index, pool_sizes, fees
+        ).outcome_tokens_received,
     )
     assert bets[0].size.value <= 0
     assert bets[1].size.value >= 0
@@ -410,8 +432,11 @@ def test_compare_kellys_full(estimated_p_yes: Probability, confidence: float) ->
         limit=5, sort_by=SortBy.NONE, question_type=QuestionType.BINARY
     )
     for market in markets:
+        pool_sizes = [market.outcome_token_pool[o] for o in market.outcomes]
         categorical_bets = get_kelly_bets_categorical_full(
-            outcome_pool_sizes=[market.outcome_token_pool[o] for o in market.outcomes],
+            market_probabilities=OmenAgentMarket.compute_fpmm_probabilities(
+                [x.as_outcome_wei for x in pool_sizes]
+            ),
             estimated_probabilities=[estimated_p_yes, Probability(1 - estimated_p_yes)],
             confidence=confidence,
             max_bet=max_bet,
@@ -420,6 +445,9 @@ def test_compare_kellys_full(estimated_p_yes: Probability, confidence: float) ->
             allow_multiple_bets=False,
             allow_shorting=False,
             multicategorical=False,
+            get_buy_token_amount=lambda bet_amount, outcome_index: calculate_buy_outcome_token(
+                bet_amount, outcome_index, pool_sizes, market.fees
+            ).outcome_tokens_received,
         )
         binary_bet = get_kelly_bet_full(
             yes_outcome_pool_size=market.outcome_token_pool[OMEN_TRUE_OUTCOME],

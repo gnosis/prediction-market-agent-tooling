@@ -16,7 +16,11 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket, MarketFees
+from prediction_market_agent_tooling.markets.agent_market import (
+    AgentMarket,
+    MarketFees,
+    QuestionType,
+)
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
     ExistingPosition,
@@ -24,10 +28,12 @@ from prediction_market_agent_tooling.markets.data_models import (
     Trade,
     TradeType,
 )
+from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
     get_buy_outcome_token_amount,
 )
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
+    KellyType,
     get_kelly_bet_full,
     get_kelly_bet_simplified,
     get_kelly_bets_categorical_full,
@@ -45,8 +51,20 @@ class GuaranteedLossError(RuntimeError):
 
 
 class BettingStrategy(ABC):
+    supported_question_types: set[QuestionType]
+    supported_market_types: set[MarketType]
+
     def __init__(self, take_profit: bool = True) -> None:
         self.take_profit = take_profit
+
+    def is_market_supported(self, market: AgentMarket) -> bool:
+        if market.question_type not in self.supported_question_types:
+            return False
+
+        if MarketType.from_market(market) not in self.supported_market_types:
+            return False
+
+        return True
 
     @abstractmethod
     def calculate_trades(
@@ -251,6 +269,13 @@ class BettingStrategy(ABC):
 
 
 class CategoricalMaxAccuracyBettingStrategy(BettingStrategy):
+    supported_question_types = {
+        QuestionType.BINARY,
+        QuestionType.CATEGORICAL,
+        QuestionType.SCALAR,
+    }
+    supported_market_types = {x for x in MarketType if x.is_trading_market}
+
     def __init__(self, max_position_amount: USD, take_profit: bool = True):
         super().__init__(take_profit=take_profit)
         self.max_position_amount = max_position_amount
@@ -362,18 +387,20 @@ class MaxExpectedValueBettingStrategy(CategoricalMaxAccuracyBettingStrategy):
         return f"MaxExpectedValueBettingStrategy(max_position_amount={self.max_position_amount}, take_profit={self.take_profit})"
 
 
-class BinaryKellyBettingStrategy(BettingStrategy):
+class _BinaryKellyBettingStrategy(BettingStrategy):
+    supported_question_types = {QuestionType.BINARY}
+
     def __init__(
         self,
+        kelly_type: KellyType,
         max_position_amount: USD,
         max_price_impact: float | None = None,
         take_profit: bool = True,
-        force_simplified_calculation: bool = False,
     ):
         super().__init__(take_profit=take_profit)
+        self.kelly_type = kelly_type
         self.max_position_amount = max_position_amount
         self.max_price_impact = max_price_impact
-        self.force_simplified_calculation = force_simplified_calculation
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
@@ -396,7 +423,7 @@ class BinaryKellyBettingStrategy(BettingStrategy):
             else override_p_yes
         )
 
-        if market.outcome_token_pool is None or self.force_simplified_calculation:
+        if self.kelly_type == KellyType.SIMPLE:
             kelly_bet = get_kelly_bet_simplified(
                 max_bet=market.get_usd_in_token(self.max_position_amount),
                 market_p_yes=market.probability_for_market_outcome(direction),
@@ -447,7 +474,6 @@ class BinaryKellyBettingStrategy(BettingStrategy):
             # Adjust amount
             max_price_impact_bet_amount = self.calculate_bet_amount_for_price_impact(
                 market,
-                kelly_bet.size,
                 direction=direction,
                 max_price_impact=self.max_price_impact,
             )
@@ -490,7 +516,6 @@ class BinaryKellyBettingStrategy(BettingStrategy):
     @staticmethod
     def calculate_bet_amount_for_price_impact(
         market: AgentMarket,
-        kelly_bet_size: CollateralToken,
         direction: OutcomeStr,
         max_price_impact: float,
     ) -> CollateralToken:
@@ -499,7 +524,7 @@ class BinaryKellyBettingStrategy(BettingStrategy):
         ) -> float:
             outcome_idx = market.get_outcome_index(direction)
             price_impact = (
-                BinaryKellyBettingStrategy.calculate_price_impact_for_bet_amount(
+                _BinaryKellyBettingStrategy.calculate_price_impact_for_bet_amount(
                     outcome_idx=outcome_idx,
                     bet_amount=CollateralToken(bet_amount_collateral),
                     pool_balances=pool_balances,
@@ -510,10 +535,9 @@ class BinaryKellyBettingStrategy(BettingStrategy):
             return abs(price_impact - max_price_impact)
 
         if not market.outcome_token_pool:
-            logger.warning(
+            raise ValueError(
                 "Market outcome_token_pool is None, cannot calculate bet amount"
             )
-            return kelly_bet_size
 
         pool_balances = [i.as_outcome_wei for i in market.outcome_token_pool.values()]
         # stay float for compatibility with `minimize_scalar`
@@ -530,10 +554,47 @@ class BinaryKellyBettingStrategy(BettingStrategy):
         return CollateralToken(optimized_bet_amount.x)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}, take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"
+        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}, take_profit={self.take_profit})"
+
+
+class SimpleBinaryKellyBettingStrategy(_BinaryKellyBettingStrategy):
+    supported_market_types = {x for x in MarketType if x.is_trading_market}
+
+    def __init__(
+        self,
+        max_position_amount: USD,
+        take_profit: bool = True,
+    ):
+        super().__init__(
+            kelly_type=KellyType.SIMPLE,
+            max_position_amount=max_position_amount,
+            max_price_impact=None,
+            take_profit=take_profit,
+        )
+
+
+class FullBinaryKellyBettingStrategy(_BinaryKellyBettingStrategy):
+    # Supports only OMEN because it uses closed-form formula derived from a binary FPMM.
+    supported_market_types = {MarketType.OMEN}
+
+    def __init__(
+        self,
+        max_position_amount: USD,
+        max_price_impact: float | None = None,
+        take_profit: bool = True,
+    ):
+        super().__init__(
+            kelly_type=KellyType.FULL,
+            max_position_amount=max_position_amount,
+            max_price_impact=max_price_impact,
+            take_profit=take_profit,
+        )
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
+    supported_question_types = {QuestionType.BINARY}
+    supported_market_types = {MarketType.OMEN}
+
     def __init__(
         self,
         max_position_amount: USD,
@@ -565,7 +626,7 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         # We ignore the direction nudge given by Kelly, hence we assume we have a perfect prediction.
         estimated_p_yes = 1.0
 
-        kelly_bet = BinaryKellyBettingStrategy(
+        kelly_bet = FullBinaryKellyBettingStrategy(
             max_position_amount=self.max_position_amount
         ).get_kelly_bet(
             market=market,
@@ -593,24 +654,27 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, take_profit={self.take_profit})"
 
 
-class CategoricalKellyBettingStrategy(BettingStrategy):
+class _CategoricalKellyBettingStrategy(BettingStrategy):
+    supported_question_types = {QuestionType.BINARY, QuestionType.CATEGORICAL}
+    supported_market_types = {x for x in MarketType if x.is_trading_market}
+
     def __init__(
         self,
+        kelly_type: KellyType,
         max_position_amount: USD,
         max_price_impact: float | None,
         allow_multiple_bets: bool,
         allow_shorting: bool,
         multicategorical: bool,
         take_profit: bool = True,
-        force_simplified_calculation: bool = False,
     ):
         super().__init__(take_profit=take_profit)
+        self.kelly_type = kelly_type
         self.max_position_amount = max_position_amount
         self.max_price_impact = max_price_impact
         self.allow_multiple_bets = allow_multiple_bets
         self.allow_shorting = allow_shorting
         self.multicategorical = multicategorical
-        self.force_simplified_calculation = force_simplified_calculation
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
@@ -624,7 +688,7 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
     ) -> list[CategoricalKellyBet]:
         max_bet = market.get_usd_in_token(max_bet_amount)
 
-        if market.outcome_token_pool is None or self.force_simplified_calculation:
+        if self.kelly_type == KellyType.SIMPLE:
             kelly_bets = get_kelly_bets_categorical_simplified(
                 market_probabilities=[market.probabilities[o] for o in market.outcomes],
                 estimated_probabilities=[
@@ -639,8 +703,8 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
 
         else:
             kelly_bets = get_kelly_bets_categorical_full(
-                outcome_pool_sizes=[
-                    market.outcome_token_pool[o] for o in market.outcomes
+                market_probabilities=[
+                    market.probability_for_market_outcome(o) for o in market.outcomes
                 ],
                 estimated_probabilities=[
                     answer.probability_for_market_outcome(o) for o in market.outcomes
@@ -651,6 +715,11 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
                 allow_multiple_bets=self.allow_multiple_bets,
                 allow_shorting=self.allow_shorting,
                 multicategorical=self.multicategorical,
+                get_buy_token_amount=lambda bet_amount, outcome_index: check_not_none(
+                    market.get_buy_token_amount(
+                        bet_amount, market.get_outcome_str(outcome_index)
+                    )
+                ),
             )
 
         return kelly_bets
@@ -681,9 +750,8 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
         if self.max_price_impact:
             # Adjust amount
             max_price_impact_bet_amount = (
-                BinaryKellyBettingStrategy.calculate_bet_amount_for_price_impact(
+                _BinaryKellyBettingStrategy.calculate_bet_amount_for_price_impact(
                     market,
-                    best_kelly_bet.size,
                     direction=market.get_outcome_str(best_kelly_bet.index),
                     max_price_impact=self.max_price_impact,
                 )
@@ -704,4 +772,45 @@ class CategoricalKellyBettingStrategy(BettingStrategy):
         return trades
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}, allow_multiple_bets={self.allow_multiple_bets}, allow_shorting={self.allow_shorting}, take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"
+        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}, allow_multiple_bets={self.allow_multiple_bets}, allow_shorting={self.allow_shorting}, take_profit={self.take_profit})"
+
+
+class SimpleCategoricalKellyBettingStrategy(_CategoricalKellyBettingStrategy):
+    def __init__(
+        self,
+        max_position_amount: USD,
+        allow_multiple_bets: bool,
+        allow_shorting: bool,
+        multicategorical: bool,
+        take_profit: bool = True,
+    ):
+        super().__init__(
+            kelly_type=KellyType.SIMPLE,
+            max_position_amount=max_position_amount,
+            max_price_impact=None,
+            allow_multiple_bets=allow_multiple_bets,
+            allow_shorting=allow_shorting,
+            multicategorical=multicategorical,
+            take_profit=take_profit,
+        )
+
+
+class FullCategoricalKellyBettingStrategy(_CategoricalKellyBettingStrategy):
+    def __init__(
+        self,
+        max_position_amount: USD,
+        max_price_impact: float | None,
+        allow_multiple_bets: bool,
+        allow_shorting: bool,
+        multicategorical: bool,
+        take_profit: bool = True,
+    ):
+        super().__init__(
+            kelly_type=KellyType.FULL,
+            max_position_amount=max_position_amount,
+            max_price_impact=max_price_impact,
+            allow_multiple_bets=allow_multiple_bets,
+            allow_shorting=allow_shorting,
+            multicategorical=multicategorical,
+            take_profit=take_profit,
+        )

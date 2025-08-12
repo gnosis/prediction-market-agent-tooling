@@ -1,4 +1,6 @@
+from enum import Enum
 from itertools import chain
+from typing import Callable
 
 import numpy as np
 from scipy.optimize import minimize
@@ -9,16 +11,17 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.markets.omen.omen import (
-    calculate_buy_outcome_token,
-)
 from prediction_market_agent_tooling.tools.betting_strategies.utils import (
     BinaryKellyBet,
     CategoricalKellyBet,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
+
+
+class KellyType(str, Enum):
+    SIMPLE = "simple"
+    FULL = "full"
 
 
 def check_is_valid_probability(probability: float) -> None:
@@ -237,7 +240,7 @@ def get_kelly_bets_categorical_simplified(
 
 
 def get_kelly_bets_categorical_full(
-    outcome_pool_sizes: list[OutcomeToken],
+    market_probabilities: list[Probability],
     estimated_probabilities: list[Probability],
     confidence: float,
     max_bet: CollateralToken,
@@ -245,6 +248,8 @@ def get_kelly_bets_categorical_full(
     allow_multiple_bets: bool,
     allow_shorting: bool,
     multicategorical: bool,
+    # investment amount, outcome index --> received outcome tokens
+    get_buy_token_amount: Callable[[CollateralToken, int], OutcomeToken],
     bet_precision: int = 6,
 ) -> list[CategoricalKellyBet]:
     """
@@ -255,18 +260,13 @@ def get_kelly_bets_categorical_full(
     If the agent's probabilities are very close to the market's, returns all-zero bets.
     multicategorical means that multiple outcomes could be selected as correct ones.
     """
-    assert len(outcome_pool_sizes) == len(
+    assert len(market_probabilities) == len(
         estimated_probabilities
     ), "Mismatch in number of outcomes"
-
-    market_probabilities = AgentMarket.compute_fpmm_probabilities(
-        [x.as_outcome_wei for x in outcome_pool_sizes]
-    )
-
     for p in chain(market_probabilities, estimated_probabilities, [confidence]):
         check_is_valid_probability(p)
 
-    n = len(outcome_pool_sizes)
+    n = len(market_probabilities)
     max_bet_value = max_bet.value
 
     if all(
@@ -283,22 +283,17 @@ def get_kelly_bets_categorical_full(
             payout = 0.0
             if bets[i] >= 0:
                 # If bet on i is positive, we buy outcome i
-                buy_result = calculate_buy_outcome_token(
-                    CollateralToken(bets[i]), i, outcome_pool_sizes, fees
-                )
-                payout += buy_result.outcome_tokens_received.value
+                buy_result = get_buy_token_amount(CollateralToken(bets[i]), i)
+                payout += buy_result.value
             else:
                 # If bet is negative, we "short" outcome i by buying all other outcomes
                 for j in range(n):
                     if j == i:
                         continue
-                    buy_result = calculate_buy_outcome_token(
-                        CollateralToken(abs(bets[i]) / (n - 1)),
-                        j,
-                        outcome_pool_sizes,
-                        fees,
+                    buy_result = get_buy_token_amount(
+                        CollateralToken(abs(bets[i]) / (n - 1)), j
                     )
-                    payout += buy_result.outcome_tokens_received.value
+                    payout += buy_result.value
             payouts.append(payout)
         return payouts
 

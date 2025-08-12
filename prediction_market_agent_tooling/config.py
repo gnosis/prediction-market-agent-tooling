@@ -2,6 +2,7 @@ import json
 import typing as t
 from copy import deepcopy
 
+import cachetools
 from eth_account.signers.local import LocalAccount
 from eth_typing import URI
 from pydantic import Field, model_validator
@@ -323,6 +324,10 @@ class RPCConfig(BaseSettings):
     def chain_id(self) -> ChainID:
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
 
+    @property
+    def gnosis_chain_id(self) -> ChainID:
+        return GNOSIS_CHAIN_ID
+
     def chain_id_to_rpc_url(self, chain_id: ChainID) -> URI:
         return {
             ETHEREUM_ID: self.ethereum_rpc_url,
@@ -356,6 +361,10 @@ class RPCConfig(BaseSettings):
             )
         )
 
+    @cachetools.cached(
+        cachetools.TTLCache(maxsize=100, ttl=5 * 60),
+        key=lambda self: f"{self.model_dump_json()}",
+    )
     def get_polygon_web3(self) -> Web3:
         web3 = self.get_web3()
         if self.chain_id != POLYGON_CHAIN_ID:

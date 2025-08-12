@@ -1,6 +1,5 @@
 from enum import Enum
-from threading import Lock
-from typing import Any, Dict
+from typing import Dict
 
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import MarketOrderArgs, OrderType
@@ -55,24 +54,7 @@ class PriceResponse(BaseModel):
     price: float
 
 
-class ClobManagerMeta(type):
-    """Singleton metaclass, one instance per API key's private key."""
-
-    _instances: Dict[str, "ClobManager"] = {}
-    _lock: Lock = Lock()
-
-    def __call__(cls, api_keys: APIKeys, *args: Any, **kwargs: Any) -> "ClobManager":
-        # Use the API key as the unique identifier for each instance
-        key = api_keys.bet_from_private_key.get_secret_value()
-        if key not in cls._instances:
-            with cls._lock:
-                if key not in cls._instances:
-                    instance = super().__call__(api_keys, *args, **kwargs)
-                    cls._instances[key] = instance
-        return cls._instances[key]
-
-
-class ClobManager(metaclass=ClobManagerMeta):
+class ClobManager:
     def __init__(self, api_keys: APIKeys):
         self.api_keys = api_keys
         self.clob_client = ClobClient(

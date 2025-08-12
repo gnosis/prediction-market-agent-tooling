@@ -317,7 +317,7 @@ class PolymarketAgentMarket(AgentMarket):
                 continue
 
             amounts_potential[OutcomeStr(p.outcome)] = USD(p.size)
-            amounts_ot[OutcomeStr(p.outcome)] = OutcomeToken(p.size * 1e6)
+            amounts_ot[OutcomeStr(p.outcome)] = OutcomeToken(p.size)
             amounts_current[OutcomeStr(p.outcome)] = USD(p.currentValue)
 
         return ExistingPosition(
@@ -365,7 +365,7 @@ class PolymarketAgentMarket(AgentMarket):
         token_id = self.get_token_id_for_outcome(outcome)
 
         created_order = clob_manager.place_buy_market_order(
-            token_id=token_id, usdc_amount=amount.value
+            token_id=token_id, usdc_amount=amount
         )
         if not created_order.success:
             raise ValueError(f"Error creating order: {created_order}")
@@ -386,19 +386,17 @@ class PolymarketAgentMarket(AgentMarket):
         logger.info(f"Selling {amount=} from {outcome=}")
         clob_manager = ClobManager(api_keys=api_keys or APIKeys())
         token_id = self.get_token_id_for_outcome(outcome)
-        token_shares: float
+        token_shares: OutcomeToken
         if isinstance(amount, OutcomeToken):
-            # We divide by 1e6 to get the number of shares
-            token_shares = amount.value / 1e6
+            token_shares = amount
         elif isinstance(amount, USD):
             token_price = clob_manager.get_token_price(
                 token_id=token_id, side=PolymarketPriceSideEnum.SELL
             )
-            token_shares = amount.value / token_price.value
+            # We expect that our order sizes don't move the price too much.
+            token_shares = OutcomeToken(amount.value / token_price.value)
         else:
-            raise ValueError(
-                f"Amount must be of type OutcomeToken or USD, got {type(amount)}"
-            )
+            raise ValueError(f"Unsupported amount type {type(amount)}")
 
         created_order = clob_manager.place_sell_market_order(
             token_id=token_id, token_shares=token_shares

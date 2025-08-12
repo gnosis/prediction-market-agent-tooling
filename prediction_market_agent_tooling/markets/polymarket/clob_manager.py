@@ -9,7 +9,8 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
-from prediction_market_agent_tooling.gtypes import USD, HexBytes, Wei
+from prediction_market_agent_tooling.gtypes import USD, HexBytes, OutcomeToken, Wei
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     CTF_EXCHANGE_POLYMARKET,
     NEG_RISK_ADAPTER,
@@ -101,21 +102,22 @@ class ClobManager:
             side=side.value,
         )
 
+        logger.info(f"Placing market order: {order_args}")
         signed_order = self.clob_client.create_market_order(order_args)
         resp = self.clob_client.post_order(signed_order, orderType=OrderType.FOK)
         return CreateOrderResult.model_validate(resp)
 
     def place_buy_market_order(
-        self, token_id: int, usdc_amount: float
+        self, token_id: int, usdc_amount: USD
     ) -> CreateOrderResult:
         """Place a market buy order for the given token with the specified USDC amount."""
-        return self._place_market_order(token_id, usdc_amount, BUY)
+        return self._place_market_order(token_id, usdc_amount.value, BUY)
 
     def place_sell_market_order(
-        self, token_id: int, token_shares: float
+        self, token_id: int, token_shares: OutcomeToken
     ) -> CreateOrderResult:
         """Place a market sell order for the given token with the specified number of shares."""
-        return self._place_market_order(token_id, token_shares, SELL)
+        return self._place_market_order(token_id, token_shares.value, SELL)
 
     def __init_approvals(
         self,
@@ -137,6 +139,7 @@ class ClobManager:
             NEG_RISK_EXCHANGE,
             NEG_RISK_ADAPTER,
         ]:
+            logger.info(f"Checking allowances for {target_address}")
             handle_allowance(
                 api_keys=self.api_keys,
                 sell_token=usdc.address,

@@ -230,11 +230,15 @@ class PolymarketAgentMarket(AgentMarket):
         )
 
         condition_models = PolymarketSubgraphHandler().get_conditions(
-            condition_ids=[
-                market.markets[0].conditionId
-                for market in markets
-                if market.markets is not None
-            ]
+            condition_ids=list(
+                set(
+                    [
+                        market.markets[0].conditionId
+                        for market in markets
+                        if market.markets is not None
+                    ]
+                )
+            )
         )
         condition_models_dict = {c.id: c for c in condition_models}
 

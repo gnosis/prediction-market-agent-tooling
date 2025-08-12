@@ -86,7 +86,7 @@ def get_polymarkets_with_pagination(
         markets_to_add = []
         for m in market_response.data:
             # Some Polymarket markets are missing the markets field
-            if m.markets is None:
+            if m.markets is None or m.markets[0].clobTokenIds is None:
                 continue
             if excluded_questions and m.title in excluded_questions:
                 continue

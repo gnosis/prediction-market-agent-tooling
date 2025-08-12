@@ -12,7 +12,6 @@ from prediction_market_agent_tooling.markets.polymarket.api import get_user_posi
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 
@@ -60,10 +59,6 @@ def test_get_positions() -> None:
     user_address = Web3.to_checksum_address(
         "0x60073655845c95014a540ae3f7375b15801647a3"
     )  # top holder in a few markets
-    # Todo - Identify multiple positions per market
-    condition_id = HexBytes(
-        "0xf2ce8d3897ac5009a131637d3575f1f91c579bd08eecce6ae2b2da0f32bbe6f1"
-    )
 
     positions = get_user_positions(user_id=user_address)
     # Oddly enough, they also return related markets. Hence important to filter by conditionId

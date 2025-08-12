@@ -11,7 +11,7 @@ from web3 import Web3
 from web3.constants import CHECKSUM_ADDRESSS_ZERO, HASH_ZERO
 from web3.contract.contract import Contract as Web3Contract
 
-from prediction_market_agent_tooling.chains import GNOSIS_CHAIN_ID, POLYGON_CHAIN_ID
+from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
     ABI,
@@ -521,7 +521,9 @@ class ContractOnGnosisChain(ContractBaseClass):
     Contract base class with Gnosis Chain configuration.
     """
 
-    CHAIN_ID = GNOSIS_CHAIN_ID
+    # This is defined like so because other chains (like Ethereum) rely on contracts that inherit
+    # from ContractOnGnosisChain. To be re-evaluated on https://github.com/gnosis/prediction-market-agent-tooling/issues/845
+    CHAIN_ID = RPCConfig().chain_id
 
 
 class ContractOnPolygonChain(ContractBaseClass):

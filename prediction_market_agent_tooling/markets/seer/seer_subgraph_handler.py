@@ -414,6 +414,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 swaps_field.price,
                 swaps_field.amount0,
                 swaps_field.amount1,
+                swaps_field.timestamp,
             ]
             + self._get_fields_for_seer_token(swaps_field.token0)
             + self._get_fields_for_seer_token(swaps_field.token1)

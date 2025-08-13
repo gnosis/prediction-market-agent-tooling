@@ -35,7 +35,7 @@ class SeerPool(BaseModel):
     sqrtPrice: int
 
 
-class SeerSwap(BaseModel):
+class SwaprSwap(BaseModel):
     id: str  # It's like "0x73afd8f096096552d72a0b40ea66d2076be136c6a531e2f6b190d151a750271e#32" (note the #32) # web3-private-key-ok
     recipient: HexAddress
     sender: HexAddress
@@ -51,11 +51,11 @@ class SeerSwap(BaseModel):
         return DatetimeUTC.to_datetime_utc(self.timestamp)
 
     @property
-    def buying_collateral_amount(self) -> CollateralToken:
+    def added_to_pool(self) -> CollateralToken:
         return self.amount0 if self.amount0 > 0 else self.amount1
 
     @property
-    def received_shares_amount(self) -> OutcomeToken:
+    def withdrawn_from_pool(self) -> OutcomeToken:
         return (
             OutcomeToken(abs(self.amount0).value)
             if self.amount0 < 0

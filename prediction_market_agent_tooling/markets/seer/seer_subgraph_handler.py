@@ -31,7 +31,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerPool,
-    SeerSwap,
+    SwaprSwap,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.singleton import SingletonMeta
@@ -426,7 +426,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         recipient: ChecksumAddress,
         timestamp_gt: DatetimeUTC | None = None,
         timestamp_lt: DatetimeUTC | None = None,
-    ) -> list[SeerSwap]:
+    ) -> list[SwaprSwap]:
         where_argument: dict[str, Any] = {"recipient": recipient.lower()}
         if timestamp_gt is not None:
             where_argument["timestamp_gt"] = to_int_timestamp(timestamp_gt)
@@ -435,7 +435,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         swaps_field = self.swapr_algebra_subgraph.Query.swaps(where=where_argument)
         fields = self._get_fields_for_swaps(swaps_field)
-        swaps = self.do_query(fields=fields, pydantic_model=SeerSwap)
+        swaps = self.do_query(fields=fields, pydantic_model=SwaprSwap)
 
         return swaps
 

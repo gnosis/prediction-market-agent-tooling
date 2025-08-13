@@ -179,51 +179,6 @@ class PerformanceAlertAgent(DeployableAgent):
     def format_count(v):
         return "n/a" if pd.isna(v) else f"{int(max(float(v), 0))}"
 
-# def build_final_tables(weekly_combined: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#     if weekly_combined.empty:
-#         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-#     m = weekly_combined.copy()
-#     profit_pivot = m.pivot(index="label", columns="sequence", values="profit_formatted")
-#     daily_accuracy_pivot = m.pivot(index="label", columns="sequence", values="daily_accuracy_formatted")
-#     avg_accuracy_pivot = m.pivot(index="label", columns="sequence", values="avg_accuracy_formatted")
-#     count_pivot = m.pivot(index="label", columns="sequence", values="count_formatted")
-
-#     sequence_numbers_ordered = sorted(profit_pivot.columns)
-#     date_mapping = m.groupby("sequence")["block_date"].first().dt.strftime("%m-%d")
-
-#     # Profit table
-#     profit_tbl = profit_pivot.reindex(columns=sequence_numbers_ordered)
-#     profit_tbl.columns = [date_mapping.get(seq, "N/A") for seq in sequence_numbers_ordered]
-#     profit_tbl.index.name = "agent"
-
-#     # Accuracy table (MultiIndex columns: Date x Metric)
-#     dates = [date_mapping.get(seq, "N/A") for seq in sequence_numbers_ordered]
-#     metrics = ["daily", "7d_avg"]
-#     column_tuples = [(date, metric) for date in dates for metric in metrics]
-#     accuracy_tbl = pd.DataFrame(
-#         {
-#             (date, "daily"): daily_accuracy_pivot.get(seq)
-#             for date, seq in zip(dates, sequence_numbers_ordered)
-#         }
-#         | {
-#             (date, "7d_avg"): avg_accuracy_pivot.get(seq)
-#             for date, seq in zip(dates, sequence_numbers_ordered)
-#         }
-#     )
-#     # Ensure correct column order
-#     accuracy_tbl = accuracy_tbl[[t for t in column_tuples if t in accuracy_tbl.columns]]
-#     accuracy_tbl.index.name = "label"
-#     accuracy_tbl.columns = pd.MultiIndex.from_tuples(accuracy_tbl.columns, names=["Date", "Metric"])
-
-#     # Count table
-#     count_tbl = count_pivot.reindex(columns=sequence_numbers_ordered)
-#     count_tbl.columns = [date_mapping.get(seq, "N/A") for seq in sequence_numbers_ordered]
-#     count_tbl.index.name = "label"
-
-#     return profit_tbl, accuracy_tbl, count_tbl
-
-
 def _get_performance_report(self, accuracy_df: pd.DataFrame, profit_df: pd.DataFrame, count_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     weekly_cumulative_profit = _weekly_cumulative_profit(profit_df)
     accuracy = _prepare_precision_daily(accuracy_df)

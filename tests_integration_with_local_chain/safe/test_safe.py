@@ -53,8 +53,6 @@ def test_send_function_on_contract_tx_using_safe(
     test_keys: APIKeys,
     test_safe: SafeV141,
 ) -> None:
-    print_current_block(local_web3)
-
     logger.debug(f"is connected {local_web3.is_connected()} {local_web3.provider}")
     print_current_block(local_web3)
 
@@ -69,14 +67,13 @@ def test_send_function_on_contract_tx_using_safe(
             value=xDai(10).as_xdai_wei,
         )
 
-    print_current_block(local_web3)
     safe_balance = local_ethereum_client.get_balance(test_safe.address)
     logger.debug(f"safe balance {safe_balance} xDai")
     # Fetch existing market with enough liquidity
     markets = OmenSubgraphHandler().get_omen_markets_simple(
         limit=1,
         filter_by=FilterBy.OPEN,
-        sort_by=SortBy.NONE,
+        sort_by=SortBy.HIGHEST_LIQUIDITY,
         collateral_token_address_in=tuple([SDAI_CONTRACT_ADDRESS]),
     )
     # Check that there is a market with enough liquidity

@@ -1,5 +1,6 @@
 import typing as t
 from datetime import timedelta
+from enum import Enum
 from typing import Annotated
 from urllib.parse import urljoin
 
@@ -188,3 +189,34 @@ class ExactInputSingleParams(BaseModel):
     limit_sqrt_price: Wei = Field(
         alias="limitSqrtPrice", default_factory=lambda: Wei(0)
     )  # 0 for convenience, we also don't expect major price shifts
+
+
+class SeerTransactionType(str, Enum):
+    SWAP = "swap"
+    SPLIT = "split"
+
+
+class SeerTransaction(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    market_name: str = Field(alias="marketName")
+    market_id: HexBytes = Field(alias="marketId")
+    type: SeerTransactionType
+    block_number: int = Field(alias="blockNumber")
+    transaction_hash: HexBytes = Field(alias="transactionHash")
+    collateral: HexAddress
+    collateral_symbol: str = Field(alias="collateralSymbol")
+
+    token_in: HexAddress = Field(alias="tokenIn")
+    token_out: HexAddress = Field(alias="tokenOut")
+    amount_in: Wei = Field(alias="amountIn")
+    amount_out: Wei = Field(alias="amountOut")
+    token_in_symbol: str = Field(alias="tokenInSymbol")
+    token_out_symbol: str = Field(alias="tokenOutSymbol")
+    timestamp: int | None = None
+
+    amount: Wei | None = None
+
+    @property
+    def timestamp_dt(self) -> DatetimeUTC | None:
+        return DatetimeUTC.to_datetime_utc(self.timestamp) if self.timestamp else None

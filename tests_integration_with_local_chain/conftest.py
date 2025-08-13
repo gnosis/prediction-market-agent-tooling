@@ -53,16 +53,15 @@ def force_non_cow_tokens() -> t.Generator[None, None, None]:
 
 
 @pytest.fixture(scope="session")
-def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, None]:
+def local_web3(
+    load_env: None, chain: ChainManager, eoa_accounts: list[TestAccount]
+) -> t.Generator[Web3, None, None]:
     print("entering fixture local_web3")
 
     if (tenderly_fork_rpc := APIKeys().TENDERLY_FORK_RPC) is not None:
         print("using tenderly rpc")
         w3 = Web3(Web3.HTTPProvider(tenderly_fork_rpc))
         print("funding test accounts on tenderly")
-        eoa_accounts: list[TestAccount] = keep_only_eoa_accounts(
-            ape_accounts.test_accounts, w3
-        )
         fund_account_on_tenderly(
             tenderly_fork_rpc, [a.address for a in eoa_accounts], xDai(1000)
         )
@@ -79,22 +78,13 @@ def local_web3(load_env: None, chain: ChainManager) -> t.Generator[Web3, None, N
 
 
 @pytest.fixture(scope="session")
-def eoa_accounts(local_web3: Web3) -> list[TestAccount]:
+def eoa_accounts() -> list[TestAccount]:
     # Note that the test accounts we use here are EOAs (because we use a different mnemonic).
     # If we were using anvil standard accounts, we would have to filter out smart accounts.
     # For example, anvil's acc 1 (https://gnosisscan.io/address/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) delegated access to a smart contract, which sweeps all funds sent to it.
     # Hence we prefer to use EOA accounts from a different mnemonic than to rely on anvil's standard accounts.
-    return ape_accounts.test_accounts
-
-
-def keep_only_eoa_accounts(
-    accounts: list[TestAccount], web3: Web3
-) -> list[TestAccount]:
-    return list(
-        filter(
-            lambda acc: web3.eth.get_code(account=acc.address).hex() == "0x", accounts
-        )
-    )
+    test_accounts: list[TestAccount] = ape_accounts.test_accounts
+    return test_accounts
 
 
 @pytest.fixture(scope="module")

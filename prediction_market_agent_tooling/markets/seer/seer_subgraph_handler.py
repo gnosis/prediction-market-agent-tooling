@@ -352,6 +352,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             pools_field.token1.id,
             pools_field.token1.name,
             pools_field.token1.symbol,
+            pools_field.totalValueLockedToken0,
+            pools_field.totalValueLockedToken1,
         ]
         return fields
 

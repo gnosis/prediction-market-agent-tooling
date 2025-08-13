@@ -30,8 +30,13 @@ from prediction_market_agent_tooling.markets.omen.omen import (
 from prediction_market_agent_tooling.tools.betting_strategies.kelly_criterion import (
     get_kelly_bet_full,
     get_kelly_bet_simplified,
+    get_kelly_bets_categorical_full,
+    get_kelly_bets_categorical_simplified,
 )
-from prediction_market_agent_tooling.tools.betting_strategies.utils import SimpleBet
+from prediction_market_agent_tooling.tools.betting_strategies.utils import (
+    BinaryKellyBet,
+    CategoricalKellyBet,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
@@ -245,7 +250,7 @@ class BettingStrategy(ABC):
         return trades
 
 
-class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
+class CategoricalMaxAccuracyBettingStrategy(BettingStrategy):
     def __init__(self, max_position_amount: USD, take_profit: bool = True):
         super().__init__(take_profit=take_profit)
         self.max_position_amount = max_position_amount
@@ -308,8 +313,11 @@ class MultiCategoricalMaxAccuracyBettingStrategy(BettingStrategy):
         )
         return trades
 
+    def __repr__(self) -> str:
+        return f"CategoricalMaxAccuracyBettingStrategy(max_position_amount={self.max_position_amount}, take_profit={self.take_profit})"
 
-class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy):
+
+class MaxExpectedValueBettingStrategy(CategoricalMaxAccuracyBettingStrategy):
     @staticmethod
     def calculate_direction(
         market: AgentMarket, answer: CategoricalProbabilisticAnswer
@@ -350,49 +358,52 @@ class MaxExpectedValueBettingStrategy(MultiCategoricalMaxAccuracyBettingStrategy
 
         return best_outcome
 
+    def __repr__(self) -> str:
+        return f"MaxExpectedValueBettingStrategy(max_position_amount={self.max_position_amount}, take_profit={self.take_profit})"
 
-class KellyBettingStrategy(BettingStrategy):
+
+class BinaryKellyBettingStrategy(BettingStrategy):
     def __init__(
         self,
         max_position_amount: USD,
         max_price_impact: float | None = None,
         take_profit: bool = True,
+        force_simplified_calculation: bool = False,
     ):
         super().__init__(take_profit=take_profit)
         self.max_position_amount = max_position_amount
         self.max_price_impact = max_price_impact
+        self.force_simplified_calculation = force_simplified_calculation
 
     @property
     def maximum_possible_bet_amount(self) -> USD:
         return self.max_position_amount
 
-    @staticmethod
     def get_kelly_bet(
+        self,
         market: AgentMarket,
-        max_bet_amount: USD,
         direction: OutcomeStr,
         other_direction: OutcomeStr,
         answer: CategoricalProbabilisticAnswer,
         override_p_yes: float | None = None,
-    ) -> SimpleBet:
+    ) -> BinaryKellyBet:
+        if not market.is_binary:
+            raise ValueError("This strategy is usable only with binary markets.")
+
         estimated_p_yes = (
             answer.probability_for_market_outcome(direction)
             if not override_p_yes
             else override_p_yes
         )
 
-        if not market.is_binary:
-            # use Kelly simple, since Kelly full only supports 2 outcomes
-
+        if market.outcome_token_pool is None or self.force_simplified_calculation:
             kelly_bet = get_kelly_bet_simplified(
-                max_bet=market.get_usd_in_token(max_bet_amount),
+                max_bet=market.get_usd_in_token(self.max_position_amount),
                 market_p_yes=market.probability_for_market_outcome(direction),
                 estimated_p_yes=estimated_p_yes,
                 confidence=answer.confidence,
             )
         else:
-            # We consider only binary markets, since the Kelly strategy is not yet implemented
-            # for markets with more than 2 outcomes (https://github.com/gnosis/prediction-market-agent-tooling/issues/671).
             direction_to_bet_pool_size = market.get_outcome_token_pool_by_outcome(
                 direction
             )
@@ -403,7 +414,7 @@ class KellyBettingStrategy(BettingStrategy):
                 yes_outcome_pool_size=direction_to_bet_pool_size,
                 no_outcome_pool_size=other_direction_pool_size,
                 estimated_p_yes=estimated_p_yes,
-                max_bet=market.get_usd_in_token(max_bet_amount),
+                max_bet=market.get_usd_in_token(self.max_position_amount),
                 confidence=answer.confidence,
                 fees=market.fees,
             )
@@ -416,7 +427,7 @@ class KellyBettingStrategy(BettingStrategy):
         market: AgentMarket,
     ) -> list[Trade]:
         # We consider the p_yes as the direction with highest probability.
-        direction = MultiCategoricalMaxAccuracyBettingStrategy.calculate_direction(
+        direction = CategoricalMaxAccuracyBettingStrategy.calculate_direction(
             market, answer
         )
         # We get the first direction which is != direction.
@@ -426,7 +437,6 @@ class KellyBettingStrategy(BettingStrategy):
 
         kelly_bet = self.get_kelly_bet(
             market=market,
-            max_bet_amount=self.max_position_amount,
             direction=direction,
             other_direction=other_direction,
             answer=answer,
@@ -436,7 +446,10 @@ class KellyBettingStrategy(BettingStrategy):
         if self.max_price_impact:
             # Adjust amount
             max_price_impact_bet_amount = self.calculate_bet_amount_for_price_impact(
-                market, kelly_bet, direction=direction
+                market,
+                kelly_bet.size,
+                direction=direction,
+                max_price_impact=self.max_price_impact,
             )
 
             # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
@@ -457,8 +470,8 @@ class KellyBettingStrategy(BettingStrategy):
         )
         return trades
 
+    @staticmethod
     def calculate_price_impact_for_bet_amount(
-        self,
         outcome_idx: int,
         bet_amount: CollateralToken,
         pool_balances: list[OutcomeWei],
@@ -476,29 +489,33 @@ class KellyBettingStrategy(BettingStrategy):
         price_impact = (actual_price - expected_price) / expected_price
         return price_impact
 
+    @staticmethod
     def calculate_bet_amount_for_price_impact(
-        self, market: AgentMarket, kelly_bet: SimpleBet, direction: OutcomeStr
+        market: AgentMarket,
+        kelly_bet_size: CollateralToken,
+        direction: OutcomeStr,
+        max_price_impact: float,
     ) -> CollateralToken:
         def calculate_price_impact_deviation_from_target_price_impact(
             bet_amount_collateral: float,  # Needs to be float because it's used in minimize_scalar internally.
         ) -> float:
             outcome_idx = market.get_outcome_index(direction)
-            price_impact = self.calculate_price_impact_for_bet_amount(
-                outcome_idx=outcome_idx,
-                bet_amount=CollateralToken(bet_amount_collateral),
-                pool_balances=pool_balances,
-                fees=market.fees,
+            price_impact = (
+                BinaryKellyBettingStrategy.calculate_price_impact_for_bet_amount(
+                    outcome_idx=outcome_idx,
+                    bet_amount=CollateralToken(bet_amount_collateral),
+                    pool_balances=pool_balances,
+                    fees=market.fees,
+                )
             )
             # We return abs for the algorithm to converge to 0 instead of the min (and possibly negative) value.
-
-            max_price_impact = check_not_none(self.max_price_impact)
             return abs(price_impact - max_price_impact)
 
         if not market.outcome_token_pool:
             logger.warning(
                 "Market outcome_token_pool is None, cannot calculate bet amount"
             )
-            return kelly_bet.size
+            return kelly_bet_size
 
         filtered_pool = {
             outcome: pool_value
@@ -521,7 +538,7 @@ class KellyBettingStrategy(BettingStrategy):
         return CollateralToken(optimized_bet_amount.x)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_position_amount}, max_price_impact={self.max_price_impact})"
+        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}, take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"
 
 
 class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
@@ -537,40 +554,29 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
     def maximum_possible_bet_amount(self) -> USD:
         return self.max_position_amount
 
-    def adjust_bet_amount(
-        self, existing_position: ExistingPosition | None, market: AgentMarket
-    ) -> USD:
-        existing_position_total_amount = (
-            existing_position.total_amount_current if existing_position else USD(0)
-        )
-        return self.max_position_amount + existing_position_total_amount
-
     def calculate_trades(
         self,
         existing_position: ExistingPosition | None,
         answer: CategoricalProbabilisticAnswer,
         market: AgentMarket,
     ) -> list[Trade]:
-        adjusted_bet_amount_usd = self.adjust_bet_amount(existing_position, market)
-
         outcome = get_most_probable_outcome(answer.probabilities)
 
-        direction = MultiCategoricalMaxAccuracyBettingStrategy.calculate_direction(
+        direction = CategoricalMaxAccuracyBettingStrategy.calculate_direction(
             market, answer
         )
         # We get the first direction which is != direction.
-        other_direction = (
-            MultiCategoricalMaxAccuracyBettingStrategy.get_other_direction(
-                outcomes=market.outcomes, direction=direction
-            )
+        other_direction = CategoricalMaxAccuracyBettingStrategy.get_other_direction(
+            outcomes=market.outcomes, direction=direction
         )
 
         # We ignore the direction nudge given by Kelly, hence we assume we have a perfect prediction.
         estimated_p_yes = 1.0
 
-        kelly_bet = KellyBettingStrategy.get_kelly_bet(
+        kelly_bet = BinaryKellyBettingStrategy(
+            max_position_amount=self.max_position_amount
+        ).get_kelly_bet(
             market=market,
-            max_bet_amount=adjusted_bet_amount_usd,
             direction=direction,
             other_direction=other_direction,
             answer=answer,
@@ -592,4 +598,118 @@ class MaxAccuracyWithKellyScaledBetsStrategy(BettingStrategy):
         return trades
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_bet_amount={self.max_position_amount})"
+        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, take_profit={self.take_profit})"
+
+
+class CategoricalKellyBettingStrategy(BettingStrategy):
+    def __init__(
+        self,
+        max_position_amount: USD,
+        max_price_impact: float | None,
+        allow_multiple_bets: bool,
+        allow_shorting: bool,
+        multicategorical: bool,
+        take_profit: bool = True,
+        force_simplified_calculation: bool = False,
+    ):
+        super().__init__(take_profit=take_profit)
+        self.max_position_amount = max_position_amount
+        self.max_price_impact = max_price_impact
+        self.allow_multiple_bets = allow_multiple_bets
+        self.allow_shorting = allow_shorting
+        self.multicategorical = multicategorical
+        self.force_simplified_calculation = force_simplified_calculation
+
+    @property
+    def maximum_possible_bet_amount(self) -> USD:
+        return self.max_position_amount
+
+    def get_kelly_bets(
+        self,
+        market: AgentMarket,
+        max_bet_amount: USD,
+        answer: CategoricalProbabilisticAnswer,
+    ) -> list[CategoricalKellyBet]:
+        max_bet = market.get_usd_in_token(max_bet_amount)
+
+        if market.outcome_token_pool is None or self.force_simplified_calculation:
+            kelly_bets = get_kelly_bets_categorical_simplified(
+                market_probabilities=[market.probabilities[o] for o in market.outcomes],
+                estimated_probabilities=[
+                    answer.probability_for_market_outcome(o) for o in market.outcomes
+                ],
+                confidence=answer.confidence,
+                max_bet=max_bet,
+                fees=market.fees,
+                allow_multiple_bets=self.allow_multiple_bets,
+                allow_shorting=self.allow_shorting,
+            )
+
+        else:
+            kelly_bets = get_kelly_bets_categorical_full(
+                outcome_pool_sizes=[
+                    market.outcome_token_pool[o] for o in market.outcomes
+                ],
+                estimated_probabilities=[
+                    answer.probability_for_market_outcome(o) for o in market.outcomes
+                ],
+                confidence=answer.confidence,
+                max_bet=max_bet,
+                fees=market.fees,
+                allow_multiple_bets=self.allow_multiple_bets,
+                allow_shorting=self.allow_shorting,
+                multicategorical=self.multicategorical,
+            )
+
+        return kelly_bets
+
+    def calculate_trades(
+        self,
+        existing_position: ExistingPosition | None,
+        answer: CategoricalProbabilisticAnswer,
+        market: AgentMarket,
+    ) -> list[Trade]:
+        kelly_bets = self.get_kelly_bets(
+            market=market,
+            max_bet_amount=self.max_position_amount,
+            answer=answer,
+        )
+
+        # TODO: Allow shorting in BettingStrategy._build_rebalance_trades_from_positions.
+        # In binary implementation, we simply flip the direction in case of negative bet, for categorical outcome, we need to implement shorting.
+        kelly_bets = [bet for bet in kelly_bets if bet.size > 0]
+        if not kelly_bets:
+            return []
+
+        # TODO: Allow betting on multiple outcomes.
+        # Categorical kelly could suggest to bet on multiple outcomes, but we only consider the first one for now (limitation of BettingStrategy `trades` creation).
+        # Also, this could maybe work for multi-categorical markets as well, but it wasn't benchmarked for it.
+        best_kelly_bet = max(kelly_bets, key=lambda x: abs(x.size))
+
+        if self.max_price_impact:
+            # Adjust amount
+            max_price_impact_bet_amount = (
+                BinaryKellyBettingStrategy.calculate_bet_amount_for_price_impact(
+                    market,
+                    best_kelly_bet.size,
+                    direction=market.get_outcome_str(best_kelly_bet.index),
+                    max_price_impact=self.max_price_impact,
+                )
+            )
+            # We just don't want Kelly size to extrapolate price_impact - hence we take the min.
+            best_kelly_bet.size = min(best_kelly_bet.size, max_price_impact_bet_amount)
+
+        amounts = {
+            market.outcomes[best_kelly_bet.index]: market.get_token_in_usd(
+                best_kelly_bet.size
+            ),
+        }
+        target_position = Position(market_id=market.id, amounts_current=amounts)
+        trades = self._build_rebalance_trades_from_positions(
+            existing_position, target_position, market=market
+        )
+
+        return trades
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(max_position_amount={self.max_position_amount}, max_price_impact={self.max_price_impact}, allow_multiple_bets={self.allow_multiple_bets}, allow_shorting={self.allow_shorting}, take_profit={self.take_profit}, force_simplified_calculation={self.force_simplified_calculation})"

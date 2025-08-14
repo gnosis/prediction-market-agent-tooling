@@ -602,7 +602,12 @@ class OmenBet(BaseModel):
             created_time=self.creation_datetime,
             market_question=self.title,
             market_id=self.fpmm.id,
-            market_outcome=self.fpmm.outcomes[self.outcomeIndex],
+            market_outcome=self.fpmm.outcomes[
+                check_not_none(
+                    self.fpmm.answer_index,
+                    "Should not be None if `is_resolved_with_valid_answer`.",
+                )
+            ],
             resolved_time=check_not_none(self.fpmm.finalized_datetime),
             profit=self.get_profit(),
         )

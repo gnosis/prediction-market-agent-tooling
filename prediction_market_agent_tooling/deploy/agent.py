@@ -11,7 +11,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    MultiCategoricalMaxAccuracyBettingStrategy,
+    CategoricalMaxAccuracyBettingStrategy,
     TradeType,
 )
 from prediction_market_agent_tooling.deploy.trade_interval import (
@@ -656,9 +656,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         Given the market and prediction, agent uses this method to calculate optimal outcome and bet size.
         """
         total_amount = self.get_total_amount_to_bet(market)
-        return MultiCategoricalMaxAccuracyBettingStrategy(
-            max_position_amount=total_amount
-        )
+        return CategoricalMaxAccuracyBettingStrategy(max_position_amount=total_amount)
 
     def build_trades(
         self,

@@ -159,9 +159,6 @@ def get_trace_for_bet(
             not in WRAPPED_XDAI_CONTRACT_ADDRESS
         ):
             # TODO: We need to compute bet amount token in USD here, but at the time of bet placement!
-            logger.warning(
-                "This currently works only for WXDAI markets, because we need to compare against USD value."
-            )
             continue
         # Cannot use exact comparison due to gas fees
         if (

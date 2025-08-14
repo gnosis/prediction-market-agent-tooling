@@ -55,8 +55,7 @@ hishel = "^0.0.31"
 pytest-postgresql = "^6.1.1"
 optuna = { version = "^4.1.0", optional = true}
 httpx = ">=0.25.2,<1.0.0"
-# Update this once release > 1.0.0 is available
-cowdao-cowpy = {git="https://github.com/cowdao-grants/cow-py", rev="756d9f4"}
+cowdao-cowpy = "1.0.1"
 eth-keys = "^0.6.1"
 proto-plus = "^1.0.0"
 protobuf = "^5.0.0"

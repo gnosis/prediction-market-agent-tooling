@@ -31,7 +31,7 @@ gnosis:
   default_network: gnosis_fork
 
 foundry:
-  host: http://localhost:8545/
+  host: auto
   fork:
     gnosis:
       mainnet:

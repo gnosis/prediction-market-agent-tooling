@@ -19,6 +19,10 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket import (
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
 
+MOCK_CONDITION_ID = HexBytes(
+    "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"  # web3-private-key-ok
+)
+
 
 class DummyAgent(bm.AbstractBenchmarkedAgent):
     def __init__(self) -> None:
@@ -86,9 +90,7 @@ def test_benchmark_run(
                 resolution=None,
                 created_time=utcnow() - timedelta(hours=48),
                 outcome_token_pool=None,
-                condition_id=HexBytes(
-                    "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-                ),
+                condition_id=MOCK_CONDITION_ID,
                 liquidity_usd=USD(1),
                 token_ids=[1, 2],
                 closed_flag_from_polymarket=False,
@@ -146,9 +148,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
                 resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
                 created_time=utcnow() - timedelta(hours=48),
                 outcome_token_pool=None,
-                condition_id=HexBytes(
-                    "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-                ),
+                condition_id=MOCK_CONDITION_ID,
                 liquidity_usd=USD(1),
                 token_ids=[1, 2],
                 closed_flag_from_polymarket=False,
@@ -222,9 +222,7 @@ def test_benchmarker_cancelled_markets() -> None:
             created_time=utcnow() - timedelta(hours=48),
             resolution=Resolution(outcome=None, invalid=True),
             outcome_token_pool=None,
-            condition_id=HexBytes(
-                "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-            ),
+            condition_id=MOCK_CONDITION_ID,
             liquidity_usd=USD(1),
             token_ids=[1, 2],
             closed_flag_from_polymarket=False,
@@ -259,9 +257,7 @@ def test_market_probable_resolution() -> None:
             created_time=utcnow() - timedelta(hours=48),
             resolution=Resolution(outcome=None, invalid=True),
             outcome_token_pool=None,
-            condition_id=HexBytes(
-                "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-            ),
+            condition_id=MOCK_CONDITION_ID,
             liquidity_usd=USD(1),
             token_ids=[1, 2],
             closed_flag_from_polymarket=False,
@@ -283,9 +279,7 @@ def test_market_probable_resolution() -> None:
         created_time=utcnow() - timedelta(hours=48),
         resolution=Resolution(outcome=OutcomeStr("Yes"), invalid=False),
         outcome_token_pool=None,
-        condition_id=HexBytes(
-            "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-        ),
+        condition_id=MOCK_CONDITION_ID,
         liquidity_usd=USD(1),
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,
@@ -306,9 +300,7 @@ def test_market_probable_resolution() -> None:
         resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
         created_time=utcnow() - timedelta(hours=48),
         outcome_token_pool=None,
-        condition_id=HexBytes(
-            "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-        ),
+        condition_id=MOCK_CONDITION_ID,
         liquidity_usd=USD(1),
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,
@@ -329,9 +321,7 @@ def test_market_probable_resolution() -> None:
         resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
         created_time=utcnow() - timedelta(hours=48),
         outcome_token_pool=None,
-        condition_id=HexBytes(
-            "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-        ),
+        condition_id=MOCK_CONDITION_ID,
         liquidity_usd=USD(1),
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,
@@ -352,9 +342,7 @@ def test_market_probable_resolution() -> None:
         resolution=Resolution(outcome=OutcomeStr("Yes"), invalid=False),
         created_time=utcnow() - timedelta(hours=48),
         outcome_token_pool=None,
-        condition_id=HexBytes(
-            "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"
-        ),
+        condition_id=MOCK_CONDITION_ID,
         liquidity_usd=USD(1),
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,

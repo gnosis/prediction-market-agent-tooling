@@ -14,7 +14,6 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts imp
 def test_set_approval_for_all(test_keys: APIKeys, polygon_local_web3: Web3) -> None:
     # sanity check web3 instance tests
     assert polygon_local_web3.is_connected()
-    print(polygon_local_web3.provider.endpoint_uri)
 
     c = PolymarketConditionalTokenContract()
     polygon_local_web3.provider.make_request(

@@ -85,10 +85,10 @@ def claim_bonds_on_realitio_question(
     responses = sorted(responses, key=lambda x: x.timestamp)
 
     if not responses:
-        raise ValueError(f"No answers found for {question.questionId.hex()=}")
+        raise ValueError(f"No answers found for {question.questionId.to_0x_hex()=}")
 
     if responses[-1].question.historyHash == ZERO_BYTES:
-        raise ValueError(f"Already claimed {question.questionId.hex()=}.")
+        raise ValueError(f"Already claimed {question.questionId.to_0x_hex()=}.")
 
     history_hashes: list[HexBytes] = []
     addresses: list[ChecksumAddress] = []

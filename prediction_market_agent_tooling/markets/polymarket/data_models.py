@@ -4,13 +4,13 @@ from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import USDC, OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.polymarket.data_models_web import (
-    POLYMARKET_FALSE_OUTCOME,
-    POLYMARKET_TRUE_OUTCOME,
-    construct_polymarket_url,
-)
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+
+POLYMARKET_TRUE_OUTCOME = "Yes"
+POLYMARKET_FALSE_OUTCOME = "No"
+
+POLYMARKET_BASE_URL = "https://polymarket.com"
 
 
 class PolymarketRewards(BaseModel):
@@ -38,6 +38,13 @@ class PolymarketGammaMarket(BaseModel):
     archived: bool
     questionId: str | None = None
     clobTokenIds: str | None = None  # int-encoded hex
+
+    @property
+    def token_ids(self) -> list[int]:
+        # If market has no token_ids, we halt for safety since it will fail later on.
+        if not self.clobTokenIds:
+            raise ValueError("Market has no token_ids")
+        return [int(i) for i in json.loads(self.clobTokenIds)]
 
     @property
     def outcomes_list(self) -> list[OutcomeStr]:
@@ -186,3 +193,24 @@ class PolymarketMarketWithPrices(PolymarketMarket):
         raise ValueError(
             "Should not happen, as we filter only for binary markets in get_polymarket_binary_markets."
         )
+
+
+class PolymarketPositionResponse(BaseModel):
+    slug: str
+    eventSlug: str
+    proxyWallet: str
+    asset: str
+    conditionId: str
+    size: float
+    currentValue: float
+    cashPnl: float
+    redeemable: bool
+    outcome: str
+    outcomeIndex: int
+
+
+def construct_polymarket_url(slug: str) -> str:
+    """
+    Note: This works only if it's a single main market, not sub-market of some more general question.
+    """
+    return f"{POLYMARKET_BASE_URL}/event/{slug}"

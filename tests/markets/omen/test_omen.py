@@ -283,7 +283,9 @@ def test_get_outcome_tokens_in_the_past() -> None:
     generic_bet = selected_bet.to_generic_resolved_bet()
 
     tx_cache = TransactionBlockCache(ContractOnGnosisChain.get_web3())
-    bet_block_number = tx_cache.get_block_number(selected_bet.transactionHash.hex())
+    bet_block_number = tx_cache.get_block_number(
+        selected_bet.transactionHash.to_0x_hex()
+    )
 
     assert np.isclose(
         generic_bet.amount.value, 4.50548

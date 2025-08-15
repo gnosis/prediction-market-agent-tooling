@@ -75,7 +75,6 @@ pytest = "*"
 mypy = "^1.11.1"
 black = "^23.12.1"
 ape-foundry = "^0.8.2"
-#eth-ape = "^0.8.10,<0.8.17"  # 0.8.17 doesn't work with the current configuration and needs a fix, see https://github.com/gnosis/prediction-market-agent-tooling/issues/518.
 eth-ape = "^0.8.34"
 diskcache = "^5.6.3"
 

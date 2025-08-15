@@ -11,7 +11,7 @@ node:
       uri: https://rpc.gnosischain.com
   polygon:
     mainnet:
-      uri: https://polygon-rpc.com
+      uri: https://polygon.gateway.tenderly.co
 
 
 networks:

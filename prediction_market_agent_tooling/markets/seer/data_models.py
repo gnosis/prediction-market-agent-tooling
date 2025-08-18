@@ -220,3 +220,11 @@ class SeerTransaction(BaseModel):
     @property
     def timestamp_dt(self) -> DatetimeUTC | None:
         return DatetimeUTC.to_datetime_utc(self.timestamp) if self.timestamp else None
+
+    @property
+    def token_in_checksum(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.token_in)
+
+    @property
+    def token_out_checksum(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.token_out)

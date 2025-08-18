@@ -35,11 +35,19 @@ class DatetimeUTC(datetime):
         cls, source_type: t.Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         # Use union schema to handle int, str, and datetime inputs directly
-        return core_schema.union_schema([
-            core_schema.no_info_after_validator_function(cls._validate, core_schema.int_schema()),
-            core_schema.no_info_after_validator_function(cls._validate, core_schema.str_schema()),
-            core_schema.no_info_after_validator_function(cls._validate, handler(datetime)),
-        ])
+        return core_schema.union_schema(
+            [
+                core_schema.no_info_after_validator_function(
+                    cls._validate, core_schema.int_schema()
+                ),
+                core_schema.no_info_after_validator_function(
+                    cls._validate, core_schema.str_schema()
+                ),
+                core_schema.no_info_after_validator_function(
+                    cls._validate, handler(datetime)
+                ),
+            ]
+        )
 
     @staticmethod
     def from_datetime(dt: datetime) -> "DatetimeUTC":

@@ -54,6 +54,7 @@ from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
+from prediction_market_agent_tooling.markets.seer.seer_api import get_seer_transactions
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     GnosisRouter,
     SeerMarketFactory,
@@ -79,7 +80,6 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     OrderStatusError,
     get_orders_by_owner,
     get_trades_by_order_uid,
-    get_trades_by_owner,
     swap_tokens_waiting,
     wait_for_order_completion,
 )
@@ -274,10 +274,12 @@ class SeerAgentMarket(AgentMarket):
         """
         We filter the markets using previous trades by the user so that we don't have to process all Seer markets.
         """
-        trades_by_user = get_trades_by_owner(api_keys.bet_from_address)
+        trades_by_user = get_seer_transactions(
+            api_keys.bet_from_address, RPCConfig().CHAIN_ID
+        )
 
-        traded_tokens = {t.buyToken for t in trades_by_user}.union(
-            [t.sellToken for t in trades_by_user]
+        traded_tokens = {t.token_in_checksum for t in trades_by_user}.union(
+            [t.token_out_checksum for t in trades_by_user]
         )
         filtered_markets: list[SeerMarket] = []
         for market in markets:
@@ -315,19 +317,43 @@ class SeerAgentMarket(AgentMarket):
             for market in filtered_markets
             if market.is_redeemable(owner=api_keys.bet_from_address, web3=web3)
         ]
+        logger.info(f"Got {len(markets_to_redeem)} markets to redeem on Seer.")
 
         gnosis_router = GnosisRouter()
         for market in markets_to_redeem:
             try:
+                # GnosisRouter needs approval to use our outcome tokens
+                for i, token in enumerate(market.wrapped_tokens):
+                    ContractERC20OnGnosisChain(
+                        address=Web3.to_checksum_address(token)
+                    ).approve(
+                        api_keys,
+                        for_address=gnosis_router.address,
+                        amount_wei=market_balances[market.id][i].as_wei,
+                        web3=web3,
+                    )
+
+                # We can only ask for redeem of outcome tokens on correct outcomes
+                # TODO: Implement more complex use-cases: https://github.com/gnosis/prediction-market-agent-tooling/issues/850
+                amounts_to_redeem = [
+                    (amount if numerator > 0 else OutcomeWei(0))
+                    for amount, numerator in zip(
+                        market_balances[market.id], market.payout_numerators
+                    )
+                ]
+
+                # Redeem!
                 params = RedeemParams(
                     market=Web3.to_checksum_address(market.id),
                     outcome_indices=list(range(len(market.payout_numerators))),
-                    amounts=market_balances[market.id],
+                    amounts=amounts_to_redeem,
                 )
                 gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
-                logger.info(f"Redeemed market {market.id.hex()}")
-            except Exception as e:
-                logger.error(f"Failed to redeem market {market.id.hex()}, {e}")
+                logger.info(f"Redeemed market {market.url}.")
+            except Exception:
+                logger.exception(
+                    f"Failed to redeem market {market.url}, {market.outcomes}, with amounts {market_balances[market.id]} and payout numerators {market.payout_numerators}, and wrapped tokens {market.wrapped_tokens}."
+                )
 
         # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 

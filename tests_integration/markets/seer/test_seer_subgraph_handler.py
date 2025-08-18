@@ -74,8 +74,8 @@ def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         )
         pool = check_not_none(pool)
         assert (
-            pool.token0.id.hex().lower() == wrapped_token.lower()
-            or pool.token1.id.hex().lower() == wrapped_token.lower()
+            pool.token0.id.to_0x_hex().lower() == wrapped_token.lower()
+            or pool.token1.id.to_0x_hex().lower() == wrapped_token.lower()
         )
 
 

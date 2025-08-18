@@ -4,7 +4,7 @@ from datetime import timedelta
 import pytest
 
 import prediction_market_agent_tooling.benchmark.benchmark as bm
-from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
+from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
     Resolution,
@@ -16,7 +16,12 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
+from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import utcnow
+
+MOCK_CONDITION_ID = HexBytes(
+    "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c"  # web3-private-key-ok
+)
 
 
 class DummyAgent(bm.AbstractBenchmarkedAgent):
@@ -85,6 +90,11 @@ def test_benchmark_run(
                 resolution=None,
                 created_time=utcnow() - timedelta(hours=48),
                 outcome_token_pool=None,
+                condition_id=MOCK_CONDITION_ID,
+                liquidity_usd=USD(1),
+                token_ids=[1, 2],
+                closed_flag_from_polymarket=False,
+                active_flag_from_polymarket=True,
             )
         ],
         agents=[dummy_agent, dummy_agent_no_prediction],
@@ -138,6 +148,11 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
                 resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
                 created_time=utcnow() - timedelta(hours=48),
                 outcome_token_pool=None,
+                condition_id=MOCK_CONDITION_ID,
+                liquidity_usd=USD(1),
+                token_ids=[1, 2],
+                closed_flag_from_polymarket=False,
+                active_flag_from_polymarket=True,
             )
         ]
         benchmarker = bm.Benchmarker(
@@ -207,6 +222,11 @@ def test_benchmarker_cancelled_markets() -> None:
             created_time=utcnow() - timedelta(hours=48),
             resolution=Resolution(outcome=None, invalid=True),
             outcome_token_pool=None,
+            condition_id=MOCK_CONDITION_ID,
+            liquidity_usd=USD(1),
+            token_ids=[1, 2],
+            closed_flag_from_polymarket=False,
+            active_flag_from_polymarket=True,
         )
     ]
     with pytest.raises(ValueError) as e:
@@ -237,6 +257,11 @@ def test_market_probable_resolution() -> None:
             created_time=utcnow() - timedelta(hours=48),
             resolution=Resolution(outcome=None, invalid=True),
             outcome_token_pool=None,
+            condition_id=MOCK_CONDITION_ID,
+            liquidity_usd=USD(1),
+            token_ids=[1, 2],
+            closed_flag_from_polymarket=False,
+            active_flag_from_polymarket=True,
         ).probable_resolution
     assert "Unknown resolution" in str(e)
     assert PolymarketAgentMarket(
@@ -254,6 +279,11 @@ def test_market_probable_resolution() -> None:
         created_time=utcnow() - timedelta(hours=48),
         resolution=Resolution(outcome=OutcomeStr("Yes"), invalid=False),
         outcome_token_pool=None,
+        condition_id=MOCK_CONDITION_ID,
+        liquidity_usd=USD(1),
+        token_ids=[1, 2],
+        closed_flag_from_polymarket=False,
+        active_flag_from_polymarket=True,
     ).probable_resolution == Resolution(outcome=OutcomeStr("Yes"), invalid=False)
     assert PolymarketAgentMarket(
         description=None,
@@ -270,6 +300,11 @@ def test_market_probable_resolution() -> None:
         resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
         created_time=utcnow() - timedelta(hours=48),
         outcome_token_pool=None,
+        condition_id=MOCK_CONDITION_ID,
+        liquidity_usd=USD(1),
+        token_ids=[1, 2],
+        closed_flag_from_polymarket=False,
+        active_flag_from_polymarket=True,
     ).probable_resolution == Resolution(outcome=OutcomeStr("No"), invalid=False)
     assert PolymarketAgentMarket(
         description=None,
@@ -286,6 +321,11 @@ def test_market_probable_resolution() -> None:
         resolution=Resolution(outcome=OutcomeStr("No"), invalid=False),
         created_time=utcnow() - timedelta(hours=48),
         outcome_token_pool=None,
+        condition_id=MOCK_CONDITION_ID,
+        liquidity_usd=USD(1),
+        token_ids=[1, 2],
+        closed_flag_from_polymarket=False,
+        active_flag_from_polymarket=True,
     ).probable_resolution == Resolution(outcome=OutcomeStr("No"), invalid=False)
     assert PolymarketAgentMarket(
         description=None,
@@ -302,4 +342,9 @@ def test_market_probable_resolution() -> None:
         resolution=Resolution(outcome=OutcomeStr("Yes"), invalid=False),
         created_time=utcnow() - timedelta(hours=48),
         outcome_token_pool=None,
+        condition_id=MOCK_CONDITION_ID,
+        liquidity_usd=USD(1),
+        token_ids=[1, 2],
+        closed_flag_from_polymarket=False,
+        active_flag_from_polymarket=True,
     ).probable_resolution == Resolution(outcome=OutcomeStr("Yes"), invalid=False)

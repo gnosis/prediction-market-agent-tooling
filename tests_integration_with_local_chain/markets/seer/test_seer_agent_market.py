@@ -233,7 +233,8 @@ def test_seer_swap_via_pools_fails_when_no_balance(
     account = Account.create()
 
     test_keys_with_no_balance = APIKeys(
-        BET_FROM_PRIVATE_KEY=private_key_type(account.key.hex()), SAFE_ADDRESS=None
+        BET_FROM_PRIVATE_KEY=private_key_type(account.key.to_0x_hex()),
+        SAFE_ADDRESS=None,
     )
 
     market, sell_token, _, buy_token, amount_wei, _ = prepare_seer_swap_test(

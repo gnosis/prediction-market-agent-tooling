@@ -38,7 +38,7 @@ def test_claim_bonds() -> None:
         opening=utcnow() + timedelta(seconds=1),
         timeout=timeout,
     )
-    logger.info(f"Question ID: {question_event.question_id.hex()}")
+    logger.info(f"Question ID: {question_event.question_id.to_0x_hex()}")
     time.sleep(2)  # Wait for the question to be opened.
 
     # Add multiple answers

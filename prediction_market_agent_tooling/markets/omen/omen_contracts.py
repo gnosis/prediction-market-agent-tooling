@@ -5,7 +5,6 @@ from datetime import timedelta
 from enum import Enum
 
 from web3 import Web3
-from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -13,7 +12,6 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     HexAddress,
     HexBytes,
-    HexStr,
     IPFSCIDVersion0,
     OutcomeWei,
     TxParams,
@@ -24,11 +22,9 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     INVALID_ANSWER_HEX_BYTES,
-    ConditionPreparationEvent,
     ContractPrediction,
     FPMMFundingAddedEvent,
     OmenFixedProductMarketMakerCreationEvent,
-    PayoutRedemptionEvent,
     RealitioLogNewQuestionEvent,
     format_realitio_question,
 )
@@ -38,6 +34,7 @@ from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ConditionalTokenContract,
     ContractDepositableWrapperERC20OnGnosisChain,
     ContractERC20OnGnosisChain,
     ContractERC4626OnGnosisChain,
@@ -96,201 +93,10 @@ class OmenOracleContract(ContractOnGnosisChain):
         )
 
 
-def build_parent_collection_id() -> HexStr:
-    return HASH_ZERO  # Taken from Olas
-
-
-class OmenConditionalTokenContract(ContractOnGnosisChain):
-    # Contract ABI taken from https://gnosisscan.io/address/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce#code.
-    abi: ABI = abi_field_validator(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "../../abis/omen_fpmm_conditionaltokens.abi.json",
-        )
-    )
+class OmenConditionalTokenContract(ConditionalTokenContract, ContractOnGnosisChain):
     address: ChecksumAddress = Web3.to_checksum_address(
         "0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce"
     )
-
-    def getConditionId(
-        self,
-        question_id: HexBytes,
-        oracle_address: ChecksumAddress,
-        outcomes_slot_count: int,
-        web3: Web3 | None = None,
-    ) -> HexBytes:
-        id_ = HexBytes(
-            self.call(
-                "getConditionId",
-                [oracle_address, question_id, outcomes_slot_count],
-                web3=web3,
-            )
-        )
-        return id_
-
-    def balanceOf(
-        self, from_address: ChecksumAddress, position_id: int, web3: Web3 | None = None
-    ) -> OutcomeWei:
-        balance = OutcomeWei(
-            self.call("balanceOf", [from_address, position_id], web3=web3)
-        )
-        return balance
-
-    def getCollectionId(
-        self,
-        parent_collection_id: HexStr,
-        condition_id: HexBytes,
-        index_set: int,
-        web3: Web3 | None = None,
-    ) -> HexBytes:
-        collection_id = HexBytes(
-            self.call(
-                "getCollectionId",
-                [parent_collection_id, condition_id, index_set],
-                web3=web3,
-            )
-        )
-        return collection_id
-
-    def getPositionId(
-        self,
-        collateral_token_address: ChecksumAddress,
-        collection_id: HexBytes,
-        web3: Web3 | None = None,
-    ) -> int:
-        position_id: int = self.call(
-            "getPositionId",
-            [collateral_token_address, collection_id],
-            web3=web3,
-        )
-        return position_id
-
-    def mergePositions(
-        self,
-        api_keys: APIKeys,
-        collateral_token_address: ChecksumAddress,
-        conditionId: HexBytes,
-        index_sets: t.List[int],
-        amount: OutcomeWei,
-        parent_collection_id: HexStr = build_parent_collection_id(),
-        web3: Web3 | None = None,
-    ) -> TxReceipt:
-        return self.send(
-            api_keys=api_keys,
-            function_name="mergePositions",
-            function_params=[
-                collateral_token_address,
-                parent_collection_id,
-                conditionId,
-                index_sets,
-                amount,
-            ],
-            web3=web3,
-        )
-
-    def redeemPositions(
-        self,
-        api_keys: APIKeys,
-        collateral_token_address: HexAddress,
-        condition_id: HexBytes,
-        index_sets: t.List[int],
-        parent_collection_id: HexStr = build_parent_collection_id(),
-        web3: Web3 | None = None,
-    ) -> PayoutRedemptionEvent:
-        receipt_tx = self.send(
-            api_keys=api_keys,
-            function_name="redeemPositions",
-            function_params=[
-                collateral_token_address,
-                parent_collection_id,
-                condition_id,
-                index_sets,
-            ],
-            web3=web3,
-        )
-        redeem_event_logs = (
-            self.get_web3_contract(web3=web3)
-            .events.PayoutRedemption()
-            .process_receipt(receipt_tx)
-        )
-        redeem_event = PayoutRedemptionEvent(**redeem_event_logs[0]["args"])
-        return redeem_event
-
-    def getOutcomeSlotCount(
-        self, condition_id: HexBytes, web3: Web3 | None = None
-    ) -> int:
-        count: int = self.call("getOutcomeSlotCount", [condition_id], web3=web3)
-        return count
-
-    def does_condition_exists(
-        self, condition_id: HexBytes, web3: Web3 | None = None
-    ) -> bool:
-        return self.getOutcomeSlotCount(condition_id, web3=web3) > 0
-
-    def is_condition_resolved(
-        self, condition_id: HexBytes, web3: Web3 | None = None
-    ) -> bool:
-        # from ConditionalTokens.redeemPositions:
-        # uint den = payoutDenominator[conditionId]; require(den > 0, "result for condition not received yet");
-        payout_for_condition = self.payoutDenominator(condition_id, web3=web3)
-        return payout_for_condition > 0
-
-    def payoutDenominator(
-        self, condition_id: HexBytes, web3: Web3 | None = None
-    ) -> int:
-        payoutForCondition: int = self.call(
-            "payoutDenominator", [condition_id], web3=web3
-        )
-        return payoutForCondition
-
-    def setApprovalForAll(
-        self,
-        api_keys: APIKeys,
-        for_address: ChecksumAddress,
-        approve: bool,
-        tx_params: t.Optional[TxParams] = None,
-        web3: Web3 | None = None,
-    ) -> TxReceipt:
-        return self.send(
-            api_keys=api_keys,
-            function_name="setApprovalForAll",
-            function_params=[
-                for_address,
-                approve,
-            ],
-            tx_params=tx_params,
-            web3=web3,
-        )
-
-    def prepareCondition(
-        self,
-        api_keys: APIKeys,
-        oracle_address: ChecksumAddress,
-        question_id: HexBytes,
-        outcomes_slot_count: int,
-        tx_params: t.Optional[TxParams] = None,
-        web3: Web3 | None = None,
-    ) -> ConditionPreparationEvent:
-        receipt_tx = self.send(
-            api_keys=api_keys,
-            function_name="prepareCondition",
-            function_params=[
-                oracle_address,
-                question_id,
-                outcomes_slot_count,
-            ],
-            tx_params=tx_params,
-            web3=web3,
-        )
-
-        event_logs = (
-            self.get_web3_contract(web3=web3)
-            .events.ConditionPreparation()
-            .process_receipt(receipt_tx)
-        )
-        cond_event = ConditionPreparationEvent(**event_logs[0]["args"])
-
-        return cond_event
 
 
 class OmenFixedProductMarketMakerContract(ContractOnGnosisChain):

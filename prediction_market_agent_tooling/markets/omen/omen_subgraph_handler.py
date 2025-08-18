@@ -285,7 +285,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["liquidityParameter_gt"] = liquidity_bigger_than
 
         if condition_id_in is not None:
-            where_stms["condition_"]["id_in"] = [x.hex() for x in condition_id_in]
+            where_stms["condition_"]["id_in"] = [x.to_0x_hex() for x in condition_id_in]
 
         if id_in is not None:
             where_stms["id_in"] = [i.lower() for i in id_in]
@@ -513,7 +513,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         where_stms: dict[str, t.Any] = {}
 
         if condition_id is not None:
-            where_stms["conditionIds_contains"] = [condition_id.hex()]
+            where_stms["conditionIds_contains"] = [condition_id.to_0x_hex()]
 
         positions = self.conditional_tokens_subgraph.Query.positions(
             first=sys.maxsize, where=unwrap_generic_value(where_stms)
@@ -541,10 +541,12 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["totalBalance_gt"] = total_balance_bigger_than
 
         if user_position_id_in is not None:
-            where_stms["id_in"] = [x.hex() for x in user_position_id_in]
+            where_stms["id_in"] = [x.to_0x_hex() for x in user_position_id_in]
 
         if position_id_in is not None:
-            where_stms["position_"]["positionId_in"] = [x.hex() for x in position_id_in]
+            where_stms["position_"]["positionId_in"] = [
+                x.to_0x_hex() for x in position_id_in
+            ]
 
         positions = self.conditional_tokens_subgraph.Query.userPositions(
             first=sys.maxsize, where=unwrap_generic_value(where_stms)
@@ -710,13 +712,13 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["user"] = user.lower()
 
         if question_id is not None:
-            where_stms["questionId"] = question_id.hex()
+            where_stms["questionId"] = question_id.to_0x_hex()
 
         if claimed is not None:
             if claimed:
-                where_stms["historyHash"] = ZERO_BYTES.hex()
+                where_stms["historyHash"] = ZERO_BYTES.to_0x_hex()
             else:
-                where_stms["historyHash_not"] = ZERO_BYTES.hex()
+                where_stms["historyHash_not"] = ZERO_BYTES.to_0x_hex()
 
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
@@ -750,7 +752,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         if question_id_in is not None:
             # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
-            where_stms["questionId_in"] = [x.hex() for x in question_id_in]
+            where_stms["questionId_in"] = [x.to_0x_hex() for x in question_id_in]
 
         if excluded_titles:
             # Be aware: This is called `title_not_in` on Omen subgraph.
@@ -777,7 +779,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         where_stms: dict[str, t.Any] = {}
 
         if question_id is not None:
-            where_stms["id"] = question_id.hex()
+            where_stms["id"] = question_id.to_0x_hex()
 
         if current_answer_before is not None:
             where_stms["currentAnswerTimestamp_lt"] = to_int_timestamp(
@@ -811,7 +813,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
         if question_id_in is not None:
             # Be aware: On Omen subgraph, question's `id` represents `questionId` on reality subgraph. And `id` on reality subraph is just a weird concat of multiple things from the question.
-            where_stms["id_in"] = [x.hex() for x in question_id_in]
+            where_stms["id_in"] = [x.to_0x_hex() for x in question_id_in]
 
         if excluded_titles:
             # Be aware: This is called `qTitle_not_in` on Omen subgraph.
@@ -864,7 +866,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         answer = self.realityeth_subgraph.Answer
         # subgrounds complains if bytes is passed, hence we convert it to HexStr
         where_stms = [
-            answer.question.questionId == question_id.hex(),
+            answer.question.questionId == question_id.to_0x_hex(),
         ]
 
         answers = self.realityeth_subgraph.Query.answers(

@@ -28,7 +28,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     ParentMarket,
     ProcessedMarket,
-    ProcessedTradedMarket,
     QuestionType,
     SortBy,
 )
@@ -38,7 +37,10 @@ from prediction_market_agent_tooling.markets.data_models import (
     Resolution,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
+    send_keeping_token_to_eoa_xdai,
+)
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     SDAI_CONTRACT_ADDRESS,
 )
@@ -136,7 +138,7 @@ class SeerAgentMarket(AgentMarket):
 
     def store_trades(
         self,
-        traded_market: ProcessedTradedMarket | None,
+        traded_market: ProcessedMarket | None,
         keys: APIKeys,
         agent_name: str,
         web3: Web3 | None = None,
@@ -263,10 +265,6 @@ class SeerAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_user_id(api_keys: APIKeys) -> str:
-        return OmenAgentMarket.get_user_id(api_keys)
-
-    @staticmethod
     def _filter_markets_contained_in_trades(
         api_keys: APIKeys,
         markets: t.Sequence[SeerMarket],
@@ -325,9 +323,9 @@ class SeerAgentMarket(AgentMarket):
                     amounts=market_balances[market.id],
                 )
                 gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
-                logger.info(f"Redeemed market {market.id.hex()}")
+                logger.info(f"Redeemed market {market.id.to_0x_hex()}")
             except Exception as e:
-                logger.error(f"Failed to redeem market {market.id.hex()}, {e}")
+                logger.error(f"Failed to redeem market {market.id.to_0x_hex()}, {e}")
 
         # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 
@@ -344,6 +342,17 @@ class SeerAgentMarket(AgentMarket):
                 return True
 
         return False
+
+    def ensure_min_native_balance(
+        self,
+        min_required_balance: xDai,
+        multiplier: float = 3.0,
+    ) -> None:
+        send_keeping_token_to_eoa_xdai(
+            api_keys=APIKeys(),
+            min_required_balance=min_required_balance,
+            multiplier=multiplier,
+        )
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
@@ -367,7 +376,7 @@ class SeerAgentMarket(AgentMarket):
             raise ValueError("Seer categorical markets must have 1 question.")
 
         question = model.questions[0]
-        outcome = model.outcomes[int(question.question.best_answer.hex(), 16)]
+        outcome = model.outcomes[int(question.question.best_answer.to_0x_hex(), 16)]
         return Resolution(outcome=outcome, invalid=False)
 
     @staticmethod
@@ -421,7 +430,7 @@ class SeerAgentMarket(AgentMarket):
             )
         except PriceCalculationError as e:
             logger.info(
-                f"Error when calculating probabilities for market {model.id.hex()} - {e}"
+                f"Error when calculating probabilities for market {model.id.to_0x_hex()} - {e}"
             )
             if must_have_prices:
                 # Price calculation failed, so don't return the market
@@ -432,7 +441,7 @@ class SeerAgentMarket(AgentMarket):
         parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
 
         market = SeerAgentMarket(
-            id=model.id.hex(),
+            id=model.id.to_0x_hex(),
             question=model.title,
             creator=model.creator,
             created_time=model.created_time,
@@ -525,7 +534,9 @@ class SeerAgentMarket(AgentMarket):
             )
 
             token_balance = token_contract.balance_of_in_tokens(
-                for_address=Web3.to_checksum_address(HexAddress(HexStr(pool.id.hex()))),
+                for_address=Web3.to_checksum_address(
+                    HexAddress(HexStr(pool.id.to_0x_hex()))
+                ),
                 web3=web3,
             )
             collateral_balance = p.get_amount_of_token_in_collateral(
@@ -606,7 +617,7 @@ class SeerAgentMarket(AgentMarket):
                 )
             cow_tx_hash = trades[0].txHash
             logger.info(f"TxHash is {cow_tx_hash=} for {order_metadata.uid.root=}.")
-            return cow_tx_hash.hex()
+            return cow_tx_hash.to_0x_hex()
 
         except (
             UnexpectedResponseError,
@@ -639,7 +650,7 @@ class SeerAgentMarket(AgentMarket):
             )
             swap_pool_tx_hash = tx_receipt["transactionHash"]
             logger.info(f"TxHash is {swap_pool_tx_hash=}.")
-            return swap_pool_tx_hash.hex()
+            return swap_pool_tx_hash.to_0x_hex()
 
     def place_bet(
         self,

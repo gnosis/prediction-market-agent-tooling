@@ -155,7 +155,7 @@ class SeerMarket(BaseModel):
     @property
     def url(self) -> str:
         chain_id = RPCConfig().chain_id
-        return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.hex()}")
+        return urljoin(SEER_BASE_URL, f"markets/{chain_id}/{self.id.to_0x_hex()}")
 
 
 class SeerMarketWithQuestions(SeerMarket):

@@ -194,7 +194,7 @@ def mint_full_set(
     # of the child market.
     seer_subgraph_handler = SeerSubgraphHandler()
     market = seer_subgraph_handler.get_market_by_wrapped_token(
-        token=collateral_token_contract.address
+        tokens=[collateral_token_contract.address]
     )
     market_collateral_token = Web3.to_checksum_address(market.collateral_token)
 

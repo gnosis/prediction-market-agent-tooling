@@ -35,6 +35,7 @@ from prediction_market_agent_tooling.markets.blockchain_utils import store_trade
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
     Resolution,
+    ResolvedBet,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.omen import (
@@ -489,6 +490,15 @@ class SeerAgentMarket(AgentMarket):
         )
 
         return market
+
+    @staticmethod
+    def get_resolved_bets_made_since(
+        better_address: ChecksumAddress,
+        start_time: DatetimeUTC,
+        end_time: DatetimeUTC | None,
+    ) -> list[ResolvedBet]:
+        # TODO: https://github.com/gnosis/prediction-market-agent-tooling/issues/841
+        raise NotImplementedError()
 
     @staticmethod
     def get_markets(

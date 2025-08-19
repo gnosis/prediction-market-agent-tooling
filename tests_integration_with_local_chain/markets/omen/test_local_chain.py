@@ -60,7 +60,7 @@ def test_send_xdai_from_locked_account(
     # we fund the random account for later sending
     send_xdai_to(
         web3=local_web3,
-        from_private_key=private_key_type(from_account.key.hex()),
+        from_private_key=private_key_type(from_account.key.to_0x_hex()),
         to_address=random_locked_account.address,
         value=fund_value,
     )
@@ -69,7 +69,7 @@ def test_send_xdai_from_locked_account(
     assert balance_random.xdai.as_xdai_wei == fund_value
     send_xdai_to(
         web3=local_web3,
-        from_private_key=private_key_type(random_locked_account.key.hex()),
+        from_private_key=private_key_type(random_locked_account.key.to_0x_hex()),
         to_address=from_account.address,
         value=transfer_back_value,
     )

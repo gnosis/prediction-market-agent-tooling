@@ -31,7 +31,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     SeerPool,
-    SeerSwap,
+    SwaprSwap,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.singleton import SingletonMeta
@@ -162,7 +162,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 raise ValueError(f"Unknown filter {filter_by}")
 
         if parent_market_id:
-            and_stms["parentMarket"] = parent_market_id.hex().lower()
+            and_stms["parentMarket"] = parent_market_id.to_0x_hex().lower()
 
         outcome_filters: list[dict[str, t.Any]] = []
 
@@ -301,7 +301,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         self, market_ids: list[HexBytes]
     ) -> list[SeerMarketQuestions]:
         where = unwrap_generic_value(
-            {"market_in": [market_id.hex().lower() for market_id in market_ids]}
+            {"market_in": [market_id.to_0x_hex().lower() for market_id in market_ids]}
         )
         markets_field = self.seer_subgraph.Query.marketQuestions(where=where)
         fields = self._get_fields_for_questions(markets_field)
@@ -309,7 +309,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         return questions
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarketWithQuestions:
-        markets_field = self.seer_subgraph.Query.market(id=market_id.hex().lower())
+        markets_field = self.seer_subgraph.Query.market(
+            id=market_id.to_0x_hex().lower()
+        )
         fields = self._get_fields_for_markets(markets_field)
         markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         if len(markets) != 1:
@@ -361,6 +363,8 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 pools_field.sqrtPrice,
                 pools_field.token0Price,
                 pools_field.token1Price,
+                pools_field.totalValueLockedToken0,
+                pools_field.totalValueLockedToken1,
             ]
             + self._get_fields_for_seer_token(pools_field.token0)
             + self._get_fields_for_seer_token(pools_field.token1)
@@ -426,7 +430,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         recipient: ChecksumAddress,
         timestamp_gt: DatetimeUTC | None = None,
         timestamp_lt: DatetimeUTC | None = None,
-    ) -> list[SeerSwap]:
+    ) -> list[SwaprSwap]:
         where_argument: dict[str, Any] = {"recipient": recipient.lower()}
         if timestamp_gt is not None:
             where_argument["timestamp_gt"] = to_int_timestamp(timestamp_gt)
@@ -435,7 +439,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
         swaps_field = self.swapr_algebra_subgraph.Query.swaps(where=where_argument)
         fields = self._get_fields_for_swaps(swaps_field)
-        swaps = self.do_query(fields=fields, pydantic_model=SeerSwap)
+        swaps = self.do_query(fields=fields, pydantic_model=SwaprSwap)
 
         return swaps
 

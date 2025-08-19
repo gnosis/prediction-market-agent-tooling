@@ -30,7 +30,7 @@ from prediction_market_agent_tooling.markets.seer.data_models import (
     SeerMarketWithQuestions,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
-    SeerPool,
+    SwaprPool,
     SwaprSwap,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -373,7 +373,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
     def get_pool_by_token(
         self, token_address: ChecksumAddress, collateral_address: ChecksumAddress
-    ) -> SeerPool | None:
+    ) -> SwaprPool | None:
         # We iterate through the wrapped tokens and put them in a where clause so that we hit the subgraph endpoint just once.
 
         where_argument = {
@@ -397,7 +397,7 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         )
 
         fields = self._get_fields_for_pools(pools_field)
-        pools = self.do_query(fields=fields, pydantic_model=SeerPool)
+        pools = self.do_query(fields=fields, pydantic_model=SwaprPool)
         # We assume there is only one pool for outcomeToken/sDAI.
         if len(pools) > 1:
             logger.info(

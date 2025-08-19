@@ -23,6 +23,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeWei,
     Probability,
     Wei,
+    xDai,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     USD,
@@ -44,9 +45,6 @@ from prediction_market_agent_tooling.tools.utils import (
 
 class ProcessedMarket(BaseModel):
     answer: CategoricalProbabilisticAnswer
-
-
-class ProcessedTradedMarket(ProcessedMarket):
     trades: list[PlacedTrade]
 
 
@@ -461,7 +459,7 @@ class AgentMarket(BaseModel):
 
     def store_trades(
         self,
-        traded_market: ProcessedTradedMarket | None,
+        traded_market: ProcessedMarket | None,
         keys: APIKeys,
         agent_name: str,
         web3: Web3 | None = None,
@@ -520,11 +518,20 @@ class AgentMarket(BaseModel):
             )
 
     def get_outcome_index(self, outcome: OutcomeStr) -> int:
-        outcomes_lowercase = [o.lower() for o in self.outcomes]
+        """Get the index of the given outcome in the market's outcomes."""
         try:
-            return outcomes_lowercase.index(outcome.lower())
-        except ValueError:
-            raise ValueError(f"Outcome `{outcome}` not found in `{self.outcomes}`.")
+            return [o.lower() for o in self.outcomes].index(outcome.lower())
+        except ValueError as e:
+            raise ValueError(
+                f"Outcome '{outcome}' not found in market outcomes: {self.outcomes}"
+            ) from e
+
+    def ensure_min_native_balance(
+        self,
+        min_required_balance: xDai,
+        multiplier: float = 3.0,
+    ) -> None:
+        raise NotImplementedError("Subclass must implement this method")
 
     def get_token_balance(self, user_id: str, outcome: OutcomeStr) -> OutcomeToken:
         raise NotImplementedError("Subclasses must implement this method")
@@ -573,7 +580,7 @@ class AgentMarket(BaseModel):
 
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
-        raise NotImplementedError("Subclasses must implement this method")
+        return api_keys.bet_from_address
 
     def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
         raise NotImplementedError("Subclasses must implement this method")

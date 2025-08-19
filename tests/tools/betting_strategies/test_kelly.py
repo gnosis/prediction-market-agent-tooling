@@ -359,7 +359,7 @@ def _compare_bets(
     non_zero_categorical_bets = [b for b in categorical_bets if abs(b.size.value) > 0]
     assert (
         len(non_zero_categorical_bets) == 1
-    ), f"Unexpected amount of bets in {categorical_bets=}"
+    ), f"Unexpected amount of bets in {categorical_bets=}, market={market.url}"
 
     category_bet = non_zero_categorical_bets[0]
 
@@ -370,7 +370,7 @@ def _compare_bets(
         market.url,
     )
     # Index zero on Omen markets is generally Yes, ie True direction of binary kelly, this works only if shorting is disabled.
-    assert (category_bet.index == 0) == binary_bet.direction
+    assert (category_bet.index == 0) == binary_bet.direction, market.url
     # For binary market, they shouldn't differ too much in the sizes
     divergence = abs(category_bet.size.value - binary_bet.size.value) / max(
         category_bet.size.value, binary_bet.size.value
@@ -387,7 +387,7 @@ def _compare_bets(
     "estimated_p_yes, confidence",
     [
         (0.1, 0.7),
-        (0.5, 0.9),
+        (0.4, 0.9),
         (0.9, 1.0),
     ],
 )
@@ -396,7 +396,7 @@ def test_compare_kellys_simplified(
 ) -> None:
     max_bet = CollateralToken(5)
     markets = OmenAgentMarket.get_markets(
-        limit=5, sort_by=SortBy.NONE, question_type=QuestionType.BINARY
+        limit=5, sort_by=SortBy.HIGHEST_LIQUIDITY, question_type=QuestionType.BINARY
     )
     for market in markets:
         categorical_bets = get_kelly_bets_categorical_simplified(
@@ -429,7 +429,7 @@ def test_compare_kellys_simplified(
 def test_compare_kellys_full(estimated_p_yes: Probability, confidence: float) -> None:
     max_bet = CollateralToken(5)
     markets = OmenAgentMarket.get_markets(
-        limit=5, sort_by=SortBy.NONE, question_type=QuestionType.BINARY
+        limit=5, sort_by=SortBy.HIGHEST_LIQUIDITY, question_type=QuestionType.BINARY
     )
     for market in markets:
         pool_sizes = [market.outcome_token_pool[o] for o in market.outcomes]

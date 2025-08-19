@@ -215,7 +215,7 @@ def mint_full_set(
     handle_allowance(
         api_keys=api_keys,
         sell_token=market_collateral_token,
-        amount_wei=collateral_amount_wei,
+        amount_to_check_wei=collateral_amount_wei,
         for_address=router.address,
         web3=web3,
     )

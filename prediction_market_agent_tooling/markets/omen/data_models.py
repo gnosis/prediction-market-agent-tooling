@@ -28,6 +28,7 @@ from prediction_market_agent_tooling.markets.omen.omen_constants import (
     OMEN_TRUE_OUTCOME,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ConditionPreparationEvent,
     ContractERC20OnGnosisChain,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
@@ -47,7 +48,7 @@ OMEN_BINARY_MARKET_OUTCOMES: t.Sequence[OutcomeStr] = [
 ]
 INVALID_ANSWER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 INVALID_ANSWER_HEX_BYTES = HexBytes(INVALID_ANSWER)
-INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.hex())
+INVALID_ANSWER_STR = HexStr(INVALID_ANSWER_HEX_BYTES.to_0x_hex())
 OMEN_BASE_URL = "https://aiomen.eth.limo"
 PRESAGIO_BASE_URL = "https://presagio.pages.dev"
 TEST_CATEGORY = "test"  # This category is hidden on Presagio for testing purposes.
@@ -594,7 +595,7 @@ class OmenBet(BaseModel):
             )
 
         return ResolvedBet(
-            id=self.transactionHash.hex(),
+            id=self.transactionHash.to_0x_hex(),
             # Use the transaction hash instead of the bet id - both are valid, but we return the transaction hash from the trade functions, so be consistent here.
             amount=self.collateral_amount_token,
             outcome=self.fpmm.outcomes[self.outcomeIndex],
@@ -795,13 +796,6 @@ class OmenFixedProductMarketMakerCreationEvent(BaseModel):
         return Web3.to_checksum_address(self.collateralToken)
 
 
-class ConditionPreparationEvent(BaseModel):
-    conditionId: HexBytes
-    oracle: HexAddress
-    questionId: HexBytes
-    outcomeSlotCount: int
-
-
 class FPMMFundingAddedEvent(BaseModel):
     funder: HexAddress
     amountsAdded: list[Wei]
@@ -895,12 +889,3 @@ class IPFSAgentResult(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-
-
-class PayoutRedemptionEvent(BaseModel):
-    redeemer: HexAddress
-    collateralToken: HexAddress
-    parentCollectionId: HexBytes
-    conditionId: HexBytes
-    indexSets: list[int]
-    payout: Wei

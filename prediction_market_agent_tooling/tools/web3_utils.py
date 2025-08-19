@@ -9,6 +9,7 @@ from eth_typing import URI
 from eth_utils.currency import MAX_WEI, MIN_WEI
 from pydantic.types import SecretStr
 from safe_eth.eth import EthereumClient
+from safe_eth.eth.ethereum_client import TxSpeed
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -104,7 +105,9 @@ def call_function_on_contract(
     function_params: Optional[list[Any] | dict[str, Any]] = None,
 ) -> Any:
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-    output = contract.functions[function_name](*parse_function_params(function_params)).call()  # type: ignore # TODO: Fix Mypy, as this works just OK.
+    output = contract.functions[function_name](
+        *parse_function_params(function_params)
+    ).call()
     return output
 
 
@@ -120,9 +123,10 @@ def prepare_tx(
 ) -> TxParams:
     tx_params_new = _prepare_tx_params(web3, from_address, access_list, tx_params)
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-
     # Build the transaction.
-    function_call = contract.functions[function_name](*parse_function_params(function_params))  # type: ignore # TODO: Fix Mypy, as this works just OK.
+    function_call = contract.functions[function_name](
+        *parse_function_params(function_params)
+    )
     built_tx_params: TxParams = function_call.build_transaction(tx_params_new)
     return built_tx_params
 
@@ -269,6 +273,7 @@ def send_function_on_contract_tx_using_safe(
     tx_hash, tx = safe_tx.execute(
         from_private_key.get_secret_value(),
         tx_nonce=eoa_nonce,
+        eip1559_speed=TxSpeed.FAST,
     )
     receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
     check_tx_receipt(receipt_tx)
@@ -286,7 +291,7 @@ def sign_send_and_get_receipt_tx(
         tx_params_new, private_key=from_private_key.get_secret_value()
     )
     # Send the signed transaction.
-    send_tx = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    send_tx = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
     # And wait for the receipt.
     receipt_tx = web3.eth.wait_for_transaction_receipt(send_tx, timeout=timeout)
     # Verify it didn't fail.

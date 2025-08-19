@@ -78,7 +78,7 @@ def test_seer_mint_child_outcome_tokens(
     handle_allowance(
         api_keys=test_keys,
         sell_token=collateral_token_contract.address,
-        amount_wei=amount_wei,
+        amount_to_check_wei=amount_wei,
         for_address=GnosisRouter().address,
         web3=local_web3,
     )

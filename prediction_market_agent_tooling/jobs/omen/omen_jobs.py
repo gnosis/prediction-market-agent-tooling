@@ -1,10 +1,6 @@
 import typing as t
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.deploy.betting_strategy import (
-    BinaryKellyBettingStrategy,
-    TradeType,
-)
 from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
 from prediction_market_agent_tooling.markets.agent_market import ProcessedMarket
@@ -92,20 +88,21 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         return processed_traded_market
 
     def get_job_trade(self, max_bond: USD, result: str) -> Trade:
+        raise NotImplementedError("TODO: Refactor to avoid circular imports.")
         # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
-        strategy = BinaryKellyBettingStrategy(max_position_amount=max_bond)
-        required_trades = strategy.calculate_trades(
-            existing_position=None,
-            answer=self.get_job_answer(result),
-            market=self,
-        )
-        assert (
-            len(required_trades) == 1
-        ), f"Shouldn't process same job twice: {required_trades}"
-        trade = required_trades[0]
-        assert trade.trade_type == TradeType.BUY, "Should only buy on job markets."
-        assert trade.outcome, "Should buy only YES on job markets."
-        return required_trades[0]
+        # strategy = FullBinaryKellyBettingStrategy(max_position_amount=max_bond)
+        # required_trades = strategy.calculate_trades(
+        #     existing_position=None,
+        #     answer=self.get_job_answer(result),
+        #     market=self,
+        # )
+        # assert (
+        #     len(required_trades) == 1
+        # ), f"Shouldn't process same job twice: {required_trades}"
+        # trade = required_trades[0]
+        # assert trade.trade_type == TradeType.BUY, "Should only buy on job markets."
+        # assert trade.outcome, "Should buy only YES on job markets."
+        # return required_trades[0]
 
     @staticmethod
     def from_omen_market(market: OmenMarket) -> "OmenJobAgentMarket":

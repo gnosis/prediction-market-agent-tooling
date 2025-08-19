@@ -630,7 +630,7 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         api_keys = APIKeys()
 
         # Get the strategy to know how much it will bet.
-        strategy = self.get_betting_strategy(market)
+        strategy = self.get_betting_strategy_supported(market)
         # Have a little bandwidth after the bet.
         min_required_balance_to_trade = strategy.maximum_possible_bet_amount * 1.01
 
@@ -658,13 +658,24 @@ class DeployableTraderAgent(DeployablePredictionAgent):
         total_amount = self.get_total_amount_to_bet(market)
         return CategoricalMaxAccuracyBettingStrategy(max_position_amount=total_amount)
 
+    def get_betting_strategy_supported(self, market: AgentMarket) -> BettingStrategy:
+        """
+        Use this class internally to assert that the configured betting strategy works with the given market.
+        """
+        strategy = self.get_betting_strategy(market=market)
+        if not strategy.is_market_supported(market):
+            raise ValueError(
+                f"Market {market.url} is not supported by the strategy {strategy}."
+            )
+        return strategy
+
     def build_trades(
         self,
         market: AgentMarket,
         answer: CategoricalProbabilisticAnswer,
         existing_position: ExistingPosition | None,
     ) -> list[Trade]:
-        strategy = self.get_betting_strategy(market=market)
+        strategy = self.get_betting_strategy_supported(market=market)
         trades = strategy.calculate_trades(existing_position, answer, market)
         return trades
 

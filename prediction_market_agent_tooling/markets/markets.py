@@ -31,6 +31,10 @@ class MarketType(str, Enum):
     METACULUS = "metaculus"
     SEER = "seer"
 
+    @staticmethod
+    def from_market(market: AgentMarket) -> "MarketType":
+        return AGENT_MARKET_TO_MARKET_TYPE[type(market)]
+
     @property
     def market_class(self) -> type[AgentMarket]:
         if self not in MARKET_TYPE_TO_AGENT_MARKET:
@@ -42,6 +46,15 @@ class MarketType(str, Enum):
         if self not in JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET:
             raise ValueError(f"Unknown market type: {self}")
         return JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET[self]
+
+    @property
+    def is_trading_market(self) -> bool:
+        return self in [
+            MarketType.OMEN,
+            MarketType.POLYMARKET,
+            MarketType.SEER,
+            MarketType.MANIFOLD,
+        ]
 
     @property
     def is_blockchain_market(self) -> bool:
@@ -56,6 +69,9 @@ MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
     MarketType.SEER: SeerAgentMarket,
 }
 
+AGENT_MARKET_TO_MARKET_TYPE: dict[type[AgentMarket], MarketType] = {
+    v: k for k, v in MARKET_TYPE_TO_AGENT_MARKET.items()
+}
 
 JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {
     MarketType.OMEN: OmenJobAgentMarket,

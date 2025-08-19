@@ -141,11 +141,6 @@ class SeerMarket(BaseModel):
         ]
 
     @property
-    def is_binary(self) -> bool:
-        # 3 because Seer has also third, `Invalid` outcome.
-        return len(self.outcomes) == 3
-
-    @property
     def collateral_token_contract_address_checksummed(self) -> ChecksumAddress:
         return Web3.to_checksum_address(self.collateral_token)
 

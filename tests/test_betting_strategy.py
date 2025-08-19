@@ -6,9 +6,10 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    BinaryKellyBettingStrategy,
     CategoricalMaxAccuracyBettingStrategy,
+    FullBinaryKellyBettingStrategy,
     GuaranteedLossError,
+    SimpleBinaryKellyBettingStrategy,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -317,7 +318,7 @@ def test_attacking_market(
 
 def test_kelly_bet_is_capped_when_unprofitable() -> None:
     """Test that Kelly bet is capped when it would result in guaranteed loss."""
-    strategy = BinaryKellyBettingStrategy(max_position_amount=USD(100))
+    strategy = SimpleBinaryKellyBettingStrategy(max_position_amount=USD(100))
 
     # Mock market that makes large bets unprofitable but small bets profitable
     mock_market = Mock(spec=AgentMarket)
@@ -381,7 +382,7 @@ def test_kelly_bet_is_capped_when_unprofitable() -> None:
 def test_kelly_bet_not_capped_when_profitable() -> None:
     """Test that Kelly bet is not capped when it's already profitable."""
     # Create a Kelly strategy with moderate bet amount
-    strategy = BinaryKellyBettingStrategy(max_position_amount=USD(20))
+    strategy = FullBinaryKellyBettingStrategy(max_position_amount=USD(20))
 
     # Mock market where all bet sizes are profitable
     mock_market = Mock(spec=AgentMarket)

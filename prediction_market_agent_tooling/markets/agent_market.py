@@ -189,6 +189,17 @@ class AgentMarket(BaseModel):
         )
 
     @property
+    def question_type(self) -> QuestionType:
+        if self.is_binary:
+            return QuestionType.BINARY
+
+        elif self.is_scalar:
+            return QuestionType.SCALAR
+
+        else:
+            return QuestionType.CATEGORICAL
+
+    @property
     def is_binary(self) -> bool:
         # 3 outcomes can also be binary if 3rd outcome is invalid (Seer)
         if len(self.outcomes) not in [2, 3]:

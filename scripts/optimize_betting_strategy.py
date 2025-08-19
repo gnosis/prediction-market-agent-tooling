@@ -18,13 +18,15 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.agent import AnsweredEnum, MarketType
 from prediction_market_agent_tooling.deploy.betting_strategy import (
     BettingStrategy,
-    BinaryKellyBettingStrategy,
-    CategoricalKellyBettingStrategy,
     CategoricalMaxAccuracyBettingStrategy,
     CategoricalProbabilisticAnswer,
+    FullBinaryKellyBettingStrategy,
+    FullCategoricalKellyBettingStrategy,
     GuaranteedLossError,
     MaxAccuracyWithKellyScaledBetsStrategy,
     MaxExpectedValueBettingStrategy,
+    SimpleBinaryKellyBettingStrategy,
+    SimpleCategoricalKellyBettingStrategy,
     TradeType,
 )
 from prediction_market_agent_tooling.gtypes import (
@@ -243,17 +245,24 @@ def get_objective(
     bets: list[list[ResolvedBetWithTrace]],
     upper_bet_amount: float,
     upper_max_price_impact: float,
+    top_n_strategy_names: set[str] | None,
     tx_block_cache: TransactionBlockCache,
 ) -> t.Callable[[optuna.trial.Trial], list[float]]:
     def objective(trial: optuna.trial.Trial) -> list[float]:
         strategy_name = trial.suggest_categorical(
             "strategy_name",
             [
-                CategoricalMaxAccuracyBettingStrategy.__name__,
-                MaxAccuracyWithKellyScaledBetsStrategy.__name__,
-                MaxExpectedValueBettingStrategy.__name__,
-                BinaryKellyBettingStrategy.__name__,
-                CategoricalKellyBettingStrategy.__name__,
+                x
+                for x in (
+                    CategoricalMaxAccuracyBettingStrategy.__name__,
+                    MaxAccuracyWithKellyScaledBetsStrategy.__name__,
+                    MaxExpectedValueBettingStrategy.__name__,
+                    SimpleBinaryKellyBettingStrategy.__name__,
+                    FullBinaryKellyBettingStrategy.__name__,
+                    SimpleCategoricalKellyBettingStrategy.__name__,
+                    FullCategoricalKellyBettingStrategy.__name__,
+                )
+                if top_n_strategy_names is None or x in top_n_strategy_names
             ],
         )
         bet_amount = USD(trial.suggest_float("bet_amount", 0, upper_bet_amount))
@@ -261,8 +270,8 @@ def get_objective(
             trial.suggest_float("max_price_impact", 0, upper_max_price_impact)
             if strategy_name
             in (
-                BinaryKellyBettingStrategy.__name__,
-                CategoricalKellyBettingStrategy.__name__,
+                FullBinaryKellyBettingStrategy.__name__,
+                FullCategoricalKellyBettingStrategy.__name__,
             )
             else None
         )
@@ -290,16 +299,6 @@ def get_objective(
             # else
             False
         )
-        force_simplified_calculation = (
-            trial.suggest_categorical("force_simplified_calculation", [True, False])
-            if strategy_name
-            in (
-                BinaryKellyBettingStrategy.__name__,
-                CategoricalKellyBettingStrategy.__name__,
-            )
-            # Just default to False if not using Kelly, as it doesn't matter.
-            else False
-        )
 
         strategy_constructors: dict[str, t.Callable[[], BettingStrategy]] = {
             CategoricalMaxAccuracyBettingStrategy.__name__: lambda: CategoricalMaxAccuracyBettingStrategy(
@@ -311,17 +310,24 @@ def get_objective(
             MaxExpectedValueBettingStrategy.__name__: lambda: MaxExpectedValueBettingStrategy(
                 max_position_amount=bet_amount
             ),
-            BinaryKellyBettingStrategy.__name__: lambda: BinaryKellyBettingStrategy(
+            SimpleBinaryKellyBettingStrategy.__name__: lambda: SimpleBinaryKellyBettingStrategy(
+                max_position_amount=bet_amount,
+            ),
+            FullBinaryKellyBettingStrategy.__name__: lambda: FullBinaryKellyBettingStrategy(
                 max_position_amount=bet_amount,
                 max_price_impact=max_price_impact,
-                force_simplified_calculation=force_simplified_calculation,
             ),
-            CategoricalKellyBettingStrategy.__name__: lambda: CategoricalKellyBettingStrategy(
+            SimpleCategoricalKellyBettingStrategy.__name__: lambda: SimpleCategoricalKellyBettingStrategy(
+                max_position_amount=bet_amount,
+                allow_multiple_bets=allow_multiple_bets,
+                allow_shorting=allow_shorting,
+                multicategorical=multicategorical,
+            ),
+            FullCategoricalKellyBettingStrategy.__name__: lambda: FullCategoricalKellyBettingStrategy(
                 max_position_amount=bet_amount,
                 max_price_impact=max_price_impact,
                 allow_multiple_bets=allow_multiple_bets,
                 allow_shorting=allow_shorting,
-                force_simplified_calculation=force_simplified_calculation,
                 multicategorical=multicategorical,
             ),
         }
@@ -415,6 +421,7 @@ def run_optuna_study(
     test_bets_with_traces: list[ResolvedBetWithTrace],
     upper_bet_amount: float,
     upper_max_price_impact: float,
+    top_n_strategy_names: set[str] | None,
     tx_block_cache: TransactionBlockCache,
 ) -> tuple[optuna.Study, SimulatedLifetimeDetail]:
     study = optuna.create_study(
@@ -427,6 +434,7 @@ def run_optuna_study(
             bets=train_bets_with_traces,
             upper_bet_amount=upper_bet_amount,
             upper_max_price_impact=upper_max_price_impact,
+            top_n_strategy_names=top_n_strategy_names,
             tx_block_cache=tx_block_cache,
         ),
         n_jobs=1,
@@ -596,6 +604,7 @@ tmux new-session -d -s DeployablePredictionProphetGPT4oAgentCategorical 'python 
 
     upper_bet_amount = 25
     upper_max_price_impact = 1.0
+    top_n_strategy_names: set[str] | None = None
     folds = generate_folds(bets_with_traces)
 
     total_simulation_profit, total_original_profit = CollateralToken(
@@ -605,6 +614,10 @@ tmux new-session -d -s DeployablePredictionProphetGPT4oAgentCategorical 'python 
     for fold_idx, (_, test_bets_with_traces) in enumerate(
         tqdm(folds, desc="Optuna studies")
     ):
+        # Run only 3 folds. If there are more, for the first optimization take all folds before the last 3.
+        if len(folds) > 3 and fold_idx < len(folds) - 3:
+            continue
+
         used_training_folds = [train for train, _ in folds[: fold_idx + 1]]
         k_study_on_train, testing_metrics = run_optuna_study(
             f"{agent_name}-train",
@@ -612,6 +625,7 @@ tmux new-session -d -s DeployablePredictionProphetGPT4oAgentCategorical 'python 
             test_bets_with_traces,
             upper_bet_amount,
             upper_max_price_impact,
+            top_n_strategy_names,
             tx_block_cache,
         )
         k_study_best_trial = choose_best_trial(k_study_on_train)
@@ -631,15 +645,29 @@ tmux new-session -d -s DeployablePredictionProphetGPT4oAgentCategorical 'python 
 
         # After the initial parameters are found, allow only small upgrades.
         # As there is no good reason for the agent to be suddenly better by a huge margin.
-        # TODO: If we would run this script in an automated way, then I think this should be uncommented.
-        # upper_bet_amount = (
-        #     k_study_best_trial.params["bet_amount"] * 1.5
-        # )
-        # upper_max_price_impact = (
-        #     k_study_best_trial.params["max_price_impact"] * 1.5
-        #     if "max_price_impact" in k_study_best_trial.params
-        #     else upper_max_price_impact
-        # )
+        top_n = 3
+        top_n_strategy_names = set(
+            trial.params["strategy_name"]
+            for trial in k_study_on_train.best_trials[:top_n]
+        )
+        upper_bet_amount = (
+            max(
+                trial.params["bet_amount"]
+                for trial in k_study_on_train.best_trials[:top_n]
+            )
+            * 1.5
+        )
+        upper_max_price_impact = (
+            max(
+                (
+                    trial.params["max_price_impact"]
+                    if "max_price_impact" in trial.params
+                    else upper_max_price_impact
+                )
+                for trial in k_study_on_train.best_trials[:top_n]
+            )
+            * 1.5
+        )
 
         # If we were in loss on testing set, check out if it's even possible to be profitable on it.
         # If the result is negative or very small, there was no chance of being in profit.
@@ -652,6 +680,7 @@ tmux new-session -d -s DeployablePredictionProphetGPT4oAgentCategorical 'python 
                 test_bets_with_traces,
                 upper_bet_amount,
                 upper_max_price_impact,
+                top_n_strategy_names,
                 tx_block_cache,
             )[0]
             print(
@@ -688,25 +717,36 @@ tmux new-session -d -s DeployablePredictionProphetGPT4oAgentCategorical 'python 
     deduplicated_df["strategy"] = deduplicated_df["strategy"].apply(
         lambda x: x.__class__.__name__
         + (
-            f" {' simplified' if x.force_simplified_calculation else ' full'}"
+            f" {' multi-bets' if x.allow_multiple_bets else ' single-bet'}"
             if isinstance(
-                x, (BinaryKellyBettingStrategy, CategoricalKellyBettingStrategy)
+                x,
+                (
+                    SimpleCategoricalKellyBettingStrategy,
+                    FullCategoricalKellyBettingStrategy,
+                ),
             )
             else ""
         )
         + (
-            f" {' multi-bets' if x.allow_multiple_bets else ' single-bet'}"
-            if isinstance(x, CategoricalKellyBettingStrategy)
-            else ""
-        )
-        + (
             f" {' short' if x.allow_shorting else ' no-short'}"
-            if isinstance(x, CategoricalKellyBettingStrategy)
+            if isinstance(
+                x,
+                (
+                    SimpleCategoricalKellyBettingStrategy,
+                    FullCategoricalKellyBettingStrategy,
+                ),
+            )
             else ""
         )
         + (
             f" {' multicat' if x.multicategorical else ' no-multicat'}"
-            if isinstance(x, CategoricalKellyBettingStrategy)
+            if isinstance(
+                x,
+                (
+                    SimpleCategoricalKellyBettingStrategy,
+                    FullCategoricalKellyBettingStrategy,
+                ),
+            )
             else ""
         )
     )

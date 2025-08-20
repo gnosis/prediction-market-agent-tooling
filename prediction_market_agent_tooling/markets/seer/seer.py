@@ -273,6 +273,7 @@ class SeerAgentMarket(AgentMarket):
         """
         We filter the markets using previous trades by the user so that we don't have to process all Seer markets.
         """
+
         trades_by_user = get_seer_transactions(
             api_keys.bet_from_address, RPCConfig().CHAIN_ID
         )
@@ -296,6 +297,8 @@ class SeerAgentMarket(AgentMarket):
     def redeem_winnings(api_keys: APIKeys) -> None:
         web3 = RPCConfig().get_web3()
         subgraph = SeerSubgraphHandler()
+
+        # ToDo - Find open positions by user directly
 
         closed_markets = subgraph.get_markets(
             filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST

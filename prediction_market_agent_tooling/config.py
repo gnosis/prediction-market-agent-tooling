@@ -73,6 +73,10 @@ class APIKeys(BaseSettings):
 
     PERPLEXITY_API_KEY: t.Optional[SecretStr] = None
 
+    DUNE_API_KEY: t.Optional[SecretStr] = None
+
+    SLACK_WEBHOOK_URL: t.Optional[SecretStr] = None
+
     ENABLE_CACHE: bool = False
     CACHE_DIR: str = "./.cache"
 
@@ -252,6 +256,18 @@ class APIKeys(BaseSettings):
     def sqlalchemy_db_url(self) -> SecretStr:
         return check_not_none(
             self.SQLALCHEMY_DB_URL, "SQLALCHEMY_DB_URL missing in the environment."
+        )
+
+    @property
+    def dune_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.DUNE_API_KEY, "DUNE_API_KEY missing in the environment."
+        )
+
+    @property
+    def slack_webhook_url(self) -> SecretStr:
+        return check_not_none(
+            self.SLACK_WEBHOOK_URL, "SLACK_WEBHOOK_URL missing in the environment."
         )
 
     def get_account(self) -> LocalAccount:

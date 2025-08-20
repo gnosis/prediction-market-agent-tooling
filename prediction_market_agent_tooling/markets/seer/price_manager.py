@@ -2,11 +2,15 @@ from cachetools import TTLCache, cached
 from pydantic import BaseModel
 from web3 import Web3
 
+from prediction_market_agent_tooling.deploy.constants import (
+    INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
+)
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
     HexAddress,
     OutcomeStr,
+    OutcomeToken,
     Probability,
 )
 from prediction_market_agent_tooling.loggers import logger
@@ -46,7 +50,7 @@ class PriceManager:
         price_diff_pct = abs(old_price - normalized_price) / max(old_price, 0.01)
         if price_diff_pct > max_price_diff:
             logger.info(
-                f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.hex()} "
+                f"{price_diff_pct=} larger than {max_price_diff=} for seer market {self.seer_market.id.to_0x_hex()} "
             )
 
     def get_price_for_token(self, token: ChecksumAddress) -> CollateralToken | None:
@@ -182,3 +186,67 @@ class PriceManager:
             normalized_prices[outcome] = new_price
 
         return normalized_prices
+
+    def build_initial_probs_from_pool(
+        self, model: SeerMarket, wrapped_tokens: list[ChecksumAddress]
+    ) -> tuple[dict[OutcomeStr, Probability], dict[OutcomeStr, OutcomeToken]]:
+        """
+        Builds a map of outcome to probability and outcome token pool.
+        """
+        probability_map = {}
+        outcome_token_pool = {}
+        wrapped_tokens_with_supply = [
+            (
+                token,
+                SeerSubgraphHandler().get_pool_by_token(
+                    token, model.collateral_token_contract_address_checksummed
+                ),
+            )
+            for token in wrapped_tokens
+        ]
+        wrapped_tokens_with_supply = [
+            (token, pool)
+            for token, pool in wrapped_tokens_with_supply
+            if pool is not None
+        ]
+
+        for token, pool in wrapped_tokens_with_supply:
+            if pool is None or pool.token1.id is None or pool.token0.id is None:
+                continue
+            if HexBytes(token) == HexBytes(pool.token1.id):
+                outcome_token_pool[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = (
+                    OutcomeToken(pool.totalValueLockedToken0)
+                    if pool.totalValueLockedToken0 is not None
+                    else OutcomeToken(0)
+                )
+                probability_map[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = Probability(pool.token0Price.value)
+            else:
+                outcome_token_pool[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = (
+                    OutcomeToken(pool.totalValueLockedToken1)
+                    if pool.totalValueLockedToken1 is not None
+                    else OutcomeToken(0)
+                )
+                probability_map[
+                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
+                ] = Probability(pool.token1Price.value)
+
+        for outcome in model.outcomes:
+            if outcome not in outcome_token_pool:
+                outcome_token_pool[outcome] = OutcomeToken(0)
+                logger.warning(
+                    f"Outcome {outcome} not found in outcome_token_pool for market {self.seer_market.url}."
+                )
+            if outcome not in probability_map:
+                if INVALID_OUTCOME_LOWERCASE_IDENTIFIER not in outcome.lower():
+                    raise PriceCalculationError(
+                        f"Couldn't get probability for {outcome} for market {self.seer_market.url}."
+                    )
+                else:
+                    probability_map[outcome] = Probability(0)
+        return probability_map, outcome_token_pool

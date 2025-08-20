@@ -194,7 +194,7 @@ def mint_full_set(
     # of the child market.
     seer_subgraph_handler = SeerSubgraphHandler()
     market = seer_subgraph_handler.get_market_by_wrapped_token(
-        token=collateral_token_contract.address
+        tokens=[collateral_token_contract.address]
     )
     market_collateral_token = Web3.to_checksum_address(market.collateral_token)
 
@@ -215,7 +215,7 @@ def mint_full_set(
     handle_allowance(
         api_keys=api_keys,
         sell_token=market_collateral_token,
-        amount_wei=collateral_amount_wei,
+        amount_to_check_wei=collateral_amount_wei,
         for_address=router.address,
         web3=web3,
     )

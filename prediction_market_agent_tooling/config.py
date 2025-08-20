@@ -2,6 +2,7 @@ import json
 import typing as t
 from copy import deepcopy
 
+import cachetools
 from eth_account.signers.local import LocalAccount
 from eth_typing import URI
 from pydantic import Field, model_validator
@@ -12,8 +13,13 @@ from safe_eth.eth import EthereumClient
 from safe_eth.safe.safe import SafeV141
 from web3 import Account, Web3
 from web3._utils.http import construct_user_agent
+from web3.middleware import ExtraDataToPOAMiddleware
 
-from prediction_market_agent_tooling.chains import ETHEREUM_ID, GNOSIS_CHAIN_ID
+from prediction_market_agent_tooling.chains import (
+    ETHEREUM_ID,
+    GNOSIS_CHAIN_ID,
+    POLYGON_CHAIN_ID,
+)
 from prediction_market_agent_tooling.deploy.gcp.utils import gcp_get_secret_value
 from prediction_market_agent_tooling.gtypes import (
     ChainID,
@@ -66,6 +72,10 @@ class APIKeys(BaseSettings):
     SQLALCHEMY_DB_URL: t.Optional[SecretStr] = None
 
     PERPLEXITY_API_KEY: t.Optional[SecretStr] = None
+
+    DUNE_API_KEY: t.Optional[SecretStr] = None
+
+    SLACK_WEBHOOK_URL: t.Optional[SecretStr] = None
 
     ENABLE_CACHE: bool = False
     CACHE_DIR: str = "./.cache"
@@ -248,6 +258,18 @@ class APIKeys(BaseSettings):
             self.SQLALCHEMY_DB_URL, "SQLALCHEMY_DB_URL missing in the environment."
         )
 
+    @property
+    def dune_api_key(self) -> SecretStr:
+        return check_not_none(
+            self.DUNE_API_KEY, "DUNE_API_KEY missing in the environment."
+        )
+
+    @property
+    def slack_webhook_url(self) -> SecretStr:
+        return check_not_none(
+            self.SLACK_WEBHOOK_URL, "SLACK_WEBHOOK_URL missing in the environment."
+        )
+
     def get_account(self) -> LocalAccount:
         acc: LocalAccount = Account.from_key(
             self.bet_from_private_key.get_secret_value()
@@ -293,6 +315,8 @@ class RPCConfig(BaseSettings):
     GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
     GNOSIS_RPC_BEARER: SecretStr | None = None
     CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
+    POLYGON_RPC_URL: URI = Field(default=URI("https://polygon-rpc.com"))
+    POLYGON_RPC_BEARER: SecretStr | None = None
 
     @property
     def ethereum_rpc_url(self) -> URI:
@@ -307,25 +331,39 @@ class RPCConfig(BaseSettings):
         )
 
     @property
+    def polygon_rpc_url(self) -> URI:
+        return check_not_none(
+            self.POLYGON_RPC_URL, "POLYGON_RPC_URL missing in the environment."
+        )
+
+    @property
     def chain_id(self) -> ChainID:
         return check_not_none(self.CHAIN_ID, "CHAIN_ID missing in the environment.")
+
+    @property
+    def gnosis_chain_id(self) -> ChainID:
+        return GNOSIS_CHAIN_ID
 
     def chain_id_to_rpc_url(self, chain_id: ChainID) -> URI:
         return {
             ETHEREUM_ID: self.ethereum_rpc_url,
             GNOSIS_CHAIN_ID: self.gnosis_rpc_url,
+            POLYGON_CHAIN_ID: self.polygon_rpc_url,
         }[chain_id]
 
     def chain_id_to_rpc_bearer(self, chain_id: ChainID) -> SecretStr | None:
         return {
             ETHEREUM_ID: self.ETHEREUM_RPC_BEARER,
             GNOSIS_CHAIN_ID: self.GNOSIS_RPC_BEARER,
+            POLYGON_CHAIN_ID: self.POLYGON_RPC_BEARER,
         }[chain_id]
 
     def get_web3(self) -> Web3:
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": construct_user_agent(str(type(self))),
+            "User-Agent": construct_user_agent(
+                str(type(self)), self.__class__.__name__
+            ),
         }
         if bearer := self.chain_id_to_rpc_bearer(self.chain_id):
             headers["Authorization"] = f"Bearer {bearer.get_secret_value()}"
@@ -338,6 +376,19 @@ class RPCConfig(BaseSettings):
                 },
             )
         )
+
+    @cachetools.cached(
+        cachetools.TTLCache(maxsize=100, ttl=5 * 60),
+        key=lambda self: f"{self.model_dump_json()}",
+    )
+    def get_polygon_web3(self) -> Web3:
+        web3 = self.get_web3()
+        if self.chain_id != POLYGON_CHAIN_ID:
+            raise ValueError(f"Chain ID {self.chain_id} is not Polygon Mainnet")
+
+        # We need to inject middleware into the Polygon web3 instance (https://web3py.readthedocs.io/en/stable/middleware.html#proof-of-authority)
+        web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+        return web3
 
 
 class CloudCredentials(BaseSettings):

@@ -74,8 +74,8 @@ def test_get_pools_for_token(seer_subgraph_handler_test: SeerSubgraphHandler) ->
         )
         pool = check_not_none(pool)
         assert (
-            pool.token0.id.hex().lower() == wrapped_token.lower()
-            or pool.token1.id.hex().lower() == wrapped_token.lower()
+            pool.token0.id.to_0x_hex().lower() == wrapped_token.lower()
+            or pool.token1.id.to_0x_hex().lower() == wrapped_token.lower()
         )
 
 
@@ -113,3 +113,10 @@ def test_binary_markets_retrieved(
     )
     # We expect at least 1 market for the given filter
     assert markets
+    assert markets[0].questions is not None
+
+
+def test_get_swaps_for_agent(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
+    addr = Web3.to_checksum_address("0xd32cbeb0acbee86670b5de60ab50596b667b4f69")
+    swaps = seer_subgraph_handler_test.get_swaps(addr)
+    assert len(swaps) > 0

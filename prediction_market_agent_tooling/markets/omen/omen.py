@@ -3,8 +3,10 @@ from collections import defaultdict
 from datetime import timedelta
 
 import tenacity
+from pydantic import BaseModel
 from tqdm import tqdm
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -27,7 +29,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     MarketFees,
     ProcessedMarket,
-    ProcessedTradedMarket,
     QuestionType,
     SortBy,
 )
@@ -42,7 +43,6 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_TRUE_OUTCOME,
     PRESAGIO_BASE_URL,
     Condition,
-    ConditionPreparationEvent,
     CreatedMarket,
     OmenBet,
     OmenMarket,
@@ -59,13 +59,13 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     OmenOracleContract,
     OmenRealitioContract,
     WrappedxDaiContract,
-    build_parent_collection_id,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     OmenSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.contract import (
+    ConditionPreparationEvent,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
@@ -410,6 +410,26 @@ class OmenAgentMarket(AgentMarket):
     def redeem_winnings(api_keys: APIKeys) -> None:
         redeem_from_all_user_positions(api_keys)
 
+    def ensure_min_native_balance(
+        self,
+        min_required_balance: xDai,
+        multiplier: float = 3.0,
+    ) -> None:
+        """
+        Ensure the EOA has at least the minimum required native token balance.
+        If not, transfer wrapped native tokens from the betting address and unwrap them.
+
+        Args:
+            min_required_balance: Minimum required native token balance to maintain
+            multiplier: Multiplier to apply to the required balance to keep as a buffer
+        """
+
+        send_keeping_token_to_eoa_xdai(
+            api_keys=APIKeys(),
+            min_required_balance=min_required_balance,
+            multiplier=multiplier,
+        )
+
     @staticmethod
     def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> USD:
         native_usd = get_xdai_in_usd(
@@ -437,7 +457,7 @@ class OmenAgentMarket(AgentMarket):
 
     def store_trades(
         self,
-        traded_market: ProcessedTradedMarket | None,
+        traded_market: ProcessedMarket | None,
         keys: APIKeys,
         agent_name: str,
         web3: Web3 | None = None,
@@ -652,10 +672,6 @@ class OmenAgentMarket(AgentMarket):
     def get_user_balance(user_id: str) -> float:
         return float(get_balances(Web3.to_checksum_address(user_id)).total)
 
-    @staticmethod
-    def get_user_id(api_keys: APIKeys) -> str:
-        return api_keys.bet_from_address
-
     def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
         sgh = OmenSubgraphHandler()
         trades = sgh.get_trades(
@@ -733,7 +749,7 @@ def omen_buy_outcome_tx(
         web3=web3,
     )
 
-    return tx_receipt["transactionHash"].hex()
+    return tx_receipt["transactionHash"].to_0x_hex()
 
 
 def binary_omen_buy_outcome_tx(
@@ -827,7 +843,7 @@ def omen_sell_outcome_tx(
             web3=web3,
         )
 
-    return tx_receipt["transactionHash"].hex()
+    return tx_receipt["transactionHash"].to_0x_hex()
 
 
 def binary_omen_sell_outcome_tx(
@@ -1075,7 +1091,7 @@ def get_conditional_tokens_balance_for_market(
     """
     balance_per_index_set: dict[int, OutcomeWei] = {}
     conditional_token_contract = OmenConditionalTokenContract()
-    parent_collection_id = build_parent_collection_id()
+    parent_collection_id = HASH_ZERO
 
     for index_set in market.condition.index_sets:
         collection_id = conditional_token_contract.getCollectionId(
@@ -1323,19 +1339,33 @@ def send_keeping_token_to_eoa_xdai(
         )
 
 
-def get_buy_outcome_token_amount(
+class BuyOutcomeResult(BaseModel):
+    outcome_tokens_received: OutcomeToken
+    new_pool_balances: list[OutcomeToken]
+
+
+def calculate_buy_outcome_token(
     investment_amount: CollateralToken,
     outcome_index: int,
     pool_balances: list[OutcomeToken],
     fees: MarketFees,
-) -> OutcomeToken:
+) -> BuyOutcomeResult:
     """
     Calculates the amount of outcome tokens received for a given investment
+    and returns the new pool balances after the purchase.
 
     Taken from https://github.com/gnosis/conditional-tokens-market-makers/blob/6814c0247c745680bb13298d4f0dd7f5b574d0db/contracts/FixedProductMarketMaker.sol#L264
     """
     if outcome_index >= len(pool_balances):
         raise ValueError("invalid outcome index")
+
+    new_pool_balances = pool_balances.copy()
+
+    if investment_amount == 0:
+        return BuyOutcomeResult(
+            outcome_tokens_received=OutcomeToken(0),
+            new_pool_balances=new_pool_balances,
+        )
 
     investment_amount_minus_fees = fees.get_after_fees(investment_amount)
     investment_amount_minus_fees_as_ot = OutcomeToken(
@@ -1348,17 +1378,39 @@ def get_buy_outcome_token_amount(
     # Calculate the ending balance considering all other outcomes
     for i, pool_balance in enumerate(pool_balances):
         if i != outcome_index:
-            denominator = pool_balance + investment_amount_minus_fees_as_ot
+            new_pool_balances[i] = pool_balance + investment_amount_minus_fees_as_ot
             ending_outcome_balance = OutcomeToken(
-                (ending_outcome_balance * pool_balance / denominator)
+                (ending_outcome_balance * pool_balance / new_pool_balances[i])
             )
+
+    # Update the bought outcome's pool balance
+    new_pool_balances[outcome_index] = ending_outcome_balance
 
     if ending_outcome_balance <= 0:
         raise ValueError("must have non-zero balances")
 
-    result = (
+    outcome_tokens_received = (
         buy_token_pool_balance
         + investment_amount_minus_fees_as_ot
         - ending_outcome_balance
     )
-    return result
+
+    return BuyOutcomeResult(
+        outcome_tokens_received=outcome_tokens_received,
+        new_pool_balances=new_pool_balances,
+    )
+
+
+def get_buy_outcome_token_amount(
+    investment_amount: CollateralToken,
+    outcome_index: int,
+    pool_balances: list[OutcomeToken],
+    fees: MarketFees,
+) -> OutcomeToken:
+    result = calculate_buy_outcome_token(
+        investment_amount=investment_amount,
+        outcome_index=outcome_index,
+        pool_balances=pool_balances,
+        fees=fees,
+    )
+    return result.outcome_tokens_received

@@ -5,7 +5,9 @@ from langfuse import Langfuse
 from langfuse.client import TraceWithDetails
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.deploy.agent import MarketType
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
     PlacedTrade,
@@ -16,12 +18,13 @@ from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     WRAPPED_XDAI_CONTRACT_ADDRESS,
 )
+from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 
 class ProcessMarketTrace(BaseModel):
     timestamp: int
-    market: OmenAgentMarket
+    market: SeerAgentMarket | OmenAgentMarket
     answer: CategoricalProbabilisticAnswer
     trades: list[PlacedTrade]
 
@@ -40,12 +43,17 @@ class ProcessMarketTrace(BaseModel):
     def from_langfuse_trace(
         trace: TraceWithDetails,
     ) -> t.Optional["ProcessMarketTrace"]:
-        market = trace_to_omen_agent_market(trace)
+        market = trace_to_agent_market(trace)
         answer = trace_to_answer(trace)
         trades = trace_to_trades(trace)
 
         if not market or not answer or not trades:
             return None
+
+        if not isinstance(market, (SeerAgentMarket, OmenAgentMarket)):
+            raise ValueError(
+                f"Market type {type(market)} is not supported for ProcessMarketTrace"
+            )
 
         return ProcessMarketTrace(
             market=market,
@@ -105,17 +113,21 @@ def get_traces_for_agent(
     return all_agent_traces
 
 
-def trace_to_omen_agent_market(trace: TraceWithDetails) -> OmenAgentMarket | None:
+def trace_to_agent_market(trace: TraceWithDetails) -> AgentMarket | None:
     if not trace.input:
         logger.warning(f"No input in the trace: {trace}")
         return None
     if not trace.input["args"]:
         logger.warning(f"No args in the trace: {trace}")
         return None
-    assert len(trace.input["args"]) == 2 and trace.input["args"][0] == "omen"
+    assert len(trace.input["args"]) == 2
+
+    market_type = MarketType(trace.input["args"][0])
+    market_class = market_type.market_class
+
     try:
         # If the market model is invalid (e.g. outdated), it will raise an exception
-        market = OmenAgentMarket.model_validate(trace.input["args"][1])
+        market = market_class.model_validate(trace.input["args"][1])
         return market
     except Exception as e:
         logger.warning(f"Market not parsed from langfuse because: {e}")
@@ -159,9 +171,6 @@ def get_trace_for_bet(
             not in WRAPPED_XDAI_CONTRACT_ADDRESS
         ):
             # TODO: We need to compute bet amount token in USD here, but at the time of bet placement!
-            logger.warning(
-                "This currently works only for WXDAI markets, because we need to compare against USD value."
-            )
             continue
         # Cannot use exact comparison due to gas fees
         if (

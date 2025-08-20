@@ -11,7 +11,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
 )
 from prediction_market_agent_tooling.loggers import logger
-from prediction_market_agent_tooling.markets.agent_market import ProcessedTradedMarket
+from prediction_market_agent_tooling.markets.agent_market import ProcessedMarket
 from prediction_market_agent_tooling.markets.omen.data_models import (
     ContractPrediction,
     IPFSAgentResult,
@@ -28,7 +28,7 @@ def store_trades(
     contract: _AgentResultMappingContract,
     market_id: ChecksumAddress,
     outcomes: Sequence[OutcomeStr],
-    traded_market: ProcessedTradedMarket | None,
+    traded_market: ProcessedMarket | None,
     keys: APIKeys,
     agent_name: str,
     web3: Web3 | None = None,
@@ -36,6 +36,10 @@ def store_trades(
     if traded_market is None:
         logger.warning(f"No prediction for market {market_id}, not storing anything.")
         return None
+
+    logger.info(
+        f"Storing trades for market {market_id}, with outcomes {outcomes}, {traded_market=}."
+    )
 
     probabilities = traded_market.answer.probabilities
     if not probabilities:
@@ -56,9 +60,7 @@ def store_trades(
         ipfs_hash_decoded = ipfscidv0_to_byte32(ipfs_hash)
 
     # tx_hashes must be list of bytes32 (see Solidity contract).
-    tx_hashes = [
-        HexBytes(HexStr(i.id)) for i in traded_market.trades if i.id is not None
-    ]
+    tx_hashes = [HexBytes(HexStr(i.id)) for i in traded_market.trades]
 
     # Dune dashboard expects the probs to be in the same order as on the market.
     probabilities_converted = [
@@ -81,5 +83,5 @@ def store_trades(
         web3=web3,
     )
     logger.info(
-        f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].hex()}."
+        f"Added prediction to market {market_id}. - receipt {tx_receipt['transactionHash'].to_0x_hex()}."
     )

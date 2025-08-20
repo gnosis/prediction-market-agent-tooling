@@ -1,13 +1,9 @@
 import typing as t
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.deploy.betting_strategy import (
-    KellyBettingStrategy,
-    TradeType,
-)
 from prediction_market_agent_tooling.gtypes import USD
 from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
-from prediction_market_agent_tooling.markets.agent_market import ProcessedTradedMarket
+from prediction_market_agent_tooling.markets.agent_market import ProcessedMarket
 from prediction_market_agent_tooling.markets.data_models import PlacedTrade, Trade
 from prediction_market_agent_tooling.markets.omen.omen import (
     OmenAgentMarket,
@@ -72,7 +68,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
 
     def submit_job_result(
         self, agent_name: str, max_bond: USD, result: str
-    ) -> ProcessedTradedMarket:
+    ) -> ProcessedMarket:
         if not APIKeys().enable_ipfs_upload:
             raise RuntimeError(
                 f"ENABLE_IPFS_UPLOAD must be set to True to upload job results."
@@ -81,7 +77,7 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         trade = self.get_job_trade(max_bond, result)
         buy_id = self.buy_tokens(outcome=trade.outcome, amount=trade.amount)
 
-        processed_traded_market = ProcessedTradedMarket(
+        processed_traded_market = ProcessedMarket(
             answer=self.get_job_answer(result),
             trades=[PlacedTrade.from_trade(trade, id=buy_id)],
         )
@@ -92,20 +88,21 @@ class OmenJobAgentMarket(OmenAgentMarket, JobAgentMarket):
         return processed_traded_market
 
     def get_job_trade(self, max_bond: USD, result: str) -> Trade:
+        raise NotImplementedError("TODO: Refactor to avoid circular imports.")
         # Because jobs are powered by prediction markets, potentional reward depends on job's liquidity and our will to bond (bet) our xDai into our job completion.
-        strategy = KellyBettingStrategy(max_position_amount=max_bond)
-        required_trades = strategy.calculate_trades(
-            existing_position=None,
-            answer=self.get_job_answer(result),
-            market=self,
-        )
-        assert (
-            len(required_trades) == 1
-        ), f"Shouldn't process same job twice: {required_trades}"
-        trade = required_trades[0]
-        assert trade.trade_type == TradeType.BUY, "Should only buy on job markets."
-        assert trade.outcome, "Should buy only YES on job markets."
-        return required_trades[0]
+        # strategy = FullBinaryKellyBettingStrategy(max_position_amount=max_bond)
+        # required_trades = strategy.calculate_trades(
+        #     existing_position=None,
+        #     answer=self.get_job_answer(result),
+        #     market=self,
+        # )
+        # assert (
+        #     len(required_trades) == 1
+        # ), f"Shouldn't process same job twice: {required_trades}"
+        # trade = required_trades[0]
+        # assert trade.trade_type == TradeType.BUY, "Should only buy on job markets."
+        # assert trade.outcome, "Should buy only YES on job markets."
+        # return required_trades[0]
 
     @staticmethod
     def from_omen_market(market: OmenMarket) -> "OmenJobAgentMarket":

@@ -233,7 +233,8 @@ def test_seer_swap_via_pools_fails_when_no_balance(
     account = Account.create()
 
     test_keys_with_no_balance = APIKeys(
-        BET_FROM_PRIVATE_KEY=private_key_type(account.key.hex()), SAFE_ADDRESS=None
+        BET_FROM_PRIVATE_KEY=private_key_type(account.key.to_0x_hex()),
+        SAFE_ADDRESS=None,
     )
 
     market, sell_token, _, buy_token, amount_wei, _ = prepare_seer_swap_test(
@@ -243,31 +244,6 @@ def test_seer_swap_via_pools_fails_when_no_balance(
     with pytest.raises(Exception):
         SwapPoolHandler(
             api_keys=test_keys_with_no_balance,
-            market_id=market.id,
-            collateral_token_address=market.collateral_token_contract_address_checksummed,
-        ).buy_or_sell_outcome_token(
-            token_in=sell_token,
-            token_out=buy_token,
-            amount_wei=Wei(amount_wei.value),
-            web3=local_web3,
-        )
-
-
-def test_seer_swap_via_pools_fails_when_token_prices_are_zero(
-    local_web3: Web3,
-    test_keys: APIKeys,
-) -> None:
-    market, sell_token, _, buy_token, amount_wei, _ = prepare_seer_swap_test(
-        local_web3,
-        test_keys,
-        deposit_collateral=False,
-        # For this market, pools return token prices as zero, see https://github.com/gnosis/prediction-market-agent-tooling/pull/811.
-        market_id=HexBytes("0x5c2972948d7dbce22ce2112d851f099358359771"),
-    )
-
-    with pytest.raises(ValueError, match="Could not find price for"):
-        SwapPoolHandler(
-            api_keys=test_keys,
             market_id=market.id,
             collateral_token_address=market.collateral_token_contract_address_checksummed,
         ).buy_or_sell_outcome_token(

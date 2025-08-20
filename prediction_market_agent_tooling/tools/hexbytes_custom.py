@@ -11,7 +11,7 @@ from pydantic_core.core_schema import (
     with_info_before_validator_function,
 )
 
-hex_serializer = plain_serializer_function_ser_schema(function=lambda x: x.hex())
+hex_serializer = plain_serializer_function_ser_schema(function=lambda x: x.to_0x_hex())
 
 
 class BaseHex:
@@ -59,6 +59,9 @@ class HexBytes(HexBytesBase, BaseHex):
     def fromhex(cls, hex_str: str) -> "HexBytes":
         value = hex_str[2:] if hex_str.startswith("0x") else hex_str
         return super().fromhex(value)
+
+    def __repr__(self) -> str:
+        return f'HexBytes("{self.to_0x_hex()}")'
 
     @classmethod
     def __eth_pydantic_validate__(

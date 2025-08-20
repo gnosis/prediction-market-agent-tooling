@@ -2,6 +2,7 @@ import asyncio
 import typing as t
 from datetime import timedelta
 
+import cachetools
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
 from web3 import Web3
@@ -27,7 +28,6 @@ from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
     ParentMarket,
     ProcessedMarket,
-    ProcessedTradedMarket,
     QuestionType,
     SortBy,
 )
@@ -35,9 +35,13 @@ from prediction_market_agent_tooling.markets.blockchain_utils import store_trade
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
     Resolution,
+    ResolvedBet,
 )
 from prediction_market_agent_tooling.markets.market_fees import MarketFees
-from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
+from prediction_market_agent_tooling.markets.omen.omen import (
+    OmenAgentMarket,
+    send_keeping_token_to_eoa_xdai,
+)
 from prediction_market_agent_tooling.markets.omen.omen_constants import (
     SDAI_CONTRACT_ADDRESS,
 )
@@ -53,6 +57,7 @@ from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
 )
 from prediction_market_agent_tooling.markets.seer.price_manager import PriceManager
+from prediction_market_agent_tooling.markets.seer.seer_api import get_seer_transactions
 from prediction_market_agent_tooling.markets.seer.seer_contracts import (
     GnosisRouter,
     SeerMarketFactory,
@@ -78,7 +83,6 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     OrderStatusError,
     get_orders_by_owner,
     get_trades_by_order_uid,
-    get_trades_by_owner,
     swap_tokens_waiting,
     wait_for_order_completion,
 )
@@ -97,6 +101,11 @@ from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 # We place a larger bet amount by default than Omen so that cow presents valid quotes.
 SEER_TINY_BET_AMOUNT = USD(0.1)
+
+
+SHARED_CACHE: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
+    maxsize=256, ttl=10 * 60
+)
 
 
 class SeerAgentMarket(AgentMarket):
@@ -130,7 +139,7 @@ class SeerAgentMarket(AgentMarket):
 
     def store_trades(
         self,
-        traded_market: ProcessedTradedMarket | None,
+        traded_market: ProcessedMarket | None,
         keys: APIKeys,
         agent_name: str,
         web3: Web3 | None = None,
@@ -257,10 +266,6 @@ class SeerAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def get_user_id(api_keys: APIKeys) -> str:
-        return OmenAgentMarket.get_user_id(api_keys)
-
-    @staticmethod
     def _filter_markets_contained_in_trades(
         api_keys: APIKeys,
         markets: t.Sequence[SeerMarket],
@@ -268,10 +273,12 @@ class SeerAgentMarket(AgentMarket):
         """
         We filter the markets using previous trades by the user so that we don't have to process all Seer markets.
         """
-        trades_by_user = get_trades_by_owner(api_keys.bet_from_address)
+        trades_by_user = get_seer_transactions(
+            api_keys.bet_from_address, RPCConfig().CHAIN_ID
+        )
 
-        traded_tokens = {t.buyToken for t in trades_by_user}.union(
-            [t.sellToken for t in trades_by_user]
+        traded_tokens = {t.token_in_checksum for t in trades_by_user}.union(
+            [t.token_out_checksum for t in trades_by_user]
         )
         filtered_markets: list[SeerMarket] = []
         for market in markets:
@@ -309,19 +316,43 @@ class SeerAgentMarket(AgentMarket):
             for market in filtered_markets
             if market.is_redeemable(owner=api_keys.bet_from_address, web3=web3)
         ]
+        logger.info(f"Got {len(markets_to_redeem)} markets to redeem on Seer.")
 
         gnosis_router = GnosisRouter()
         for market in markets_to_redeem:
             try:
+                # GnosisRouter needs approval to use our outcome tokens
+                for i, token in enumerate(market.wrapped_tokens):
+                    ContractERC20OnGnosisChain(
+                        address=Web3.to_checksum_address(token)
+                    ).approve(
+                        api_keys,
+                        for_address=gnosis_router.address,
+                        amount_wei=market_balances[market.id][i].as_wei,
+                        web3=web3,
+                    )
+
+                # We can only ask for redeem of outcome tokens on correct outcomes
+                # TODO: Implement more complex use-cases: https://github.com/gnosis/prediction-market-agent-tooling/issues/850
+                amounts_to_redeem = [
+                    (amount if numerator > 0 else OutcomeWei(0))
+                    for amount, numerator in zip(
+                        market_balances[market.id], market.payout_numerators
+                    )
+                ]
+
+                # Redeem!
                 params = RedeemParams(
                     market=Web3.to_checksum_address(market.id),
                     outcome_indices=list(range(len(market.payout_numerators))),
-                    amounts=market_balances[market.id],
+                    amounts=amounts_to_redeem,
                 )
                 gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
-                logger.info(f"Redeemed market {market.id.hex()}")
-            except Exception as e:
-                logger.error(f"Failed to redeem market {market.id.hex()}, {e}")
+                logger.info(f"Redeemed market {market.url}.")
+            except Exception:
+                logger.exception(
+                    f"Failed to redeem market {market.url}, {market.outcomes}, with amounts {market_balances[market.id]} and payout numerators {market.payout_numerators}, and wrapped tokens {market.wrapped_tokens}."
+                )
 
         # GnosisRouter withdraws sDai into wxDAI/xDai on its own, so no auto-withdraw needed by us.
 
@@ -338,6 +369,17 @@ class SeerAgentMarket(AgentMarket):
                 return True
 
         return False
+
+    def ensure_min_native_balance(
+        self,
+        min_required_balance: xDai,
+        multiplier: float = 3.0,
+    ) -> None:
+        send_keeping_token_to_eoa_xdai(
+            api_keys=APIKeys(),
+            min_required_balance=min_required_balance,
+            multiplier=multiplier,
+        )
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:
@@ -361,7 +403,7 @@ class SeerAgentMarket(AgentMarket):
             raise ValueError("Seer categorical markets must have 1 question.")
 
         question = model.questions[0]
-        outcome = model.outcomes[int(question.question.best_answer.hex(), 16)]
+        outcome = model.outcomes[int(question.question.best_answer.to_0x_hex(), 16)]
         return Resolution(outcome=outcome, invalid=False)
 
     @staticmethod
@@ -405,13 +447,17 @@ class SeerAgentMarket(AgentMarket):
         must_have_prices: bool,
     ) -> t.Optional["SeerAgentMarket"]:
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
-
-        probability_map = {}
+        wrapped_tokens = [Web3.to_checksum_address(i) for i in model.wrapped_tokens]
         try:
-            probability_map = price_manager.build_probability_map()
+            (
+                probability_map,
+                outcome_token_pool,
+            ) = price_manager.build_initial_probs_from_pool(
+                model=model, wrapped_tokens=wrapped_tokens
+            )
         except PriceCalculationError as e:
             logger.info(
-                f"Error when calculating probabilities for market {model.id.hex()} - {e}"
+                f"Error when calculating probabilities for market {model.id.to_0x_hex()} - {e}"
             )
             if must_have_prices:
                 # Price calculation failed, so don't return the market
@@ -422,7 +468,7 @@ class SeerAgentMarket(AgentMarket):
         parent = SeerAgentMarket.get_parent(model=model, seer_subgraph=seer_subgraph)
 
         market = SeerAgentMarket(
-            id=model.id.hex(),
+            id=model.id.to_0x_hex(),
             question=model.title,
             creator=model.creator,
             created_time=model.created_time,
@@ -431,9 +477,9 @@ class SeerAgentMarket(AgentMarket):
             condition_id=model.condition_id,
             url=model.url,
             close_time=model.close_time,
-            wrapped_tokens=[Web3.to_checksum_address(i) for i in model.wrapped_tokens],
+            wrapped_tokens=wrapped_tokens,
             fees=MarketFees.get_zero_fees(),
-            outcome_token_pool=None,
+            outcome_token_pool=outcome_token_pool,
             outcomes_supply=model.outcomes_supply,
             resolution=resolution,
             volume=None,
@@ -444,6 +490,15 @@ class SeerAgentMarket(AgentMarket):
         )
 
         return market
+
+    @staticmethod
+    def get_resolved_bets_made_since(
+        better_address: ChecksumAddress,
+        start_time: DatetimeUTC,
+        end_time: DatetimeUTC | None,
+    ) -> list[ResolvedBet]:
+        # TODO: https://github.com/gnosis/prediction-market-agent-tooling/issues/841
+        raise NotImplementedError()
 
     @staticmethod
     def get_markets(
@@ -515,7 +570,9 @@ class SeerAgentMarket(AgentMarket):
             )
 
             token_balance = token_contract.balance_of_in_tokens(
-                for_address=Web3.to_checksum_address(HexAddress(HexStr(pool.id.hex()))),
+                for_address=Web3.to_checksum_address(
+                    HexAddress(HexStr(pool.id.to_0x_hex()))
+                ),
                 web3=web3,
             )
             collateral_balance = p.get_amount_of_token_in_collateral(
@@ -541,6 +598,7 @@ class SeerAgentMarket(AgentMarket):
         liquidity = self.get_liquidity_for_outcome(outcome)
         return liquidity > self.minimum_market_liquidity_required
 
+    @cachetools.cached(cache=SHARED_CACHE, key=lambda self: f"has_liquidity_{self.id}")
     def has_liquidity(self) -> bool:
         # We define a market as having liquidity if it has liquidity for all outcomes except for the invalid (index -1)
         return all(
@@ -594,8 +652,8 @@ class SeerAgentMarket(AgentMarket):
                     f"Expected exactly 1 trade from {order_metadata=}, but got {len(trades)=}."
                 )
             cow_tx_hash = trades[0].txHash
-            logger.info(f"TxHash for {order_metadata.uid.root=} is {cow_tx_hash=}.")
-            return cow_tx_hash.hex()
+            logger.info(f"TxHash is {cow_tx_hash=} for {order_metadata.uid.root=}.")
+            return cow_tx_hash.to_0x_hex()
 
         except (
             UnexpectedResponseError,
@@ -626,7 +684,9 @@ class SeerAgentMarket(AgentMarket):
                 amount_wei=amount_wei,
                 web3=web3,
             )
-            return tx_receipt["transactionHash"].hex()
+            swap_pool_tx_hash = tx_receipt["transactionHash"]
+            logger.info(f"TxHash is {swap_pool_tx_hash=}.")
+            return swap_pool_tx_hash.to_0x_hex()
 
     def place_bet(
         self,

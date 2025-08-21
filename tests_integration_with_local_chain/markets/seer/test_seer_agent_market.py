@@ -252,3 +252,21 @@ def test_seer_swap_via_pools_fails_when_no_balance(
             amount_wei=Wei(amount_wei.value),
             web3=local_web3,
         )
+
+def test_seer_redeem_scalar(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
+    # ToDo
+    safe_address = Web3.to_checksum_address("0xdF99b89934f697f295fDf132Ec5174656bC088BD")
+    market_id = HexBytes("0x8517e637b15246d8ae0b384bf53c601a99d8b16f")
+    #  fork curr block gnosis
+    market = seer_subgraph_handler_test.get_market_by_id(market_id=market_id)
+    agent_market = SeerAgentMarket.from_data_model_with_subgraph(market, seer_subgraph=seer_subgraph_handler_test, must_have_prices=False)
+    keys = APIKeys(SAFE_ADDRESS=safe_address)
+    TENDERLY_URL = "https://virtual.gnosis.eu.rpc.tenderly.co/7f5c6362-34d2-46a8-9b5a-3c189de74c32"
+    w3 = Web3(Web3.HTTPProvider(TENDERLY_URL))
+    import os
+    os.environ['GNOSIS_RPC_URL'] = TENDERLY_URL
+    # ToDo mock web3
+    agent_market.redeem_winnings(keys)
+    #  call redeem on market id
+    assert False
+

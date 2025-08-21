@@ -10,7 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     TxReceipt,
     Wei,
-    xDai,
+    xDai, OutcomeWei,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
     ExactInputSingleParams,
@@ -115,6 +115,10 @@ class GnosisRouter(ContractOnGnosisChain):
             web3=web3,
         )
         return receipt_tx
+
+
+
+
 
     def split_position(
         self,

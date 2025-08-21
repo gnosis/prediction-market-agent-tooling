@@ -130,7 +130,7 @@ def prepare_tx(
     function_call = contract.functions[function_name](
         *parse_function_params(function_params)
     )
-    if default_gas is not None:
+    if default_gas is not None and "gas" not in tx_params_new:
         tx_params_new["gas"] = estimate_gas_with_timeout(
             function_call, default_gas=default_gas, tx_params=tx_params_new
         )

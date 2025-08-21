@@ -1,5 +1,4 @@
 import binascii
-import concurrent.futures
 import secrets
 from typing import Any, Optional
 
@@ -8,6 +7,7 @@ import tenacity
 from eth_account import Account
 from eth_typing import URI
 from eth_utils.currency import MAX_WEI, MIN_WEI
+from joblib import Parallel, delayed
 from pydantic.types import SecretStr
 from safe_eth.eth import EthereumClient
 from safe_eth.eth.ethereum_client import TxSpeed
@@ -148,26 +148,17 @@ def estimate_gas_with_timeout(
     Tries to estimate the gas, but default to the default value on timeout.
     """
     try:
-
-        def estimate_gas() -> int:
-            return function_call.estimate_gas(tx_params)
-
-        # Use timeout to prevent hanging on slow estimation
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        future = executor.submit(estimate_gas)
-
-        try:
-            estimated_gas = future.result(timeout=timeout)
-            return int(estimated_gas * 1.2)  # Add 20% buffer
-        except concurrent.futures.TimeoutError:
-            logger.warning(
-                f"Gas estimation timed out after {timeout} seconds, using default: {default_gas}"
-            )
-
-        executor.shutdown(wait=False, cancel_futures=True)
-        return default_gas
-    except Exception:
-        logger.warning(f"Error during gas estimation, using default: {default_gas}.")
+        # We need multiprocessing, because thread can not be killed and would get stuck because of GIL.
+        # We need n_jobs=-1, otherwise timeouting isn't applied.
+        result: list[int] = Parallel(
+            n_jobs=-1, backend="multiprocessing", timeout=timeout
+        )(delayed(function_call.estimate_gas)(tx_params) for _ in range(1))
+        estimated_gas = result[0]
+        return int(estimated_gas * 1.2)  # Add 20% buffer
+    except TimeoutError:
+        logger.warning(
+            f"Gas estimation timed out after {timeout} seconds, using default: {default_gas}"
+        )
         return default_gas
 
 

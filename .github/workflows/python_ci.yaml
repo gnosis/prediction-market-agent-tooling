@@ -38,8 +38,12 @@ jobs:
             command: "poetry run python -m pytest tests/ -p no:ape_test -vvv --durations=0"
           - name: Integration Tests
             command: "poetry run python -m pytest tests_integration/ -p no:ape_test -vvv --durations=0"
-          - name: Integration with Local Chain
-            command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0"
+          - name: Integration with Local Chain (Omen)
+            command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k omen"
+          - name: Integration with Local Chain (Seer)
+            command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k seer"
+          - name: Integration with Local Chain (Others)
+            command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k 'not omen and not seer'"
     name: pytest - Python ${{ matrix.python-version }} - ${{ matrix.test.name }}
     steps:
       - uses: actions/checkout@v2

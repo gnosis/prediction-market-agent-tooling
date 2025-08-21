@@ -1,4 +1,5 @@
 import binascii
+import multiprocessing.context
 import secrets
 from typing import Any, Optional
 
@@ -148,14 +149,13 @@ def estimate_gas_with_timeout(
     Tries to estimate the gas, but default to the default value on timeout.
     """
     try:
-        # We need multiprocessing, because thread can not be killed and would get stuck because of GIL.
         # We need n_jobs=-1, otherwise timeouting isn't applied.
-        result: list[int] = Parallel(
-            n_jobs=-1, backend="multiprocessing", timeout=timeout
-        )(delayed(function_call.estimate_gas)(tx_params) for _ in range(1))
+        result: list[int] = Parallel(n_jobs=-1, backend="threading", timeout=timeout)(
+            delayed(function_call.estimate_gas)(tx_params) for _ in range(1)
+        )
         estimated_gas = result[0]
         return int(estimated_gas * 1.2)  # Add 20% buffer
-    except TimeoutError:
+    except (TimeoutError, multiprocessing.context.TimeoutError):
         logger.warning(
             f"Gas estimation timed out after {timeout} seconds, using default: {default_gas}"
         )

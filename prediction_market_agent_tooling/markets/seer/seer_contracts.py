@@ -135,7 +135,6 @@ class GnosisRouter(ContractOnGnosisChain):
 
 
 class SwaprRouterContract(ContractOnGnosisChain):
-    # File content taken from https://github.com/protofire/omen-exchange/blob/master/app/src/abi/marketMaker.json.
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),

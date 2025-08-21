@@ -7,6 +7,7 @@ from eth_account import Account
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.deploy.constants import is_invalid_outcome
 from prediction_market_agent_tooling.gtypes import (
     USD,
     ChecksumAddress,
@@ -77,13 +78,17 @@ def test_seer_place_bet(
         must_have_prices=False,
     )
     agent_market = check_not_none(agent_market)
+    outcome = min(
+        [o for o in agent_market.outcomes if not is_invalid_outcome(o)],
+        key=lambda o: agent_market.probabilities[o],
+    )
     amount = USD(10.0)
 
     with pytest.raises(Exception):
         # We expect an exception from Cow since test accounts don't have enough funds.
         agent_market.place_bet(
             api_keys=test_keys,
-            outcome=agent_market.outcomes[0],
+            outcome=outcome,
             amount=amount,
             auto_deposit=False,
             web3=local_web3,
@@ -109,7 +114,10 @@ def test_seer_place_bet_via_pools(
         must_have_prices=True,
     )
     agent_market = check_not_none(agent_market)
-    outcome = agent_market.outcomes[0]
+    outcome = min(
+        [o for o in agent_market.outcomes if not is_invalid_outcome(o)],
+        key=lambda o: agent_market.probabilities[o],
+    )
     mock_completed_order = Mock(spec=CompletedOrder)
     mock_completed_order.uid = UID(root="1234")
     # Mock swap_tokens_waiting to throw a TimeoutError immediately
@@ -161,7 +169,11 @@ def prepare_seer_swap_test(
     assert market is not None
 
     sell_token = market.collateral_token_contract_address_checksummed
-    outcome_idx = 0
+    outcome = min(
+        [o for o in market.outcomes if not is_invalid_outcome(o)],
+        key=lambda o: market.probabilities[o],
+    )
+    outcome_idx = market.get_outcome_index(outcome)
     buy_token = market.wrapped_tokens[outcome_idx]
 
     # assert there is liquidity to swap

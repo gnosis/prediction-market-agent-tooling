@@ -166,4 +166,7 @@ class SwaprRouterContract(ContractOnGnosisChain):
             function_name="exactInputSingle",
             function_params=[tuple(dict(params).values())],
             web3=web3,
+            # Use higher gas limit for complex swap operations to avoid slow estimation
+            # Typical Swapr swaps use 150k-300k gas, we set conservative 400k
+            default_gas=400_000,
         )

@@ -1,4 +1,5 @@
 import binascii
+import concurrent.futures
 import secrets
 from typing import Any, Optional
 
@@ -13,6 +14,7 @@ from safe_eth.eth.ethereum_client import TxSpeed
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
+from web3.contract.contract import ContractFunction as Web3ContractFunction
 from web3.types import AccessList, AccessListEntry, Nonce, TxParams, TxReceipt
 
 from prediction_market_agent_tooling.gtypes import (
@@ -76,7 +78,7 @@ def unwrap_generic_value(value: Any) -> Any:
 
 
 def parse_function_params(
-    params: Optional[list[Any] | tuple[Any] | dict[str, Any]]
+    params: Optional[list[Any] | tuple[Any] | dict[str, Any]],
 ) -> list[Any] | tuple[Any]:
     params = unwrap_generic_value(params)
     if params is None:
@@ -120,6 +122,7 @@ def prepare_tx(
     function_params: Optional[list[Any] | dict[str, Any]] = None,
     access_list: Optional[AccessList] = None,
     tx_params: Optional[TxParams] = None,
+    default_gas: int | None = None,
 ) -> TxParams:
     tx_params_new = _prepare_tx_params(web3, from_address, access_list, tx_params)
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
@@ -127,8 +130,45 @@ def prepare_tx(
     function_call = contract.functions[function_name](
         *parse_function_params(function_params)
     )
+    if default_gas is not None:
+        tx_params_new["gas"] = estimate_gas_with_timeout(
+            function_call, default_gas=default_gas, tx_params=tx_params_new
+        )
     built_tx_params: TxParams = function_call.build_transaction(tx_params_new)
     return built_tx_params
+
+
+def estimate_gas_with_timeout(
+    function_call: Web3ContractFunction,
+    default_gas: int,
+    timeout: int = 15,
+    tx_params: Optional[TxParams] = None,
+) -> int:
+    """
+    Tries to estimate the gas, but default to the default value on timeout.
+    """
+    try:
+
+        def estimate_gas() -> int:
+            return function_call.estimate_gas(tx_params)
+
+        # Use timeout to prevent hanging on slow estimation
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(estimate_gas)
+
+        try:
+            estimated_gas = future.result(timeout=timeout)
+            return int(estimated_gas * 1.2)  # Add 20% buffer
+        except concurrent.futures.TimeoutError:
+            logger.warning(
+                f"Gas estimation timed out after {timeout} seconds, using default: {default_gas}"
+            )
+
+        executor.shutdown(wait=False, cancel_futures=True)
+        return default_gas
+    except Exception:
+        logger.warning(f"Error during gas estimation, using default: {default_gas}.")
+        return default_gas
 
 
 def _prepare_tx_params(
@@ -182,6 +222,7 @@ def send_function_on_contract_tx(
     function_params: Optional[list[Any] | dict[str, Any]] = None,
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
+    default_gas: int | None = None,
 ) -> TxReceipt:
     public_key = private_key_to_public_key(from_private_key)
 
@@ -193,6 +234,7 @@ def send_function_on_contract_tx(
         function_name=function_name,
         function_params=function_params,
         tx_params=tx_params,
+        default_gas=default_gas,
     )
 
     receipt_tx = sign_send_and_get_receipt_tx(
@@ -221,6 +263,7 @@ def send_function_on_contract_tx_using_safe(
     function_params: Optional[list[Any] | dict[str, Any]] = None,
     tx_params: Optional[TxParams] = None,
     timeout: int = 180,
+    default_gas: int | None = None,
 ) -> TxReceipt:
     if not web3.provider.endpoint_uri:  # type: ignore
         raise EnvironmentError("RPC_URL not available in web3 object.")
@@ -261,6 +304,7 @@ def send_function_on_contract_tx_using_safe(
         function_params=function_params,
         access_list=access_list,
         tx_params=tx_params,
+        default_gas=default_gas,
     )
     safe_tx = s.build_multisig_tx(
         to=Web3.to_checksum_address(tx_params["to"]),

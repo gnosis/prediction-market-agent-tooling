@@ -10,7 +10,8 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     TxReceipt,
     Wei,
-    xDai, OutcomeWei,
+    xDai,
+    OutcomeWei,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
     ExactInputSingleParams,
@@ -116,9 +117,21 @@ class GnosisRouter(ContractOnGnosisChain):
         )
         return receipt_tx
 
-
-
-
+    def split_from_base(
+        self,
+        api_keys: APIKeys,
+        market_id: ChecksumAddress,
+        amount_wei: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        """Splits using xDAI and receives outcome tokens"""
+        return self.send_with_value(
+            api_keys=api_keys,
+            function_name="splitFromBase",
+            amount_wei=amount_wei,
+            function_params=[market_id],
+            web3=web3,
+        )
 
     def split_position(
         self,

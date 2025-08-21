@@ -431,6 +431,25 @@ class ContractWrapped1155BaseClass(ContractERC20BaseClass):
         )
     )
 
+    def factory(self, web3: Web3 | None = None) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.call("factory", web3=web3))
+
+    def mint(
+            self,
+            api_keys: APIKeys,
+            to_address: ChecksumAddress,
+            amount: Wei,
+            tx_params: t.Optional[TxParams] = None,
+            web3: Web3 | None = None,
+    ) -> TxReceipt:
+        return self.send(
+            api_keys=api_keys,
+            function_name="mint",
+            function_params=[to_address, amount],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
 
 class OwnableContract(ContractBaseClass):
     abi: ABI = abi_field_validator(

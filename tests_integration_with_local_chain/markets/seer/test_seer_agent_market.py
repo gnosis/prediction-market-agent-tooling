@@ -1,10 +1,12 @@
 from unittest.mock import Mock, patch
-
+from web3.types import RPCEndpoint
 import pytest
 from cowdao_cowpy.cow.swap import CompletedOrder
 from cowdao_cowpy.order_book.generated.model import UID
 from eth_account import Account
 from web3 import Web3
+from ape import accounts
+from ape import accounts, Contract
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -15,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeWei,
     Wei,
     private_key_type,
+    xDai,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
@@ -32,12 +35,14 @@ from prediction_market_agent_tooling.markets.seer.swap_pool_handler import (
 from prediction_market_agent_tooling.tools.contract import (
     init_collateral_token_contract,
     to_gnosis_chain_contract,
+    ContractWrapped1155OnGnosisChain,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
+from tests_integration_with_local_chain.conftest import fund_account_on_tenderly
 
 
 def test_seer_get_resolution(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
@@ -253,20 +258,65 @@ def test_seer_swap_via_pools_fails_when_no_balance(
             web3=local_web3,
         )
 
-def test_seer_redeem_scalar(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    # ToDo
-    safe_address = Web3.to_checksum_address("0xdF99b89934f697f295fDf132Ec5174656bC088BD")
-    market_id = HexBytes("0x8517e637b15246d8ae0b384bf53c601a99d8b16f")
-    #  fork curr block gnosis
-    market = seer_subgraph_handler_test.get_market_by_id(market_id=market_id)
-    agent_market = SeerAgentMarket.from_data_model_with_subgraph(market, seer_subgraph=seer_subgraph_handler_test, must_have_prices=False)
-    keys = APIKeys(SAFE_ADDRESS=safe_address)
-    TENDERLY_URL = "https://virtual.gnosis.eu.rpc.tenderly.co/7f5c6362-34d2-46a8-9b5a-3c189de74c32"
-    w3 = Web3(Web3.HTTPProvider(TENDERLY_URL))
-    import os
-    os.environ['GNOSIS_RPC_URL'] = TENDERLY_URL
-    # ToDo mock web3
-    agent_market.redeem_winnings(keys)
-    #  call redeem on market id
-    assert False
 
+def test_seer_redeem_scalar(
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+    local_web3: Web3,
+    test_keys: APIKeys,
+) -> None:
+    market_recently_closed = seer_subgraph_handler_test.get_markets(
+        limit=1, filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST
+    )[0]
+
+    agent_market = check_not_none(
+        SeerAgentMarket.from_data_model_with_subgraph(
+            model=market_recently_closed,
+            seer_subgraph=seer_subgraph_handler_test,
+            must_have_prices=False,
+        )
+    )
+
+    amount_outcome_tokens: Wei = xDai(0.01).as_xdai_wei.as_wei
+
+    for wrapped_token in market_recently_closed.wrapped_tokens[:-1]:
+        contract = ContractWrapped1155OnGnosisChain(
+            address=Web3.to_checksum_address(wrapped_token)
+        )
+        factory_address = contract.factory(web3=local_web3)
+        # impersonate factory minter and mint outcome tokens
+        local_web3.provider.make_request(
+            RPCEndpoint("anvil_setBalance"),
+            [factory_address, hex(xDai(1).as_xdai_wei.value)],
+        )
+        with accounts.use_sender(factory_address):
+            contract_instance = Contract(
+                wrapped_token, abi=contract.abi, fetch_from_explorer=False
+            )
+
+            contract_instance.mint(
+                test_keys.bet_from_address,
+                amount_outcome_tokens.value,
+                sender=factory_address,
+            )
+
+    # mock markets to match the market whose wrapped tokens we just minted
+    with patch(
+        "prediction_market_agent_tooling.markets.seer.seer_subgraph_handler.SeerSubgraphHandler.get_markets"
+    ) as mock_get_markets:
+        mock_get_markets.return_value = [market_recently_closed]
+        with patch(
+            "prediction_market_agent_tooling.markets.seer.seer.SeerAgentMarket._filter_markets_contained_in_trades"
+        ) as mock_filter_markets:
+            mock_filter_markets.side_effect = lambda _, markets: markets
+
+            SeerAgentMarket.redeem_winnings(test_keys, web3=local_web3)
+
+    # we assert that the outcome tokens with positive payouts were transferred out of the account
+    for idx, payout in enumerate(market_recently_closed.payout_numerators):
+        if payout > 0:
+            token_balance = agent_market.get_token_balance(
+                user_id=test_keys.bet_from_address,
+                outcome=market_recently_closed.outcomes[idx],
+                web3=local_web3,
+            )
+            assert token_balance == OutcomeToken.zero()

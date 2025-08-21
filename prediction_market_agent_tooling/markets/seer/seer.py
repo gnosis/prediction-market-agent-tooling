@@ -84,7 +84,8 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     get_orders_by_owner,
     get_trades_by_order_uid,
     swap_tokens_waiting,
-    wait_for_order_completion, handle_allowance,
+    wait_for_order_completion,
+    handle_allowance,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -293,8 +294,8 @@ class SeerAgentMarket(AgentMarket):
         return filtered_markets
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys) -> None:
-        web3 = RPCConfig().get_web3()
+    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
+        web3 = web3 or RPCConfig().get_web3()
         subgraph = SeerSubgraphHandler()
 
         closed_markets = subgraph.get_markets(
@@ -328,7 +329,7 @@ class SeerAgentMarket(AgentMarket):
                         sell_token=Web3.to_checksum_address(token),
                         amount_to_check_wei=market_balances[market.id][i].as_wei,
                         for_address=gnosis_router.address,
-                        web3=web3
+                        web3=web3,
                     )
 
                 # We can only ask for redeem of outcome tokens on correct outcomes

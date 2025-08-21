@@ -407,7 +407,7 @@ class OmenAgentMarket(AgentMarket):
         )
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys) -> None:
+    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
         redeem_from_all_user_positions(api_keys)
 
     def ensure_min_native_balance(

@@ -2,7 +2,7 @@ import typing as t
 
 from pydantic import field_validator
 from pydantic_core.core_schema import FieldValidationInfo
-
+from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -151,6 +151,6 @@ class MetaculusAgentMarket(AgentMarket):
         return True
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys) -> None:
+    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
         # Nothing to redeem on Metaculus.
         pass

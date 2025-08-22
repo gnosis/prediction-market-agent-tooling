@@ -14,6 +14,10 @@ class ConditionSubgraphModel(BaseModel):
     resolutionTimestamp: int | None = None
     questionId: HexBytes
 
+    @property
+    def index_sets(self) -> list[int]:
+        return [i + 1 for i in range(self.outcomeSlotCount)]
+
 
 class MarketPositionMarket(BaseModel):
     condition: ConditionSubgraphModel
@@ -61,13 +65,12 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
 
     def get_market_positions_from_user(
         self,
-        user: ChecksumAddress | None = None,
+        user: ChecksumAddress,
         block_number: int | None = None,  # fetch already redeemed positions
     ) -> list[MarketPosition]:
-        # ToDo - remove None option
         positions = self.conditions_subgraph.Query.marketPositions(
             first=1000,
-            where={"user": user.lower()} if user else None,
+            where={"user": user.lower()},
             block={"number": block_number} if block_number else None,
         )
 

@@ -14,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
     Probability,
     Wei,
     xDai,
+    OutcomeWei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -28,6 +29,9 @@ from prediction_market_agent_tooling.markets.agent_market import (
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
     Resolution,
+)
+from prediction_market_agent_tooling.markets.markets import (
+    get_conditional_tokens_balance_base,
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
@@ -47,6 +51,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
     USDCeContract,
+    PolymarketConditionalTokenContract,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
     ConditionSubgraphModel,
@@ -266,13 +271,48 @@ class PolymarketAgentMarket(AgentMarket):
             )
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys) -> None:
-        # ToDo
-        #  OK 1. Implement `marketPositions` endpoint on Polymarket subgraph
-        #  2. fetch all markets for those position_ids
-        #  3. for each market, call get_conditional_tokens_balance_for_market
-        #  4. if balance[winning_outcome] > 0, call redeemPositions on ConditionalTokens PolymarketConditionalTokenContract, else continue
-        pass
+    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
+        web3 = web3 or RPCConfig().get_polygon_web3()
+        user_id = api_keys.bet_from_address
+        s = PolymarketSubgraphHandler()
+        conditional_token_contract = PolymarketConditionalTokenContract()
+        positions = s.get_market_positions_from_user(user_id)
+        for pos in positions:
+            if pos.market.resolutionTimestamp is None:
+                continue
+
+            condition_id = pos.market.condition.id
+            index_sets = pos.market.condition.index_sets
+            balances_per_index_set = get_conditional_tokens_balance_base(
+                condition_id=condition_id,
+                collateral_token_address=USDCeContract().address,
+                conditional_token_contract=conditional_token_contract,
+                from_address=user_id,
+                index_sets=pos.market.condition.index_sets,
+            )
+            # get the resolved outcome
+            amounts = []
+            for index_set, payout_numerator in zip(
+                index_sets, pos.market.condition.payoutNumerators
+            ):
+                amount = (
+                    OutcomeWei(0)
+                    if payout_numerator == 0
+                    else balances_per_index_set[index_set]
+                )
+                amounts.append(amount)
+
+            redeem_event = conditional_token_contract.redeemPositions(
+                api_keys=api_keys,
+                collateral_token_address=USDCeContract().address,
+                condition_id=condition_id,
+                index_sets=index_sets,
+                web3=web3,
+            )
+
+            logger.info(
+                f"Redeemed {redeem_event=} from condition_id {condition_id=} ()."
+            )
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

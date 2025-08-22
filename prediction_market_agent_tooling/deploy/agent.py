@@ -36,7 +36,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ScalarProbabilisticAnswer,
     Trade,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.market_type import MarketType
 from prediction_market_agent_tooling.tools.custom_exceptions import (
     CantPayForGasError,
     OutOfFundsError,

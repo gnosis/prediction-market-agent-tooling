@@ -13,7 +13,7 @@ from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.manifold.api import (
     find_resolution_on_manifold,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.market_type import MarketType
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OmenMarket,
     RealityQuestion,

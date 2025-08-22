@@ -751,6 +751,33 @@ class ConditionalTokenContract(ContractBaseClass):
         )
         return payoutForCondition
 
+    def splitPosition(
+        self,
+        api_keys: APIKeys,
+        collateral_token: ChecksumAddress,
+        condition_id: HexBytes,
+        outcome_slot_count: int,
+        amount_wei: Wei,
+        parent_collateral_id: HexBytes = HASH_ZERO,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        # We always split the full set of outcome tokens (for simplicity)
+        partition = [1 for _ in range(outcome_slot_count)]
+        return self.send(
+            api_keys=api_keys,
+            function_name="splitPosition",
+            function_params=[
+                collateral_token,
+                parent_collateral_id,
+                condition_id,
+                partition,
+                amount_wei,
+            ],
+            tx_params=tx_params,
+            web3=web3,
+        )
+
     def setApprovalForAll(
         self,
         api_keys: APIKeys,

@@ -6,7 +6,7 @@ from prediction_market_agent_tooling.markets.agent_market import AgentMarket, So
 from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.market_type import MarketType
 
 
 class DeployableCoinFlipAgent(DeployableTraderAgent):

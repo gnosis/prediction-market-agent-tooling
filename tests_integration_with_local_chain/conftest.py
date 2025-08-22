@@ -21,6 +21,7 @@ from prediction_market_agent_tooling.gtypes import (
     PrivateKey,
     private_key_type,
     xDai,
+    Wei,
 )
 from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     SAFE_COLLATERAL_TOKENS_ADDRESSES,
@@ -171,3 +172,10 @@ def execute_tx_from_impersonated_account(
 @pytest.fixture(scope="session")
 def omen_subgraph_handler() -> OmenSubgraphHandler:
     return OmenSubgraphHandler()
+
+
+def fund_account(web3: Web3, account: ChecksumAddress, amount: Wei) -> None:
+    web3.provider.make_request(
+        RPCEndpoint("anvil_setBalance"),
+        [account, hex(amount.value)],
+    )

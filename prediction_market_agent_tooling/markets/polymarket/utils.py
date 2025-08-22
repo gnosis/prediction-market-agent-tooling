@@ -1,4 +1,4 @@
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.market_type import MarketType
 from prediction_market_agent_tooling.tools.google_utils import search_google_gcp
 
 

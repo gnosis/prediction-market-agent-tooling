@@ -28,7 +28,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     Trade,
     TradeType,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.market_type import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import (
     get_buy_outcome_token_amount,
 )

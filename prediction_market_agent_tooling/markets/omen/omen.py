@@ -6,7 +6,9 @@ import tenacity
 from pydantic import BaseModel
 from tqdm import tqdm
 from web3 import Web3
-from web3.constants import HASH_ZERO
+from prediction_market_agent_tooling.markets.blockchain_utils import (
+    get_conditional_tokens_balance_base,
+)
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -68,6 +70,7 @@ from prediction_market_agent_tooling.tools.contract import (
     ConditionPreparationEvent,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
+    ConditionalTokenContract,
 )
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -1089,26 +1092,14 @@ def get_conditional_tokens_balance_for_market(
     We derive the withdrawable balance from the ConditionalTokens contract through CollectionId -> PositionId (which
     also serves as tokenId) -> TokenBalances.
     """
-    balance_per_index_set: dict[int, OutcomeWei] = {}
-    conditional_token_contract = OmenConditionalTokenContract()
-    parent_collection_id = HASH_ZERO
-
-    for index_set in market.condition.index_sets:
-        collection_id = conditional_token_contract.getCollectionId(
-            parent_collection_id, market.condition.id, index_set, web3=web3
-        )
-        # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
-        position_id: int = conditional_token_contract.getPositionId(
-            market.collateral_token_contract_address_checksummed,
-            collection_id,
-            web3=web3,
-        )
-        balance_for_position = conditional_token_contract.balanceOf(
-            from_address=from_address, position_id=position_id, web3=web3
-        )
-        balance_per_index_set[index_set] = balance_for_position
-
-    return balance_per_index_set
+    return get_conditional_tokens_balance_base(
+        condition_id=market.condition.id,
+        collateral_token_address=market.collateral_token_contract_address_checksummed,
+        conditional_token_contract=OmenConditionalTokenContract(),
+        from_address=from_address,
+        index_sets=market.condition.index_sets,
+        web3=web3,
+    )
 
 
 def omen_remove_fund_market_tx(

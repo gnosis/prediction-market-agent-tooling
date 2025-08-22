@@ -266,7 +266,7 @@ class PolymarketAgentMarket(AgentMarket):
             )
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
+    def redeem_winnings(api_keys: APIKeys) -> None:
         # ToDo - implement me - https://github.com/gnosis/prediction-market-agent-tooling/issues/824
         pass
 

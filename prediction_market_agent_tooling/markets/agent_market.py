@@ -425,7 +425,7 @@ class AgentMarket(BaseModel):
         raise NotImplementedError("Subclasses must implement this method")
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys, web3: Web3|None=None) -> None:
+    def redeem_winnings(api_keys: APIKeys) -> None:
         """
         On some markets (like Omen), it's needed to manually claim the winner bets. If it's not needed, just implement with `pass`.
         """

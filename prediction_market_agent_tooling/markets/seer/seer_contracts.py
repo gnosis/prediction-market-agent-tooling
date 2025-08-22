@@ -8,10 +8,10 @@ from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
     OutcomeStr,
+    OutcomeWei,
     TxReceipt,
     Wei,
     xDai,
-    OutcomeWei,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
     ExactInputSingleParams,

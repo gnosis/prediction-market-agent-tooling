@@ -1,12 +1,12 @@
 from unittest.mock import Mock, patch
-from web3.types import RPCEndpoint
+
 import pytest
+from ape import Contract, accounts
 from cowdao_cowpy.cow.swap import CompletedOrder
 from cowdao_cowpy.order_book.generated.model import UID
 from eth_account import Account
 from web3 import Web3
-from ape import accounts
-from ape import accounts, Contract
+from web3.types import RPCEndpoint
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -34,9 +34,9 @@ from prediction_market_agent_tooling.markets.seer.swap_pool_handler import (
     SwapPoolHandler,
 )
 from prediction_market_agent_tooling.tools.contract import (
+    ContractWrapped1155OnGnosisChain,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
-    ContractWrapped1155OnGnosisChain,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
@@ -304,35 +304,13 @@ def test_seer_redeem(
     )
 
     g = GnosisRouter()
+    # mint outcome tokens
     g.split_from_base(
         api_keys=test_keys,
         market_id=Web3.to_checksum_address(market_recently_closed.id),
         amount_wei=amount_outcome_tokens,
         web3=local_web3,
     )
-
-    # mint outcome tokens
-    # for wrapped_token in market_recently_closed.wrapped_tokens[:-1]:
-    #     contract = ContractWrapped1155OnGnosisChain(
-    #         address=Web3.to_checksum_address(wrapped_token)
-    #     )
-    #     factory_address = contract.factory(web3=local_web3)
-    #     # impersonate factory minter and mint outcome tokens
-    #     local_web3.provider.make_request(
-    #         RPCEndpoint("anvil_setBalance"),
-    #         [factory_address, hex(xDai(1).as_xdai_wei.value)],
-    #     )
-    #
-    #     with accounts.use_sender(factory_address):
-    #         contract_instance = Contract(
-    #             wrapped_token, abi=contract.abi, fetch_from_explorer=False
-    #         )
-    #
-    #         contract_instance.mint(
-    #             test_keys.bet_from_address,
-    #             amount_outcome_tokens.value,
-    #             sender=factory_address,
-    #         )
 
     # mock markets to match the market whose wrapped tokens we just minted
     with patch(

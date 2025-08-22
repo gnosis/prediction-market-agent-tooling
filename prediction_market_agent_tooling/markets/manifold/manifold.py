@@ -1,6 +1,8 @@
 import typing as t
 from datetime import timedelta
+
 from web3 import Web3
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -147,7 +149,7 @@ class ManifoldAgentMarket(AgentMarket):
         ]
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
+    def redeem_winnings(api_keys: APIKeys) -> None:
         # It's done automatically on Manifold.
         pass
 

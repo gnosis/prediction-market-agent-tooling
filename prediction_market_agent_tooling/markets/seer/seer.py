@@ -83,9 +83,9 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     OrderStatusError,
     get_orders_by_owner,
     get_trades_by_order_uid,
+    handle_allowance,
     swap_tokens_waiting,
     wait_for_order_completion,
-    handle_allowance,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.auto_deposit import (

@@ -435,12 +435,12 @@ class ContractWrapped1155BaseClass(ContractERC20BaseClass):
         return Web3.to_checksum_address(self.call("factory", web3=web3))
 
     def mint(
-            self,
-            api_keys: APIKeys,
-            to_address: ChecksumAddress,
-            amount: Wei,
-            tx_params: t.Optional[TxParams] = None,
-            web3: Web3 | None = None,
+        self,
+        api_keys: APIKeys,
+        to_address: ChecksumAddress,
+        amount: Wei,
+        tx_params: t.Optional[TxParams] = None,
+        web3: Web3 | None = None,
     ) -> TxReceipt:
         return self.send(
             api_keys=api_keys,

@@ -183,7 +183,7 @@ class PriceManager:
             outcome = self.seer_market.outcomes[
                 self.seer_market.wrapped_tokens.index(outcome_token)
             ]
-            normalized_prices[outcome] = new_price
+            normalized_prices[OutcomeStr(str(outcome).strip())] = new_price
 
         return normalized_prices
 
@@ -214,39 +214,38 @@ class PriceManager:
             if pool is None or pool.token1.id is None or pool.token0.id is None:
                 continue
             if HexBytes(token) == HexBytes(pool.token1.id):
-                outcome_token_pool[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = (
+                key_outcome = OutcomeStr(
+                    str(model.outcomes[wrapped_tokens.index(token)]).strip()
+                )
+                outcome_token_pool[key_outcome] = (
                     OutcomeToken(pool.totalValueLockedToken0)
                     if pool.totalValueLockedToken0 is not None
                     else OutcomeToken(0)
                 )
-                probability_map[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = Probability(pool.token0Price.value)
+                probability_map[key_outcome] = Probability(pool.token0Price.value)
             else:
-                outcome_token_pool[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = (
+                key_outcome = OutcomeStr(
+                    str(model.outcomes[wrapped_tokens.index(token)]).strip()
+                )
+                outcome_token_pool[key_outcome] = (
                     OutcomeToken(pool.totalValueLockedToken1)
                     if pool.totalValueLockedToken1 is not None
                     else OutcomeToken(0)
                 )
-                probability_map[
-                    OutcomeStr(model.outcomes[wrapped_tokens.index(token)])
-                ] = Probability(pool.token1Price.value)
+                probability_map[key_outcome] = Probability(pool.token1Price.value)
 
         for outcome in model.outcomes:
-            if outcome not in outcome_token_pool:
-                outcome_token_pool[outcome] = OutcomeToken(0)
+            key_outcome = OutcomeStr(str(outcome).strip())
+            if key_outcome not in outcome_token_pool:
+                outcome_token_pool[key_outcome] = OutcomeToken(0)
                 logger.warning(
-                    f"Outcome {outcome} not found in outcome_token_pool for market {self.seer_market.url}."
+                    f"Outcome {key_outcome} not found in outcome_token_pool for market {self.seer_market.url}."
                 )
-            if outcome not in probability_map:
-                if INVALID_OUTCOME_LOWERCASE_IDENTIFIER not in outcome.lower():
+            if key_outcome not in probability_map:
+                if INVALID_OUTCOME_LOWERCASE_IDENTIFIER not in key_outcome.lower():
                     raise PriceCalculationError(
-                        f"Couldn't get probability for {outcome} for market {self.seer_market.url}."
+                        f"Couldn't get probability for {key_outcome} for market {self.seer_market.url}."
                     )
                 else:
-                    probability_map[outcome] = Probability(0)
+                    probability_map[key_outcome] = Probability(0)
         return probability_map, outcome_token_pool

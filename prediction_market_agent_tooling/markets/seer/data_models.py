@@ -4,7 +4,14 @@ from enum import Enum
 from typing import Annotated
 from urllib.parse import urljoin
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, computed_field
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    computed_field,
+    model_validator,
+)
 from web3 import Web3
 from web3.constants import ADDRESS_ZERO
 
@@ -102,6 +109,14 @@ class SeerMarket(BaseModel):
     outcomes_supply: int = Field(alias="outcomesSupply")
     upper_bound: SeerNormalizedWei = Field(alias="upperBound", default=None)
     lower_bound: SeerNormalizedWei = Field(alias="lowerBound", default=None)
+
+    @model_validator(mode="before")
+    def normalize_outcomes(cls, values: dict[str, t.Any]) -> dict[str, t.Any]:
+        if "outcomes" in values:
+            values["outcomes"] = [
+                OutcomeStr(o.strip().lower()) for o in values["outcomes"]
+            ]
+        return values
 
     @property
     def has_valid_answer(self) -> bool:

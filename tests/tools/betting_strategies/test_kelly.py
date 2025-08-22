@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from prediction_market_agent_tooling.gtypes import (
@@ -351,6 +352,7 @@ def test_kelly_categorical_simplified_0(
 
 
 def _compare_bets(
+    estimated_p_yes: Probability,
     market: OmenAgentMarket,
     categorical_bets: list[CategoricalKellyBet],
     binary_bet: BinaryKellyBet,
@@ -359,23 +361,30 @@ def _compare_bets(
     non_zero_categorical_bets = [b for b in categorical_bets if abs(b.size.value) > 0]
     assert (
         len(non_zero_categorical_bets) == 1
-    ), f"Unexpected amount of bets in {categorical_bets=}, market={market.url}"
+    ), f"Unexpected amount of bets in {categorical_bets=}, {market.url=}, {market.p_yes=}, {estimated_p_yes=}"
 
     category_bet = non_zero_categorical_bets[0]
 
     # If one bets, other should as well, binary's kelly size is always positive
     assert (abs(category_bet.size) > 0) == (binary_bet.size > 0), (
+        estimated_p_yes,
         category_bet,
         binary_bet,
         market.url,
     )
     # Index zero on Omen markets is generally Yes, ie True direction of binary kelly, this works only if shorting is disabled.
-    assert (category_bet.index == 0) == binary_bet.direction, market.url
+    assert (category_bet.index == 0) == binary_bet.direction, (
+        estimated_p_yes,
+        category_bet,
+        binary_bet,
+        market.url,
+    )
     # For binary market, they shouldn't differ too much in the sizes
     divergence = abs(category_bet.size.value - binary_bet.size.value) / max(
         category_bet.size.value, binary_bet.size.value
     )
     assert divergence < max_divergence, (
+        estimated_p_yes,
         divergence,
         category_bet,
         binary_bet,
@@ -388,6 +397,7 @@ def _compare_bets(
     [
         (0.1, 0.7),
         (0.4, 0.9),
+        (0.5, 0.9),
         (0.9, 1.0),
     ],
 )
@@ -399,6 +409,9 @@ def test_compare_kellys_simplified(
         limit=5, sort_by=SortBy.HIGHEST_LIQUIDITY, question_type=QuestionType.BINARY
     )
     for market in markets:
+        # Skip if prediction and market are too close, as that can result in no bets.
+        if np.isclose(market.p_yes, estimated_p_yes, atol=0.01):
+            continue
         categorical_bets = get_kelly_bets_categorical_simplified(
             market_probabilities=[market.p_yes, market.p_no],
             estimated_probabilities=[estimated_p_yes, Probability(1 - estimated_p_yes)],
@@ -416,13 +429,15 @@ def test_compare_kellys_simplified(
             estimated_p_yes=estimated_p_yes,
             confidence=confidence,
         )
-        _compare_bets(market, categorical_bets, binary_bet, 0.01)
+        _compare_bets(estimated_p_yes, market, categorical_bets, binary_bet, 0.01)
 
 
 @pytest.mark.parametrize(
     "estimated_p_yes, confidence",
     [
         (0.1, 0.7),
+        (0.4, 0.9),
+        (0.5, 0.9),
         (0.9, 1.0),
     ],
 )
@@ -432,6 +447,9 @@ def test_compare_kellys_full(estimated_p_yes: Probability, confidence: float) ->
         limit=5, sort_by=SortBy.HIGHEST_LIQUIDITY, question_type=QuestionType.BINARY
     )
     for market in markets:
+        # Skip if prediction and market are too close, as this causes just very small bets in direction that can be influenced by the optimization script.
+        if np.isclose(market.p_yes, estimated_p_yes, atol=0.05):
+            continue
         pool_sizes = [market.outcome_token_pool[o] for o in market.outcomes]
         categorical_bets = get_kelly_bets_categorical_full(
             market_probabilities=OmenAgentMarket.compute_fpmm_probabilities(
@@ -457,4 +475,4 @@ def test_compare_kellys_full(estimated_p_yes: Probability, confidence: float) ->
             max_bet=max_bet,
             fees=market.fees,
         )
-        _compare_bets(market, categorical_bets, binary_bet, 0.99)
+        _compare_bets(estimated_p_yes, market, categorical_bets, binary_bet, 0.99)

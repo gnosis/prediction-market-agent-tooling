@@ -2,6 +2,7 @@ from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
     PolymarketSubgraphHandler,
 )
+from web3 import Web3
 
 
 def test_get_conditions_using_subgraph() -> None:
@@ -16,3 +17,13 @@ def test_get_conditions_using_subgraph() -> None:
     ]
     conditions = s.get_conditions(condition_ids=condition_ids)
     assert len(conditions) == len(condition_ids)
+
+
+def test_get_positions_using_subgraph() -> None:
+    s = PolymarketSubgraphHandler()
+    user = Web3.to_checksum_address("0xA6672bF6c97A9138b1a415D697174fcD9d98561D")
+    block_with_unredeemed_positions = 75528289
+    positions = s.get_market_positions_from_user(
+        user=user, block_number=block_with_unredeemed_positions
+    )
+    assert len(positions) > 0

@@ -267,7 +267,11 @@ class PolymarketAgentMarket(AgentMarket):
 
     @staticmethod
     def redeem_winnings(api_keys: APIKeys) -> None:
-        # ToDo - implement me - https://github.com/gnosis/prediction-market-agent-tooling/issues/824
+        # ToDo
+        #  OK 1. Implement `marketPositions` endpoint on Polymarket subgraph
+        #  2. fetch all markets for those position_ids
+        #  3. for each market, call get_conditional_tokens_balance_for_market
+        #  4. if balance[winning_outcome] > 0, call redeemPositions on ConditionalTokens PolymarketConditionalTokenContract, else continue
         pass
 
     @staticmethod

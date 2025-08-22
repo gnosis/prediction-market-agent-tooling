@@ -183,7 +183,7 @@ class PriceManager:
             outcome = self.seer_market.outcomes[
                 self.seer_market.wrapped_tokens.index(outcome_token)
             ]
-            normalized_prices[OutcomeStr(str(outcome).strip())] = new_price
+            normalized_prices[OutcomeStr(outcome.strip().lower())] = new_price
 
         return normalized_prices
 
@@ -235,7 +235,7 @@ class PriceManager:
                 probability_map[key_outcome] = Probability(pool.token1Price.value)
 
         for outcome in model.outcomes:
-            key_outcome = OutcomeStr(str(outcome).strip())
+            key_outcome = OutcomeStr(outcome.strip().lower())
             if key_outcome not in outcome_token_pool:
                 outcome_token_pool[key_outcome] = OutcomeToken(0)
                 logger.warning(

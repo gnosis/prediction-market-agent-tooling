@@ -348,7 +348,7 @@ class SeerAgentMarket(AgentMarket):
                 )
                 gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
                 logger.info(f"Redeemed market {market.url}.")
-            except Exception as e:
+            except Exception:
                 logger.exception(
                     f"Failed to redeem market {market.url}, {market.outcomes}, with amounts {market_balances[market.id]} and payout numerators {market.payout_numerators}, and wrapped tokens {market.wrapped_tokens}."
                 )

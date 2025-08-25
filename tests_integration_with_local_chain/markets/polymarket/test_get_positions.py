@@ -3,10 +3,11 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.polymarket.api import (
-    get_user_positions,
-    get_polymarkets_with_pagination,
     PolymarketOrderByEnum,
+    get_polymarkets_with_pagination,
+    get_user_positions,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 def get_random_token_holder() -> ChecksumAddress:
@@ -15,7 +16,8 @@ def get_random_token_holder() -> ChecksumAddress:
     )
     market = recent_markets[0]
     # 0x prefix is mandatory
-    params = {"market": market.markets[0].conditionId.to_0x_hex()}
+    market_item = check_not_none(market.markets)[0]
+    params = {"market": market_item.conditionId.to_0x_hex()}
     r = requests.get(url="https://data-api.polymarket.com/holders", params=params)
     data = r.json()
     return Web3.to_checksum_address(data[0]["holders"][0]["proxyWallet"])

@@ -1,6 +1,8 @@
 import typing as t
 from datetime import timedelta
 
+from web3 import Web3
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,

@@ -83,6 +83,7 @@ from prediction_market_agent_tooling.tools.cow.cow_order import (
     OrderStatusError,
     get_orders_by_owner,
     get_trades_by_order_uid,
+    handle_allowance,
     swap_tokens_waiting,
     wait_for_order_completion,
 )
@@ -294,8 +295,8 @@ class SeerAgentMarket(AgentMarket):
         return filtered_markets
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys) -> None:
-        web3 = RPCConfig().get_web3()
+    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
+        web3 = web3 or RPCConfig().get_web3()
         subgraph = SeerSubgraphHandler()
 
         # ToDo - Find open positions by user directly
@@ -326,17 +327,15 @@ class SeerAgentMarket(AgentMarket):
             try:
                 # GnosisRouter needs approval to use our outcome tokens
                 for i, token in enumerate(market.wrapped_tokens):
-                    ContractERC20OnGnosisChain(
-                        address=Web3.to_checksum_address(token)
-                    ).approve(
-                        api_keys,
+                    handle_allowance(
+                        api_keys=api_keys,
+                        sell_token=Web3.to_checksum_address(token),
+                        amount_to_check_wei=market_balances[market.id][i].as_wei,
                         for_address=gnosis_router.address,
-                        amount_wei=market_balances[market.id][i].as_wei,
                         web3=web3,
                     )
 
                 # We can only ask for redeem of outcome tokens on correct outcomes
-                # TODO: Implement more complex use-cases: https://github.com/gnosis/prediction-market-agent-tooling/issues/850
                 amounts_to_redeem = [
                     (amount if numerator > 0 else OutcomeWei(0))
                     for amount, numerator in zip(

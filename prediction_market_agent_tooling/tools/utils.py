@@ -1,8 +1,10 @@
+import functools
 import os
 import subprocess
+import time
 from datetime import datetime
 from math import prod
-from typing import Any, NoReturn, Optional, Type, TypeVar
+from typing import Any, Callable, NoReturn, Optional, Type, TypeVar, cast
 
 import httpx
 import pytz
@@ -54,6 +56,49 @@ def check_not_none(
     if value is None:
         should_not_happen(msg=msg, exp=exp)
     return value
+
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def retry_until_true(
+    condition: Callable[[Any], bool],
+    max_retries: int = 3,
+    delay: float = 1.0,
+) -> Callable[[F], F]:
+    """
+    Decorator that retries a function if the condition on its result evaluates to False.
+
+    Args:
+        condition: Function that takes the result and returns True if acceptable, False to retry
+        max_retries: Maximum number of retry attempts
+        delay: Delay between retries in seconds
+    """
+
+    def decorator(func: F) -> F:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            for attempt in range(1, max_retries + 1):
+                result = func(*args, **kwargs)
+
+                if condition(result):
+                    logger.info(f"Condition met for {func.__name__} on {attempt}.")
+                    return result
+
+                if attempt < max_retries:
+                    logger.debug(
+                        f"Retry {attempt + 1}/{max_retries} for {func.__name__}"
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.warning(
+                        f"All {max_retries} retries exhausted for {func.__name__}"
+                    )
+                    return result
+
+        return cast(F, wrapper)
+
+    return decorator
 
 
 def should_not_happen(

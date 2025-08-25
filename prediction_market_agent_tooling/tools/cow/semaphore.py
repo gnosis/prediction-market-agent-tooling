@@ -19,8 +19,8 @@ FALLBACK_SQL_ENGINE = "sqlite:///rate_limit.db"
 
 def postgres_rate_limited(
     api_keys: APIKeys,
-    rate_id: str = "default",
-    interval_seconds: float = 1.0,
+    rate_id: str,
+    interval_seconds: float,
     shared_db: bool = False,
 ) -> Callable[[F], F]:
     """rate_id is used to distinguish between different rate limits for different functions"""

@@ -207,3 +207,59 @@ def get_trace_for_bet(
             return None
 
         return traces_for_bet[closest_trace_index]
+
+def get_bet_for_trace(
+    trace: ProcessMarketTrace,
+    bets: list[ResolvedBet],
+    wxdai_only: bool = False,
+) -> ResolvedBet | None:
+    # Filter for bets with the same market id
+    bets = [b for b in bets if b.market_id == trace.market.id]
+
+    # Filter for bets with matching outcome and amount
+    bets_for_trace: list[ResolvedBet] = []
+    for bet in bets:
+        if (
+            wxdai_only
+            and trace.market.collateral_token_contract_address_checksummed
+            not in WRAPPED_XDAI_CONTRACT_ADDRESS
+        ):
+            # Same limitation as in get_trace_for_bet
+            logger.warning(
+                "This currently works only for WXDAI markets, because we need to compare against USD value."
+            )
+            continue
+
+        # Cannot use exact comparison due to gas fees
+        if (
+            trace.buy_trade
+            and trace.buy_trade.outcome == bet.outcome
+            and np.isclose(trace.buy_trade.amount.value, bet.amount.value)
+        ):
+            bets_for_trace.append(bet)
+
+    if not bets_for_trace:
+        return None
+    elif len(bets_for_trace) == 1:
+        return bets_for_trace[0]
+    else:
+        # In-case there are multiple bets for the same market, get the closest
+        # bet to the trace
+        closest_bet_index = get_closest_datetime_from_list(
+            trace.timestamp_datetime,
+            [bet.created_time for bet in bets_for_trace],
+        )
+
+        # Same sanity check: 20 minutes maximum time difference
+        candidate_bet = bets_for_trace[closest_bet_index]
+        if (
+            abs(candidate_bet.created_time - trace.timestamp_datetime).total_seconds()
+            > 1200
+        ):
+            logger.info(
+                f"Closest bet to trace has timestamp {candidate_bet.created_time}, "
+                f"but trace was created at {trace.timestamp_datetime}. Not matching"
+            )
+            return None
+
+        return bets_for_trace[closest_bet_index]

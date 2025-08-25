@@ -737,6 +737,9 @@ class ConditionalTokenContract(ContractBaseClass):
             .events.PayoutRedemption()
             .process_receipt(receipt_tx)
         )
+        logger.info(
+            f"Receipt tx: `{receipt_tx}` Redeem event logs: `{redeem_event_logs}`"
+        )
         redeem_event = PayoutRedemptionEvent(**redeem_event_logs[0]["args"])
         return redeem_event
 

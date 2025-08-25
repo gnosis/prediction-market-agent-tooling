@@ -22,5 +22,6 @@ class Order(BaseModel):
 
 class RateLimit(SQLModel, table=True):
     __tablename__ = "rate_limit"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(primary_key=True)
     last_called_at: DatetimeUTC = Field(default_factory=utcnow)

@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     OmenMarket,
     binary_omen_buy_outcome_tx,
     binary_omen_sell_outcome_tx,
+    omen_buy_outcome_tx_no_retry,
     omen_create_market_tx,
     omen_remove_fund_market_tx,
 )
@@ -62,7 +63,7 @@ def test_stealing_on_markets(
     )
 
     # Create the market.
-    close_in = 10
+    close_in = 5
     question = f"Will job X be completed in {close_in} seconds from now?"
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)
@@ -126,7 +127,7 @@ def test_stealing_on_markets(
 
     # Buying or selling tokens after the liquidity is removed will fail.
     with pytest.raises(Exception):
-        binary_omen_buy_outcome_tx(
+        omen_buy_outcome_tx_no_retry(
             api_keys_B,
             buy_yes_for_b,
             agent_market,

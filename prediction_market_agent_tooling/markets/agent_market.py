@@ -12,10 +12,10 @@ from prediction_market_agent_tooling.benchmark.utils import get_most_probable_ou
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import (
     DOWN_OUTCOME_LOWERCASE_IDENTIFIER,
-    INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    is_invalid_outcome,
 )
 from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
@@ -212,7 +212,7 @@ class AgentMarket(BaseModel):
 
         if len(lowercase_outcomes) == 3:
             invalid_outcome = lowercase_outcomes[-1]
-            has_invalid = INVALID_OUTCOME_LOWERCASE_IDENTIFIER in invalid_outcome
+            has_invalid = is_invalid_outcome(invalid_outcome)
             return has_yes and has_no and has_invalid
 
         return has_yes and has_no
@@ -230,7 +230,7 @@ class AgentMarket(BaseModel):
 
         if len(lowercase_outcomes) == 3:
             invalid_outcome = lowercase_outcomes[-1]
-            has_invalid = INVALID_OUTCOME_LOWERCASE_IDENTIFIER in invalid_outcome
+            has_invalid = is_invalid_outcome(invalid_outcome)
             return has_up and has_down and has_invalid
 
         return has_up and has_down

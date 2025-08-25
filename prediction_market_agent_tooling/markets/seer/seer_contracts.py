@@ -135,7 +135,6 @@ class GnosisRouter(ContractOnGnosisChain):
 
 
 class SwaprRouterContract(ContractOnGnosisChain):
-    # File content taken from https://github.com/protofire/omen-exchange/blob/master/app/src/abi/marketMaker.json.
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -166,4 +165,7 @@ class SwaprRouterContract(ContractOnGnosisChain):
             function_name="exactInputSingle",
             function_params=[tuple(dict(params).values())],
             web3=web3,
+            # Use higher gas limit for complex swap operations to avoid slow estimation
+            # Typical Swapr swaps use 150k-300k gas, we set conservative
+            default_gas=400_000,
         )

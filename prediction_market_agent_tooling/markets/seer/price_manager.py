@@ -2,9 +2,7 @@ from cachetools import TTLCache, cached
 from pydantic import BaseModel
 from web3 import Web3
 
-from prediction_market_agent_tooling.deploy.constants import (
-    INVALID_OUTCOME_LOWERCASE_IDENTIFIER,
-)
+from prediction_market_agent_tooling.deploy.constants import is_invalid_outcome
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     CollateralToken,
@@ -243,7 +241,7 @@ class PriceManager:
                     f"Outcome {outcome} not found in outcome_token_pool for market {self.seer_market.url}."
                 )
             if outcome not in probability_map:
-                if INVALID_OUTCOME_LOWERCASE_IDENTIFIER not in outcome.lower():
+                if not is_invalid_outcome(outcome):
                     raise PriceCalculationError(
                         f"Couldn't get probability for {outcome} for market {self.seer_market.url}."
                     )

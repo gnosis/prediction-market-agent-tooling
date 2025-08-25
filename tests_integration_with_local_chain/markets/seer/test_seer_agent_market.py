@@ -1,7 +1,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from ape import Contract, accounts
 from cowdao_cowpy.cow.swap import CompletedOrder
 from cowdao_cowpy.order_book.generated.model import UID
 from eth_account import Account
@@ -34,7 +33,6 @@ from prediction_market_agent_tooling.markets.seer.swap_pool_handler import (
     SwapPoolHandler,
 )
 from prediction_market_agent_tooling.tools.contract import (
-    ContractWrapped1155OnGnosisChain,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
 )
@@ -43,7 +41,6 @@ from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
-from tests_integration_with_local_chain.conftest import fund_account_on_tenderly
 
 
 def test_seer_get_resolution(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:

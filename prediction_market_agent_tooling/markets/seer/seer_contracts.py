@@ -8,7 +8,6 @@ from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
     OutcomeStr,
-    OutcomeWei,
     TxReceipt,
     Wei,
     xDai,

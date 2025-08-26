@@ -235,7 +235,9 @@ class SeerAgentMarket(AgentMarket):
     def get_tiny_bet_amount(self) -> CollateralToken:
         return self.get_in_token(SEER_TINY_BET_AMOUNT)
 
-    def get_position(self, user_id: str, web3: Web3 | None = None) -> ExistingPosition:
+    def get_position(
+        self, user_id: str, web3: Web3 | None = None
+    ) -> ExistingPosition | None:
         """
         Fetches position from the user in a given market.
         We ignore the INVALID balances since we are only interested in binary outcomes.
@@ -251,6 +253,10 @@ class SeerAgentMarket(AgentMarket):
             )
 
             amounts_ot[outcome_str] = outcome_token_balance_wei.as_outcome_token
+
+        # Adhere to convenience from other markets, where we return None if user doesn't have any position.
+        if all(v == 0 for v in amounts_ot.values()):
+            return None
 
         amounts_current = {
             k: self.get_token_in_usd(self.get_sell_value_of_outcome_token(k, v))

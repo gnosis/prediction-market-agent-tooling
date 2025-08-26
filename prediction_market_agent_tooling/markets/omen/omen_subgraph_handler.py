@@ -190,6 +190,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             questions_field.templateId,
             questions_field.isPendingArbitration,
             questions_field.openingTimestamp,
+            questions_field.timeout,
         ]
 
     def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:

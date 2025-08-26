@@ -481,6 +481,7 @@ class OmenMarket(BaseModel):
                 outcomes=model.question_event.parsed_question.outcomes,
                 isPendingArbitration=False,  # Can not be, it's a fresh market.
                 openingTimestamp=model.question_event.opening_ts,
+                timeout=model.question_event.timeout,
                 answerFinalizedTimestamp=None,  # It's a new one, can not be.
                 currentAnswer=None,  # It's a new one, no answer yet.
             ),

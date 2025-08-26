@@ -46,7 +46,7 @@ def test_redeem_and_withdraw(
     mint_new_block(api_keys, local_web3)
 
     # Create the market.
-    close_in = 10
+    close_in = 5
     question = f"Will job X be completed in {close_in} seconds from now?"
     created_time = utcnow()
     closing_time = created_time + timedelta(seconds=close_in)

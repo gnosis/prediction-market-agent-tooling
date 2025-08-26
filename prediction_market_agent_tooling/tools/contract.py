@@ -116,6 +116,7 @@ class ContractBaseClass(BaseModel):
         tx_params: t.Optional[TxParams] = None,
         timeout: int = 180,
         web3: Web3 | None = None,
+        default_gas: int | None = None,
     ) -> TxReceipt:
         """
         Used for changing a state (writing) to the contract.
@@ -132,6 +133,7 @@ class ContractBaseClass(BaseModel):
                 function_params=function_params,
                 tx_params=tx_params,
                 timeout=timeout,
+                default_gas=default_gas,
             )
         return send_function_on_contract_tx(
             web3=web3 or self.get_web3(),
@@ -142,6 +144,7 @@ class ContractBaseClass(BaseModel):
             function_params=function_params,
             tx_params=tx_params,
             timeout=timeout,
+            default_gas=default_gas,
         )
 
     def send_with_value(

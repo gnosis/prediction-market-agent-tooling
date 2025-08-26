@@ -12,10 +12,16 @@ from langfuse.client import TraceWithDetails
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import DatetimeUTC, OutcomeStr, OutcomeToken
+from prediction_market_agent_tooling.gtypes import (
+    DatetimeUTC,
+    OutcomeStr,
+    OutcomeToken,
+    PrivateKey,
+    Probability,
+)
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
-from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.data_models import Resolution, ResolvedBet
 from prediction_market_agent_tooling.markets.markets import MarketType
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
@@ -25,6 +31,8 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
+    ProcessMarketTrace,
+    get_bet_for_trace,
     get_traces_for_agent,
 )
 
@@ -44,6 +52,28 @@ MARKET_RESOLUTION_PROVIDERS = {
         seer_subgraph=SeerSubgraphHandler(),
         must_have_prices=False,
     ),
+}
+
+AGENT_GCP_SECRET_MAP = {
+    "DeployablePredictionProphetGPT4TurboFinalAgent": "pma-prophetgpt4turbo-final",
+    "DeployablePredictionProphetGPT4TurboPreviewAgent": "pma-prophetgpt4",
+    "DeployablePredictionProphetGPT4oAgent": "pma-prophetgpt3",
+    "DeployablePredictionProphetGPTo1PreviewAgent": "pma-prophet-o1-preview",
+    "DeployablePredictionProphetGPTo1MiniAgent": "pma-prophet-o1-mini",
+    "DeployableOlasEmbeddingOAAgent": "pma-evo-olas-embeddingoa",
+    "DeployableThinkThoroughlyAgent": "pma-think-thoroughly",
+    "DeployableThinkThoroughlyProphetResearchAgent": "pma-think-thoroughly-prophet-research",
+    "DeployableKnownOutcomeAgent": "pma-knownoutcome",
+    "DeployablePredictionProphetGemini20Flash": "prophet-gemini20flash",
+    "DeployablePredictionProphetDeepSeekR1": "prophet-deepseekr1",
+    "DeployablePredictionProphetDeepSeekChat": "prophet-deepseekchat",
+    "DeployablePredictionProphetGPT4ominiAgent": "pma-prophet-gpt4o-mini",
+    "DeployablePredictionProphetGPTo1": "pma-prophet-o1",
+    "DeployablePredictionProphetGPTo3mini": "pma-prophet-o3-mini",
+    "DeployablePredictionProphetClaude3OpusAgent": "prophet-claude3-opus",
+    "DeployablePredictionProphetClaude35HaikuAgent": "prophet-claude35-haiku",
+    "DeployablePredictionProphetClaude35SonnetAgent": "prophet-claude35-sonnet",
+    "AdvancedAgent": "advanced-agent",
 }
 
 
@@ -68,6 +98,7 @@ class TraceResult(BaseModel):
     full_market_json: str | None
     prediction_json: str
     trades: list[dict[str, Any]] | None
+    bet_json: str | None
 
 
 def get_langfuse_client() -> Langfuse:
@@ -106,6 +137,7 @@ def download_data_daily(
     date_to: DatetimeUTC,
     only_resolved: bool,
     output_file: str,
+    bets: list[ResolvedBet],
     append_mode: bool = False,
 ) -> tuple[int, int]:
     """Download data for a single day/period and return (traces_downloaded, records_saved)."""
@@ -123,7 +155,9 @@ def download_data_daily(
         tags=["answered"],
     )
 
+    traces = list(filter(lambda t: t.metadata["agent_class"] == agent_name, traces))
     traces_count = len(traces) if traces else 0
+
     if not traces:
         logger.info(f"No traces found for {date_from.date()}")
         # If this is the first call and no traces, create empty CSV with header
@@ -138,7 +172,7 @@ def download_data_daily(
         # Submit all tasks
         future_to_trace = {
             executor.submit(
-                process_trace, trace, only_resolved, langfuse_client_for_traces
+                process_trace, trace, only_resolved, langfuse_client_for_traces, bets
             ): trace
             for trace in traces
         }
@@ -172,6 +206,30 @@ def download_data_daily(
     return traces_count, len(successful_results)
 
 
+def get_api_keys(agent_name: str) -> APIKeys:
+    gcp_secret_name = AGENT_GCP_SECRET_MAP[agent_name]
+    try:
+        safe_address_variants = [
+            f"gcps:{gcp_secret_name}:safe_address",
+            f"gcps:{gcp_secret_name}:SAFE_ADDRESS",
+            None,
+        ]
+
+        for safe_address in safe_address_variants:
+            try:
+                api_keys = APIKeys(
+                    BET_FROM_PRIVATE_KEY=PrivateKey(f"gcps:{gcp_secret_name}:private_key"),  # type: ignore
+                    SAFE_ADDRESS=safe_address,
+                )
+                return api_keys
+            except Exception:
+                continue
+
+        raise ValueError("No usual combination of keys found.")
+    except Exception as e:
+        raise ValueError("No usual combination of keys found.") from e
+
+
 def download_data(
     agent_name: str,
     date_from: DatetimeUTC,
@@ -187,6 +245,13 @@ def download_data(
     current_date = date_from
     first_call = True
 
+    bets: list[ResolvedBet] = OmenAgentMarket.get_resolved_bets_made_since(
+        better_address=get_api_keys(agent_name).bet_from_address,
+        start_time=date_from,
+        end_time=None,
+    )
+    bets.sort(key=lambda b: b.created_time)
+
     while current_date < date_to:
         next_date = DatetimeUTC.from_datetime(current_date + timedelta(days=1))
         if next_date > date_to:
@@ -199,6 +264,7 @@ def download_data(
             only_resolved=only_resolved,
             output_file=output_file,
             append_mode=not first_call,
+            bets=bets,
         )
 
         daily_stats.append(
@@ -249,14 +315,15 @@ def process_trace(
     trace: TraceWithDetails,
     only_resolved: bool,
     langfuse_client: Langfuse,
+    bets: list[ResolvedBet],
     include_market: bool = True,
 ) -> TraceResult | None:
     try:
         logger.info(f"Processing trace {trace.id}")
         observations = langfuse_client.fetch_observations(trace_id=trace.id)
         logger.info(f"Observations downloaded for trace {trace.id}")
-        market_state, market_type = get_agent_market_state(trace.input)
-
+        market_state, market_type, probabilities = get_agent_market_state(trace.input)
+        trace.output["answer"]["probabilities"] = probabilities
         prepare_report_obs = [
             obs for obs in observations.data if obs.name in REPORT_STATES
         ]
@@ -276,6 +343,19 @@ def process_trace(
 
         if only_resolved and not resolution:
             raise ValueError(f"No resolution found for market {market_state.id}")
+
+        for trade in trace.output["trades"]:
+            if trade["outcome"]:
+                trade["outcome"] = "Yes"
+            else:
+                trade["outcome"] = "No"
+
+        bet = None
+        market_trace = ProcessMarketTrace.from_langfuse_trace(trace)
+        if bets and market_trace:
+            bet = get_bet_for_trace(market_trace, bets)
+        else:
+            logger.warning(f"No bet found for trace {trace.id}")
 
         result = TraceResult(
             agent_name=trace.metadata["agent_class"],
@@ -298,6 +378,7 @@ def process_trace(
             resolution_is_valid=not resolution.invalid if resolution else None,
             full_market_json=market_state.model_dump_json() if include_market else None,
             trades=build_trades_obs[0].output if build_trades_obs else None,
+            bet_json=bet.model_dump_json() if bet else None,
         )
         logger.info(f"Downloaded trace {trace.id} finished")
         return result
@@ -309,7 +390,7 @@ def process_trace(
 
 def get_agent_market_state(
     input_data: dict[str, Any]
-) -> tuple[AgentMarket, MarketType]:
+) -> tuple[AgentMarket, MarketType, dict[OutcomeStr, Probability]]:
     if not input_data or "args" not in input_data:
         raise ValueError("Invalid input data: missing args")
 
@@ -325,7 +406,7 @@ def get_agent_market_state(
 
     # recreate probabilities if not present
     if "outcome_token_pool" in market_data and "probabilities" not in market_data:
-        market_data["probabilities"] = AgentMarket.build_probability_map(
+        probabilities = AgentMarket.build_probability_map(
             [
                 OutcomeToken(
                     float(value["value"]) if isinstance(value, dict) else float(value)
@@ -334,13 +415,18 @@ def get_agent_market_state(
             ],
             list(market_data["outcome_token_pool"].keys()),
         )
+        market_data["probabilities"] = probabilities
+    elif "probabilities" in market_data:
+        probabilities = market_data["probabilities"]
+    else:
+        raise ValueError("No outcome_token_pool or probabilities found in market data")
 
     if market_type == MarketType.OMEN:
-        return OmenAgentMarket.model_validate(market_data), market_type
+        return OmenAgentMarket.model_validate(market_data), market_type, probabilities
     elif market_type == MarketType.SEER:
-        return SeerAgentMarket.model_validate(market_data), market_type
+        return SeerAgentMarket.model_validate(market_data), market_type, probabilities
     else:
-        return AgentMarket.model_validate(market_data), market_type
+        return AgentMarket.model_validate(market_data), market_type, probabilities
 
 
 def get_market_resolution(market_id: str, market_type: MarketType) -> Resolution:

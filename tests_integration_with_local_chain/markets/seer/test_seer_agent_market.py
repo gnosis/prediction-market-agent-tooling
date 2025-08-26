@@ -5,6 +5,7 @@ from cowdao_cowpy.cow.swap import CompletedOrder
 from cowdao_cowpy.order_book.generated.model import UID
 from eth_account import Account
 from web3 import Web3
+from web3.types import RPCEndpoint
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.deploy.constants import is_invalid_outcome
@@ -16,6 +17,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeWei,
     Wei,
     private_key_type,
+    xDai,
 )
 from prediction_market_agent_tooling.markets.agent_market import (
     FilterBy,
@@ -24,6 +26,7 @@ from prediction_market_agent_tooling.markets.agent_market import (
 )
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.seer.seer import SeerAgentMarket
+from prediction_market_agent_tooling.markets.seer.seer_contracts import GnosisRouter
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
 )
@@ -264,3 +267,77 @@ def test_seer_swap_via_pools_fails_when_no_balance(
             amount_wei=Wei(amount_wei.value),
             web3=local_web3,
         )
+
+
+def fund_account(web3: Web3, account: ChecksumAddress, amount: Wei) -> None:
+    web3.provider.make_request(
+        RPCEndpoint("anvil_setBalance"),
+        [account, hex(amount.value)],
+    )
+
+
+def test_seer_redeem(
+    seer_subgraph_handler_test: SeerSubgraphHandler,
+    local_web3: Web3,
+    test_keys: APIKeys,
+) -> None:
+    markets = seer_subgraph_handler_test.get_markets(
+        limit=10, filter_by=FilterBy.RESOLVED, sort_by=SortBy.NEWEST
+    )
+    # We fetch markets with the hope that one of them will have valid answers.
+    market_recently_closed = None
+    for temp_market in markets:
+        if temp_market.has_valid_answer:
+            market_recently_closed = temp_market
+            break
+
+    try:
+        market_recently_closed = check_not_none(market_recently_closed)
+    except Exception:
+        raise EnvironmentError("No valid markets found, cannot test redeem.")
+
+    agent_market = check_not_none(
+        SeerAgentMarket.from_data_model_with_subgraph(
+            model=market_recently_closed,
+            seer_subgraph=seer_subgraph_handler_test,
+            must_have_prices=False,
+        )
+    )
+
+    # split from base to produce outcome tokens
+    amount_outcome_tokens: Wei = xDai(0.01).as_xdai_wei.as_wei
+    fund_account(
+        web3=local_web3,
+        account=test_keys.bet_from_address,
+        amount=amount_outcome_tokens * 2,
+    )
+
+    g = GnosisRouter()
+    # mint outcome tokens
+    g.split_from_base(
+        api_keys=test_keys,
+        market_id=Web3.to_checksum_address(market_recently_closed.id),
+        amount_wei=amount_outcome_tokens,
+        web3=local_web3,
+    )
+
+    # mock markets to match the market whose wrapped tokens we just minted
+    with patch(
+        "prediction_market_agent_tooling.markets.seer.seer_subgraph_handler.SeerSubgraphHandler.get_markets"
+    ) as mock_get_markets, patch(
+        "prediction_market_agent_tooling.markets.seer.seer.SeerAgentMarket._filter_markets_contained_in_trades"
+    ) as mock_filter_markets:
+        mock_get_markets.return_value = [market_recently_closed]
+        mock_filter_markets.side_effect = lambda _, markets: markets
+
+        SeerAgentMarket.redeem_winnings(test_keys, web3=local_web3)
+
+    # we assert that the outcome tokens with positive payouts were transferred out of the account
+    for idx, payout in enumerate(market_recently_closed.payout_numerators):
+        if payout > 0:
+            token_balance = agent_market.get_token_balance(
+                user_id=test_keys.bet_from_address,
+                outcome=market_recently_closed.outcomes[idx],
+                web3=local_web3,
+            )
+            assert token_balance == OutcomeToken.zero()

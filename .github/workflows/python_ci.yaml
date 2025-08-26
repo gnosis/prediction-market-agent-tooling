@@ -41,7 +41,7 @@ jobs:
           - name: Integration with Local Chain (Omen)
             command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k omen"
           - name: Integration with Local Chain (Seer)
-            command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k seer"
+            command: "poetry run python -m pytest tests_integration_with_local_chain/ -vvv --durations=0 -k seer"
           - name: Integration with Local Chain (Polymarket)
             command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k polymarket"
           - name: Integration with Local Chain (Others)

@@ -8,13 +8,13 @@ from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
     OutcomeStr,
+    OutcomeWei,
     TxReceipt,
     Wei,
     xDai,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
     ExactInputSingleParams,
-    RedeemParams,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
@@ -102,12 +102,18 @@ class GnosisRouter(ContractOnGnosisChain):
     def redeem_to_base(
         self,
         api_keys: APIKeys,
-        params: RedeemParams,
+        market: ChecksumAddress,
+        outcome_indexes: list[int],
+        amounts: list[OutcomeWei],
         web3: Web3 | None = None,
     ) -> TxReceipt:
-        params_dict = params.model_dump(by_alias=True)
         # We explicity set amounts since OutcomeWei gets serialized as dict
-        params_dict["amounts"] = [amount.value for amount in params.amounts]
+        params_dict = {
+            "market": market,
+            "outcomeIndexes": outcome_indexes,
+            "amounts": [amount.value for amount in amounts],
+        }
+
         receipt_tx = self.send(
             api_keys=api_keys,
             function_name="redeemToBase",
@@ -115,6 +121,22 @@ class GnosisRouter(ContractOnGnosisChain):
             web3=web3,
         )
         return receipt_tx
+
+    def split_from_base(
+        self,
+        api_keys: APIKeys,
+        market_id: ChecksumAddress,
+        amount_wei: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        """Splits using xDAI and receives outcome tokens"""
+        return self.send_with_value(
+            api_keys=api_keys,
+            function_name="splitFromBase",
+            amount_wei=amount_wei,
+            function_params=[market_id],
+            web3=web3,
+        )
 
     def split_position(
         self,

@@ -191,7 +191,7 @@ def handle_allowance(
 
 
 @postgres_rate_limited(
-    api_keys=APIKeys(), rate_id="swap_tokens_waiting", interval_seconds=60.0
+    api_keys=APIKeys(), rate_id="swap_tokens_waiting", interval_seconds=5.0
 )
 @tenacity.retry(
     reraise=True,

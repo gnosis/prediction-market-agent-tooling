@@ -708,6 +708,26 @@ def omen_buy_outcome_tx(
     web3: Web3 | None = None,
     slippage: float = 0.01,
 ) -> str:
+    return omen_buy_outcome_tx_no_retry(
+        api_keys=api_keys,
+        amount=amount,
+        market=market,
+        outcome=outcome,
+        auto_deposit=auto_deposit,
+        web3=web3,
+        slippage=slippage,
+    )
+
+
+def omen_buy_outcome_tx_no_retry(
+    api_keys: APIKeys,
+    amount: USD | CollateralToken,
+    market: OmenAgentMarket,
+    outcome: OutcomeStr,
+    auto_deposit: bool,
+    web3: Web3 | None = None,
+    slippage: float = 0.01,
+) -> str:
     """
     Bets the given amount for the given outcome in the given market.
     """

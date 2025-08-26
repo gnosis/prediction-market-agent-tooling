@@ -88,7 +88,7 @@ class SeerMarketFactory(ContractOnGnosisChain):
 
 
 class GnosisRouter(ContractOnGnosisChain):
-    # https://gnosisscan.io/address/0x83183da839ce8228e31ae41222ead9edbb5cdcf1#code.
+    # https://gnosisscan.io/address/0xeC9048b59b3467415b1a38F63416407eA0c70fB8#code.
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),

@@ -1,3 +1,6 @@
+from datetime import datetime
+from unittest import mock
+
 from ape import Contract
 from ape import accounts as AccountManagerApe
 from web3 import Web3
@@ -7,6 +10,9 @@ from prediction_market_agent_tooling.gtypes import OutcomeWei, Wei
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarkets_with_pagination,
 )
+from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    PolymarketGammaMarket,
+)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
@@ -14,11 +20,42 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts imp
     PolymarketConditionalTokenContract,
     USDCeContract,
 )
+from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
+    MarketPosition,
+    PolymarketSubgraphHandler,
+)
+from prediction_market_agent_tooling.tools.cow.cow_order import handle_allowance
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
-def test_redeem(test_keys: APIKeys, polygon_local_web3: Web3) -> None:
-    markets = check_not_none(get_polymarkets_with_pagination(closed=True, limit=1))
+def build_mock_market(
+    market: PolymarketGammaMarket, subgraph_handler: PolymarketSubgraphHandler
+) -> MarketPosition:
+    condition = subgraph_handler.get_conditions(condition_ids=[market.conditionId])[0]
+
+    mock_condition = mock.MagicMock()
+    mock_condition.id = market.conditionId
+    mock_condition.payoutNumerators = condition.payoutNumerators
+    mock_condition.outcomeSlotCount = condition.outcomeSlotCount
+    mock_condition.resolutionTimestamp = int(datetime.now().timestamp())
+    mock_condition.index_sets = [i + 1 for i in range(condition.outcomeSlotCount)]
+
+    mock_market = mock.MagicMock()
+    mock_market.condition = mock_condition
+
+    mock_position = mock.MagicMock(wraps=MarketPosition)
+    mock_position.market = mock_market
+    return mock_position
+
+
+def test_redeem(
+    test_keys: APIKeys,
+    polygon_local_web3: Web3,
+    polymarket_subgraph_handler_test: PolymarketSubgraphHandler,
+) -> None:
+    markets = check_not_none(
+        get_polymarkets_with_pagination(closed=True, limit=1, only_binary=True)
+    )
     market = check_not_none(markets[0].markets)[0]
     # should exist since filtered by this on the api client call
 
@@ -31,14 +68,24 @@ def test_redeem(test_keys: APIKeys, polygon_local_web3: Web3) -> None:
     )
     with AccountManagerApe.use_sender(whale_account):
         contract_instance = USDCeContract()
-        contract = Contract(address=contract_instance, abi=contract_instance.abi)
-        receipt = contract.transferFrom(
-            sender=whale_account, to=keys.bet_from_address, amount=amount_wei
+        contract = Contract(
+            address=contract_instance.address, abi=contract_instance.abi
         )
+        receipt = contract.transfer(keys.bet_from_address, amount_wei.value)
         print(receipt)
 
     condition_id = market.conditionId
     c = PolymarketConditionalTokenContract()
+
+    # allowance
+    handle_allowance(
+        api_keys=keys,
+        sell_token=USDCeContract().address,
+        amount_to_check_wei=amount_wei,
+        for_address=c.address,
+        web3=polygon_local_web3,
+    )
+
     c.splitPosition(
         api_keys=keys,
         collateral_token=USDCeContract().address,
@@ -47,8 +94,12 @@ def test_redeem(test_keys: APIKeys, polygon_local_web3: Web3) -> None:
         amount_wei=amount_wei,
         web3=polygon_local_web3,
     )
-
-    PolymarketAgentMarket.redeem_winnings(api_keys=keys, web3=polygon_local_web3)
+    mock_position = build_mock_market(market, polymarket_subgraph_handler_test)
+    with mock.patch(
+        "prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler.PolymarketSubgraphHandler.get_market_positions_from_user",
+        return_value=[mock_position],
+    ):
+        PolymarketAgentMarket.redeem_winnings(api_keys=keys, web3=polygon_local_web3)
 
     # we assert that the outcome tokens with positive payouts were transferred out of the account
     ctf = PolymarketConditionalTokenContract()

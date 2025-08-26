@@ -785,7 +785,8 @@ class ConditionalTokenContract(ContractBaseClass):
         web3: Web3 | None = None,
     ) -> TxReceipt:
         # We always split the full set of outcome tokens (for simplicity)
-        partition = [1 for _ in range(outcome_slot_count)]
+        # partitions are given in bitmasks, i.e. outcomes are 1,2,4,8,etc.
+        partition = [2**i for i in range(outcome_slot_count)]
         return self.send(
             api_keys=api_keys,
             function_name="splitPosition",

@@ -52,6 +52,7 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
 
         condition_fields = [
             conditions.id,
+            conditions.questionId,
             conditions.payoutNumerators,
             conditions.payoutDenominator,
             conditions.outcomeSlotCount,

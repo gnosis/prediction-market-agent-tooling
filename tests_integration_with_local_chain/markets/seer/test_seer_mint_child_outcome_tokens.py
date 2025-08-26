@@ -1,7 +1,13 @@
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, Wei, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    PrivateKey,
+    SecretStr,
+    Wei,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.agent_market import (
     ConditionalFilterType,
     FilterBy,
@@ -23,6 +29,7 @@ from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
     auto_deposit_collateral_token,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
+from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
 
 def fetch_wrapped_token_balances(
@@ -41,6 +48,10 @@ def test_seer_mint_child_outcome_tokens(
     test_keys: APIKeys,
     local_web3: Web3,
 ) -> None:
+    fresh_account = create_and_fund_random_account(
+        web3=local_web3, private_key=test_keys.bet_from_private_key
+    )
+    keys = APIKeys(BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(fresh_account.key.hex())))
     market = seer_subgraph_handler_test.get_markets(
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
@@ -63,7 +74,7 @@ def test_seer_mint_child_outcome_tokens(
     )
 
     initial_wrapped_token_balances = fetch_wrapped_token_balances(
-        address=test_keys.bet_from_address,
+        address=keys.bet_from_address,
         wrapped_tokens=market_agent.wrapped_tokens,
         web3=local_web3,
     )
@@ -71,12 +82,12 @@ def test_seer_mint_child_outcome_tokens(
     auto_deposit_collateral_token(
         collateral_token_contract=collateral_token_contract,
         collateral_amount_wei_or_usd=amount_wei,
-        api_keys=test_keys,
+        api_keys=keys,
         web3=local_web3,
     )
 
     handle_allowance(
-        api_keys=test_keys,
+        api_keys=keys,
         sell_token=collateral_token_contract.address,
         amount_to_check_wei=amount_wei,
         for_address=GnosisRouter().address,
@@ -84,7 +95,7 @@ def test_seer_mint_child_outcome_tokens(
     )
 
     GnosisRouter().split_position(
-        api_keys=test_keys,
+        api_keys=keys,
         collateral_token=collateral_token_contract.address,
         market_id=Web3.to_checksum_address(market_agent.id),
         amount=amount_wei,
@@ -93,7 +104,7 @@ def test_seer_mint_child_outcome_tokens(
 
     # Assert outcome tokens were transferred
     final_wrapped_token_balances = fetch_wrapped_token_balances(
-        address=test_keys.bet_from_address,
+        address=keys.bet_from_address,
         wrapped_tokens=market_agent.wrapped_tokens,
         web3=local_web3,
     )
@@ -110,6 +121,10 @@ def test_init_collateral_conditional_market(
     test_keys: APIKeys,
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
+    fresh_account = create_and_fund_random_account(
+        web3=local_web3, private_key=test_keys.bet_from_private_key
+    )
+    keys = APIKeys(BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(fresh_account.key.hex())))
     # It should mint collateral tokens from parent market.
     child_market = seer_subgraph_handler_test.get_markets(
         conditional_filter_type=ConditionalFilterType.ONLY_CONDITIONAL,
@@ -127,12 +142,12 @@ def test_init_collateral_conditional_market(
     auto_deposit_collateral_token(
         collateral_token_contract=collateral_token_contract,
         collateral_amount_wei_or_usd=amount_wei,
-        api_keys=test_keys,
+        api_keys=keys,
         web3=local_web3,
     )
     # assert collateral tokens were transferred
     token_balance = ContractERC20OnGnosisChain(
         address=child_market.collateral_token_contract_address_checksummed
-    ).balanceOf(test_keys.bet_from_address, web3=local_web3)
+    ).balanceOf(keys.bet_from_address, web3=local_web3)
     # >= to account for surplus changes when auto-depositing
     assert token_balance >= amount_wei

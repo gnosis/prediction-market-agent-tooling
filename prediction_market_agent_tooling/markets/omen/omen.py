@@ -6,9 +6,6 @@ import tenacity
 from pydantic import BaseModel
 from tqdm import tqdm
 from web3 import Web3
-from prediction_market_agent_tooling.markets.blockchain_utils import (
-    get_conditional_tokens_balance_base,
-)
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -34,7 +31,10 @@ from prediction_market_agent_tooling.markets.agent_market import (
     QuestionType,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.blockchain_utils import store_trades
+from prediction_market_agent_tooling.markets.blockchain_utils import (
+    get_conditional_tokens_balance_base,
+    store_trades,
+)
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
     ExistingPosition,
@@ -70,7 +70,6 @@ from prediction_market_agent_tooling.tools.contract import (
     ConditionPreparationEvent,
     init_collateral_token_contract,
     to_gnosis_chain_contract,
-    ConditionalTokenContract,
 )
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes

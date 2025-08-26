@@ -11,7 +11,6 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeWei,
 )
-from prediction_market_agent_tooling.tools.contract import ConditionalTokenContract
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import ProcessedMarket
 from prediction_market_agent_tooling.markets.omen.data_models import (
@@ -21,6 +20,7 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     _AgentResultMappingContract,
 )
+from prediction_market_agent_tooling.tools.contract import ConditionalTokenContract
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import BPS_CONSTANT
 from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
@@ -32,9 +32,9 @@ def get_conditional_tokens_balance_base(
     conditional_token_contract: ConditionalTokenContract,
     from_address: ChecksumAddress,
     index_sets: list[int],
-    parent_collection_id=HASH_ZERO,
+    parent_collection_id: HexBytes = HexBytes(HASH_ZERO),
     web3: Web3 | None = None,
-) -> dict[tuple[HexBytes, int], OutcomeWei]:
+) -> dict[int, OutcomeWei]:
     """
     Get the balance of conditional tokens for a given condition ID and account.
 
@@ -52,16 +52,16 @@ def get_conditional_tokens_balance_base(
     """
     balances = {}
     for index_set in index_sets:
-        collection_id = conditional_token_contract.get_collection_id(
+        collection_id = conditional_token_contract.getCollectionId(
             parent_collection_id, condition_id, index_set, web3=web3
         )
-        position_id = conditional_token_contract.get_position_id(
+        position_id = conditional_token_contract.getPositionId(
             collateral_token_address, collection_id, web3=web3
         )
-        balance = conditional_token_contract.balance_of(
+        balance = conditional_token_contract.balanceOf(
             from_address, position_id, web3=web3
         )
-        balances[(collection_id, index_set)] = OutcomeWei(balance)
+        balances[index_set] = OutcomeWei(balance.value)
     return balances
 
 

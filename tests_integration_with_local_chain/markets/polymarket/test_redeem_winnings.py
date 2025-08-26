@@ -1,11 +1,9 @@
-from ape import accounts as AccountManagerApe, Contract
+from ape import Contract
+from ape import accounts as AccountManagerApe
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import (
-    Wei,
-    OutcomeWei,
-)
+from prediction_market_agent_tooling.gtypes import OutcomeWei, Wei
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarkets_with_pagination,
 )
@@ -20,13 +18,12 @@ from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 def test_redeem(test_keys: APIKeys, polygon_local_web3: Web3) -> None:
-    markets = get_polymarkets_with_pagination(closed=True, limit=1)
-    market = check_not_none(
-        markets[0].markets[0]
-    )  # should exist since filtered by this on the api client call
+    markets = check_not_none(get_polymarkets_with_pagination(closed=True, limit=1))
+    market = check_not_none(markets[0].markets)[0]
+    # should exist since filtered by this on the api client call
 
     keys = APIKeys()
-    amount_wei = Wei(1 * 1e6)
+    amount_wei = Wei(int(1 * 1e6))
 
     # we impersonate a whale account (Wormhole token bridge) to fetch some USDC
     whale_account = Web3.to_checksum_address(
@@ -40,7 +37,7 @@ def test_redeem(test_keys: APIKeys, polygon_local_web3: Web3) -> None:
         )
         print(receipt)
 
-    condition_id = market.condition_id
+    condition_id = market.conditionId
     c = PolymarketConditionalTokenContract()
     c.splitPosition(
         api_keys=keys,

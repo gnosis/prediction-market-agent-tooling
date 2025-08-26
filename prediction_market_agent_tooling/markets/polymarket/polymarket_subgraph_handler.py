@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import HexBytes, ChecksumAddress
+from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
@@ -66,15 +66,19 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
     def get_market_positions_from_user(
         self,
         user: ChecksumAddress,
+        first: int = 1000,
         block_number: int | None = None,  # fetch already redeemed positions
     ) -> list[MarketPosition]:
+        # Not possible to filter using `market_.condition` on a subgraph level, bad indexers error.
         positions = self.conditions_subgraph.Query.marketPositions(
-            first=1000,
+            first=first,
             where={"user": user.lower()},
             block={"number": block_number} if block_number else None,
         )
 
         condition_fields = [
+            positions.netQuantity,
+            positions.netValue,
             positions.market.condition.id,
             positions.market.condition.questionId,
             positions.market.condition.payoutNumerators,

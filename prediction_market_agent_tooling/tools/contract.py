@@ -665,7 +665,7 @@ class ConditionalTokenContract(ContractBaseClass):
 
     def getCollectionId(
         self,
-        parent_collection_id: HexStr,
+        parent_collection_id: HexBytes,
         condition_id: HexBytes,
         index_set: int,
         web3: Web3 | None = None,
@@ -780,7 +780,7 @@ class ConditionalTokenContract(ContractBaseClass):
         condition_id: HexBytes,
         outcome_slot_count: int,
         amount_wei: Wei,
-        parent_collateral_id: HexBytes = HASH_ZERO,
+        parent_collateral_id: HexBytes = HexBytes(HASH_ZERO),
         tx_params: t.Optional[TxParams] = None,
         web3: Web3 | None = None,
     ) -> TxReceipt:

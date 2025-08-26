@@ -11,10 +11,10 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     OutcomeStr,
     OutcomeToken,
+    OutcomeWei,
     Probability,
     Wei,
     xDai,
-    OutcomeWei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
@@ -26,12 +26,12 @@ from prediction_market_agent_tooling.markets.agent_market import (
     QuestionType,
     SortBy,
 )
+from prediction_market_agent_tooling.markets.blockchain_utils import (
+    get_conditional_tokens_balance_base,
+)
 from prediction_market_agent_tooling.markets.data_models import (
     ExistingPosition,
     Resolution,
-)
-from prediction_market_agent_tooling.markets.markets import (
-    get_conditional_tokens_balance_base,
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
@@ -50,8 +50,8 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
-    USDCeContract,
     PolymarketConditionalTokenContract,
+    USDCeContract,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
     ConditionSubgraphModel,
@@ -278,7 +278,10 @@ class PolymarketAgentMarket(AgentMarket):
         conditional_token_contract = PolymarketConditionalTokenContract()
         positions = s.get_market_positions_from_user(user_id)
         for pos in positions:
-            if pos.market.resolutionTimestamp is None:
+            if (
+                pos.market.condition.resolutionTimestamp is None
+                or pos.market.condition.payoutNumerators is None
+            ):
                 continue
 
             condition_id = pos.market.condition.id
@@ -310,9 +313,7 @@ class PolymarketAgentMarket(AgentMarket):
                 web3=web3,
             )
 
-            logger.info(
-                f"Redeemed {redeem_event=} from condition_id {condition_id=} ()."
-            )
+            logger.info(f"Redeemed {redeem_event=} from condition_id {condition_id=}.")
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

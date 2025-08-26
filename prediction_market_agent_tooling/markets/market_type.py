@@ -1,9 +1,14 @@
 from enum import Enum
-from typing import Type, TypeVar
+from typing import TypeVar
 
+from prediction_market_agent_tooling.jobs.jobs_models import JobAgentMarket
+from prediction_market_agent_tooling.jobs.omen.omen_jobs import OmenJobAgentMarket
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
 from prediction_market_agent_tooling.markets.manifold.manifold import (
     ManifoldAgentMarket,
+)
+from prediction_market_agent_tooling.markets.metaculus.metaculus import (
+    MetaculusAgentMarket,
 )
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
@@ -15,48 +20,28 @@ T = TypeVar("T", bound=AgentMarket)
 
 
 class MarketType(str, Enum):
+    # Note: Always keep the omen market first, as it is the main market for us.
     OMEN = "omen"
     MANIFOLD = "manifold"
     POLYMARKET = "polymarket"
+    METACULUS = "metaculus"
     SEER = "seer"
 
-    @classmethod
-    def from_market(cls, market: AgentMarket) -> "MarketType":
-        """Get the market type from a market instance."""
-        if isinstance(market, OmenAgentMarket):
-            return MarketType.OMEN
-        elif isinstance(market, ManifoldAgentMarket):
-            return MarketType.MANIFOLD
-        elif isinstance(market, PolymarketAgentMarket):
-            return MarketType.POLYMARKET
-        elif isinstance(market, SeerAgentMarket):
-            return MarketType.SEER
-        else:
-            raise ValueError(f"Unknown market type: {type(market).__name__}")
+    @staticmethod
+    def from_market(market: AgentMarket) -> "MarketType":
+        return AGENT_MARKET_TO_MARKET_TYPE[type(market)]
 
-    def market_class(self) -> Type[AgentMarket]:
-        """Get the market class for this market type."""
-        if self == MarketType.OMEN:
-            return OmenAgentMarket
-        elif self == MarketType.MANIFOLD:
-            return ManifoldAgentMarket
-        elif self == MarketType.POLYMARKET:
-            return PolymarketAgentMarket
-        elif self == MarketType.SEER:
-            return SeerAgentMarket
-        else:
+    @property
+    def market_class(self) -> type[AgentMarket]:
+        if self not in MARKET_TYPE_TO_AGENT_MARKET:
             raise ValueError(f"Unknown market type: {self}")
+        return MARKET_TYPE_TO_AGENT_MARKET[self]
 
-    def job_class(self):
-        """Get the job class for this market type."""
-        if self == MarketType.OMEN:
-            from prediction_market_agent_tooling.jobs.omen.omen_jobs import (
-                OmenJobAgentMarket,
-            )
-
-            return OmenJobAgentMarket
-        else:
-            raise ValueError(f"No job class for market type: {self}")
+    @property
+    def job_class(self) -> type[JobAgentMarket]:
+        if self not in JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET:
+            raise ValueError(f"Unknown market type: {self}")
+        return JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET[self]
 
     @property
     def is_trading_market(self) -> bool:
@@ -70,3 +55,20 @@ class MarketType(str, Enum):
     @property
     def is_blockchain_market(self) -> bool:
         return self in [MarketType.OMEN, MarketType.POLYMARKET, MarketType.SEER]
+
+
+MARKET_TYPE_TO_AGENT_MARKET: dict[MarketType, type[AgentMarket]] = {
+    MarketType.MANIFOLD: ManifoldAgentMarket,
+    MarketType.OMEN: OmenAgentMarket,
+    MarketType.POLYMARKET: PolymarketAgentMarket,
+    MarketType.METACULUS: MetaculusAgentMarket,
+    MarketType.SEER: SeerAgentMarket,
+}
+
+AGENT_MARKET_TO_MARKET_TYPE: dict[type[AgentMarket], MarketType] = {
+    v: k for k, v in MARKET_TYPE_TO_AGENT_MARKET.items()
+}
+
+JOB_MARKET_TYPE_TO_JOB_AGENT_MARKET: dict[MarketType, type[JobAgentMarket]] = {
+    MarketType.OMEN: OmenJobAgentMarket,
+}

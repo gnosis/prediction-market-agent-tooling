@@ -1,8 +1,9 @@
+from web3 import Web3
+
 from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
     PolymarketSubgraphHandler,
 )
-from web3 import Web3
 
 
 def test_get_conditions_using_subgraph() -> None:
@@ -20,6 +21,8 @@ def test_get_conditions_using_subgraph() -> None:
 
 
 def test_get_positions_using_subgraph() -> None:
+    # We fetch historical positions (on a given block) from a pre-defined user we know
+    # has some positions.
     s = PolymarketSubgraphHandler()
     user = Web3.to_checksum_address("0xA6672bF6c97A9138b1a415D697174fcD9d98561D")
     block_with_unredeemed_positions = 75528289

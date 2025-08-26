@@ -1,30 +1,22 @@
-from unittest.mock import patch
+from ape import accounts as AccountManagerApe, Contract
+from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import (
+    Wei,
+    OutcomeWei,
+)
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarkets_with_pagination,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from web3 import Web3
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
     PolymarketConditionalTokenContract,
     USDCeContract,
 )
-from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
-    PolymarketSubgraphHandler,
-)
-from prediction_market_agent_tooling.gtypes import (
-    ChecksumAddress,
-    to_wei_inc_negative,
-    Wei,
-    OutcomeWei,
-)
 from prediction_market_agent_tooling.tools.utils import check_not_none
-from tests_integration_with_local_chain.conftest import fund_account
-from web3 import Web3
-from ape import accounts as AccountManagerApe, Contract
 
 
 def test_redeem(test_keys: APIKeys, polygon_local_web3: Web3) -> None:

@@ -9,7 +9,6 @@ from prediction_market_agent_tooling.gtypes import (
     HexBytes,
     HexStr,
     OutcomeStr,
-    OutcomeWei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import ProcessedMarket
@@ -20,49 +19,9 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     _AgentResultMappingContract,
 )
-from prediction_market_agent_tooling.tools.contract import ConditionalTokenContract
 from prediction_market_agent_tooling.tools.ipfs.ipfs_handler import IPFSHandler
 from prediction_market_agent_tooling.tools.utils import BPS_CONSTANT
 from prediction_market_agent_tooling.tools.web3_utils import ipfscidv0_to_byte32
-
-
-def get_conditional_tokens_balance_base(
-    condition_id: HexBytes,
-    collateral_token_address: ChecksumAddress,
-    conditional_token_contract: ConditionalTokenContract,
-    from_address: ChecksumAddress,
-    index_sets: list[int],
-    parent_collection_id: HexBytes = HexBytes(HASH_ZERO),
-    web3: Web3 | None = None,
-) -> dict[int, OutcomeWei]:
-    """
-    Get the balance of conditional tokens for a given condition ID and account.
-
-    Args:
-        condition_id: The ID of the condition.
-        collateral_token_address: The address of the collateral token.
-        conditional_token_contract: The conditional token contract instance.
-        from_address: The address to check the balance for.
-        index_sets: List of index sets to check.
-        parent_collection_id: The ID of the parent collection.
-        web3: Optional Web3 instance.
-
-    Returns:
-        A dictionary mapping (collection_id, index_set) to the balance in wei.
-    """
-    balances = {}
-    for index_set in index_sets:
-        collection_id = conditional_token_contract.getCollectionId(
-            parent_collection_id, condition_id, index_set, web3=web3
-        )
-        position_id = conditional_token_contract.getPositionId(
-            collateral_token_address, collection_id, web3=web3
-        )
-        balance = conditional_token_contract.balanceOf(
-            from_address, position_id, web3=web3
-        )
-        balances[index_set] = OutcomeWei(balance.value)
-    return balances
 
 
 def store_trades(

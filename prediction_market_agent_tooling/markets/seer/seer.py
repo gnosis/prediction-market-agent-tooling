@@ -49,7 +49,6 @@ from prediction_market_agent_tooling.markets.omen.omen_contracts import (
     SeerAgentResultMappingContract,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
-    RedeemParams,
     SeerMarket,
     SeerMarketWithQuestions,
 )
@@ -315,8 +314,8 @@ class SeerAgentMarket(AgentMarket):
         )
 
         market_balances = {
-            market.id: market.get_outcome_token_balances(
-                api_keys.bet_from_address, web3
+            market.id: list(
+                market.get_outcome_token_balances(api_keys.bet_from_address, web3)
             )
             for market in filtered_markets
         }
@@ -349,13 +348,13 @@ class SeerAgentMarket(AgentMarket):
                     )
                 ]
 
-                # Redeem!
-                params = RedeemParams(
+                gnosis_router.redeem_to_base(
+                    api_keys,
                     market=Web3.to_checksum_address(market.id),
-                    outcome_indices=list(range(len(market.payout_numerators))),
+                    outcome_indexes=list(range(len(market.payout_numerators))),
                     amounts=amounts_to_redeem,
+                    web3=web3,
                 )
-                gnosis_router.redeem_to_base(api_keys, params=params, web3=web3)
                 logger.info(f"Redeemed market {market.url}.")
             except Exception:
                 logger.exception(

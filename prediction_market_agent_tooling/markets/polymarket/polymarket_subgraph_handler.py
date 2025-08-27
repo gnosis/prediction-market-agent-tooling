@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from subgrounds import FieldPath
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
@@ -41,6 +42,16 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
             )
         )
 
+    def _get_fields_for_condition(self, field: FieldPath) -> list[FieldPath]:
+        return [
+            field.id,
+            field.questionId,
+            field.payoutNumerators,
+            field.payoutDenominator,
+            field.outcomeSlotCount,
+            field.resolutionTimestamp,
+        ]
+
     def get_conditions(
         self, condition_ids: list[HexBytes]
     ) -> list[ConditionSubgraphModel]:
@@ -50,14 +61,7 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
             where=where_stms,
         )
 
-        condition_fields = [
-            conditions.id,
-            conditions.questionId,
-            conditions.payoutNumerators,
-            conditions.payoutDenominator,
-            conditions.outcomeSlotCount,
-            conditions.resolutionTimestamp,
-        ]
+        condition_fields = self._get_fields_for_condition(conditions)
 
         conditions_models = self.do_query(
             fields=condition_fields, pydantic_model=ConditionSubgraphModel
@@ -68,7 +72,7 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
         self,
         user: ChecksumAddress,
         first: int = 1000,
-        block_number: int | None = None,  # fetch already redeemed positions
+        block_number: int | None = None,
     ) -> list[MarketPosition]:
         # Not possible to filter using `market_.condition` on a subgraph level, bad indexers error.
         positions = self.conditions_subgraph.Query.marketPositions(
@@ -77,16 +81,9 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
             block={"number": block_number} if block_number else None,
         )
 
-        condition_fields = [
-            positions.netQuantity,
-            positions.netValue,
-            positions.market.condition.id,
-            positions.market.condition.questionId,
-            positions.market.condition.payoutNumerators,
-            positions.market.condition.payoutDenominator,
-            positions.market.condition.outcomeSlotCount,
-            positions.market.condition.resolutionTimestamp,
-        ]
+        condition_fields = (
+            self._get_fields_for_condition(positions.market.condition) + positions.id
+        )
 
         positions_models = self.do_query(
             fields=condition_fields, pydantic_model=MarketPosition

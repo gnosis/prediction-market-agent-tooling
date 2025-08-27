@@ -6,7 +6,12 @@ from ape import accounts as AccountManagerApe
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import OutcomeWei, Wei
+from prediction_market_agent_tooling.gtypes import (
+    OutcomeWei,
+    Wei,
+    private_key_type,
+    xDai,
+)
 from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarkets_with_pagination,
 )
@@ -26,6 +31,7 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_hand
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import handle_allowance
 from prediction_market_agent_tooling.tools.utils import check_not_none
+from tests_integration_with_local_chain.conftest import create_and_fund_random_account
 
 
 def build_mock_market(
@@ -49,7 +55,6 @@ def build_mock_market(
 
 
 def test_redeem(
-    test_keys: APIKeys,
     polygon_local_web3: Web3,
     polymarket_subgraph_handler_test: PolymarketSubgraphHandler,
 ) -> None:
@@ -59,8 +64,16 @@ def test_redeem(
     market = check_not_none(markets[0].markets)[0]
     # should exist since filtered by this on the api client call
 
-    keys = APIKeys()
     amount_wei = Wei(int(1 * 1e6))
+    fresh_account = create_and_fund_random_account(
+        web3=polygon_local_web3,
+        deposit_amount=xDai(amount_wei.value * 2),  # 2* for safety
+    )
+
+    api_keys = APIKeys(
+        BET_FROM_PRIVATE_KEY=private_key_type(fresh_account.key.hex()),
+        SAFE_ADDRESS=None,
+    )
 
     # we impersonate a whale account (Wormhole token bridge) to fetch some USDC
     whale_account = Web3.to_checksum_address(
@@ -71,7 +84,7 @@ def test_redeem(
         contract = Contract(
             address=contract_instance.address, abi=contract_instance.abi
         )
-        receipt = contract.transfer(keys.bet_from_address, amount_wei.value)
+        receipt = contract.transfer(api_keys.bet_from_address, amount_wei.value)
         print(receipt)
 
     condition_id = market.conditionId
@@ -79,7 +92,7 @@ def test_redeem(
 
     # allowance
     handle_allowance(
-        api_keys=keys,
+        api_keys=api_keys,
         sell_token=USDCeContract().address,
         amount_to_check_wei=amount_wei,
         for_address=c.address,
@@ -87,7 +100,7 @@ def test_redeem(
     )
 
     c.splitPosition(
-        api_keys=keys,
+        api_keys=api_keys,
         collateral_token=USDCeContract().address,
         condition_id=condition_id,
         outcome_slot_count=len(market.outcomes_list),
@@ -99,13 +112,15 @@ def test_redeem(
         "prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler.PolymarketSubgraphHandler.get_market_positions_from_user",
         return_value=[mock_position],
     ):
-        PolymarketAgentMarket.redeem_winnings(api_keys=keys, web3=polygon_local_web3)
+        PolymarketAgentMarket.redeem_winnings(
+            api_keys=api_keys, web3=polygon_local_web3
+        )
 
     # we assert that the outcome tokens with positive payouts were transferred out of the account
     ctf = PolymarketConditionalTokenContract()
     for token_id in market.token_ids:
         user_balance = ctf.balanceOf(
-            from_address=keys.bet_from_address,
+            from_address=api_keys.bet_from_address,
             position_id=token_id,
             web3=polygon_local_web3,
         )

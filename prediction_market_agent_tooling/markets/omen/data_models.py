@@ -1,4 +1,5 @@
 import typing as t
+from datetime import timedelta
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from web3 import Web3
@@ -86,6 +87,7 @@ class Question(BaseModel):
     templateId: int
     outcomes: t.Sequence[OutcomeStr]
     isPendingArbitration: bool
+    timeout: int  # Finalization time in seconds
     openingTimestamp: int
     answerFinalizedTimestamp: t.Optional[DatetimeUTC] = None
     currentAnswer: t.Optional[str] = None
@@ -98,6 +100,10 @@ class Question(BaseModel):
     def question_raw(self) -> str:
         # Based on https://github.com/protofire/omen-exchange/blob/2cfdf6bfe37afa8b169731d51fea69d42321d66c/app/src/hooks/graph/useGraphMarketMakerData.tsx#L217.
         return self.data
+
+    @property
+    def timeout_timedelta(self) -> timedelta:
+        return timedelta(seconds=self.timeout)
 
     @property
     def n_outcomes(self) -> int:
@@ -255,6 +261,10 @@ class OmenMarket(BaseModel):
             self.liquidityParameter = Wei(0)
 
         return self
+
+    @property
+    def creator_checksum(self) -> ChecksumAddress:
+        return Web3.to_checksum_address(self.creator)
 
     @property
     def openingTimestamp(self) -> int:
@@ -471,6 +481,7 @@ class OmenMarket(BaseModel):
                 outcomes=model.question_event.parsed_question.outcomes,
                 isPendingArbitration=False,  # Can not be, it's a fresh market.
                 openingTimestamp=model.question_event.opening_ts,
+                timeout=model.question_event.timeout,
                 answerFinalizedTimestamp=None,  # It's a new one, can not be.
                 currentAnswer=None,  # It's a new one, no answer yet.
             ),

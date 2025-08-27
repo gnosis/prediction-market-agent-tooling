@@ -163,13 +163,6 @@ class SeerMarketWithQuestions(SeerMarket):
     questions: list[SeerMarketQuestions]
 
 
-class RedeemParams(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    market: ChecksumAddress
-    outcome_indices: list[int] = Field(alias="outcomeIndexes")
-    amounts: list[OutcomeWei]
-
-
 class ExactInputSingleParams(BaseModel):
     # from https://gnosisscan.io/address/0xffb643e73f280b97809a8b41f7232ab401a04ee1#code
     model_config = ConfigDict(populate_by_name=True)

@@ -81,9 +81,9 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
             block={"number": block_number} if block_number else None,
         )
 
-        condition_fields = (
-            self._get_fields_for_condition(positions.market.condition) + positions.id
-        )
+        condition_fields = self._get_fields_for_condition(
+            positions.market.condition
+        ) + [positions.id]
 
         positions_models = self.do_query(
             fields=condition_fields, pydantic_model=MarketPosition

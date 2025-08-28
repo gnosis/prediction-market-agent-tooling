@@ -10,11 +10,16 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
+    Wei,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.seer.data_models import SeerMarket
 from prediction_market_agent_tooling.markets.seer.exceptions import (
     PriceCalculationError,
+)
+from prediction_market_agent_tooling.markets.seer.seer_contracts import (
+    QuoteExactInputSingleParams,
+    SwaprQuoterContract,
 )
 from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
     SeerSubgraphHandler,
@@ -52,16 +57,16 @@ class PriceManager:
             )
 
     def get_price_for_token(self, token: ChecksumAddress) -> CollateralToken | None:
-        return self.get_amount_of_token_in_collateral(token, CollateralToken(1))
+        return self.get_amount_of_token_in_collateral(token, OutcomeToken(1))
 
     @cached(TTLCache(maxsize=100, ttl=5 * 60))
     def get_amount_of_collateral_in_token(
         self,
         token: ChecksumAddress,
         collateral_exchange_amount: CollateralToken,
-    ) -> CollateralToken | None:
+    ) -> OutcomeToken | None:
         if token == self.seer_market.collateral_token_contract_address_checksummed:
-            return collateral_exchange_amount
+            return OutcomeToken(collateral_exchange_amount.value)
 
         try:
             buy_token_amount = get_buy_token_amount_else_raise(
@@ -69,31 +74,31 @@ class PriceManager:
                 sell_token=self.seer_market.collateral_token_contract_address_checksummed,
                 buy_token=token,
             )
-            return buy_token_amount.as_token
+            return OutcomeToken.from_token(buy_token_amount.as_token)
 
         except Exception as e:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
             )
-            prices = self.get_token_price_from_pools(token=token)
-            return (
-                prices.priceOfCollateralInAskingToken * collateral_exchange_amount
-                if prices
-                else None
+            quote = self.get_swapr_input_quote(
+                input_token=self.seer_market.collateral_token_contract_address_checksummed,
+                output_token=token,
+                input_amount=collateral_exchange_amount.as_wei,
             )
+            return OutcomeToken.from_token(quote.as_token)
 
     @cached(TTLCache(maxsize=100, ttl=5 * 60))
     def get_amount_of_token_in_collateral(
         self,
         token: ChecksumAddress,
-        token_exchange_amount: CollateralToken,
+        token_exchange_amount: OutcomeToken,
     ) -> CollateralToken | None:
         if token == self.seer_market.collateral_token_contract_address_checksummed:
-            return token_exchange_amount
+            return token_exchange_amount.as_token
 
         try:
             buy_collateral_amount = get_buy_token_amount_else_raise(
-                sell_amount=token_exchange_amount.as_wei,
+                sell_amount=token_exchange_amount.as_outcome_wei.as_wei,
                 sell_token=token,
                 buy_token=self.seer_market.collateral_token_contract_address_checksummed,
             )
@@ -103,17 +108,21 @@ class PriceManager:
             logger.warning(
                 f"Could not get quote for {token=} from Cow, exception {e=}. Falling back to pools. "
             )
-            prices = self.get_token_price_from_pools(token=token)
-            return (
-                prices.priceOfAskingTokenInCollateral * token_exchange_amount
-                if prices
-                else None
+            quote = self.get_swapr_input_quote(
+                input_token=token,
+                output_token=self.seer_market.collateral_token_contract_address_checksummed,
+                input_amount=token_exchange_amount.as_outcome_wei.as_wei,
             )
+            return quote.as_token
 
     def get_token_price_from_pools(
         self,
         token: ChecksumAddress,
     ) -> Prices | None:
+        """
+        Although this might come handy,
+        consider using `get_amount_of_collateral_in_token` or `get_amount_of_token_in_collateral` to have an exact quote.
+        """
         pool = SeerSubgraphHandler().get_pool_by_token(
             token_address=token,
             collateral_address=self.seer_market.collateral_token_contract_address_checksummed,
@@ -248,3 +257,21 @@ class PriceManager:
                 else:
                     probability_map[outcome] = Probability(0)
         return probability_map, outcome_token_pool
+
+    def get_swapr_input_quote(
+        self,
+        input_token: ChecksumAddress,
+        output_token: ChecksumAddress,
+        input_amount: Wei,
+        web3: Web3 | None = None,
+    ) -> Wei:  # Not marked as OutcomeWei, but this works for both buying and selling.
+        quoter = SwaprQuoterContract()
+        amount_out, _ = quoter.quote_exact_input_single(
+            QuoteExactInputSingleParams(
+                token_in=input_token,
+                token_out=output_token,
+                amount_in=input_amount,
+            ),
+            web3=web3,
+        )
+        return amount_out

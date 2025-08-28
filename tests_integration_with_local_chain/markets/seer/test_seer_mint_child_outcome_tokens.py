@@ -49,7 +49,10 @@ def test_seer_mint_child_outcome_tokens(
     local_web3: Web3,
 ) -> None:
     fresh_account = create_and_fund_random_account(web3=local_web3)
-    keys = APIKeys(BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(fresh_account.key.hex())))
+    keys = APIKeys(
+        BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(fresh_account.key.hex())),
+        SAFE_ADDRESS=None,
+    )
     market = seer_subgraph_handler_test.get_markets(
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
@@ -120,7 +123,10 @@ def test_init_collateral_conditional_market(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     fresh_account = create_and_fund_random_account(web3=local_web3)
-    keys = APIKeys(BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(fresh_account.key.hex())))
+    keys = APIKeys(
+        BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(fresh_account.key.hex())),
+        SAFE_ADDRESS=None,
+    )
     # It should mint collateral tokens from parent market.
     child_market = seer_subgraph_handler_test.get_markets(
         conditional_filter_type=ConditionalFilterType.ONLY_CONDITIONAL,

@@ -230,7 +230,7 @@ def test_seer_swap_via_pools(local_web3: Web3, test_keys: APIKeys) -> None:
     ).buy_or_sell_outcome_token(
         token_in=sell_token,
         token_out=buy_token,
-        amount_wei=Wei(amount_wei.value),
+        amount_in=Wei(amount_wei.value),
         web3=local_web3,
     )
 
@@ -264,7 +264,7 @@ def test_seer_swap_via_pools_fails_when_no_balance(
         ).buy_or_sell_outcome_token(
             token_in=sell_token,
             token_out=buy_token,
-            amount_wei=Wei(amount_wei.value),
+            amount_in=Wei(amount_wei.value),
             web3=local_web3,
         )
 

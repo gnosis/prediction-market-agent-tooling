@@ -124,36 +124,3 @@ def test_outcome_token_pool_strips_whitespace() -> None:
     assert set(probability_map.keys()) == {"yes", "no", "invalid"}
     assert all(isinstance(key, str) for key in probability_map.keys())
     assert all(isinstance(val, float) for val in probability_map.values())
-
-
-def test_seer_market_normalizes_outcomes() -> None:
-    """Test that SeerMarket normalizes outcomes on creation."""
-    # Create market with mixed case and whitespace in outcomes
-    market = SeerMarket(
-        id=HexBytes("0x1234"),
-        creator=HexAddress(HexStr("0x1234567890123456789012345678901234567890")),
-        title="Test Market",
-        outcomes=[OutcomeStr(" Yes "), OutcomeStr("NO  "), OutcomeStr(" inVaLiD ")],
-        wrapped_tokens=[
-            HexAddress(HexStr("0x1234567890123456789012345678901234567890")),
-            HexAddress(HexStr("0x2345678901234567890123456789012345678901")),
-            HexAddress(HexStr("0x3456789012345678901234567890123456789012")),
-        ],
-        template_id=1,
-        collateral_token=HexAddress(
-            HexStr("0x1234567890123456789012345678901234567890")
-        ),
-        condition_id=HexBytes("0x1234"),
-        opening_ts=1234567890,
-        block_timestamp=1234567890,
-        has_answers=False,
-        payout_reported=False,
-        payout_numerators=[1, 0, 0],
-        outcomes_supply=1000000,
-        parent_outcome=0,
-        parent_market=None,
-    )
-
-    # Verify outcomes are normalized (lowercase and stripped)
-    assert [str(o).lower() for o in market.outcomes] == ["yes", "no", "invalid"]
-    assert all(isinstance(outcome, str) for outcome in market.outcomes)

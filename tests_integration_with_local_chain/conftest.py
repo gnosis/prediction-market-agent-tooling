@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     HexAddress,
+    Wei,
     private_key_type,
     xDai,
 )
@@ -130,18 +131,6 @@ def fund_account_on_tenderly(
     response.raise_for_status()
 
 
-def create_and_fund_random_account(
-    web3: Web3, deposit_amount: xDai = xDai(10)
-) -> LocalAccount:
-    fresh_account: LocalAccount = Account.create()
-    web3.provider.make_request(
-        RPCEndpoint("anvil_setBalance"),
-        [fresh_account.address, hex(deposit_amount.as_xdai_wei.value)],
-    )
-
-    return fresh_account
-
-
 def execute_tx_from_impersonated_account(
     web3: Web3,
     impersonated_account: LocalAccount,
@@ -169,3 +158,18 @@ def execute_tx_from_impersonated_account(
 @pytest.fixture(scope="session")
 def omen_subgraph_handler() -> OmenSubgraphHandler:
     return OmenSubgraphHandler()
+
+
+def create_and_fund_random_account(
+    web3: Web3, deposit_amount: xDai = xDai(10)
+) -> LocalAccount:
+    fresh_account: LocalAccount = Account.create()
+    fund_account(web3, fresh_account.address, deposit_amount.as_xdai_wei.as_wei)
+    return fresh_account
+
+
+def fund_account(web3: Web3, account: ChecksumAddress, amount: Wei) -> None:
+    web3.provider.make_request(
+        RPCEndpoint("anvil_setBalance"),
+        [account, hex(amount.value)],
+    )

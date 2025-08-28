@@ -3,7 +3,6 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
-    CollateralToken,
     HexBytes,
     HexStr,
     TxReceipt,
@@ -36,22 +35,20 @@ class SwapPoolHandler:
 
     def _calculate_amount_out_minimum(
         self,
-        amount_wei: Wei,
+        amount_in: Wei,
         token_in: ChecksumAddress,
-        price_outcome_token: CollateralToken,
+        token_out: ChecksumAddress,
         buffer_pct: float = 0.05,
     ) -> Wei:
-        is_buying_outcome = token_in == self.collateral_token_address
-
-        if is_buying_outcome:
-            value = amount_wei.value * (1.0 - buffer_pct) / price_outcome_token.value
-        else:
-            value = amount_wei.value * price_outcome_token.value * (1.0 - buffer_pct)
-        return Wei(int(value))
+        price_manager = PriceManager.build(HexBytes(HexStr(self.market_id)))
+        value = price_manager.get_swapr_input_quote(
+            input_amount=amount_in, input_token=token_in, output_token=token_out
+        )
+        return value * (1 - buffer_pct)
 
     def buy_or_sell_outcome_token(
         self,
-        amount_wei: Wei,
+        amount_in: Wei,
         token_in: ChecksumAddress,
         token_out: ChecksumAddress,
         web3: Web3 | None = None,
@@ -62,38 +59,22 @@ class SwapPoolHandler:
                 f"trading outcome_token for a token different than collateral_token {self.collateral_token_address} is not supported. {token_in=} {token_out=}"
             )
 
-        outcome_token = (
-            token_in if token_in != self.collateral_token_address else token_out
-        )
-
-        # We could use a quoter contract (https://github.com/SwaprHQ/swapr-sdk/blob/develop/src/entities/trades/swapr-v3/constants.ts#L7), but since there is normally 1 pool per outcome token/collateral pair, it's not necessary.
-
-        price_outcome_token = PriceManager.build(
-            HexBytes(HexStr(self.market_id))
-        ).get_token_price_from_pools(token=outcome_token)
-        if (
-            not price_outcome_token
-            or not price_outcome_token.priceOfCollateralInAskingToken
-        ):
-            raise ValueError(
-                f"Could not find price for {outcome_token=} and {self.collateral_token_address}"
-            )
-
         amount_out_minimum = self._calculate_amount_out_minimum(
-            amount_wei=amount_wei,
+            amount_in=amount_in,
             token_in=token_in,
-            price_outcome_token=price_outcome_token.priceOfCollateralInAskingToken,
+            token_out=token_out,
         )
 
         p = ExactInputSingleParams(
             token_in=token_in,
             token_out=token_out,
             recipient=self.api_keys.bet_from_address,
-            amount_in=amount_wei,
+            amount_in=amount_in,
             amount_out_minimum=amount_out_minimum,
         )
 
         tx_receipt = SwaprRouterContract().exact_input_single(
             api_keys=self.api_keys, params=p, web3=web3
         )
+
         return tx_receipt

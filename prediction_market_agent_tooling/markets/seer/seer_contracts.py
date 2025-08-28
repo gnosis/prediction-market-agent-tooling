@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
     ExactInputSingleParams,
+    QuoteExactInputSingleParams,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
@@ -191,3 +192,31 @@ class SwaprRouterContract(ContractOnGnosisChain):
             # Typical Swapr swaps use 150k-300k gas, we set conservative
             default_gas=400_000,
         )
+
+
+class SwaprQuoterContract(ContractOnGnosisChain):
+    # File content taken from https://gnosisscan.io/address/0xcBaD9FDf0D2814659Eb26f600EFDeAF005Eda0F7#code.
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../../abis/swapr_quoter.abi.json",
+        )
+    )
+
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0xcBaD9FDf0D2814659Eb26f600EFDeAF005Eda0F7"
+    )
+
+    def quote_exact_input_single(
+        self,
+        params: QuoteExactInputSingleParams,
+        web3: Web3 | None = None,
+    ) -> tuple[Wei, Wei]:
+        # See https://docs.uniswap.org/contracts/v3/guides/swaps/single-swaps.
+        result: tuple[int, int] = self.call(
+            function_name="quoteExactInputSingle",
+            function_params=list(dict(params).values()),
+            web3=web3,
+        )
+        amount_out, fee = result
+        return Wei(amount_out), Wei(fee)

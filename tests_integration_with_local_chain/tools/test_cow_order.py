@@ -113,7 +113,8 @@ async def test_cow_cancellation(local_web3: Web3) -> None:
     test_keys = APIKeys(
         BET_FROM_PRIVATE_KEY=PrivateKey(
             SecretStr(check_not_none(os.getenv("COWSWAP_TEST_PRIVATE_KEY")))
-        )
+        ),
+        SAFE_ADDRESS=None,
     )
 
     # must have a positive balance on Gnosis chain

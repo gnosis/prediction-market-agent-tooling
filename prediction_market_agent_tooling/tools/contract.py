@@ -909,84 +909,77 @@ def contract_implements_function(
 
     # If not found directly and we should check proxies
     if not implements and look_for_proxy_contract:
-        # Case 1: Check if it's a standard proxy (has implementation() function)
-        if contract_implements_function(
-            contract_address, "implementation", web3, look_for_proxy_contract=False
-        ):
-            # Get the implementation address and check the function there
-            implementation_address = ContractProxyOnGnosisChain(
-                address=contract_address
-            ).implementation()
+        imp_address = uni_implementation_address(contract_address, web3)
+        if imp_address is not None:
             implements = contract_implements_function(
-                implementation_address,
+                imp_address,
                 function_name=function_name,
                 web3=web3,
                 function_arg_types=function_arg_types,
                 look_for_proxy_contract=False,
             )
-        else:
-            # Case 2: Check if it's a minimal proxy contract
-            implements = minimal_proxy_implements_function(
-                contract_address=contract_address,
-                function_name=function_name,
-                web3=web3,
-                function_arg_types=function_arg_types,
-            ) or seer_minimal_proxy_implements_function(
-                contract_address=contract_address,
-                function_name=function_name,
-                web3=web3,
-                function_arg_types=function_arg_types,
-            )
 
     return implements
 
 
-def minimal_proxy_implements_function(
-    contract_address: ChecksumAddress,
-    function_name: str,
-    web3: Web3,
-    function_arg_types: list[str] | None = None,
-) -> bool:
+def uni_implementation_address(
+    contract_address: ChecksumAddress, web3: Web3
+) -> ChecksumAddress | None:
+    """
+    There are multiple ways how proxies can be implemented.
+    This function enumerates them and returns the one that succeeds, or None.
+    """
+    address = implementation_proxy_address(contract_address, web3)
+    if address is not None:
+        return address
+
+    address = minimal_proxy_address(contract_address, web3)
+    if address is not None:
+        return address
+
+    address = seer_minimal_proxy_address(contract_address, web3)
+    if address is not None:
+        return address
+
+    return None
+
+
+def implementation_proxy_address(
+    contract_address: ChecksumAddress, web3: Web3
+) -> ChecksumAddress | None:
+    if not contract_implements_function(
+        contract_address, "implementation", web3, look_for_proxy_contract=False
+    ):
+        return None
+    return ContractProxyOnGnosisChain(address=contract_address).implementation()
+
+
+def minimal_proxy_address(
+    contract_address: ChecksumAddress, web3: Web3
+) -> ChecksumAddress | None:
     try:
         # Read storage slot 0 which should contain the implementation address in minimal proxies
         raw_slot_0 = web3.eth.get_storage_at(contract_address, 0)
         singleton_address = eth_abi.decode(["address"], raw_slot_0)[0]
-        # Recurse into singleton
-        return contract_implements_function(
-            Web3.to_checksum_address(singleton_address),
-            function_name=function_name,
-            web3=web3,
-            function_arg_types=function_arg_types,
-            look_for_proxy_contract=False,
-        )
+        return Web3.to_checksum_address(singleton_address)
     except DecodingError:
         logger.info(f"Error decoding contract address for singleton")
-        return False
+        return None
 
 
-def seer_minimal_proxy_implements_function(
-    contract_address: ChecksumAddress,
-    function_name: str,
-    web3: Web3,
-    function_arg_types: list[str] | None = None,
-) -> bool:
+def seer_minimal_proxy_address(
+    contract_address: ChecksumAddress, web3: Web3
+) -> ChecksumAddress | None:
     try:
         # Read address between specific indices to find logic contract
         bytecode = web3.eth.get_code(contract_address)
         logic_contract_address = bytecode[11:31]
         if not Web3.is_address(logic_contract_address):
-            return False
-
-        return contract_implements_function(
-            Web3.to_checksum_address(logic_contract_address),
-            function_name=function_name,
-            web3=web3,
-            function_arg_types=function_arg_types,
-            look_for_proxy_contract=False,
-        )
+            return None
+        return Web3.to_checksum_address(logic_contract_address)
     except DecodingError:
         logger.info("Error decoding contract address on seer minimal proxy")
-        return False
+        return None
 
 
 def init_collateral_token_contract(

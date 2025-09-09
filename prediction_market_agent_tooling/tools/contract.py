@@ -951,7 +951,7 @@ def implementation_proxy_address(
         contract_address, "implementation", web3, look_for_proxy_contract=False
     ):
         return None
-    return ContractProxyOnGnosisChain(address=contract_address).implementation()
+    return ContractProxyOnGnosisChain(address=contract_address).implementation(web3)
 
 
 def minimal_proxy_address(

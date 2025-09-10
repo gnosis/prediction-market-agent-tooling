@@ -932,8 +932,10 @@ def uni_implementation_address(
     There are multiple ways how proxies can be implemented.
     This function enumerates them and returns the ones that succeed, or an empty list.
     """
-    # It's non-intuitive, but for a single contract, multiple of these can return values.
-    # For example in `test_wrapped_erc1155_init_collateral` test, both minimal_proxy and seer_minimal proxy return an address, but different.
+    # Currently, our implementation sometimes returns implementation multiple addresses for a single proxy contract.
+    # This should not happen and needs more investigation.
+    # Probably `minimal_proxy_address` is bugged and a function identifying the ERC-1967 proxy pattern (https://eips.ethereum.org/EIPS/eip-1967#logic-contract-address) should be implemented.
+    # TODO: Fix the above, and afterwards assert that only 1 imp address is returned from this function. Or prove that this could indeed happen (although we are very pretty sure it shouldn't).
     addresses = [
         implementation_proxy_address(contract_address, web3),
         minimal_proxy_address(contract_address, web3),

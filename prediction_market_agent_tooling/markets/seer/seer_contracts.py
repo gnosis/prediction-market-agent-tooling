@@ -8,13 +8,13 @@ from prediction_market_agent_tooling.gtypes import (
     ABI,
     ChecksumAddress,
     OutcomeStr,
+    OutcomeWei,
     TxReceipt,
     Wei,
     xDai,
 )
 from prediction_market_agent_tooling.markets.seer.data_models import (
     ExactInputSingleParams,
-    RedeemParams,
 )
 from prediction_market_agent_tooling.markets.seer.subgraph_data_models import (
     CreateCategoricalMarketsParams,
@@ -88,7 +88,7 @@ class SeerMarketFactory(ContractOnGnosisChain):
 
 
 class GnosisRouter(ContractOnGnosisChain):
-    # https://gnosisscan.io/address/0x83183da839ce8228e31ae41222ead9edbb5cdcf1#code.
+    # https://gnosisscan.io/address/0xeC9048b59b3467415b1a38F63416407eA0c70fB8#code.
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -102,12 +102,18 @@ class GnosisRouter(ContractOnGnosisChain):
     def redeem_to_base(
         self,
         api_keys: APIKeys,
-        params: RedeemParams,
+        market: ChecksumAddress,
+        outcome_indexes: list[int],
+        amounts: list[OutcomeWei],
         web3: Web3 | None = None,
     ) -> TxReceipt:
-        params_dict = params.model_dump(by_alias=True)
         # We explicity set amounts since OutcomeWei gets serialized as dict
-        params_dict["amounts"] = [amount.value for amount in params.amounts]
+        params_dict = {
+            "market": market,
+            "outcomeIndexes": outcome_indexes,
+            "amounts": [amount.value for amount in amounts],
+        }
+
         receipt_tx = self.send(
             api_keys=api_keys,
             function_name="redeemToBase",
@@ -115,6 +121,22 @@ class GnosisRouter(ContractOnGnosisChain):
             web3=web3,
         )
         return receipt_tx
+
+    def split_from_base(
+        self,
+        api_keys: APIKeys,
+        market_id: ChecksumAddress,
+        amount_wei: Wei,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        """Splits using xDAI and receives outcome tokens"""
+        return self.send_with_value(
+            api_keys=api_keys,
+            function_name="splitFromBase",
+            amount_wei=amount_wei,
+            function_params=[market_id],
+            web3=web3,
+        )
 
     def split_position(
         self,
@@ -135,7 +157,6 @@ class GnosisRouter(ContractOnGnosisChain):
 
 
 class SwaprRouterContract(ContractOnGnosisChain):
-    # File content taken from https://github.com/protofire/omen-exchange/blob/master/app/src/abi/marketMaker.json.
     abi: ABI = abi_field_validator(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -166,4 +187,7 @@ class SwaprRouterContract(ContractOnGnosisChain):
             function_name="exactInputSingle",
             function_params=[tuple(dict(params).values())],
             web3=web3,
+            # Use higher gas limit for complex swap operations to avoid slow estimation
+            # Typical Swapr swaps use 150k-300k gas, we set conservative
+            default_gas=400_000,
         )

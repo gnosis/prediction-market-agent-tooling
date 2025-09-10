@@ -36,7 +36,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     ScalarProbabilisticAnswer,
     Trade,
 )
-from prediction_market_agent_tooling.markets.markets import MarketType
+from prediction_market_agent_tooling.markets.market_type import MarketType
 from prediction_market_agent_tooling.tools.custom_exceptions import (
     CantPayForGasError,
     OutOfFundsError,
@@ -53,6 +53,7 @@ from prediction_market_agent_tooling.tools.tokens.main_token import (
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     check_not_none,
+    retry_until_true,
     utcnow,
 )
 
@@ -645,8 +646,10 @@ class DeployableTraderAgent(DeployablePredictionAgent):
 
         total_amount = market.get_in_usd(market.get_tiny_bet_amount())
         existing_position = market.get_position(user_id=user_id)
+
         if existing_position and existing_position.total_amount_current > USD(0):
             total_amount += existing_position.total_amount_current
+
         return total_amount
 
     def get_betting_strategy(self, market: AgentMarket) -> BettingStrategy:
@@ -703,8 +706,11 @@ class DeployableTraderAgent(DeployablePredictionAgent):
                         )
                     case TradeType.SELL:
                         # Get actual value of the position we are going to sell, and if it's less than we wanted to sell, simply sell all of it.
+                        # In this palce, we expect to have positions, so retry a few times if None are returned, which sometimes happens due to flaky subgraph.
                         current_position = check_not_none(
-                            market.get_position(
+                            retry_until_true(
+                                lambda x: x is not None and x.total_amount_ot > 0
+                            )(market.get_position)(
                                 market.get_user_id(api_keys=self.api_keys)
                             ),
                             "Should exists if we are going to sell outcomes.",

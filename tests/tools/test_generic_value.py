@@ -2,8 +2,15 @@ import json
 
 import pytest
 from pydantic import BaseModel
+from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import CollateralToken, Wei, xDai
+from prediction_market_agent_tooling.gtypes import (
+    ChecksumAddress,
+    CollateralToken,
+    OutcomeWei,
+    Wei,
+    xDai,
+)
 
 
 class TestModel(BaseModel):
@@ -135,3 +142,21 @@ def test_set_dict() -> None:
     assert len(s) == 2
     assert a in s
     assert b in s
+
+
+class TestParams(BaseModel):
+    market: ChecksumAddress
+    outcome_indices: list[int]
+    amounts: list[OutcomeWei]
+
+
+def test_passing_around_big_ints() -> None:
+    amounts_to_redeem = [OutcomeWei(0), OutcomeWei(506972912318042040), OutcomeWei(0)]
+
+    params = TestParams(
+        market=Web3.to_checksum_address("0x8298648810788EF1b2F7e0CD71553E200aB811B3"),
+        outcome_indices=list(range(len([0, 1, 0]))),
+        amounts=amounts_to_redeem,
+    )
+
+    assert params.amounts == amounts_to_redeem

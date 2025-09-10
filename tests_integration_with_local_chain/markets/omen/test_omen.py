@@ -388,7 +388,6 @@ def test_omen_buy_and_sell_outcome(
 def test_deposit_and_withdraw_wxdai(local_web3: Web3, test_keys: APIKeys) -> None:
     deposit_amount = xDai(10)
     fresh_account = create_and_fund_random_account(
-        private_key=test_keys.bet_from_private_key,
         web3=local_web3,
         deposit_amount=xDai(deposit_amount.value * 2),  # 2* for safety
     )

@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.deploy.constants import (
     NO_OUTCOME_LOWERCASE_IDENTIFIER,
     UP_OUTCOME_LOWERCASE_IDENTIFIER,
     YES_OUTCOME_LOWERCASE_IDENTIFIER,
+    is_invalid_outcome,
 )
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -224,10 +225,7 @@ class CategoricalProbabilisticAnswer(BaseModel):
             OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper())
         ] = answer.p_down
 
-        if (
-            market_outcomes
-            and INVALID_OUTCOME_LOWERCASE_IDENTIFIER in lowercase_market_outcomes
-        ):
+        if market_outcomes and any(is_invalid_outcome(o) for o in market_outcomes):
             probabilities[
                 OutcomeStr(INVALID_OUTCOME_LOWERCASE_IDENTIFIER.capitalize())
             ] = Probability(1 - answer.p_up - answer.p_down)

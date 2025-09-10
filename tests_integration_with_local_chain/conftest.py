@@ -12,13 +12,13 @@ from eth_typing import URI, ChecksumAddress
 from safe_eth.eth import EthereumClient
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
-from web3.types import TxReceipt
+from web3.types import RPCEndpoint, TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     ABI,
     HexAddress,
-    PrivateKey,
+    Wei,
     private_key_type,
     xDai,
 )
@@ -28,7 +28,7 @@ from prediction_market_agent_tooling.markets.omen.omen_subgraph_handler import (
     WrappedxDaiContract,
     sDaiContract,
 )
-from prediction_market_agent_tooling.tools.web3_utils import prepare_tx, send_xdai_to
+from prediction_market_agent_tooling.tools.web3_utils import prepare_tx
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -131,19 +131,6 @@ def fund_account_on_tenderly(
     response.raise_for_status()
 
 
-def create_and_fund_random_account(
-    web3: Web3, private_key: PrivateKey, deposit_amount: xDai = xDai(10)
-) -> LocalAccount:
-    fresh_account: LocalAccount = Account.create()
-    send_xdai_to(
-        web3=web3,
-        from_private_key=private_key,
-        to_address=fresh_account.address,
-        value=deposit_amount.as_xdai_wei,
-    )
-    return fresh_account
-
-
 def execute_tx_from_impersonated_account(
     web3: Web3,
     impersonated_account: LocalAccount,
@@ -171,3 +158,18 @@ def execute_tx_from_impersonated_account(
 @pytest.fixture(scope="session")
 def omen_subgraph_handler() -> OmenSubgraphHandler:
     return OmenSubgraphHandler()
+
+
+def create_and_fund_random_account(
+    web3: Web3, deposit_amount: xDai = xDai(10)
+) -> LocalAccount:
+    fresh_account: LocalAccount = Account.create()
+    fund_account(web3, fresh_account.address, deposit_amount.as_xdai_wei.as_wei)
+    return fresh_account
+
+
+def fund_account(web3: Web3, account: ChecksumAddress, amount: Wei) -> None:
+    web3.provider.make_request(
+        RPCEndpoint("anvil_setBalance"),
+        [account, hex(amount.value)],
+    )

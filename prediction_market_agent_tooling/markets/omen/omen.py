@@ -91,7 +91,6 @@ from prediction_market_agent_tooling.tools.utils import (
 )
 from prediction_market_agent_tooling.tools.web3_utils import get_receipt_block_timestamp
 
-OMEN_DEFAULT_REALITIO_BOND_VALUE = xDai(0.01)
 # Too low value would work with the Omen contract, but causes CoW orders (when buying the specific market's tokens) to fail.
 OMEN_TINY_BET_AMOUNT = USD(0.01)
 
@@ -705,6 +704,26 @@ def omen_buy_outcome_tx(
     web3: Web3 | None = None,
     slippage: float = 0.01,
 ) -> str:
+    return omen_buy_outcome_tx_no_retry(
+        api_keys=api_keys,
+        amount=amount,
+        market=market,
+        outcome=outcome,
+        auto_deposit=auto_deposit,
+        web3=web3,
+        slippage=slippage,
+    )
+
+
+def omen_buy_outcome_tx_no_retry(
+    api_keys: APIKeys,
+    amount: USD | CollateralToken,
+    market: OmenAgentMarket,
+    outcome: OutcomeStr,
+    auto_deposit: bool,
+    web3: Web3 | None = None,
+    slippage: float = 0.01,
+) -> str:
     """
     Bets the given amount for the given outcome in the given market.
     """
@@ -1095,7 +1114,7 @@ def get_conditional_tokens_balance_for_market(
 
     for index_set in market.condition.index_sets:
         collection_id = conditional_token_contract.getCollectionId(
-            parent_collection_id, market.condition.id, index_set, web3=web3
+            HexBytes(parent_collection_id), market.condition.id, index_set, web3=web3
         )
         # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
         position_id: int = conditional_token_contract.getPositionId(

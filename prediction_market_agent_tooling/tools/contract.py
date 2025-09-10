@@ -909,8 +909,8 @@ def contract_implements_function(
 
     # If not found directly and we should check proxies
     if not implements and look_for_proxy_contract:
-        imp_address = uni_implementation_address(contract_address, web3)
-        if imp_address is not None:
+        imp_addresses = uni_implementation_address(contract_address, web3)
+        for imp_address in imp_addresses:
             implements = contract_implements_function(
                 imp_address,
                 function_name=function_name,
@@ -918,30 +918,28 @@ def contract_implements_function(
                 function_arg_types=function_arg_types,
                 look_for_proxy_contract=False,
             )
+            # If one of the implementations has the function, we can terminate early.
+            if implements:
+                break
 
     return implements
 
 
 def uni_implementation_address(
     contract_address: ChecksumAddress, web3: Web3
-) -> ChecksumAddress | None:
+) -> list[ChecksumAddress]:
     """
     There are multiple ways how proxies can be implemented.
-    This function enumerates them and returns the one that succeeds, or None.
+    This function enumerates them and returns the ones that succeed, or an empty list.
     """
-    address = implementation_proxy_address(contract_address, web3)
-    if address is not None:
-        return address
-
-    address = minimal_proxy_address(contract_address, web3)
-    if address is not None:
-        return address
-
-    address = seer_minimal_proxy_address(contract_address, web3)
-    if address is not None:
-        return address
-
-    return None
+    # It's non-intuitive, but for a single contract, multiple of these can return values.
+    # For example in `test_wrapped_erc1155_init_collateral` test, both minimal_proxy and seer_minimal proxy return an address, but different.
+    addresses = [
+        implementation_proxy_address(contract_address, web3),
+        minimal_proxy_address(contract_address, web3),
+        seer_minimal_proxy_address(contract_address, web3),
+    ]
+    return [addr for addr in addresses if addr is not None]
 
 
 def implementation_proxy_address(

@@ -100,6 +100,139 @@ def db_cache(
         return decorator
 
     api_keys = api_keys if api_keys is not None else APIKeys()
+    
+    # Check if the decorated function is async
+    if inspect.iscoroutinefunction(func):
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            # If caching is disabled, just call the function and return it
+            if not api_keys.ENABLE_CACHE:
+                return await func(*args, **kwargs)
+
+            DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
+                [FunctionCache]
+            )
+
+            # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
+            signature = inspect.signature(func)
+            bound_arguments = signature.bind(*args, **kwargs)
+            bound_arguments.apply_defaults()
+
+            # Convert any argument that is Pydantic model into classic dictionary, otherwise it won't be json-serializable.
+            args_dict: dict[str, Any] = bound_arguments.arguments
+
+            # Remove `self` or `cls` if present (in case of class' methods)
+            if "self" in args_dict:
+                del args_dict["self"]
+            if "cls" in args_dict:
+                del args_dict["cls"]
+
+            # Remove ignored arguments
+            if ignore_args:
+                for arg in ignore_args:
+                    if arg in args_dict:
+                        del args_dict[arg]
+
+            # Remove arguments of ignored types
+            if ignore_arg_types:
+                args_dict = {
+                    k: v
+                    for k, v in args_dict.items()
+                    if not isinstance(v, tuple(ignore_arg_types))
+                }
+
+            # Compute a hash of the function arguments used for lookup of cached results
+            arg_string = json.dumps(args_dict, sort_keys=True, default=str)
+            args_hash = hashlib.md5(arg_string.encode()).hexdigest()
+
+            # Get the full function name as concat of module and qualname, to not accidentally clash
+            full_function_name = func.__module__ + "." + func.__qualname__
+            # But also get the standard function name to easily search for it in database
+            function_name = func.__name__
+
+            # Determine if the function returns or contains Pydantic BaseModel(s)
+            return_type = func.__annotations__.get("return", None)
+            is_pydantic_model = return_type is not None and contains_pydantic_model(
+                return_type
+            )
+
+            with DBManager(
+                api_keys.sqlalchemy_db_url.get_secret_value()
+            ).get_session() as session:
+                # Try to get cached result
+                statement = (
+                    select(FunctionCache)
+                    .where(
+                        FunctionCache.function_name == function_name,
+                        FunctionCache.full_function_name == full_function_name,
+                        FunctionCache.args_hash == args_hash,
+                    )
+                    .order_by(desc(FunctionCache.created_at))
+                )
+                if max_age is not None:
+                    cutoff_time = utcnow() - max_age
+                    statement = statement.where(FunctionCache.created_at >= cutoff_time)
+                cached_result = session.exec(statement).first()
+
+            if cached_result:
+                logger.info(
+                    # Keep the special [case-hit] identifier so we can easily track it in GCP.
+                    f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
+                )
+                if is_pydantic_model:
+                    # If the output contains any Pydantic models, we need to initialise them.
+                    try:
+                        return convert_cached_output_to_pydantic(
+                            return_type, cached_result.result
+                        )
+                    except ValueError as e:
+                        # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
+                        logger.warning(
+                            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
+                        )
+                        cached_result = None
+                else:
+                    return cached_result.result
+
+            # On cache miss, compute the result - AWAIT for async
+            computed_result = await func(*args, **kwargs)
+            # Keep the special [case-miss] identifier so we can easily track it in GCP.
+            logger.info(
+                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
+            )
+
+            # If postgres access was specified, save it.
+            if cache_none or computed_result is not None:
+                cache_entry = FunctionCache(
+                    function_name=function_name,
+                    full_function_name=full_function_name,
+                    args_hash=args_hash,
+                    args=args_dict,
+                    result=computed_result,
+                    created_at=utcnow(),
+                )
+                # Do not raise an exception if saving to the database fails, just log it and let the agent continue the work.
+                try:
+                    with DBManager(
+                        api_keys.sqlalchemy_db_url.get_secret_value()
+                    ).get_session() as session:
+                        logger.info(
+                            f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database."
+                        )
+                        session.add(cache_entry)
+                        session.commit()
+                except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
+                    (logger.error if log_error_on_unsavable_data else logger.warning)(
+                        f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring, because: {e}"
+                    )
+                except Exception:
+                    logger.exception(
+                        f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring."
+                    )
+
+            return computed_result
+        
+        return cast(FunctionT, wrapper)
 
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:

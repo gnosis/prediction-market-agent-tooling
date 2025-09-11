@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 from prediction_market_agent_tooling.tools.utils import utcnow
+from dataclasses import dataclass
 
 DB_CACHE_LOG_PREFIX = "[db-cache]"
 
@@ -109,261 +110,191 @@ def db_cache(
             if not api_keys.ENABLE_CACHE:
                 return await func(*args, **kwargs)
 
-            DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
-                [FunctionCache]
-            )
+            _ensure_tables(api_keys)
 
-            # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
-            signature = inspect.signature(func)
-            bound_arguments = signature.bind(*args, **kwargs)
-            bound_arguments.apply_defaults()
+            ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
+            lookup = _fetch_cached(api_keys, ctx, max_age)
 
-            # Convert any argument that is Pydantic model into classic dictionary, otherwise it won't be json-serializable.
-            args_dict: dict[str, Any] = bound_arguments.arguments
-
-            # Remove `self` or `cls` if present (in case of class' methods)
-            if "self" in args_dict:
-                del args_dict["self"]
-            if "cls" in args_dict:
-                del args_dict["cls"]
-
-            # Remove ignored arguments
-            if ignore_args:
-                for arg in ignore_args:
-                    if arg in args_dict:
-                        del args_dict[arg]
-
-            # Remove arguments of ignored types
-            if ignore_arg_types:
-                args_dict = {
-                    k: v
-                    for k, v in args_dict.items()
-                    if not isinstance(v, tuple(ignore_arg_types))
-                }
-
-            # Compute a hash of the function arguments used for lookup of cached results
-            arg_string = json.dumps(args_dict, sort_keys=True, default=str)
-            args_hash = hashlib.md5(arg_string.encode()).hexdigest()
-
-            # Get the full function name as concat of module and qualname, to not accidentally clash
-            full_function_name = func.__module__ + "." + func.__qualname__
-            # But also get the standard function name to easily search for it in database
-            function_name = func.__name__
-
-            # Determine if the function returns or contains Pydantic BaseModel(s)
-            return_type = func.__annotations__.get("return", None)
-            is_pydantic_model = return_type is not None and contains_pydantic_model(
-                return_type
-            )
-
-            with DBManager(
-                api_keys.sqlalchemy_db_url.get_secret_value()
-            ).get_session() as session:
-                # Try to get cached result
-                statement = (
-                    select(FunctionCache)
-                    .where(
-                        FunctionCache.function_name == function_name,
-                        FunctionCache.full_function_name == full_function_name,
-                        FunctionCache.args_hash == args_hash,
-                    )
-                    .order_by(desc(FunctionCache.created_at))
-                )
-                if max_age is not None:
-                    cutoff_time = utcnow() - max_age
-                    statement = statement.where(FunctionCache.created_at >= cutoff_time)
-                cached_result = session.exec(statement).first()
-
-            if cached_result:
+            if lookup.hit:
                 logger.info(
-                    # Keep the special [case-hit] identifier so we can easily track it in GCP.
-                    f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
+                    f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {ctx.full_function_name} with args {ctx.args_dict} and output {lookup.value}"
                 )
-                if is_pydantic_model:
-                    # If the output contains any Pydantic models, we need to initialise them.
-                    try:
-                        return convert_cached_output_to_pydantic(
-                            return_type, cached_result.result
-                        )
-                    except ValueError as e:
-                        # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
-                        logger.warning(
-                            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
-                        )
-                        cached_result = None
-                else:
-                    return cached_result.result
+                return lookup.value
 
-            # On cache miss, compute the result - AWAIT for async
             computed_result = await func(*args, **kwargs)
-            # Keep the special [case-miss] identifier so we can easily track it in GCP.
             logger.info(
-                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
+                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {ctx.full_function_name} with args {ctx.args_dict}, computed the output {computed_result}"
             )
 
-            # If postgres access was specified, save it.
             if cache_none or computed_result is not None:
-                cache_entry = FunctionCache(
-                    function_name=function_name,
-                    full_function_name=full_function_name,
-                    args_hash=args_hash,
-                    args=args_dict,
-                    result=computed_result,
-                    created_at=utcnow(),
-                )
-                # Do not raise an exception if saving to the database fails, just log it and let the agent continue the work.
-                try:
-                    with DBManager(
-                        api_keys.sqlalchemy_db_url.get_secret_value()
-                    ).get_session() as session:
-                        logger.info(
-                            f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database."
-                        )
-                        session.add(cache_entry)
-                        session.commit()
-                except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
-                    (logger.error if log_error_on_unsavable_data else logger.warning)(
-                        f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring, because: {e}"
-                    )
-                except Exception:
-                    logger.exception(
-                        f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring."
-                    )
+                _save_cached(api_keys, ctx, computed_result, log_error_on_unsavable_data)
 
             return computed_result
-        
+
         return cast(FunctionT, wrapper)
 
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        # If caching is disabled, just call the function and return it
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
-            [FunctionCache]
-        )
+        _ensure_tables(api_keys)
 
-        # Convert *args and **kwargs to a single dictionary, where we have names for arguments passed as args as well.
-        signature = inspect.signature(func)
-        bound_arguments = signature.bind(*args, **kwargs)
-        bound_arguments.apply_defaults()
+        ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
+        lookup = _fetch_cached(api_keys, ctx, max_age)
 
-        # Convert any argument that is Pydantic model into classic dictionary, otherwise it won't be json-serializable.
-        args_dict: dict[str, Any] = bound_arguments.arguments
-
-        # Remove `self` or `cls` if present (in case of class' methods)
-        if "self" in args_dict:
-            del args_dict["self"]
-        if "cls" in args_dict:
-            del args_dict["cls"]
-
-        # Remove ignored arguments
-        if ignore_args:
-            for arg in ignore_args:
-                if arg in args_dict:
-                    del args_dict[arg]
-
-        # Remove arguments of ignored types
-        if ignore_arg_types:
-            args_dict = {
-                k: v
-                for k, v in args_dict.items()
-                if not isinstance(v, tuple(ignore_arg_types))
-            }
-
-        # Compute a hash of the function arguments used for lookup of cached results
-        arg_string = json.dumps(args_dict, sort_keys=True, default=str)
-        args_hash = hashlib.md5(arg_string.encode()).hexdigest()
-
-        # Get the full function name as concat of module and qualname, to not accidentally clash
-        full_function_name = func.__module__ + "." + func.__qualname__
-        # But also get the standard function name to easily search for it in database
-        function_name = func.__name__
-
-        # Determine if the function returns or contains Pydantic BaseModel(s)
-        return_type = func.__annotations__.get("return", None)
-        is_pydantic_model = return_type is not None and contains_pydantic_model(
-            return_type
-        )
-
-        with DBManager(
-            api_keys.sqlalchemy_db_url.get_secret_value()
-        ).get_session() as session:
-            # Try to get cached result
-            statement = (
-                select(FunctionCache)
-                .where(
-                    FunctionCache.function_name == function_name,
-                    FunctionCache.full_function_name == full_function_name,
-                    FunctionCache.args_hash == args_hash,
-                )
-                .order_by(desc(FunctionCache.created_at))
-            )
-            if max_age is not None:
-                cutoff_time = utcnow() - max_age
-                statement = statement.where(FunctionCache.created_at >= cutoff_time)
-            cached_result = session.exec(statement).first()
-
-        if cached_result:
+        if lookup.hit:
             logger.info(
-                # Keep the special [case-hit] identifier so we can easily track it in GCP.
-                f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {full_function_name} with args {args_dict} and output {cached_result.result}"
+                f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {ctx.full_function_name} with args {ctx.args_dict} and output {lookup.value}"
             )
-            if is_pydantic_model:
-                # If the output contains any Pydantic models, we need to initialise them.
-                try:
-                    return convert_cached_output_to_pydantic(
-                        return_type, cached_result.result
-                    )
-                except ValueError as e:
-                    # In case of backward-incompatible pydantic model, just treat it as cache miss, to not error out.
-                    logger.warning(
-                        f"{DB_CACHE_LOG_PREFIX} [cache-miss] Can not validate {cached_result=} into {return_type=} because {e=}, treating as cache miss."
-                    )
-                    cached_result = None
-            else:
-                return cached_result.result
+            return lookup.value
 
-        # On cache miss, compute the result
         computed_result = func(*args, **kwargs)
-        # Keep the special [case-miss] identifier so we can easily track it in GCP.
         logger.info(
-            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {full_function_name} with args {args_dict}, computed the output {computed_result}"
+            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {ctx.full_function_name} with args {ctx.args_dict}, computed the output {computed_result}"
         )
 
-        # If postgres access was specified, save it.
         if cache_none or computed_result is not None:
-            cache_entry = FunctionCache(
-                function_name=function_name,
-                full_function_name=full_function_name,
-                args_hash=args_hash,
-                args=args_dict,
-                result=computed_result,
-                created_at=utcnow(),
-            )
-            # Do not raise an exception if saving to the database fails, just log it and let the agent continue the work.
-            try:
-                with DBManager(
-                    api_keys.sqlalchemy_db_url.get_secret_value()
-                ).get_session() as session:
-                    logger.info(
-                        f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database."
-                    )
-                    session.add(cache_entry)
-                    session.commit()
-            except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
-                (logger.error if log_error_on_unsavable_data else logger.warning)(
-                    f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring, because: {e}"
-                )
-            except Exception:
-                logger.exception(
-                    f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring."
-                )
+            _save_cached(api_keys, ctx, computed_result, log_error_on_unsavable_data)
 
         return computed_result
 
     return cast(FunctionT, wrapper)
+
+
+@dataclass
+class CallContext:
+    args_dict: dict[str, Any]
+    args_hash: str
+    function_name: str
+    full_function_name: str
+    return_type: Any
+
+    @property
+    def is_pydantic_model(self) -> bool:
+        return self.return_type is not None and contains_pydantic_model(self.return_type)
+
+
+@dataclass
+class CacheLookup:
+    hit: bool
+    value: Any | None = None
+
+
+def _ensure_tables(api_keys: APIKeys) -> None:
+    DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables([FunctionCache])
+
+
+def _build_context(
+    func: Callable[..., Any],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    ignore_args: Sequence[str] | None,
+    ignore_arg_types: Sequence[type] | None,
+) -> CallContext:
+    signature = inspect.signature(func)
+    bound_arguments = signature.bind(*args, **kwargs)
+    bound_arguments.apply_defaults()
+
+    args_dict: dict[str, Any] = bound_arguments.arguments
+
+    if "self" in args_dict:
+        del args_dict["self"]
+    if "cls" in args_dict:
+        del args_dict["cls"]
+
+    if ignore_args:
+        for arg in ignore_args:
+            if arg in args_dict:
+                del args_dict[arg]
+
+    if ignore_arg_types:
+        args_dict = {
+            k: v
+            for k, v in args_dict.items()
+            if not isinstance(v, tuple(ignore_arg_types))
+        }
+
+    arg_string = json.dumps(args_dict, sort_keys=True, default=str)
+    args_hash = hashlib.md5(arg_string.encode()).hexdigest()
+
+    full_function_name = func.__module__ + "." + func.__qualname__
+    function_name = func.__name__
+
+    return_type = func.__annotations__.get("return", None)
+
+    return CallContext(
+        args_dict=args_dict,
+        args_hash=args_hash,
+        function_name=function_name,
+        full_function_name=full_function_name,
+        return_type=return_type,
+    )
+
+
+def _fetch_cached(
+    api_keys: APIKeys,
+    ctx: CallContext,
+    max_age: timedelta | None,
+) -> CacheLookup:
+    with DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).get_session() as session:
+        statement = (
+            select(FunctionCache)
+            .where(
+                FunctionCache.function_name == ctx.function_name,
+                FunctionCache.full_function_name == ctx.full_function_name,
+                FunctionCache.args_hash == ctx.args_hash,
+            )
+            .order_by(desc(FunctionCache.created_at))
+        )
+        if max_age is not None:
+            cutoff_time = utcnow() - max_age
+            statement = statement.where(FunctionCache.created_at >= cutoff_time)
+        cached_result = session.exec(statement).first()
+
+    if not cached_result:
+        return CacheLookup(hit=False)
+
+    if ctx.is_pydantic_model:
+        try:
+            value = convert_cached_output_to_pydantic(ctx.return_type, cached_result.result)
+            return CacheLookup(hit=True, value=value)
+        except ValueError as e:
+            logger.warning(
+                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Can not validate {cached_result=} into {ctx.return_type=} because {e=}, treating as cache miss."
+            )
+            return CacheLookup(hit=False)
+
+    return CacheLookup(hit=True, value=cached_result.result)
+
+
+def _save_cached(
+    api_keys: APIKeys,
+    ctx: CallContext,
+    computed_result: Any,
+    log_error_on_unsavable_data: bool,
+) -> None:
+    cache_entry = FunctionCache(
+        function_name=ctx.function_name,
+        full_function_name=ctx.full_function_name,
+        args_hash=ctx.args_hash,
+        args=ctx.args_dict,
+        result=computed_result,
+        created_at=utcnow(),
+    )
+    try:
+        with DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).get_session() as session:
+            logger.info(f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database.")
+            session.add(cache_entry)
+            session.commit()
+    except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
+        (logger.error if log_error_on_unsavable_data else logger.warning)(
+            f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring, because: {e}"
+        )
+    except Exception:
+        logger.exception(
+            f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring."
+        )
 
 
 def contains_pydantic_model(return_type: Any) -> bool:

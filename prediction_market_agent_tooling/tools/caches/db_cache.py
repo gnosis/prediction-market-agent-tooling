@@ -124,14 +124,14 @@ def db_cache(
             lookup = await loop.run_in_executor(None, _fetch_cached, api_keys, ctx, max_age)
 
             if lookup.hit:
-                logger.info(
-                    f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {ctx.full_function_name} with args {ctx.args_dict} and output {lookup.value}"
+                logger.debug(
+                    f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {ctx.full_function_name}"
                 )
                 return lookup.value
 
             computed_result = await func(*args, **kwargs)
-            logger.info(
-                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {ctx.full_function_name} with args {ctx.args_dict}, computed the output {computed_result}"
+            logger.debug(
+                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {ctx.full_function_name}"
             )
 
             if cache_none or computed_result is not None:
@@ -162,14 +162,14 @@ def db_cache(
         lookup = _fetch_cached(api_keys, ctx, max_age)
 
         if lookup.hit:
-            logger.info(
-                f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {ctx.full_function_name} with args {ctx.args_dict} and output {lookup.value}"
+            logger.debug(
+                f"{DB_CACHE_LOG_PREFIX} [cache-hit] Cache hit for {ctx.full_function_name}"
             )
             return lookup.value
 
         computed_result = func(*args, **kwargs)
-        logger.info(
-            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {ctx.full_function_name} with args {ctx.args_dict}, computed the output {computed_result}"
+        logger.debug(
+            f"{DB_CACHE_LOG_PREFIX} [cache-miss] Cache miss for {ctx.full_function_name}"
         )
 
         if cache_none or computed_result is not None:
@@ -287,7 +287,7 @@ def _fetch_cached(
             return CacheLookup(hit=True, value=value)
         except ValueError as e:
             logger.warning(
-                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Can not validate {cached_result=} into {ctx.return_type=} because {e=}, treating as cache miss."
+                f"{DB_CACHE_LOG_PREFIX} [cache-miss] Failed to validate cached result for {ctx.full_function_name}, treating as cache miss: {e}"
             )
             return CacheLookup(hit=False)
 
@@ -312,18 +312,18 @@ def _save_cached(
         with DBManager(
             api_keys.sqlalchemy_db_url.get_secret_value()
         ).get_session() as session:
-            logger.info(
-                f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database."
+            logger.debug(
+                f"{DB_CACHE_LOG_PREFIX} [cache-save] Saving cache entry for {ctx.full_function_name}"
             )
             session.add(cache_entry)
             session.commit()
     except (DataError, psycopg2.errors.UntranslatableCharacter) as e:
         (logger.error if log_error_on_unsavable_data else logger.warning)(
-            f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring, because: {e}"
+            f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save cache entry for {ctx.full_function_name}: {e}"
         )
     except Exception:
         logger.exception(
-            f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save {cache_entry} into database, ignoring."
+            f"{DB_CACHE_LOG_PREFIX} [cache-error] Failed to save cache entry for {ctx.full_function_name}"
         )
 
 

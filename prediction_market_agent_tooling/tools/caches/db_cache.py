@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import inspect
 import json
@@ -111,10 +112,16 @@ def db_cache(
             if not api_keys.ENABLE_CACHE:
                 return await func(*args, **kwargs)
 
-            _ensure_tables(api_keys)
+            # Run blocking database operations in thread pool
+            loop = asyncio.get_event_loop()
+            
+            # Ensure tables in thread pool
+            await loop.run_in_executor(None, _ensure_tables, api_keys)
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
-            lookup = _fetch_cached(api_keys, ctx, max_age)
+            
+            # Fetch cached result in thread pool
+            lookup = await loop.run_in_executor(None, _fetch_cached, api_keys, ctx, max_age)
 
             if lookup.hit:
                 logger.info(
@@ -128,8 +135,16 @@ def db_cache(
             )
 
             if cache_none or computed_result is not None:
-                _save_cached(
-                    api_keys, ctx, computed_result, log_error_on_unsavable_data
+                # Save cached result in thread pool (fire-and-forget)
+                asyncio.create_task(
+                    loop.run_in_executor(
+                        None, 
+                        _save_cached,
+                        api_keys, 
+                        ctx, 
+                        computed_result, 
+                        log_error_on_unsavable_data
+                    )
                 )
 
             return computed_result

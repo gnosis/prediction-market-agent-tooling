@@ -114,15 +114,14 @@ def db_cache(
                 return await func(*args, **kwargs)
 
             # Run blocking database operations in thread pool
-            loop = asyncio.get_event_loop()
-            
+
             # Ensure tables in thread pool
-            await loop.run_in_executor(None, _ensure_tables, api_keys)
+            await asyncio.to_thread(_ensure_tables, api_keys)
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
-            
+
             # Fetch cached result in thread pool
-            lookup = await loop.run_in_executor(None, _fetch_cached, api_keys, ctx, max_age)
+            lookup = await asyncio.to_thread(_fetch_cached, api_keys, ctx, max_age)
 
             if lookup.hit:
                 logger.debug(
@@ -138,13 +137,12 @@ def db_cache(
             if cache_none or computed_result is not None:
                 # Save cached result in thread pool (fire-and-forget)
                 asyncio.create_task(
-                    loop.run_in_executor(
-                        None, 
+                    asyncio.to_thread(
                         _save_cached,
-                        api_keys, 
-                        ctx, 
-                        computed_result, 
-                        log_error_on_unsavable_data
+                        api_keys,
+                        ctx,
+                        computed_result,
+                        log_error_on_unsavable_data,
                     )
                 )
 

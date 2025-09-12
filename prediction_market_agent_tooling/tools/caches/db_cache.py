@@ -285,7 +285,7 @@ def _fetch_cached(
                 ctx.return_type, cached_result.result
             )
             return CacheLookup(hit=True, value=value)
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             logger.warning(
                 f"{DB_CACHE_LOG_PREFIX} [cache-miss] Failed to validate cached result for {ctx.full_function_name}, treating as cache miss: {e}"
             )

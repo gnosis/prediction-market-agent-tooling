@@ -14,6 +14,7 @@ from typing import (
     cast,
     get_args,
     get_origin,
+    get_type_hints,
     overload,
 )
 
@@ -243,7 +244,16 @@ def _build_context(
     full_function_name = func.__module__ + "." + func.__qualname__
     function_name = func.__name__
 
-    return_type = func.__annotations__.get("return", None)
+    # Use get_type_hints to resolve forward references instead of __annotations__
+    try:
+        type_hints = get_type_hints(func)
+        return_type = type_hints.get("return", None)
+    except (NameError, AttributeError, TypeError) as e:
+        # Fallback to raw annotations if get_type_hints fails
+        logger.debug(
+            f"{DB_CACHE_LOG_PREFIX} Failed to resolve type hints for {full_function_name}, falling back to raw annotations: {e}"
+        )
+        return_type = func.__annotations__.get("return", None)
 
     return CallContext(
         args_dict=args_dict,

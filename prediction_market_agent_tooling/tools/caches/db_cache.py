@@ -1,6 +1,7 @@
 import hashlib
 import inspect
 import json
+from dataclasses import dataclass
 from datetime import timedelta
 from functools import wraps
 from types import UnionType
@@ -27,7 +28,6 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 from prediction_market_agent_tooling.tools.utils import utcnow
-from dataclasses import dataclass
 
 DB_CACHE_LOG_PREFIX = "[db-cache]"
 
@@ -101,11 +101,12 @@ def db_cache(
         return decorator
 
     api_keys = api_keys if api_keys is not None else APIKeys()
-    
+
     # Check if the decorated function is async
     if inspect.iscoroutinefunction(func):
+
         @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             # If caching is disabled, just call the function and return it
             if not api_keys.ENABLE_CACHE:
                 return await func(*args, **kwargs)
@@ -127,14 +128,16 @@ def db_cache(
             )
 
             if cache_none or computed_result is not None:
-                _save_cached(api_keys, ctx, computed_result, log_error_on_unsavable_data)
+                _save_cached(
+                    api_keys, ctx, computed_result, log_error_on_unsavable_data
+                )
 
             return computed_result
 
-        return cast(FunctionT, wrapper)
+        return cast(FunctionT, async_wrapper)
 
     @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
@@ -159,7 +162,7 @@ def db_cache(
 
         return computed_result
 
-    return cast(FunctionT, wrapper)
+    return cast(FunctionT, sync_wrapper)
 
 
 @dataclass
@@ -172,7 +175,9 @@ class CallContext:
 
     @property
     def is_pydantic_model(self) -> bool:
-        return self.return_type is not None and contains_pydantic_model(self.return_type)
+        return self.return_type is not None and contains_pydantic_model(
+            self.return_type
+        )
 
 
 @dataclass
@@ -182,7 +187,9 @@ class CacheLookup:
 
 
 def _ensure_tables(api_keys: APIKeys) -> None:
-    DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables([FunctionCache])
+    DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
+        [FunctionCache]
+    )
 
 
 def _build_context(
@@ -237,7 +244,9 @@ def _fetch_cached(
     ctx: CallContext,
     max_age: timedelta | None,
 ) -> CacheLookup:
-    with DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).get_session() as session:
+    with DBManager(
+        api_keys.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
         statement = (
             select(FunctionCache)
             .where(
@@ -257,7 +266,9 @@ def _fetch_cached(
 
     if ctx.is_pydantic_model:
         try:
-            value = convert_cached_output_to_pydantic(ctx.return_type, cached_result.result)
+            value = convert_cached_output_to_pydantic(
+                ctx.return_type, cached_result.result
+            )
             return CacheLookup(hit=True, value=value)
         except ValueError as e:
             logger.warning(
@@ -283,8 +294,12 @@ def _save_cached(
         created_at=utcnow(),
     )
     try:
-        with DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).get_session() as session:
-            logger.info(f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database.")
+        with DBManager(
+            api_keys.sqlalchemy_db_url.get_secret_value()
+        ).get_session() as session:
+            logger.info(
+                f"{DB_CACHE_LOG_PREFIX} [cache-info] Saving {cache_entry} into database."
+            )
             session.add(cache_entry)
             session.commit()
     except (DataError, psycopg2.errors.UntranslatableCharacter) as e:

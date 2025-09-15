@@ -61,7 +61,7 @@ proto-plus = "^1.0.0"
 protobuf = "^5.0.0"
 types-cachetools = "^5.5.0.20240820"
 python-json-logger = "^3.3.0"
-pydantic-ai = ">=0.1.9,<1.0.0"
+pydantic-ai = "^1.0.3"
 py-clob-client = "^0.24.0"
 
 [tool.poetry.extras]

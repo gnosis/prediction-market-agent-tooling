@@ -126,7 +126,8 @@ def test_wont_retry(local_web3: Web3, eoa_accounts: list[TestAccount]) -> None:
     with pytest.raises(Exception) as e:
         WrappedxDaiContract().transferFrom(
             api_keys=APIKeys(
-                BET_FROM_PRIVATE_KEY=private_key_type(from_account.private_key)
+                BET_FROM_PRIVATE_KEY=private_key_type(from_account.private_key),
+                SAFE_ADDRESS=None,
             ),
             sender=Web3.to_checksum_address(from_account.address),
             recipient=Web3.to_checksum_address(to_account.address),

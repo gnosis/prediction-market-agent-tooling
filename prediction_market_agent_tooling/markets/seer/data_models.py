@@ -179,6 +179,17 @@ class ExactInputSingleParams(BaseModel):
     )  # 0 for convenience, we also don't expect major price shifts
 
 
+class QuoteExactInputSingleParams(BaseModel):
+    # from https://gnosisscan.io/address/0xcBaD9FDf0D2814659Eb26f600EFDeAF005Eda0F7#writeContract
+    model_config = ConfigDict(populate_by_name=True)
+    token_in: ChecksumAddress = Field(alias="tokenIn")
+    token_out: ChecksumAddress = Field(alias="tokenOut")
+    amount_in: Wei = Field(alias="amountIn")
+    limit_sqrt_price: Wei = Field(
+        alias="limitSqrtPrice", default_factory=lambda: Wei(0)
+    )  # 0 for convenience, we also don't expect major price shifts
+
+
 class SeerTransactionType(str, Enum):
     SWAP = "swap"
     SPLIT = "split"

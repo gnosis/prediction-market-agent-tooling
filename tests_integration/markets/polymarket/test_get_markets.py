@@ -1,14 +1,11 @@
 from datetime import timedelta
 
-from web3 import Web3
-
 from prediction_market_agent_tooling.markets.agent_market import (
     ConditionalFilterType,
     FilterBy,
     QuestionType,
     SortBy,
 )
-from prediction_market_agent_tooling.markets.polymarket.api import get_user_positions
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
@@ -52,15 +49,3 @@ def test_many_markets() -> None:
     )
 
     assert len(polymarket_markets) == limit
-
-
-def test_get_positions() -> None:
-    # ToDo - find better address
-    user_address = Web3.to_checksum_address(
-        "0x60073655845c95014a540ae3f7375b15801647a3"
-    )  # top holder in a few markets
-
-    positions = get_user_positions(user_id=user_address)
-    # Oddly enough, they also return related markets. Hence important to filter by conditionId
-    # inside PolymarketAgentMarket
-    assert len(positions) > 0

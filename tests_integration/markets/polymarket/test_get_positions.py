@@ -5,7 +5,9 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
     get_polymarkets_with_pagination,
-    get_user_positions,
+)
+from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
+    PolymarketSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
@@ -26,5 +28,7 @@ def get_random_token_holder() -> ChecksumAddress:
 def test_get_positions() -> None:
     # we get a positive, random token holder
     better_address = get_random_token_holder()
-    pos = get_user_positions(user_id=better_address, condition_ids=None)
+    pos = PolymarketSubgraphHandler().get_market_positions_from_user(
+        first=10, user=better_address
+    )
     assert len(pos) > 0

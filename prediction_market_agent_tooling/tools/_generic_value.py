@@ -239,7 +239,7 @@ class _GenericValue(
         cls, source_type: t.Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         # Support for Pydantic usage.
-        dt_schema = handler(str | int | float | dict)
+        dt_schema = handler(cls.parser | str | dict)
         return core_schema.no_info_after_validator_function(
             lambda x: cls(x["value"] if isinstance(x, dict) else x),
             dt_schema,

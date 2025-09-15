@@ -1114,7 +1114,7 @@ def get_conditional_tokens_balance_for_market(
 
     for index_set in market.condition.index_sets:
         collection_id = conditional_token_contract.getCollectionId(
-            parent_collection_id, market.condition.id, index_set, web3=web3
+            HexBytes(parent_collection_id), market.condition.id, index_set, web3=web3
         )
         # Note that collection_id is returned as bytes, which is accepted by the contract calls downstream.
         position_id: int = conditional_token_contract.getPositionId(

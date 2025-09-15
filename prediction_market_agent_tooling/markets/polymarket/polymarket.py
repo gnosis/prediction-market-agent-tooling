@@ -46,6 +46,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
+    PolymarketConditionalTokenContract,
     USDCeContract,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
@@ -266,9 +267,30 @@ class PolymarketAgentMarket(AgentMarket):
             )
 
     @staticmethod
-    def redeem_winnings(api_keys: APIKeys) -> None:
-        # ToDo - implement me - https://github.com/gnosis/prediction-market-agent-tooling/issues/824
-        pass
+    def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
+        web3 = web3 or RPCConfig().get_polygon_web3()
+        user_id = api_keys.bet_from_address
+        conditional_token_contract = PolymarketConditionalTokenContract()
+        positions = PolymarketSubgraphHandler().get_market_positions_from_user(user_id)
+        for pos in positions:
+            if (
+                pos.market.condition.resolutionTimestamp is None
+                or pos.market.condition.payoutNumerators is None
+            ):
+                continue
+
+            condition_id = pos.market.condition.id
+            index_sets = pos.market.condition.index_sets
+
+            redeem_event = conditional_token_contract.redeemPositions(
+                api_keys=api_keys,
+                collateral_token_address=USDCeContract().address,
+                condition_id=condition_id,
+                index_sets=index_sets,
+                web3=web3,
+            )
+
+            logger.info(f"Redeemed {redeem_event=} from condition_id {condition_id=}.")
 
     @staticmethod
     def verify_operational_balance(api_keys: APIKeys) -> bool:

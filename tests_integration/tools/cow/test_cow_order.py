@@ -21,7 +21,7 @@ async def test_order_by_uid() -> None:
     uid = HexBytes(
         "0xdedd2447008592d047b1cab4f0990ae1340ef234019abaea6cbb2fabc74d9b1f3564e1e403c050248027f870eee032384b48f2d165822589"
     )
-    order = await get_order_by_uid(uid)
+    order = await get_order_by_uid(uid=uid)
     assert (
         order.appData
         == "0x64e80e8f762315c3af2b7efc36c39b41ead8ab8593d816a070359428dae97f03"  # web3-private-key-ok

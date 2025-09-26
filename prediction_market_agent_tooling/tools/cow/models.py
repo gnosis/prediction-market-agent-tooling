@@ -1,18 +1,22 @@
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Optional
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
-from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes, Wei
+from prediction_market_agent_tooling.gtypes import (
+    HexBytes,
+    VerifiedChecksumAddress,
+    VerifiedChecksumAddressOrNone,
+    Wei,
+)
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 class MinimalisticTrade(BaseModel):
-    sellToken: Annotated[ChecksumAddress, BeforeValidator(Web3.to_checksum_address)]
-    buyToken: Annotated[ChecksumAddress, BeforeValidator(Web3.to_checksum_address)]
+    sellToken: VerifiedChecksumAddress
+    buyToken: VerifiedChecksumAddress
     orderUid: HexBytes
     txHash: HexBytes
 
@@ -29,7 +33,7 @@ class PlacementError(str, Enum):
 
 
 class OnchainOrderData(BaseModel):
-    sender: Annotated[ChecksumAddress, BeforeValidator(Web3.to_checksum_address)]
+    sender: VerifiedChecksumAddress
     placementError: Optional[PlacementError]
 
 
@@ -77,15 +81,10 @@ class Order(BaseModel):
     quoteId: int | None = None
     validTo: int
     sellAmount: Wei
-    sellToken: Annotated[ChecksumAddress, BeforeValidator(Web3.to_checksum_address)]
+    sellToken: VerifiedChecksumAddress
     buyAmount: Wei
-    buyToken: Annotated[ChecksumAddress, BeforeValidator(Web3.to_checksum_address)]
-    receiver: Annotated[
-        ChecksumAddress | None,
-        BeforeValidator(
-            lambda x: Web3.to_checksum_address(x) if x is not None else None
-        ),
-    ]
+    buyToken: VerifiedChecksumAddress
+    receiver: VerifiedChecksumAddressOrNone
     feeAmount: Wei
     creationDate: DatetimeUTC
     kind: OrderKind
@@ -94,17 +93,12 @@ class Order(BaseModel):
     buyTokenBalance: BuyTokenBalance | None
     signingScheme: SigningScheme
     signature: HexBytes
-    from_: Annotated[
-        ChecksumAddress | None,
-        BeforeValidator(
-            lambda x: Web3.to_checksum_address(x) if x is not None else None
-        ),
-    ] = Field(None, alias="from")
+    from_: VerifiedChecksumAddressOrNone = Field(None, alias="from")
     appData: str
     fullAppData: str | None
     appDataHash: HexBytes | None = None
     class_: str = Field(None, alias="class")
-    owner: Annotated[ChecksumAddress, BeforeValidator(Web3.to_checksum_address)]
+    owner: VerifiedChecksumAddress
     executedSellAmount: Wei
     executedSellAmountBeforeFees: Wei
     executedBuyAmount: Wei
@@ -113,19 +107,9 @@ class Order(BaseModel):
     status: str
     isLiquidityOrder: bool | None
     ethflowData: EthFlowData | None = None
-    onchainUser: Annotated[
-        ChecksumAddress | None,
-        BeforeValidator(
-            lambda x: Web3.to_checksum_address(x) if x is not None else None
-        ),
-    ] = None
+    onchainUser: VerifiedChecksumAddressOrNone = None
     executedFee: Wei
-    executedFeeToken: Annotated[
-        ChecksumAddress | None,
-        BeforeValidator(
-            lambda x: Web3.to_checksum_address(x) if x is not None else None
-        ),
-    ]
+    executedFeeToken: VerifiedChecksumAddressOrNone
 
 
 class RateLimit(SQLModel, table=True):

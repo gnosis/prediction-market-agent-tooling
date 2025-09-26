@@ -1,6 +1,6 @@
 import typing as t
 from decimal import Decimal
-from typing import NewType
+from typing import Annotated, NewType, TypeAlias
 
 from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     Address,
@@ -8,6 +8,7 @@ from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy import
     HexAddress,
     HexStr,
 )
+from pydantic import BeforeValidator
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from web3 import Web3
@@ -18,6 +19,7 @@ from web3.types import (  # noqa: F401  # Import for the sake of easy importing 
 )
 from web3.types import Wei as Web3Wei
 
+from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.tools._generic_value import _GenericValue
 from prediction_market_agent_tooling.tools.datetime_utc import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     DatetimeUTC,
@@ -25,6 +27,14 @@ from prediction_market_agent_tooling.tools.datetime_utc import (  # noqa: F401  
 from prediction_market_agent_tooling.tools.hexbytes_custom import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     HexBytes,
 )
+
+VerifiedChecksumAddress: TypeAlias = Annotated[
+    ChecksumAddress, BeforeValidator(Web3.to_checksum_address)
+]
+VerifiedChecksumAddressOrNone: TypeAlias = Annotated[
+    ChecksumAddress | None,
+    BeforeValidator(lambda x: Web3.to_checksum_address(x) if x is not None else None),
+]
 
 
 class CollateralToken(_GenericValue[int | float | str | Decimal, float], parser=float):

@@ -402,6 +402,22 @@ def get_orders_by_owner(
 @tenacity.retry(
     stop=stop_after_attempt(3),
     wait=wait_fixed(1),
+    after=lambda x: logger.debug(f"get_order_by_uid failed, {x.attempt_number=}."),
+)
+async def get_order_by_uid(
+    uid: HexBytes,
+) -> Order:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"https://api.cow.fi/xdai/api/v1/orders/{uid.to_0x_hex()}"
+        )
+        response.raise_for_status()
+        return Order.model_validate(response.json())
+
+
+@tenacity.retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
     after=lambda x: logger.debug(f"paginate_endpoint failed, {x.attempt_number=}."),
 )
 def paginate_endpoint(url: str, limit: int = 1000) -> t.Any:

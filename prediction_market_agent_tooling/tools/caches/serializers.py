@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
 
@@ -12,7 +13,7 @@ def json_serializer(x: t.Any) -> str:
 
 
 def json_serializer_default_fn(
-    y: DatetimeUTC | timedelta | date | BaseModel,
+    y: DatetimeUTC | timedelta | date | HexBytes | BaseModel,
 ) -> str | dict[str, t.Any]:
     """
     Used to serialize objects that don't support it by default into a specific string that can be deserialized out later.
@@ -25,6 +26,8 @@ def json_serializer_default_fn(
         return f"timedelta::{y.total_seconds()}"
     elif isinstance(y, date):
         return f"date::{y.isoformat()}"
+    elif isinstance(y, HexBytes):
+        return f"HexBytes::{y.to_0x_hex()}"
     elif isinstance(y, BaseModel):
         return y.model_dump()
     raise TypeError(
@@ -51,6 +54,9 @@ def replace_custom_stringified_objects(obj: t.Any) -> t.Any:
         elif obj.startswith("date::"):
             iso_str = obj[len("date::") :]
             return date.fromisoformat(iso_str)
+        elif obj.startswith("HexBytes::"):
+            hex_str = obj[len("HexBytes::") :]
+            return HexBytes(hex_str)
         else:
             return obj
     elif isinstance(obj, dict):

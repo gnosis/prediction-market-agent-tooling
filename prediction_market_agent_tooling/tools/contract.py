@@ -940,6 +940,7 @@ def uni_implementation_address(
         implementation_proxy_address(contract_address, web3),
         minimal_proxy_address(contract_address, web3),
         seer_minimal_proxy_address(contract_address, web3),
+        eip_1967_proxy_address(contract_address, web3),
     ]
     return [addr for addr in addresses if addr is not None]
 
@@ -979,6 +980,23 @@ def seer_minimal_proxy_address(
         return Web3.to_checksum_address(logic_contract_address)
     except DecodingError:
         logger.info("Error decoding contract address on seer minimal proxy")
+        return None
+
+
+def eip_1967_proxy_address(
+    contract_address: ChecksumAddress, web3: Web3
+) -> ChecksumAddress | None:
+    try:
+        raw_slot = web3.eth.get_storage_at(
+            contract_address,
+            HexBytes(
+                "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"  # web3-private-key-ok
+            ).as_int(),
+        )
+        address = eth_abi.decode(["address"], raw_slot)[0]
+        return Web3.to_checksum_address(address)
+    except DecodingError:
+        logger.info("Error decoding contract address for eip 1967 proxy")
         return None
 
 

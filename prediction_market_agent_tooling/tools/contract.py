@@ -987,12 +987,8 @@ def eip_1967_proxy_address(
     contract_address: ChecksumAddress, web3: Web3
 ) -> ChecksumAddress | None:
     try:
-        raw_slot = web3.eth.get_storage_at(
-            contract_address,
-            HexBytes(
-                "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"  # web3-private-key-ok
-            ).as_int(),
-        )
+        slot = HexBytes(Web3.keccak(text="eip1967.proxy.implementation")).as_int() - 1
+        raw_slot = web3.eth.get_storage_at(contract_address, slot)
         address = eth_abi.decode(["address"], raw_slot)[0]
         return Web3.to_checksum_address(address)
     except DecodingError:

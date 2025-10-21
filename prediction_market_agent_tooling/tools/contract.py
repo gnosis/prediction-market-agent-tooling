@@ -942,7 +942,7 @@ def uni_implementation_address(
         minimal_proxy_address(contract_address, web3),
         seer_minimal_proxy_address(contract_address, web3),
         eip_1967_proxy_address(contract_address, web3),
-        zeppelinos_proxy_address(contract_address, web3),
+        zeppelinos_unstructured_storage_proxy_address(contract_address, web3),
     ]
     return [addr for addr in addresses if addr is not None]
 
@@ -1006,7 +1006,7 @@ def eip_1967_proxy_address(
         return None
 
 
-def zeppelinos_proxy_address(
+def zeppelinos_unstructured_storage_proxy_address(
     contract_address: ChecksumAddress, web3: Web3
 ) -> ChecksumAddress | None:
     try:

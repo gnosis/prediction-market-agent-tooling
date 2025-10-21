@@ -10,6 +10,7 @@ from pydantic import BaseModel, field_validator
 from web3 import Web3
 from web3.constants import CHECKSUM_ADDRESSS_ZERO, HASH_ZERO
 from web3.contract.contract import Contract as Web3Contract
+from web3.exceptions import ContractCustomError
 
 from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -941,6 +942,7 @@ def uni_implementation_address(
         minimal_proxy_address(contract_address, web3),
         seer_minimal_proxy_address(contract_address, web3),
         eip_1967_proxy_address(contract_address, web3),
+        zeppelinos_proxy_address(contract_address, web3),
     ]
     return [addr for addr in addresses if addr is not None]
 
@@ -952,7 +954,15 @@ def implementation_proxy_address(
         contract_address, "implementation", web3, look_for_proxy_contract=False
     ):
         return None
-    return ContractProxyOnGnosisChain(address=contract_address).implementation(web3)
+    try:
+        return ContractProxyOnGnosisChain(address=contract_address).implementation(web3)
+    except ContractCustomError as e:
+        # For example https://gnosisscan.io/address/0x3221a28ed2b2e955da64d1d299956f277562c95c#code,
+        # it has the implementation method, but it's only for admins.
+        logger.warning(
+            f"Failed to get implementation for {contract_address=} even though it has the method: {e}"
+        )
+        return None
 
 
 def minimal_proxy_address(
@@ -993,6 +1003,21 @@ def eip_1967_proxy_address(
         return Web3.to_checksum_address(address)
     except DecodingError:
         logger.info("Error decoding contract address for eip 1967 proxy")
+        return None
+
+
+def zeppelinos_proxy_address(
+    contract_address: ChecksumAddress, web3: Web3
+) -> ChecksumAddress | None:
+    try:
+        slot = HexBytes(
+            Web3.keccak(text="org.zeppelinos.proxy.implementation")
+        ).as_int()
+        raw_slot = web3.eth.get_storage_at(contract_address, slot)
+        address = eth_abi.decode(["address"], raw_slot)[0]
+        return Web3.to_checksum_address(address)
+    except DecodingError:
+        logger.info("Error decoding contract address for zeppelinos proxy")
         return None
 
 

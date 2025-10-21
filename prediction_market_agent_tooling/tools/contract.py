@@ -5,12 +5,13 @@ import typing as t
 from contextlib import contextmanager
 
 import eth_abi
+import tenacity
 from eth_abi.exceptions import DecodingError
 from pydantic import BaseModel, field_validator
 from web3 import Web3
 from web3.constants import CHECKSUM_ADDRESSS_ZERO, HASH_ZERO
 from web3.contract.contract import Contract as Web3Contract
-from web3.exceptions import ContractCustomError
+from web3.exceptions import ContractCustomError, ContractLogicError
 
 from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -956,7 +957,12 @@ def implementation_proxy_address(
         return None
     try:
         return ContractProxyOnGnosisChain(address=contract_address).implementation(web3)
-    except ContractCustomError as e:
+    except (ContractCustomError, ContractLogicError, tenacity.RetryError) as e:
+        if isinstance(e, tenacity.RetryError) and not isinstance(
+            e.last_attempt.exception(), (ContractCustomError, ContractLogicError)
+        ):
+            raise
+
         # For example https://gnosisscan.io/address/0x3221a28ed2b2e955da64d1d299956f277562c95c#code,
         # it has the implementation method, but it's only for admins.
         logger.warning(

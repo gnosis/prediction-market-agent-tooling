@@ -22,7 +22,6 @@ def test_eip_1967_imp(
 def test_zeppelinos_imp(
     local_web3: Web3,
 ) -> None:
-    # EURe v2 to its imp address
     assert zeppelinos_proxy_address(
         Web3.to_checksum_address("0x3221a28ed2b2e955da64d1d299956f277562c95c"),
         local_web3,

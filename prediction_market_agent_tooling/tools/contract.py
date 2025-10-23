@@ -207,9 +207,17 @@ class ContractERC20BaseClass(ContractBaseClass):
         )
     )
 
+    def name(self, web3: Web3 | None = None) -> str:
+        name: str = self.call("name", web3=web3)
+        return name
+
     def symbol(self, web3: Web3 | None = None) -> str:
         symbol: str = self.call("symbol", web3=web3)
         return symbol
+
+    def decimals(self, web3: Web3 | None = None) -> int:
+        decimals = int(self.call("decimals", web3=web3))
+        return decimals
 
     def symbol_cached(self, web3: Web3 | None = None) -> str:
         web3 = web3 or self.get_web3()

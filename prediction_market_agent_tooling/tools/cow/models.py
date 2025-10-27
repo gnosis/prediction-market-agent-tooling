@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, TypeAlias
 
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
@@ -74,10 +74,13 @@ class OrderStatus(str, Enum):
     expired = "expired"
 
 
+CowOrderUID: TypeAlias = HexBytes
+
+
 class Order(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-    uid: str
+    uid: CowOrderUID
     quoteId: int | None = None
     validTo: int
     sellAmount: Wei

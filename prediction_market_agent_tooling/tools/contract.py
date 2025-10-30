@@ -12,6 +12,7 @@ from web3 import Web3
 from web3.constants import CHECKSUM_ADDRESSS_ZERO, HASH_ZERO
 from web3.contract.contract import Contract as Web3Contract
 from web3.exceptions import ContractCustomError, ContractLogicError
+from web3.types import BlockIdentifier
 
 from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -97,6 +98,7 @@ class ContractBaseClass(BaseModel):
         function_name: str,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
         web3: Web3 | None = None,
+        block_identifier: BlockIdentifier | None = None,
     ) -> t.Any:
         """
         Used for reading from the contract.
@@ -108,6 +110,7 @@ class ContractBaseClass(BaseModel):
             contract_abi=self.abi,
             function_name=function_name,
             function_params=function_params,
+            block_identifier=block_identifier,
         )
 
     def send(
@@ -290,8 +293,17 @@ class ContractERC20BaseClass(ContractBaseClass):
             web3=web3,
         )
 
-    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
-        balance = Wei(self.call("balanceOf", [for_address], web3=web3))
+    def balanceOf(
+        self,
+        for_address: ChecksumAddress,
+        web3: Web3 | None = None,
+        block_identifier: BlockIdentifier | None = None,
+    ) -> Wei:
+        balance = Wei(
+            self.call(
+                "balanceOf", [for_address], web3=web3, block_identifier=block_identifier
+            )
+        )
         return balance
 
     def balance_of_in_tokens(

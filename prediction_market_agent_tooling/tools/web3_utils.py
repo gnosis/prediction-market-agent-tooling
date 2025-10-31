@@ -16,7 +16,14 @@ from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
 from web3.contract.contract import ContractFunction as Web3ContractFunction
-from web3.types import AccessList, AccessListEntry, Nonce, TxParams, TxReceipt
+from web3.types import (
+    AccessList,
+    AccessListEntry,
+    BlockIdentifier,
+    Nonce,
+    TxParams,
+    TxReceipt,
+)
 
 from prediction_market_agent_tooling.gtypes import (
     ABI,
@@ -106,11 +113,12 @@ def call_function_on_contract(
     contract_abi: ABI,
     function_name: str,
     function_params: Optional[list[Any] | dict[str, Any]] = None,
+    block_identifier: Optional[BlockIdentifier] = None,
 ) -> Any:
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
     output = contract.functions[function_name](
         *parse_function_params(function_params)
-    ).call()
+    ).call(block_identifier=block_identifier)
     return output
 
 

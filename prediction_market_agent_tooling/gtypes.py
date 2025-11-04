@@ -155,11 +155,13 @@ def private_key_type(k: str) -> PrivateKey:
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1: ...
+def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1:
+    ...
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: None) -> None: ...
+def secretstr_to_v1_secretstr(s: None) -> None:
+    ...
 
 
 def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:

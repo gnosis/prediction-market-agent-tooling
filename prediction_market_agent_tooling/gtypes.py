@@ -33,7 +33,7 @@ VerifiedChecksumAddress: TypeAlias = Annotated[
 ]
 VerifiedChecksumAddressOrNone: TypeAlias = Annotated[
     ChecksumAddress | None,
-    BeforeValidator(lambda x: Web3.to_checksum_address(x) if x is not None else None),
+    BeforeValidator(lambda x: Web3.to_checksum_address(x) if x else None),
 ]
 
 
@@ -155,13 +155,11 @@ def private_key_type(k: str) -> PrivateKey:
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1:
-    ...
+def secretstr_to_v1_secretstr(s: SecretStr) -> SecretStrV1: ...
 
 
 @t.overload
-def secretstr_to_v1_secretstr(s: None) -> None:
-    ...
+def secretstr_to_v1_secretstr(s: None) -> None: ...
 
 
 def secretstr_to_v1_secretstr(s: SecretStr | None) -> SecretStrV1 | None:

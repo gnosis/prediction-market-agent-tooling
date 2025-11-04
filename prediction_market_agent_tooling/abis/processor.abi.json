@@ -1,0 +1,16 @@
+[
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "processor",
+    "outputs": [
+      {
+        "name": "impl",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

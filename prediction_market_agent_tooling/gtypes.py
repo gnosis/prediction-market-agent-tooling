@@ -33,7 +33,7 @@ VerifiedChecksumAddress: TypeAlias = Annotated[
 ]
 VerifiedChecksumAddressOrNone: TypeAlias = Annotated[
     ChecksumAddress | None,
-    BeforeValidator(lambda x: Web3.to_checksum_address(x) if x is not None else None),
+    BeforeValidator(lambda x: Web3.to_checksum_address(x) if x else None),
 ]
 
 

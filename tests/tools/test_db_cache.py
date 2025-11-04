@@ -1,5 +1,8 @@
+import asyncio
+import time
 from datetime import date, timedelta
 
+import pytest
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -374,3 +377,21 @@ def test_postgres_cache_pydantic_union_none_3(
     assert (
         call_count == 2
     ), "The function should only be called once due to cache disabled"
+
+
+@pytest.mark.asyncio
+async def test_db_cache_parallel(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    @db_cache(
+        api_keys=session_keys_with_postgresql_proc_and_enabled_cache, cache_none=False
+    )
+    async def wait(x: int) -> int:
+        await asyncio.sleep(0.1)
+        return x
+
+    start_time = time.time()
+    await asyncio.gather(*(wait(i) for i in range(10)))
+    took = time.time() - start_time
+
+    assert took < 0.2

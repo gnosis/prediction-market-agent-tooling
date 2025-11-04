@@ -12,6 +12,7 @@ from web3 import Web3
 from web3.constants import CHECKSUM_ADDRESSS_ZERO, HASH_ZERO
 from web3.contract.contract import Contract as Web3Contract
 from web3.exceptions import ContractCustomError, ContractLogicError
+from web3.types import BlockIdentifier
 
 from prediction_market_agent_tooling.chains import POLYGON_CHAIN_ID
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -97,6 +98,7 @@ class ContractBaseClass(BaseModel):
         function_name: str,
         function_params: t.Optional[list[t.Any] | dict[str, t.Any]] = None,
         web3: Web3 | None = None,
+        block_identifier: BlockIdentifier | None = None,
     ) -> t.Any:
         """
         Used for reading from the contract.
@@ -108,6 +110,7 @@ class ContractBaseClass(BaseModel):
             contract_abi=self.abi,
             function_name=function_name,
             function_params=function_params,
+            block_identifier=block_identifier,
         )
 
     def send(
@@ -196,6 +199,22 @@ class ContractProxyBaseClass(ContractBaseClass):
         return Web3.to_checksum_address(address)
 
 
+class ContractProcessorBaseClass(ContractBaseClass):
+    """
+    Contract base class for processor contracts.
+    """
+
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "../abis/processor.abi.json"
+        )
+    )
+
+    def processor(self, web3: Web3 | None = None) -> ChecksumAddress:
+        address = self.call("processor", web3=web3)
+        return Web3.to_checksum_address(address)
+
+
 class ContractERC20BaseClass(ContractBaseClass):
     """
     Contract base class extended by ERC-20 standard methods.
@@ -274,8 +293,17 @@ class ContractERC20BaseClass(ContractBaseClass):
             web3=web3,
         )
 
-    def balanceOf(self, for_address: ChecksumAddress, web3: Web3 | None = None) -> Wei:
-        balance = Wei(self.call("balanceOf", [for_address], web3=web3))
+    def balanceOf(
+        self,
+        for_address: ChecksumAddress,
+        web3: Web3 | None = None,
+        block_identifier: BlockIdentifier | None = None,
+    ) -> Wei:
+        balance = Wei(
+            self.call(
+                "balanceOf", [for_address], web3=web3, block_identifier=block_identifier
+            )
+        )
         return balance
 
     def balance_of_in_tokens(
@@ -948,6 +976,7 @@ def uni_implementation_address(
     # TODO: Fix the above, and afterwards assert that only 1 imp address is returned from this function. Or prove that this could indeed happen (although we are very pretty sure it shouldn't).
     addresses = [
         implementation_proxy_address(contract_address, web3),
+        processor_proxy_address(contract_address, web3),
         minimal_proxy_address(contract_address, web3),
         seer_minimal_proxy_address(contract_address, web3),
         eip_1967_proxy_address(contract_address, web3),
@@ -975,6 +1004,29 @@ def implementation_proxy_address(
         # it has the implementation method, but it's only for admins.
         logger.warning(
             f"Failed to get implementation for {contract_address=} even though it has the method: {e}"
+        )
+        return None
+
+
+def processor_proxy_address(
+    contract_address: ChecksumAddress, web3: Web3
+) -> ChecksumAddress | None:
+    if not contract_implements_function(
+        contract_address, "processor", web3, look_for_proxy_contract=False
+    ):
+        return None
+    try:
+        return ContractProcessorBaseClass(address=contract_address).processor(web3)
+    except (ContractCustomError, ContractLogicError, tenacity.RetryError) as e:
+        if isinstance(e, tenacity.RetryError) and not isinstance(
+            e.last_attempt.exception(), (ContractCustomError, ContractLogicError)
+        ):
+            raise
+
+        # For example https://gnosisscan.io/address/0x3221a28ed2b2e955da64d1d299956f277562c95c#code,
+        # it has the processor method, but it's only for admins.
+        logger.warning(
+            f"Failed to get processor for {contract_address=} even though it has the method: {e}"
         )
         return None
 

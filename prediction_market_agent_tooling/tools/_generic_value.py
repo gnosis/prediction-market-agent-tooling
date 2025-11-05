@@ -60,6 +60,10 @@ class _GenericValue(
         cls.parser = parser
 
     def __init__(self, value: InputValueType) -> None:
+        if isinstance(value, str) and (
+            value.startswith("0x") or value.startswith("-0x")
+        ):
+            value = int(value, 16)  # type: ignore[assignment] # mypy is confused but if `parser` below can process it, it should be fine, and if it cannot, it should be catched by mypy earlier than here.
         self.value: InternalValueType = self.parser(value)
         super().__init__({"value": self.value, "type": self.__class__.__name__})
 

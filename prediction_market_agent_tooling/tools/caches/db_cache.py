@@ -59,8 +59,7 @@ def db_cache(
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
-) -> Callable[[FunctionT], FunctionT]:
-    ...
+) -> Callable[[FunctionT], FunctionT]: ...
 
 
 @overload
@@ -73,8 +72,7 @@ def db_cache(
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
-) -> FunctionT:
-    ...
+) -> FunctionT: ...
 
 
 def db_cache(
@@ -103,12 +101,16 @@ def db_cache(
         return decorator
 
     api_keys = api_keys if api_keys is not None else APIKeys()
+    # Ensure tables only once, as it's a time costly operation.
+    tables_ensured = False
 
     # Check if the decorated function is async
     if inspect.iscoroutinefunction(func):
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            nonlocal tables_ensured
+
             # If caching is disabled, just call the function and return it
             if not api_keys.ENABLE_CACHE:
                 return await func(*args, **kwargs)
@@ -116,7 +118,9 @@ def db_cache(
             # Run blocking database operations in thread pool
 
             # Ensure tables in thread pool
-            await asyncio.to_thread(_ensure_tables, api_keys)
+            if not tables_ensured:
+                await asyncio.to_thread(_ensure_tables, api_keys)
+                tables_ensured = True
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
 
@@ -152,10 +156,14 @@ def db_cache(
 
     @wraps(func)
     def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        nonlocal tables_ensured
+
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        _ensure_tables(api_keys)
+        if not tables_ensured:
+            _ensure_tables(api_keys)
+            tables_ensured = True
 
         ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
         lookup = _fetch_cached(api_keys, ctx, max_age)

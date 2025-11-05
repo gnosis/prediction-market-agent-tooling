@@ -6,6 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
+from prediction_market_agent_tooling.gtypes import Wei
 from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
@@ -395,3 +396,43 @@ async def test_db_cache_parallel(
     took = time.time() - start_time
 
     assert took < 0.2
+
+
+class TestInputModelWei(BaseModel):
+    value: Wei
+
+
+class Nested(BaseModel):
+    nested: Wei
+
+
+class TestOutputModelWei(BaseModel):
+    result: Wei
+    nested: Nested
+
+
+def test_postgres_cache_pydantic_models_with_wei(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
+    def multiply_models(
+        a: TestInputModelWei, b: TestInputModelWei
+    ) -> TestOutputModelWei:
+        nonlocal call_count
+        call_count += 1
+        return TestOutputModelWei(
+            result=a.value * b.value, nested=Nested(nested=Wei(1))
+        )
+
+    assert multiply_models(
+        TestInputModelWei(value=Wei(2)), TestInputModelWei(value=Wei(3))
+    ) == TestOutputModelWei(result=Wei(6), nested=Nested(nested=Wei(1)))
+    assert multiply_models(
+        TestInputModelWei(value=Wei(2)), TestInputModelWei(value=Wei(3))
+    ) == TestOutputModelWei(result=Wei(6), nested=Nested(nested=Wei(1)))
+    assert multiply_models(
+        TestInputModelWei(value=Wei(4)), TestInputModelWei(value=Wei(5))
+    ) == TestOutputModelWei(result=Wei(20), nested=Nested(nested=Wei(1)))
+    assert call_count == 2, "The function should only be called twice due to caching"

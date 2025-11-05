@@ -374,8 +374,8 @@ def convert_cached_output_to_pydantic(return_type: Any, data: Any) -> Any:
         if origin is None:
             if inspect.isclass(return_type) and issubclass(return_type, BaseModel):
                 # Convert the dictionary to a Pydantic model
-                return return_type(
-                    **{
+                return return_type.model_validate(
+                    {
                         k: convert_cached_output_to_pydantic(
                             getattr(return_type, k, None), v
                         )

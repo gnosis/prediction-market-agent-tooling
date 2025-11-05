@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from unittest.mock import patch
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Wei
@@ -473,3 +473,24 @@ def test_postgres_cache_tables_ensured_only_once(
     assert (
         ensure_tables_call_count == 1
     ), "Tables should only be ensured once across multiple cached functions"
+
+
+class TestOutputModelAlias(BaseModel):
+    result: int = Field(..., alias="r")
+
+
+def test_pydantic_alias(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
+    def multiply_models(v: int) -> TestOutputModelAlias:
+        nonlocal call_count
+        call_count += 1
+        return TestOutputModelAlias(r=v)
+
+    assert multiply_models(1) == TestOutputModelAlias(r=1)
+    assert multiply_models(1) == TestOutputModelAlias(r=1)
+    assert multiply_models(2) == TestOutputModelAlias(r=2)
+    assert call_count == 2, "The function should only be called twice due to caching"

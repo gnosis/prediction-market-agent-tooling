@@ -29,7 +29,10 @@ def json_serializer_default_fn(
     elif isinstance(y, HexBytes):
         return f"HexBytes::{y.to_0x_hex()}"
     elif isinstance(y, BaseModel):
-        return y.model_dump()
+        # For some reason, Pydantic by default serializes using the field names (not alias),
+        # but also by default, deserializes only using the aliased names.
+        # `by_alias=True` here to work by default with models that have some fields with aliased names.
+        return y.model_dump(by_alias=True)
     raise TypeError(
         f"Unsupported type for the default json serialize function, value is {y}."
     )

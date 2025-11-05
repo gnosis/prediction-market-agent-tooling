@@ -1,12 +1,14 @@
 import asyncio
 import time
 from datetime import date, timedelta
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Wei
+from prediction_market_agent_tooling.tools.caches import db_cache as db_cache_module
 from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 
@@ -436,3 +438,38 @@ def test_postgres_cache_pydantic_models_with_wei(
         TestInputModelWei(value=Wei(4)), TestInputModelWei(value=Wei(5))
     ) == TestOutputModelWei(result=Wei(20), nested=Nested(nested=Wei(1)))
     assert call_count == 2, "The function should only be called twice due to caching"
+
+
+def test_postgres_cache_tables_ensured_only_once(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    # Reset the global flag to simulate fresh start
+    db_cache_module._db_cache_tables_ensured = False
+
+    ensure_tables_call_count = 0
+
+    def mock_ensure_tables(api_keys: APIKeys) -> None:
+        nonlocal ensure_tables_call_count
+        ensure_tables_call_count += 1
+
+    with patch.object(
+        db_cache_module, "_ensure_tables", side_effect=mock_ensure_tables
+    ):
+
+        @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
+        def func1(x: int) -> int:
+            return x * 2
+
+        @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)
+        def func2(x: int) -> int:
+            return x * 3
+
+        # Call multiple functions
+        func1(1)
+        func1(2)
+        func2(1)
+        func2(2)
+
+    assert (
+        ensure_tables_call_count == 1
+    ), "Tables should only be ensured once across multiple cached functions"

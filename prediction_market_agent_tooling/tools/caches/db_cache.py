@@ -35,6 +35,9 @@ DB_CACHE_LOG_PREFIX = "[db-cache]"
 
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
 
+# Ensure tables only once, as it's a time costly operation.
+_db_cache_tables_ensured = False
+
 
 class FunctionCache(SQLModel, table=True):
     __tablename__ = "function_cache"
@@ -103,15 +106,13 @@ def db_cache(
         return decorator
 
     api_keys = api_keys if api_keys is not None else APIKeys()
-    # Ensure tables only once, as it's a time costly operation.
-    tables_ensured = False
 
     # Check if the decorated function is async
     if inspect.iscoroutinefunction(func):
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-            nonlocal tables_ensured
+            global _db_cache_tables_ensured
 
             # If caching is disabled, just call the function and return it
             if not api_keys.ENABLE_CACHE:
@@ -120,9 +121,9 @@ def db_cache(
             # Run blocking database operations in thread pool
 
             # Ensure tables in thread pool
-            if not tables_ensured:
+            if not _db_cache_tables_ensured:
                 await asyncio.to_thread(_ensure_tables, api_keys)
-                tables_ensured = True
+                _db_cache_tables_ensured = True
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
 
@@ -158,14 +159,14 @@ def db_cache(
 
     @wraps(func)
     def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-        nonlocal tables_ensured
+        global _db_cache_tables_ensured
 
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        if not tables_ensured:
+        if not _db_cache_tables_ensured:
             _ensure_tables(api_keys)
-            tables_ensured = True
+            _db_cache_tables_ensured = True
 
         ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
         lookup = _fetch_cached(api_keys, ctx, max_age)

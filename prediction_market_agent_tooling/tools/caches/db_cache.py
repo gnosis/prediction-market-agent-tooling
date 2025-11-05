@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import inspect
 import json
+import threading
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import wraps
@@ -19,7 +20,7 @@ from typing import (
 )
 
 import psycopg2
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import DataError
@@ -36,7 +37,9 @@ DB_CACHE_LOG_PREFIX = "[db-cache]"
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
 
 # Ensure tables only once, as it's a time costly operation.
-_db_cache_tables_ensured = False
+_DB_CACHE_TABLES_LOCK_THREAD = threading.Lock()
+_DB_CACHE_TABLES_LOCK_ASYNC = asyncio.Lock()
+_DB_CACHE_TABLES_ENSURED: dict[SecretStr, bool] = {}
 
 
 class FunctionCache(SQLModel, table=True):
@@ -112,7 +115,7 @@ def db_cache(
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-            global _db_cache_tables_ensured
+            global _DB_CACHE_TABLES_ENSURED
 
             # If caching is disabled, just call the function and return it
             if not api_keys.ENABLE_CACHE:
@@ -121,9 +124,11 @@ def db_cache(
             # Run blocking database operations in thread pool
 
             # Ensure tables in thread pool
-            if not _db_cache_tables_ensured:
-                await asyncio.to_thread(_ensure_tables, api_keys)
-                _db_cache_tables_ensured = True
+            if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
+                async with _DB_CACHE_TABLES_LOCK_ASYNC:
+                    if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
+                        await asyncio.to_thread(_ensure_tables, api_keys)
+                        _DB_CACHE_TABLES_ENSURED[api_keys.sqlalchemy_db_url] = True
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
 
@@ -159,14 +164,16 @@ def db_cache(
 
     @wraps(func)
     def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-        global _db_cache_tables_ensured
+        global _DB_CACHE_TABLES_ENSURED
 
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        if not _db_cache_tables_ensured:
-            _ensure_tables(api_keys)
-            _db_cache_tables_ensured = True
+        if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
+            with _DB_CACHE_TABLES_LOCK_THREAD:
+                if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
+                    _ensure_tables(api_keys)
+                    _DB_CACHE_TABLES_ENSURED[api_keys.sqlalchemy_db_url] = True
 
         ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
         lookup = _fetch_cached(api_keys, ctx, max_age)

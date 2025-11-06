@@ -160,3 +160,11 @@ def test_passing_around_big_ints() -> None:
     )
 
     assert params.amounts == amounts_to_redeem
+
+
+def test_from_hex() -> None:
+    assert Wei("0x1").value == 1
+
+
+def test_from_negative_hex() -> None:
+    assert Wei("-0x1").value == -1

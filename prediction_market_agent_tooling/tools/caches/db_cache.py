@@ -28,7 +28,10 @@ from sqlmodel import Field, SQLModel, desc, select
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.db.db_manager import DBManager
+from prediction_market_agent_tooling.tools.db.db_manager import (
+    DBManager,
+    EnsureTableManager,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 DB_CACHE_LOG_PREFIX = "[db-cache]"
@@ -47,6 +50,10 @@ class FunctionCache(SQLModel, table=True):
     args_hash: str = Field(index=True)
     result: Any = Field(sa_column=Column(JSONB, nullable=False))
     created_at: DatetimeUTC = Field(default_factory=utcnow, index=True)
+
+
+# Global instance of the table manager for FunctionCache
+_table_manager = EnsureTableManager([FunctionCache])
 
 
 @overload
@@ -113,10 +120,8 @@ def db_cache(
             if not api_keys.ENABLE_CACHE:
                 return await func(*args, **kwargs)
 
-            # Run blocking database operations in thread pool
-
-            # Ensure tables in thread pool
-            await asyncio.to_thread(_ensure_tables, api_keys)
+            # Ensure tables are created before accessing cache
+            await _table_manager.ensure_tables_async(api_keys)
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
 
@@ -155,7 +160,8 @@ def db_cache(
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        _ensure_tables(api_keys)
+        # Ensure tables are created before accessing cache
+        _table_manager.ensure_tables_sync(api_keys)
 
         ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
         lookup = _fetch_cached(api_keys, ctx, max_age)
@@ -198,12 +204,6 @@ class CallContext:
 class CacheLookup:
     hit: bool
     value: Any | None = None
-
-
-def _ensure_tables(api_keys: APIKeys) -> None:
-    DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
-        [FunctionCache]
-    )
 
 
 def _build_context(
@@ -363,8 +363,8 @@ def convert_cached_output_to_pydantic(return_type: Any, data: Any) -> Any:
         if origin is None:
             if inspect.isclass(return_type) and issubclass(return_type, BaseModel):
                 # Convert the dictionary to a Pydantic model
-                return return_type(
-                    **{
+                return return_type.model_validate(
+                    {
                         k: convert_cached_output_to_pydantic(
                             getattr(return_type, k, None), v
                         )

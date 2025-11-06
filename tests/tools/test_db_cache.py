@@ -444,7 +444,7 @@ def test_postgres_cache_tables_ensured_only_once(
     session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
 ) -> None:
     # Reset the global flag to simulate fresh start
-    db_cache_module._DB_CACHE_TABLES_ENSURED.clear()
+    db_cache_module._table_manager._ensured.clear()
 
     ensure_tables_call_count = 0
 
@@ -453,7 +453,7 @@ def test_postgres_cache_tables_ensured_only_once(
         ensure_tables_call_count += 1
 
     with patch.object(
-        db_cache_module, "_ensure_tables", side_effect=mock_ensure_tables
+        db_cache_module._table_manager, "_create_tables", side_effect=mock_ensure_tables
     ):
 
         @db_cache(api_keys=session_keys_with_postgresql_proc_and_enabled_cache)

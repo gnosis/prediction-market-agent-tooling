@@ -1,7 +1,10 @@
+import asyncio
 import hashlib
+import threading
 from contextlib import contextmanager
 from typing import Generator, Sequence
 
+from pydantic import SecretStr
 from sqlalchemy import Connection
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -79,3 +82,59 @@ class DBManager:
         if tables_to_create:
             for table in tables_to_create:
                 self.cache_table_initialized[table.name] = True
+
+
+class EnsureTableManager:
+    """
+    Manages database table initialization with thread-safe and async-safe locking.
+    Ensures tables are created only once per database URL.
+    """
+
+    def __init__(self, tables: Sequence[type[SQLModel]]) -> None:
+        """
+        Initialize the table manager with the tables to manage.
+
+        Args:
+            tables: Sequence of SQLModel table classes to ensure in the database.
+        """
+        # Ensure tables only once, as it's a time costly operation.
+        self._tables = tables
+        self._lock_thread = threading.Lock()
+        self._lock_async = asyncio.Lock()
+        self._ensured: dict[SecretStr, bool] = {}
+
+    def is_ensured(self, db_url: SecretStr) -> bool:
+        """Check if tables have been ensured for the given database URL."""
+        return self._ensured.get(db_url, False)
+
+    def mark_ensured(self, db_url: SecretStr) -> None:
+        """Mark tables as ensured for the given database URL."""
+        self._ensured[db_url] = True
+
+    def ensure_tables_sync(self, api_keys: APIKeys) -> None:
+        """
+        Ensure tables exist for the given API keys (synchronous version).
+        Thread-safe with double-checked locking pattern.
+        """
+        if not self.is_ensured(api_keys.sqlalchemy_db_url):
+            with self._lock_thread:
+                if not self.is_ensured(api_keys.sqlalchemy_db_url):
+                    self._create_tables(api_keys)
+                    self.mark_ensured(api_keys.sqlalchemy_db_url)
+
+    async def ensure_tables_async(self, api_keys: APIKeys) -> None:
+        """
+        Ensure tables exist for the given API keys (asynchronous version).
+        Async-safe with double-checked locking pattern.
+        """
+        if not self.is_ensured(api_keys.sqlalchemy_db_url):
+            async with self._lock_async:
+                if not self.is_ensured(api_keys.sqlalchemy_db_url):
+                    await asyncio.to_thread(self._create_tables, api_keys)
+                    self.mark_ensured(api_keys.sqlalchemy_db_url)
+
+    def _create_tables(self, api_keys: APIKeys) -> None:
+        """Create the database tables."""
+        DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
+            list(self._tables)
+        )

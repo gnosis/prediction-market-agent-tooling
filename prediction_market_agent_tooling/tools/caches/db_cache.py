@@ -2,7 +2,6 @@ import asyncio
 import hashlib
 import inspect
 import json
-import threading
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import wraps
@@ -20,7 +19,7 @@ from typing import (
 )
 
 import psycopg2
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import DataError
@@ -29,17 +28,15 @@ from sqlmodel import Field, SQLModel, desc, select
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.db.db_manager import DBManager
+from prediction_market_agent_tooling.tools.db.db_manager import (
+    DBManager,
+    EnsureTableManager,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 DB_CACHE_LOG_PREFIX = "[db-cache]"
 
 FunctionT = TypeVar("FunctionT", bound=Callable[..., Any])
-
-# Ensure tables only once, as it's a time costly operation.
-_DB_CACHE_TABLES_LOCK_THREAD = threading.Lock()
-_DB_CACHE_TABLES_LOCK_ASYNC = asyncio.Lock()
-_DB_CACHE_TABLES_ENSURED: dict[SecretStr, bool] = {}
 
 
 class FunctionCache(SQLModel, table=True):
@@ -53,6 +50,10 @@ class FunctionCache(SQLModel, table=True):
     args_hash: str = Field(index=True)
     result: Any = Field(sa_column=Column(JSONB, nullable=False))
     created_at: DatetimeUTC = Field(default_factory=utcnow, index=True)
+
+
+# Global instance of the table manager for FunctionCache
+_table_manager = EnsureTableManager([FunctionCache])
 
 
 @overload
@@ -115,20 +116,12 @@ def db_cache(
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-            global _DB_CACHE_TABLES_ENSURED
-
             # If caching is disabled, just call the function and return it
             if not api_keys.ENABLE_CACHE:
                 return await func(*args, **kwargs)
 
-            # Run blocking database operations in thread pool
-
-            # Ensure tables in thread pool
-            if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
-                async with _DB_CACHE_TABLES_LOCK_ASYNC:
-                    if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
-                        await asyncio.to_thread(_ensure_tables, api_keys)
-                        _DB_CACHE_TABLES_ENSURED[api_keys.sqlalchemy_db_url] = True
+            # Ensure tables are created before accessing cache
+            await _table_manager.ensure_tables_async(api_keys)
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
 
@@ -164,16 +157,11 @@ def db_cache(
 
     @wraps(func)
     def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-        global _DB_CACHE_TABLES_ENSURED
-
         if not api_keys.ENABLE_CACHE:
             return func(*args, **kwargs)
 
-        if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
-            with _DB_CACHE_TABLES_LOCK_THREAD:
-                if not _DB_CACHE_TABLES_ENSURED.get(api_keys.sqlalchemy_db_url):
-                    _ensure_tables(api_keys)
-                    _DB_CACHE_TABLES_ENSURED[api_keys.sqlalchemy_db_url] = True
+        # Ensure tables are created before accessing cache
+        _table_manager.ensure_tables_sync(api_keys)
 
         ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
         lookup = _fetch_cached(api_keys, ctx, max_age)
@@ -216,12 +204,6 @@ class CallContext:
 class CacheLookup:
     hit: bool
     value: Any | None = None
-
-
-def _ensure_tables(api_keys: APIKeys) -> None:
-    DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
-        [FunctionCache]
-    )
 
 
 def _build_context(

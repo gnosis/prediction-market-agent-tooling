@@ -191,9 +191,11 @@ class _GenericValue(
             raise TypeError("Cannot compare different types")
         return bool(self.value >= other.value)
 
-    def __eq__(self: GenericValueType, other: GenericValueType | t.Literal[0]) -> bool:  # type: ignore
+    def __eq__(self: GenericValueType, other: GenericValueType | t.Literal[0] | None) -> bool:  # type: ignore
         if other == 0:
             other = self.zero()
+        if other is None:
+            return False
         if not isinstance(other, _GenericValue):
             raise TypeError("Cannot compare different types")
         if type(self) is not type(other):

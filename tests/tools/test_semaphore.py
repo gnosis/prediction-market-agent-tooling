@@ -179,3 +179,42 @@ async def test_async_different_rate_ids() -> None:
     assert len(calls_b) == 2
     assert calls_a[1] - calls_a[0] >= 0.3
     assert calls_b[1] - calls_b[0] >= 0.3
+
+
+@pytest.mark.asyncio
+async def test_async_parallel_calls_no_timeout() -> None:
+    """Test that parallel async calls don't cause database contention and timeouts."""
+    call_count = 0
+
+    @postgres_rate_limited(
+        api_keys=APIKeys(),
+        rate_id="test_async_parallel_no_timeout",
+        interval_seconds=0.1,
+        shared_db=False,
+    )
+    async def async_function(value: int) -> int:
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.01)  # Simulate async work
+        return value * 2
+
+    # Make multiple parallel calls using asyncio.gather
+    # This should not cause timeouts or database contention
+    start_time = time.time()
+    results = await asyncio.gather(
+        async_function(1),
+        async_function(2),
+        async_function(3),
+        async_function(4),
+        async_function(5),
+    )
+    elapsed = time.time() - start_time
+
+    # Verify all calls completed
+    assert list(results) == [2, 4, 6, 8, 10]
+    assert call_count == 5
+
+    # Should take at least 0.4 seconds (5 calls * 0.1s interval - 0.1s for first)
+    # but much less than 30 seconds (the old timeout error threshold)
+    assert elapsed >= 0.4
+    assert elapsed < 5.0  # Should complete in reasonable time

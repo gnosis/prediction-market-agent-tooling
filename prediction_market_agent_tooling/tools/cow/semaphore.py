@@ -34,12 +34,23 @@ def postgres_rate_limited(
     Rate limiter decorator that works with both sync and async functions.
 
     rate_id is used to distinguish between different rate limits for different functions.
+
+    For async functions, uses AsyncRateLimiter with semaphore to prevent multiple
+    async tasks from competing for the database lock simultaneously, while still
+    maintaining cross-process rate limits via PostgreSQL.
+
+    For sync functions, uses database-backed RateLimiter for proper synchronization.
     """
     limiter = RateLimiter(id=rate_id, interval_seconds=interval_seconds)
 
     def decorator(func: F) -> F:
         if inspect.iscoroutinefunction(func):
-            # Async function wrapper
+            # Get or create async rate limiter for this rate_id
+            async_limiter = AsyncRateLimiter.get_instance(
+                id=rate_id, interval_seconds=interval_seconds
+            )
+
+            # Async function wrapper using hybrid rate limiter
             @wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 sqlalchemy_db_url = (
@@ -50,13 +61,13 @@ def postgres_rate_limited(
                 await _table_manager.ensure_tables_async(api_keys)
 
                 db_manager = DBManager(sqlalchemy_db_url)
-                await asyncio.to_thread(lambda: limiter.enforce_sync(db_manager))
+                await async_limiter.enforce(db_manager)
                 return await func(*args, **kwargs)
 
             return cast(F, async_wrapper)
 
         else:
-            # Sync function wrapper
+            # Sync function wrapper using database-backed rate limiter
             @wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 sqlalchemy_db_url = (
@@ -73,6 +84,79 @@ def postgres_rate_limited(
             return cast(F, sync_wrapper)
 
     return decorator
+
+
+class AsyncRateLimiter:
+    """
+    Hybrid async rate limiter that combines in-process coordination with database-based
+    cross-process rate limiting.
+
+    This prevents multiple async tasks in the same process from competing for the
+    database lock simultaneously, while still maintaining rate limits across different
+    deployments/processes via the PostgreSQL-based RateLimiter.
+
+    Uses a class-level dictionary to maintain singleton instances per rate_id.
+    """
+
+    _instances: dict[str, "AsyncRateLimiter"] = {}
+
+    def __init__(
+        self,
+        id: str,
+        interval_seconds: float,
+    ):
+        self.id = id
+        self.interval_seconds = interval_seconds
+        # In-process semaphore to allow only one async task to access DB at a time
+        self._semaphore = asyncio.Semaphore(1)
+
+    @classmethod
+    def get_instance(cls, id: str, interval_seconds: float) -> "AsyncRateLimiter":
+        """
+        Get or create an AsyncRateLimiter instance for the given rate_id.
+
+        This ensures that the same rate limiter instance is used across multiple
+        calls with the same rate_id, maintaining proper in-process coordination.
+
+        Args:
+            id: The unique identifier for this rate limiter
+            interval_seconds: The minimum interval between rate-limited calls
+
+        Returns:
+            The singleton AsyncRateLimiter instance for this rate_id
+        """
+        if id not in cls._instances:
+            cls._instances[id] = cls(id=id, interval_seconds=interval_seconds)
+        return cls._instances[id]
+
+    async def enforce(
+        self, db_manager: DBManager, timeout_seconds: float = 30.0
+    ) -> None:
+        """
+        Enforce rate limiting in async context using a hybrid approach:
+        1. Use semaphore to ensure only one async task accesses database at a time
+        2. Then check database for cross-process rate limiting
+
+        This prevents multiple async tasks from competing for the database lock
+        simultaneously, while still maintaining rate limits across different
+        deployments via the PostgreSQL-based RateLimiter.
+
+        Args:
+            db_manager: The database manager to use for getting sessions
+            timeout_seconds: Maximum time in seconds to wait before giving up
+
+        Raises:
+            TimeoutError: If the rate limit cannot be acquired within timeout
+        """
+        # Step 1: Acquire semaphore to serialize database access within this process
+        async with self._semaphore:
+            # Step 2: Check database for cross-process rate limiting
+            sync_limiter = RateLimiter(
+                id=self.id, interval_seconds=self.interval_seconds
+            )
+            await asyncio.to_thread(
+                lambda: sync_limiter.enforce_sync(db_manager, timeout_seconds)
+            )
 
 
 class RateLimiter:

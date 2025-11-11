@@ -5,6 +5,7 @@ from datetime import timedelta
 from functools import wraps
 from typing import Any, Callable, Optional, TypeVar, cast
 
+from pydantic import SecretStr
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, select
 
@@ -19,7 +20,7 @@ from prediction_market_agent_tooling.tools.utils import utcnow
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-FALLBACK_SQL_ENGINE = "sqlite:///rate_limit.db"
+FALLBACK_SQL_ENGINE = SecretStr("sqlite:///rate_limit.db")
 
 _table_manager = EnsureTableManager([RateLimit])
 
@@ -54,13 +55,11 @@ def postgres_rate_limited(
             @wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 sqlalchemy_db_url = (
-                    api_keys.sqlalchemy_db_url.get_secret_value()
-                    if shared_db
-                    else FALLBACK_SQL_ENGINE
+                    api_keys.sqlalchemy_db_url if shared_db else FALLBACK_SQL_ENGINE
                 )
-                await _table_manager.ensure_tables_async(api_keys)
+                await _table_manager.ensure_tables_async(sqlalchemy_db_url)
 
-                db_manager = DBManager(sqlalchemy_db_url)
+                db_manager = DBManager(sqlalchemy_db_url.get_secret_value())
                 await async_limiter.enforce(db_manager)
                 return await func(*args, **kwargs)
 
@@ -71,13 +70,11 @@ def postgres_rate_limited(
             @wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 sqlalchemy_db_url = (
-                    api_keys.sqlalchemy_db_url.get_secret_value()
-                    if shared_db
-                    else FALLBACK_SQL_ENGINE
+                    api_keys.sqlalchemy_db_url if shared_db else FALLBACK_SQL_ENGINE
                 )
-                _table_manager.ensure_tables_sync(api_keys)
+                _table_manager.ensure_tables_sync(sqlalchemy_db_url)
 
-                db_manager = DBManager(sqlalchemy_db_url)
+                db_manager = DBManager(sqlalchemy_db_url.get_secret_value())
                 limiter.enforce_sync(db_manager)
                 return func(*args, **kwargs)
 
@@ -222,12 +219,12 @@ class RateLimiter:
                     # Not enough time passed, sleep and retry
                     to_sleep = (self.interval - elapsed).total_seconds()
                     time.sleep(to_sleep)
-            except OperationalError:
+            except OperationalError as e:
                 # Backoff if DB is under contention
                 elapsed_time = time.monotonic() - start_time
                 if elapsed_time > timeout_seconds:
                     raise TimeoutError(
                         f"Could not acquire rate limit '{self.id}' "
-                        f"after {elapsed_time:.1f} seconds due to database contention"
+                        f"after {elapsed_time:.1f} seconds due to database error: {e}"
                     )
                 time.sleep(0.5)

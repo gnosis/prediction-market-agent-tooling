@@ -111,30 +111,28 @@ class EnsureTableManager:
         """Mark tables as ensured for the given database URL."""
         self._ensured[db_url] = True
 
-    def ensure_tables_sync(self, api_keys: APIKeys) -> None:
+    def ensure_tables_sync(self, db_url: SecretStr) -> None:
         """
         Ensure tables exist for the given API keys (synchronous version).
         Thread-safe with double-checked locking pattern.
         """
-        if not self.is_ensured(api_keys.sqlalchemy_db_url):
+        if not self.is_ensured(db_url):
             with self._lock_thread:
-                if not self.is_ensured(api_keys.sqlalchemy_db_url):
-                    self._create_tables(api_keys)
-                    self.mark_ensured(api_keys.sqlalchemy_db_url)
+                if not self.is_ensured(db_url):
+                    self._create_tables(db_url)
+                    self.mark_ensured(db_url)
 
-    async def ensure_tables_async(self, api_keys: APIKeys) -> None:
+    async def ensure_tables_async(self, db_url: SecretStr) -> None:
         """
         Ensure tables exist for the given API keys (asynchronous version).
         Async-safe with double-checked locking pattern.
         """
-        if not self.is_ensured(api_keys.sqlalchemy_db_url):
+        if not self.is_ensured(db_url):
             async with self._lock_async:
-                if not self.is_ensured(api_keys.sqlalchemy_db_url):
-                    await asyncio.to_thread(self._create_tables, api_keys)
-                    self.mark_ensured(api_keys.sqlalchemy_db_url)
+                if not self.is_ensured(db_url):
+                    await asyncio.to_thread(self._create_tables, db_url)
+                    self.mark_ensured(db_url)
 
-    def _create_tables(self, api_keys: APIKeys) -> None:
+    def _create_tables(self, db_url: SecretStr) -> None:
         """Create the database tables."""
-        DBManager(api_keys.sqlalchemy_db_url.get_secret_value()).create_tables(
-            list(self._tables)
-        )
+        DBManager(db_url.get_secret_value()).create_tables(list(self._tables))

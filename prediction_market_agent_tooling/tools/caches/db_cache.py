@@ -121,7 +121,7 @@ def db_cache(
                 return await func(*args, **kwargs)
 
             # Ensure tables are created before accessing cache
-            await _table_manager.ensure_tables_async(api_keys)
+            await _table_manager.ensure_tables_async(api_keys.sqlalchemy_db_url)
 
             ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
 
@@ -161,7 +161,7 @@ def db_cache(
             return func(*args, **kwargs)
 
         # Ensure tables are created before accessing cache
-        _table_manager.ensure_tables_sync(api_keys)
+        _table_manager.ensure_tables_sync(api_keys.sqlalchemy_db_url)
 
         ctx = _build_context(func, args, kwargs, ignore_args, ignore_arg_types)
         lookup = _fetch_cached(api_keys, ctx, max_age)

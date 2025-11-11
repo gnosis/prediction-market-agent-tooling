@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import time
 from datetime import timedelta
 from functools import wraps
@@ -9,12 +11,17 @@ from sqlmodel import Session, select
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.cow.models import RateLimit
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.db.db_manager import DBManager
+from prediction_market_agent_tooling.tools.db.db_manager import (
+    DBManager,
+    EnsureTableManager,
+)
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 F = TypeVar("F", bound=Callable[..., Any])
 
 FALLBACK_SQL_ENGINE = "sqlite:///rate_limit.db"
+
+_table_manager = EnsureTableManager([RateLimit])
 
 
 def postgres_rate_limited(
@@ -23,26 +30,47 @@ def postgres_rate_limited(
     interval_seconds: float,
     shared_db: bool = False,
 ) -> Callable[[F], F]:
-    """rate_id is used to distinguish between different rate limits for different functions"""
+    """
+    Rate limiter decorator that works with both sync and async functions.
+
+    rate_id is used to distinguish between different rate limits for different functions.
+    """
     limiter = RateLimiter(id=rate_id, interval_seconds=interval_seconds)
 
     def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            sqlalchemy_db_url = (
-                api_keys.sqlalchemy_db_url.get_secret_value()
-                if shared_db
-                else FALLBACK_SQL_ENGINE
-            )
+        if inspect.iscoroutinefunction(func):
+            # Async function wrapper
+            @wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                sqlalchemy_db_url = (
+                    api_keys.sqlalchemy_db_url.get_secret_value()
+                    if shared_db
+                    else FALLBACK_SQL_ENGINE
+                )
+                await _table_manager.ensure_tables_async(api_keys)
 
-            db_manager = DBManager(sqlalchemy_db_url)
-            db_manager.create_tables([RateLimit])
+                db_manager = DBManager(sqlalchemy_db_url)
+                await asyncio.to_thread(lambda: limiter.enforce_sync(db_manager))
+                return await func(*args, **kwargs)
 
-            with db_manager.get_session() as session:
-                limiter.enforce(session)
-            return func(*args, **kwargs)
+            return cast(F, async_wrapper)
 
-        return cast(F, wrapper)
+        else:
+            # Sync function wrapper
+            @wraps(func)
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                sqlalchemy_db_url = (
+                    api_keys.sqlalchemy_db_url.get_secret_value()
+                    if shared_db
+                    else FALLBACK_SQL_ENGINE
+                )
+                _table_manager.ensure_tables_sync(api_keys)
+
+                db_manager = DBManager(sqlalchemy_db_url)
+                limiter.enforce_sync(db_manager)
+                return func(*args, **kwargs)
+
+            return cast(F, sync_wrapper)
 
     return decorator
 
@@ -51,6 +79,23 @@ class RateLimiter:
     def __init__(self, id: str, interval_seconds: float = 1.0) -> None:
         self.id = id
         self.interval = timedelta(seconds=interval_seconds)
+
+    def enforce_sync(
+        self, db_manager: DBManager, timeout_seconds: float = 30.0
+    ) -> None:
+        """
+        Enforces the rate limit inside a transaction using a DBManager.
+        Blocks until allowed or timeout is reached.
+
+        Args:
+            db_manager: The database manager to use for getting sessions
+            timeout_seconds: Maximum time in seconds to wait before giving up
+
+        Raises:
+            TimeoutError: If the rate limit cannot be acquired within the timeout period
+        """
+        with db_manager.get_session() as session:
+            self.enforce(session, timeout_seconds)
 
     def enforce(self, session: Session, timeout_seconds: float = 30.0) -> None:
         """

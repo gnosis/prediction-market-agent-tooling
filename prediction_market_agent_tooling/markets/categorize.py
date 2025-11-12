@@ -12,7 +12,7 @@ def infer_category(
     model: str = "gpt-3.5-turbo-0125",
 ) -> str:
     try:
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain.schema.output_parser import StrOutputParser
         from langchain_openai import ChatOpenAI
     except ImportError:

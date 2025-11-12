@@ -1,10 +1,8 @@
 from typing import Any, Callable, Iterable, Literal, Optional, ParamSpec, TypeVar
 
 from langchain_core.runnables.config import RunnableConfig
-from langfuse.decorators.langfuse_decorator import (  # noqa: F401  # Import for the sake of easy importing with others from here.
-    langfuse_context,
-)
-from langfuse.decorators.langfuse_decorator import observe as original_observe
+from langfuse import observe as original_observe
+from langfuse.langchain import CallbackHandler
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -28,7 +26,5 @@ def observe(
 
 
 def get_langfuse_langchain_config() -> RunnableConfig:
-    config: RunnableConfig = {
-        "callbacks": [langfuse_context.get_current_langchain_handler()]
-    }
+    config: RunnableConfig = {"callbacks": [CallbackHandler()]}
     return config

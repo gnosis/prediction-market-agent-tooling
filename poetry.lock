@@ -3511,31 +3511,28 @@ tiktoken = ">=0.7.0,<1.0.0"
 
 [[package]]
 name = "langfuse"
-version = "2.60.9"
+version = "3.9.3"
 description = "A client library for accessing langfuse"
 optional = false
-python-versions = "<4.0,>=3.9"
+python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
 files = [
-    {file = "langfuse-2.60.9-py3-none-any.whl", hash = "sha256:e4291a66bc579c66d7652da5603ca7f0409536700d7b812e396780b5d9a0685d"},
-    {file = "langfuse-2.60.9.tar.gz", hash = "sha256:040753346d7df4a0be6967dfc7efe3de313fee362524fe2f801867fcbbca3c98"},
+    {file = "langfuse-3.9.3-py3-none-any.whl", hash = "sha256:0afe88773f20fc67636d8a52dd3a5fb4e10f1c6e226f2c99ace8c65190fb5697"},
+    {file = "langfuse-3.9.3.tar.gz", hash = "sha256:8081691d40325b7022b07fc4e5884853c4a4ffe03b05c702490788b9a1a125df"},
 ]
 
 [package.dependencies]
-anyio = ">=4.4.0,<5.0.0"
 backoff = ">=1.10.0"
 httpx = ">=0.15.4,<1.0"
-idna = ">=3.7,<4.0"
-packaging = ">=23.2,<25.0"
+openai = ">=0.27.8"
+opentelemetry-api = ">=1.33.1,<2.0.0"
+opentelemetry-exporter-otlp-proto-http = ">=1.33.1,<2.0.0"
+opentelemetry-sdk = ">=1.33.1,<2.0.0"
+packaging = ">=23.2,<26.0"
 pydantic = ">=1.10.7,<3.0"
 requests = ">=2,<3"
 wrapt = ">=1.14,<2.0"
-
-[package.extras]
-langchain = ["langchain (>=0.0.309)"]
-llama-index = ["llama-index (>=0.10.12,<2.0.0)"]
-openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langgraph"
@@ -9015,4 +9012,4 @@ optuna = ["optuna"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "a65f404da068185fad745b04d59c0ee19b719548f266bad88abef61658959090"
+content-hash = "8c47e34fb06f0387730316c538e3f6bf4b1806ffb5f66a4e34869d865cb5085c"

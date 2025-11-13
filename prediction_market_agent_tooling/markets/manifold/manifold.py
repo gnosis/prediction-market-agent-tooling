@@ -176,6 +176,6 @@ class ManifoldAgentMarket(AgentMarket):
                 )           
             return False
             
-        except (ValueError, requests.exceptions.RequestException) as e:
+        except ValueError as e:
             print(f"Error verifying Manifold balance: {e}")
             return False

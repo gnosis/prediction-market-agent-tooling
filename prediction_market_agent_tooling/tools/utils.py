@@ -208,7 +208,7 @@ def response_to_model(
     try:
         return model.model_validate(response_json)
     except ValidationError as e:
-        raise ValueError(f"Unable to validate: `{response_json}`") from e
+        raise ValueError(f"Unable to validate: `{str(response_json)[:1000]}`") from e
 
 
 def response_list_to_model(
@@ -218,7 +218,7 @@ def response_list_to_model(
     try:
         return [model.model_validate(x) for x in response_json]
     except ValidationError as e:
-        raise ValueError(f"Unable to validate: `{response_json}`") from e
+        raise ValueError(f"Unable to validate: `{str(response_json)[:1000]}`") from e
 
 
 def secret_str_from_env(key: str) -> SecretStr | None:

@@ -175,7 +175,7 @@ class ManifoldAgentMarket(AgentMarket):
                 raise ValueError("MANIFOLD_API_KEY not found in API keys")
             
             # Get authenticated user
-            user = get_authenticated_user(api_keys.manifold_api_key)
+            user = get_authenticated_user(api_keys.manifold_api_key.get_secret_value())
             current_balance = user.balance
             has_sufficient_balance = current_balance >= MIN_MANA_BALANCE
             if not has_sufficient_balance:

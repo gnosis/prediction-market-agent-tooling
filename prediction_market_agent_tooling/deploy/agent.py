@@ -1,10 +1,13 @@
 import getpass
+import os
 import time
 import typing as t
 from datetime import timedelta
 from enum import Enum
 from functools import cached_property
 
+import langfuse
+from langfuse._client.environment_variables import LANGFUSE_TRACING_ENABLED
 from pydantic import computed_field
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
@@ -43,7 +46,7 @@ from prediction_market_agent_tooling.tools.custom_exceptions import (
 )
 from prediction_market_agent_tooling.tools.is_invalid import is_invalid
 from prediction_market_agent_tooling.tools.is_predictable import is_predictable_binary
-from prediction_market_agent_tooling.tools.langfuse_ import langfuse_context, observe
+from prediction_market_agent_tooling.tools.langfuse_ import observe
 from prediction_market_agent_tooling.tools.rephrase import (
     rephrase_question_to_unconditional,
 )
@@ -65,14 +68,16 @@ def initialize_langfuse(enable_langfuse: bool) -> None:
     # If langfuse is disabled, it will just ignore all the calls, so no need to do if-else around the code.
     keys = APIKeys()
     if enable_langfuse:
-        langfuse_context.configure(
+        # A bit unusuall (in contrast to previous pattern of calling `configure`),
+        # but it initialises a singleton class of LangfuseResourceManager that will later on be used even without configs,
+        # if get_client function is used in the code.
+        langfuse.Langfuse(
             public_key=keys.langfuse_public_key,
             secret_key=keys.langfuse_secret_key.get_secret_value(),
             host=keys.langfuse_host,
-            enabled=enable_langfuse,
         )
     else:
-        langfuse_context.configure(enabled=enable_langfuse)
+        os.environ[LANGFUSE_TRACING_ENABLED] = "false"
 
 
 class AnsweredEnum(str, Enum):
@@ -111,7 +116,6 @@ class DeployableAgent:
         user_id: str | None = None,
         session_id: str | None = None,
         version: str | None = None,
-        release: str | None = None,
         metadata: t.Any | None = None,
         tags: list[str] | None = None,
         public: bool | None = None,
@@ -119,7 +123,7 @@ class DeployableAgent:
         """
         Provide some useful default arguments when updating the current trace in our agents.
         """
-        langfuse_context.update_current_trace(
+        langfuse.get_client().update_current_trace(
             name=name,
             input=input,
             output=output,
@@ -127,8 +131,6 @@ class DeployableAgent:
             session_id=session_id or self.session_id,
             # All traces within a single run execution will be grouped under a single session.
             version=version or APIKeys().LANGFUSE_DEPLOYMENT_VERSION,
-            # Optionally, mark the current deployment with version (e.g. add git commit hash during docker building).
-            release=release,
             metadata=metadata,
             tags=tags,
             public=public,

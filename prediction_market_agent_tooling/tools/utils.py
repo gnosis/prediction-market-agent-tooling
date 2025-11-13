@@ -10,6 +10,7 @@ import httpx
 import pytz
 import requests
 from pydantic import BaseModel, ValidationError
+from pydantic_ai.models import KnownModelName
 from scipy.optimize import newton
 from scipy.stats import entropy
 from tenacity import RetryError
@@ -288,3 +289,7 @@ def extract_error_from_retry_error(e: BaseException | RetryError) -> BaseExcepti
     ):
         e = exp_from_retry
     return e
+
+
+def infer_model(x: KnownModelName) -> str:
+    return x.split(":")[-1]

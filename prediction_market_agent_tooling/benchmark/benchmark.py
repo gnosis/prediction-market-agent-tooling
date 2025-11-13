@@ -1,5 +1,6 @@
 import concurrent.futures
 import os
+import time
 import typing as t
 from collections import defaultdict
 
@@ -12,7 +13,6 @@ from prediction_market_agent_tooling.benchmark.agents import AbstractBenchmarked
 from prediction_market_agent_tooling.benchmark.utils import Prediction, PredictionsCache
 from prediction_market_agent_tooling.gtypes import OutcomeStr
 from prediction_market_agent_tooling.markets.agent_market import AgentMarket
-from prediction_market_agent_tooling.tools.costs import openai_costs
 from prediction_market_agent_tooling.tools.utils import (
     check_not_none,
     should_not_happen,
@@ -102,7 +102,6 @@ class Benchmarker:
             "confidence/p_yes error correlation": self._compute_confidence_p_yes_error_correlation,
             "Proportion answerable": self._compute_ratio_evaluated_as_answerable,
             "Proportion answered": self._compute_ratio_answered,
-            "Mean cost ($)": self._compute_mean_cost,
             "Mean time (s)": self._compute_mean_time,
         }
         self.metric_fns.update(predefined_metric_fns)
@@ -137,21 +136,20 @@ class Benchmarker:
             def get_prediction_result(
                 market: AgentMarket,
             ) -> tuple[str, Prediction]:
-                with openai_costs(model=agent.model) as costs:
-                    prediction = (
-                        agent.check_and_predict(market_question=market.question)
-                        if not market.is_resolved()
-                        else (
-                            agent.check_and_predict_restricted(
-                                market=market,
-                                time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
-                            )
-                            if market.created_time is not None
-                            else should_not_happen()
+                start_time = time.time()
+                prediction = (
+                    agent.check_and_predict(market_question=market.question)
+                    if not market.is_resolved()
+                    else (
+                        agent.check_and_predict_restricted(
+                            market=market,
+                            time_restriction_up_to=market.created_time,  # TODO: Add support for resolved_at and any time in between.
                         )
+                        if market.created_time is not None
+                        else should_not_happen()
                     )
-                    prediction.time = costs.time
-                    prediction.cost = costs.cost
+                )
+                prediction.time = time.time() - start_time
                 return market.question, prediction
 
             # Run agents in parallel
@@ -293,9 +291,11 @@ class Benchmarker:
             for m in markets
         ]
         y_pred = [
-            p.outcome_prediction.probable_resolution.outcome
-            if p.outcome_prediction is not None
-            else None
+            (
+                p.outcome_prediction.probable_resolution.outcome
+                if p.outcome_prediction is not None
+                else None
+            )
             for p in predictions
         ]
 
@@ -335,16 +335,6 @@ class Benchmarker:
             check_not_none(p.outcome_prediction).confidence for p in predictions
         ]
         return float(np.corrcoef(confidences, p_yes_errors)[0, 1])
-
-    def _compute_mean_cost(
-        self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]
-    ) -> float | None:
-        # Note: costs are optional
-        costs = [p.cost for p in predictions if p.cost]
-        if costs:
-            return sum(costs) / len(costs)
-        else:
-            return None
 
     def _compute_mean_time(
         self, predictions: t.List[Prediction], markets: t.Sequence[AgentMarket]

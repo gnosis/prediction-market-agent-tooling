@@ -291,5 +291,6 @@ def extract_error_from_retry_error(e: BaseException | RetryError) -> BaseExcepti
     return e
 
 
-def infer_model(x: KnownModelName) -> str:
+def infer_model(x: KnownModelName | str) -> str:
+    # Utility to extract only the model name from a potential provider:model_name pair.
     return x.split(":")[-1]

@@ -158,3 +158,33 @@ class ManifoldAgentMarket(AgentMarket):
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
         return api_keys.manifold_user_id
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        """
+        Verify that the agent has at least 10.0 mana balance
+        """
+        from prediction_market_agent_tooling.markets.manifold.api import (
+            get_authenticated_user,
+        )
+        
+        MIN_MANA_BALANCE = 10.0
+
+        try:
+            if not api_keys.manifold_api_key:
+                raise ValueError("MANIFOLD_API_KEY not found in API keys")
+            
+            # Get authenticated user
+            user = get_authenticated_user(api_keys.manifold_api_key)
+            current_balance = user.balance
+            has_sufficient_balance = current_balance >= MIN_MANA_BALANCE
+            if not has_sufficient_balance:
+                print(
+                    f"Insufficient Manifold balance: {current_balance} mana."
+                )
+            
+            return has_sufficient_balance
+            
+        except Exception as e:
+            print(f"Error verifying Manifold balance: {e}")
+            return False

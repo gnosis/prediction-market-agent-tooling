@@ -12,7 +12,7 @@ class TavilyResult(BaseModel):
 class TavilyResponse(BaseModel):
     query: str
     follow_up_questions: str | None = None
-    answer: str
+    answer: str | None
     images: list[str]
     results: list[TavilyResult]
     response_time: float

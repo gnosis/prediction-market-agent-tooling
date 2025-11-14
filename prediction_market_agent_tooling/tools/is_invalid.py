@@ -70,7 +70,7 @@ def is_invalid(
     Evaluate if the question is actually answerable.
     """
     try:
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_openai import ChatOpenAI
     except ImportError:
         logger.error("langchain not installed, skipping is_invalid")

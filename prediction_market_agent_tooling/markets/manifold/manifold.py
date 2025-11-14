@@ -164,18 +164,13 @@ class ManifoldAgentMarket(AgentMarket):
         """
         Verify that the agent has at least 10.0 mana balance
         """
-        MIN_MANA_BALANCE = 10.0
-        try:
-            user = get_authenticated_user(api_keys.manifold_api_key.get_secret_value())
-            current_balance = user.balance
-            if current_balance >= MIN_MANA_BALANCE:
-                return True
-            else:
-                print(
-                    f"Insufficient Manifold balance: {current_balance} mana."
-                )           
-            return False
-            
-        except ValueError as e:
-            print(f"Error verifying Manifold balance: {e}")
-            return False
+        MIN_MANA_BALANCE = 1.0
+        user = get_authenticated_user(api_keys.manifold_api_key.get_secret_value())
+        current_balance = user.balance
+        if current_balance >= MIN_MANA_BALANCE:
+            return True
+        else:
+            logger.warning(
+                f"Insufficient Manifold balance: {current_balance} mana."
+            )           
+        return False

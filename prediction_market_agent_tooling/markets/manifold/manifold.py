@@ -172,4 +172,4 @@ class ManifoldAgentMarket(AgentMarket):
             return True
         else:
             logger.warning(f"Insufficient Manifold balance: {current_balance} mana.")           
-        return False
+            return False

@@ -1,5 +1,6 @@
 import typing as t
 from datetime import timedelta
+from prediction_market_agent_tooling.loggers import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -170,5 +171,5 @@ class ManifoldAgentMarket(AgentMarket):
         if current_balance >= MIN_MANA_BALANCE:
             return True
         else:
-            raise ValueError(f"Insufficient Manifold balance: {current_balance} mana.")           
+            logger.warning(f"Insufficient Manifold balance: {current_balance} mana.")           
         return False

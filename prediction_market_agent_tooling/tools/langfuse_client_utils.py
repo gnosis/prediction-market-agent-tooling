@@ -86,7 +86,7 @@ def get_traces_for_agent(
     all_agent_traces = []
     while True:
         logger.debug(f"Fetching Langfuse page {page} / {total_pages}.")
-        traces = client.fetch_traces(
+        traces = client.api.trace.list(
             name=trace_name,
             limit=100,
             page=page,

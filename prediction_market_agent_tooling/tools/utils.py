@@ -10,6 +10,7 @@ import httpx
 import pytz
 import requests
 from pydantic import BaseModel, ValidationError
+from pydantic_ai.models import KnownModelName
 from scipy.optimize import newton
 from scipy.stats import entropy
 from tenacity import RetryError
@@ -207,7 +208,7 @@ def response_to_model(
     try:
         return model.model_validate(response_json)
     except ValidationError as e:
-        raise ValueError(f"Unable to validate: `{response_json}`") from e
+        raise ValueError(f"Unable to validate: `{str(response_json)[:1000]}`") from e
 
 
 def response_list_to_model(
@@ -217,7 +218,7 @@ def response_list_to_model(
     try:
         return [model.model_validate(x) for x in response_json]
     except ValidationError as e:
-        raise ValueError(f"Unable to validate: `{response_json}`") from e
+        raise ValueError(f"Unable to validate: `{str(response_json)[:1000]}`") from e
 
 
 def secret_str_from_env(key: str) -> SecretStr | None:
@@ -288,3 +289,8 @@ def extract_error_from_retry_error(e: BaseException | RetryError) -> BaseExcepti
     ):
         e = exp_from_retry
     return e
+
+
+def infer_model(x: KnownModelName | str) -> str:
+    # Utility to extract only the model name from a potential provider:model_name pair.
+    return x.split(":")[-1]

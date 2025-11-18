@@ -15,7 +15,7 @@ REPHRASE_QUESTION_PROMPT = """Given the following question of main interest: {qu
 
 But it's conditioned on `{parent_question}` resolving to `{needed_parent_outcome}`.
 
-Rewrite the main question to contain the parent question in the correct form. 
+Rewrite the main question to contain the parent question in the correct form.
 
 The main question will be used as a prediction market, so it does need to be rephrased using the parent question properly. Such that the probability of the main question also accounts for the conditioned outcome.
 
@@ -44,7 +44,7 @@ def rephrase_question_to_unconditional(
     max_tokens: int = 1024,
 ) -> str:
     try:
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_openai import ChatOpenAI
     except ImportError:
         raise ImportError("langchain not installed")

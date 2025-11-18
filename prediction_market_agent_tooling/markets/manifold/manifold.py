@@ -8,6 +8,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     Probability,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     ConditionalFilterType,
@@ -26,6 +27,7 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     MANIFOLD_BASE_URL,
     FullManifoldMarket,
+    mana_to_usd,
     usd_to_mana,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
@@ -158,3 +160,14 @@ class ManifoldAgentMarket(AgentMarket):
     @staticmethod
     def get_user_id(api_keys: APIKeys) -> str:
         return api_keys.manifold_user_id
+
+    @classmethod
+    def get_trade_balance(cls, api_keys: APIKeys) -> USD:
+        user = get_authenticated_user(api_keys.manifold_api_key.get_secret_value())
+        current_balance = user.balance
+        return mana_to_usd(current_balance)
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        logger.info("No operational balance needed for Manifold, skipping check.")
+        return True

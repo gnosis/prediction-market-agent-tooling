@@ -1,6 +1,5 @@
 import typing as t
 from datetime import timedelta
-from prediction_market_agent_tooling.loggers import logger
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
@@ -9,6 +8,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     Probability,
 )
+from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     ConditionalFilterType,
@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.markets.manifold.api import (
 from prediction_market_agent_tooling.markets.manifold.data_models import (
     MANIFOLD_BASE_URL,
     FullManifoldMarket,
+    mana_to_usd,
     usd_to_mana,
 )
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
@@ -160,16 +161,13 @@ class ManifoldAgentMarket(AgentMarket):
     def get_user_id(api_keys: APIKeys) -> str:
         return api_keys.manifold_user_id
 
-    @staticmethod
-    def verify_operational_balance(api_keys: APIKeys) -> bool:
-        """
-        Verify that the agent has at least 1.0 mana balance
-        """
-        MIN_MANA_BALANCE = 1.0
+    @classmethod
+    def get_trade_balance(cls, api_keys: APIKeys) -> USD:
         user = get_authenticated_user(api_keys.manifold_api_key.get_secret_value())
         current_balance = user.balance
-        if current_balance >= MIN_MANA_BALANCE:
-            return True
-        else:
-            logger.warning(f"Insufficient Manifold balance: {current_balance} mana.")           
-            return False
+        return mana_to_usd(current_balance)
+
+    @staticmethod
+    def verify_operational_balance(api_keys: APIKeys) -> bool:
+        logger.info("No operational balance needed for Manifold, skipping check.")
+        return True

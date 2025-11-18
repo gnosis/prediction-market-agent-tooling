@@ -51,14 +51,14 @@ And the description:
 {description}
 ```
 
-Description refers only to the text above and nothing else. 
+Description refers only to the text above and nothing else.
 
-Even if the question is somewhat vague, but even the description does not contain enough of extra information, it's okay and the question is fully self-contained. 
+Even if the question is somewhat vague, but even the description does not contain enough of extra information, it's okay and the question is fully self-contained.
 If the question is vague and the description contains the information required to answer the question, it's not fully self-contained and the answer is "no".
 
 Follow a chain of thought to evaluate if the question doesn't need the description to be answered.
 
-Start by examining the question and the description in detail. Write down their parts, what they refer to and what they contain. 
+Start by examining the question and the description in detail. Write down their parts, what they refer to and what they contain.
 
 Continue by writing comparison of the question and the description content. Write down what the question contains and what the description contains.
 
@@ -91,7 +91,7 @@ def is_predictable_binary(
     Evaluate if the question is actually answerable.
     """
     try:
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_openai import ChatOpenAI
     except ImportError:
         logger.error("langchain not installed, skipping is_predictable_binary")
@@ -129,7 +129,7 @@ def is_predictable_without_description(
     Evaluate if the question is fully self-contained.
     """
     try:
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_openai import ChatOpenAI
     except ImportError:
         logger.error(

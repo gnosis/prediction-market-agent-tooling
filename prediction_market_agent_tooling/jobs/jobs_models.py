@@ -3,13 +3,13 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.deploy.betting_strategy import (
-    CategoricalProbabilisticAnswer,
-)
 from prediction_market_agent_tooling.gtypes import USD, Probability
 from prediction_market_agent_tooling.markets.agent_market import (
     AgentMarket,
     ProcessedMarket,
+)
+from prediction_market_agent_tooling.markets.data_models import (
+    CategoricalProbabilisticAnswer,
 )
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,

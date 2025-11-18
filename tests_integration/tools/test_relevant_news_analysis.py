@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-from langchain_community.callbacks import get_openai_callback
 from pydantic import SecretStr
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -43,24 +42,20 @@ def test_get_certified_relevant_news_since() -> None:
         ),
     ]
 
-    running_cost = 0.0
     iterations = 0
     for question, expected_result, days_ago in questions_days_ago_expected_results:
-        with get_openai_callback() as cb:
-            news = get_certified_relevant_news_since(
-                question=question,
-                days_ago=days_ago,
-            )
-            running_cost += cb.total_cost
-            iterations += 1
+        news = get_certified_relevant_news_since(
+            question=question,
+            days_ago=days_ago,
+        )
+        iterations += 1
 
         has_related_news = news is not None
         assert (
             has_related_news == expected_result
         ), f"Was relevant news found for question '{question}'?: {has_related_news}. Expected result {expected_result}"
 
-    average_cost = running_cost / iterations  # $0.01289 when run on 2022-10-24
-    assert average_cost < 0.02, f"Expected average: {average_cost}. Expected < 0.02"
+    assert iterations > 0
 
 
 def test_get_certified_relevant_news_since_cached() -> None:

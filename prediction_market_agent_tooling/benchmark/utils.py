@@ -34,7 +34,6 @@ class Prediction(BaseModel):
     outcome_prediction: t.Optional[CategoricalProbabilisticAnswer] = None
 
     time: t.Optional[float] = None
-    cost: t.Optional[float] = None
 
     @property
     def is_answered(self) -> bool:

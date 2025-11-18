@@ -27,6 +27,7 @@ from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCache
 from prediction_market_agent_tooling.tools.langfuse_client_utils import (
     get_traces_for_agent,
 )
+from prediction_market_agent_tooling.tools.utils import check_not_none
 
 PREDICTION_STATES = [
     "predict_market",
@@ -253,7 +254,7 @@ def process_trace(
 ) -> TraceResult | None:
     try:
         logger.info(f"Processing trace {trace.id}")
-        observations = langfuse_client.fetch_observations(trace_id=trace.id)
+        observations = langfuse_client.api.observations.get_many(trace_id=trace.id)
         logger.info(f"Observations downloaded for trace {trace.id}")
         market_state, market_type = get_agent_market_state(trace.input)
 
@@ -269,8 +270,8 @@ def process_trace(
         if not prepare_report_obs or not predict_market_obs:
             raise ValueError(f"Missing required observations for trace {trace.id}")
 
-        analysis = prepare_report_obs[0].output
-        prediction = predict_market_obs[0].output
+        analysis = check_not_none(prepare_report_obs[0].output)
+        prediction = check_not_none(predict_market_obs[0].output)
 
         resolution = get_market_resolution(market_state.id, market_type)
 

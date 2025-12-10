@@ -312,7 +312,7 @@ class RPCConfig(BaseSettings):
 
     ETHEREUM_RPC_URL: URI = Field(default=URI("https://rpc.eth.gateway.fm"))
     ETHEREUM_RPC_BEARER: SecretStr | None = None
-    GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosis.gateway.fm"))
+    GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosischain.com"))
     GNOSIS_RPC_BEARER: SecretStr | None = None
     CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
     POLYGON_RPC_URL: URI = Field(default=URI("https://polygon-rpc.com"))

@@ -407,6 +407,12 @@ def get_orders_by_owner(
 async def get_order_by_uid(
     uid: HexBytes,
 ) -> Order:
+    return await get_order_by_uid_no_retry(uid)
+
+
+async def get_order_by_uid_no_retry(
+    uid: HexBytes,
+) -> Order:
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"https://api.cow.fi/xdai/api/v1/orders/{uid.to_0x_hex()}"

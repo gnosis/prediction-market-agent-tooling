@@ -100,7 +100,7 @@ class Order(BaseModel):
     appData: str
     fullAppData: str | None
     appDataHash: HexBytes | None = None
-    class_: str = Field(None, alias="class")
+    class_: str | None = Field(None, alias="class")
     owner: VerifiedChecksumAddress
     executedSellAmount: Wei
     executedSellAmountBeforeFees: Wei

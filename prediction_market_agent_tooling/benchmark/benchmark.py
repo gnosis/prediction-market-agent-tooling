@@ -206,13 +206,13 @@ class Benchmarker:
         prediction: Prediction, market: AgentMarket
     ) -> list[float]:
         pred_probs = check_not_none(prediction.outcome_prediction).probabilities
-        market_probs = market.probabilities
 
         # Get common outcomes between prediction and market
-        common_outcomes = set(pred_probs.keys()) & set(market_probs.keys())
+        common_outcomes = set(pred_probs.keys()) & set(market.outcomes_lowercase)
 
         errors = [
-            (pred_probs[outcome] - market_probs[outcome]) for outcome in common_outcomes
+            (pred_probs[outcome] - market.probability_for_market_outcome(outcome))
+            for outcome in common_outcomes
         ]
 
         return errors

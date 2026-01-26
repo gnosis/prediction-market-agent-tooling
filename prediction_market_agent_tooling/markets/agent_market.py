@@ -134,6 +134,10 @@ class AgentMarket(BaseModel):
                 )
         return outcome_token_pool
 
+    @property
+    def outcomes_lowercase(self) -> list[str]:
+        return [outcome.lower() for outcome in self.outcomes]
+
     def have_bet_on_market_since(self, keys: APIKeys, since: timedelta) -> bool:
         raise NotImplementedError("Subclasses must implement this method")
 

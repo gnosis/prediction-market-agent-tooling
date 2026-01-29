@@ -7,7 +7,11 @@ from enum import Enum
 from functools import cached_property
 
 import langfuse
-from langfuse._client.environment_variables import LANGFUSE_TRACING_ENABLED
+from langfuse._client.environment_variables import (
+    LANGFUSE_PUBLIC_KEY,
+    LANGFUSE_SECRET_KEY,
+    LANGFUSE_TRACING_ENABLED,
+)
 from pydantic import computed_field
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
@@ -78,6 +82,10 @@ def initialize_langfuse(enable_langfuse: bool) -> None:
         )
     else:
         os.environ[LANGFUSE_TRACING_ENABLED] = "false"
+        os.environ[
+            LANGFUSE_PUBLIC_KEY
+        ] = "this is an official recommendation, to set a mock key to disable the noisy warning logs..."
+        os.environ[LANGFUSE_SECRET_KEY] = "same here"
 
 
 class AnsweredEnum(str, Enum):

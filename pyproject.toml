@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.69.25"
+version = "0.69.26"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -44,7 +44,7 @@ langfuse = "^3.0.0"
 openai = { version = "^1.0.0", optional = true}
 pymongo = "^4.8.0"
 tavily-python = "^0.5.0"
-sqlmodel = "^0.0.22"
+sqlmodel = "^0.0.31"
 psycopg2-binary = "^2.9.9"
 base58 = ">=1.0.2,<2.0"
 loky = "^3.4.1"

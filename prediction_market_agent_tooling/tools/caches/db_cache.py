@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import DataError
-from sqlmodel import Field, SQLModel, desc, select
+from sqlmodel import Field, SQLModel, col, delete, desc, select
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.loggers import logger
@@ -50,6 +50,8 @@ class FunctionCache(SQLModel, table=True):
     args_hash: str = Field(index=True)
     result: Any = Field(sa_column=Column(JSONB, nullable=False))
     created_at: DatetimeUTC = Field(default_factory=utcnow, index=True)
+    valid_until_timestamp: int | None = Field(default=None, index=True)
+    keep: bool = Field(default=False, index=True)
 
 
 # Global instance of the table manager for FunctionCache
@@ -66,6 +68,7 @@ def db_cache(
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
+    keep: bool = False,
 ) -> Callable[[FunctionT], FunctionT]:
     ...
 
@@ -80,6 +83,7 @@ def db_cache(
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
+    keep: bool = False,
 ) -> FunctionT:
     ...
 
@@ -93,6 +97,7 @@ def db_cache(
     ignore_args: Sequence[str] | None = None,
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
+    keep: bool = False,
 ) -> FunctionT | Callable[[FunctionT], FunctionT]:
     if func is None:
         # Ugly Pythonic way to support this decorator as `@postgres_cache` but also `@postgres_cache(max_age=timedelta(days=3))`
@@ -105,6 +110,7 @@ def db_cache(
                 ignore_args=ignore_args,
                 ignore_arg_types=ignore_arg_types,
                 log_error_on_unsavable_data=log_error_on_unsavable_data,
+                keep=keep,
             )
 
         return decorator
@@ -148,6 +154,8 @@ def db_cache(
                         ctx,
                         computed_result,
                         log_error_on_unsavable_data,
+                        keep=keep,
+                        max_age=max_age,
                     )
                 )
 
@@ -178,7 +186,14 @@ def db_cache(
         )
 
         if cache_none or computed_result is not None:
-            _save_cached(api_keys, ctx, computed_result, log_error_on_unsavable_data)
+            _save_cached(
+                api_keys,
+                ctx,
+                computed_result,
+                log_error_on_unsavable_data,
+                keep=keep,
+                max_age=max_age,
+            )
 
         return computed_result
 
@@ -307,14 +322,25 @@ def _save_cached(
     ctx: CallContext,
     computed_result: Any,
     log_error_on_unsavable_data: bool,
+    keep: bool,
+    max_age: timedelta | None,
 ) -> None:
+    created_at = utcnow()
+    valid_until_timestamp = (
+        int(created_at.timestamp() + max_age.total_seconds())
+        if max_age is not None
+        else None
+    )
+
     cache_entry = FunctionCache(
         function_name=ctx.function_name,
         full_function_name=ctx.full_function_name,
         args_hash=ctx.args_hash,
         args=ctx.args_dict,
         result=computed_result,
-        created_at=utcnow(),
+        created_at=created_at,
+        keep=keep,
+        valid_until_timestamp=valid_until_timestamp,
     )
     try:
         with DBManager(
@@ -412,3 +438,27 @@ def convert_cached_output_to_pydantic(return_type: Any, data: Any) -> Any:
     else:
         # If the data is neither a dictionary nor a list, return it as is
         return data
+
+
+def clear_cache(api_keys: APIKeys | None = None) -> None:
+    """
+    Clear cache entries based on the provided ages.
+    """
+    now = utcnow()
+    now_ts = int(now.timestamp())
+    api_keys = api_keys if api_keys is not None else APIKeys()
+    logger.info(f"Clearing cache at {now.isoformat()}.")
+
+    with DBManager(
+        api_keys.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
+        statement = (
+            delete(FunctionCache)
+            .where(col(FunctionCache.keep) == False)
+            .where(col(FunctionCache.valid_until_timestamp) != None)
+            .where(col(FunctionCache.valid_until_timestamp) < now_ts)
+        )
+        session.exec(statement)
+        session.commit()
+
+    logger.info("Cache clearing completed.")

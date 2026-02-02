@@ -5,12 +5,18 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel, Field
+from sqlmodel import func, select
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Wei
 from prediction_market_agent_tooling.tools.caches import db_cache as db_cache_module
-from prediction_market_agent_tooling.tools.caches.db_cache import db_cache
+from prediction_market_agent_tooling.tools.caches.db_cache import (
+    FunctionCache,
+    clear_cache,
+    db_cache,
+)
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
+from prediction_market_agent_tooling.tools.db.db_manager import DBManager
 
 
 def test_postgres_cache_bools(
@@ -494,3 +500,160 @@ def test_pydantic_alias(
     assert multiply_models(1) == TestOutputModelAlias(r=1)
     assert multiply_models(2) == TestOutputModelAlias(r=2)
     assert call_count == 2, "The function should only be called twice due to caching"
+
+
+def test_clear_cache_removes_expired_entries(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(
+        api_keys=session_keys_with_postgresql_proc_and_enabled_cache,
+        max_age=timedelta(seconds=1),
+    )
+    def cached_function_1(x: int) -> int:
+        nonlocal call_count
+        call_count += 1
+        return x * 2
+
+    # Call the function to cache it
+    result = cached_function_1(5)
+    assert result == 10
+    assert call_count == 1
+
+    # Call again, should use cache
+    result = cached_function_1(5)
+    assert result == 10
+    assert call_count == 1
+
+    # Check that entry exists in DB
+    with DBManager(
+        session_keys_with_postgresql_proc_and_enabled_cache.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
+        count_before = session.exec(
+            select(func.count())
+            .where(FunctionCache.function_name == "cached_function_1")
+            .select_from(FunctionCache)
+        ).one()
+        assert count_before > 0
+
+    # Simulate time passing beyond max_age
+    time.sleep(2)
+    clear_cache(session_keys_with_postgresql_proc_and_enabled_cache)
+
+    # Check that expired entry is removed
+    with DBManager(
+        session_keys_with_postgresql_proc_and_enabled_cache.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
+        count_after = session.exec(
+            select(func.count())
+            .where(FunctionCache.function_name == "cached_function_1")
+            .select_from(FunctionCache)
+        ).one()
+        assert count_after == 0  # Assuming no other entries
+
+    # Call again, should compute again since cache was cleared
+    result = cached_function_1(5)
+    assert result == 10
+    assert call_count == 2
+
+
+def test_clear_cache_keeps_non_expired_entries(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(
+        api_keys=session_keys_with_postgresql_proc_and_enabled_cache,
+        max_age=timedelta(hours=1),  # Long expiry
+    )
+    def cached_function_2(x: int) -> int:
+        nonlocal call_count
+        call_count += 1
+        return x * 2
+
+    # Call the function to cache it
+    result = cached_function_2(5)
+    assert result == 10
+    assert call_count == 1
+
+    # Check that entry exists
+    with DBManager(
+        session_keys_with_postgresql_proc_and_enabled_cache.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
+        count_before = session.exec(
+            select(func.count())
+            .where(FunctionCache.function_name == "cached_function_2")
+            .select_from(FunctionCache)
+        ).one()
+        assert count_before > 0
+
+    # Clear cache without time passing
+    clear_cache(session_keys_with_postgresql_proc_and_enabled_cache)
+
+    # Check that non-expired entry remains
+    with DBManager(
+        session_keys_with_postgresql_proc_and_enabled_cache.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
+        count_after = session.exec(
+            select(func.count())
+            .where(FunctionCache.function_name == "cached_function_2")
+            .select_from(FunctionCache)
+        ).one()
+        assert count_after == count_before
+
+    # Call again, should use cache
+    result = cached_function_2(5)
+    assert result == 10
+    assert call_count == 1
+
+
+def test_clear_cache_keeps_keep_true_entries_even_if_expired(
+    session_keys_with_postgresql_proc_and_enabled_cache: APIKeys,
+) -> None:
+    call_count = 0
+
+    @db_cache(
+        api_keys=session_keys_with_postgresql_proc_and_enabled_cache,
+        max_age=timedelta(seconds=1),
+        keep=True,
+    )
+    def cached_function_3(x: int) -> int:
+        nonlocal call_count
+        call_count += 1
+        return x * 2
+
+    # Call the function to cache it
+    result = cached_function_3(5)
+    assert result == 10
+    assert call_count == 1, f"{call_count=} != 1"
+
+    # Check that entry exists
+    with DBManager(
+        session_keys_with_postgresql_proc_and_enabled_cache.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
+        count_before = session.exec(
+            select(func.count())
+            .where(FunctionCache.function_name == "cached_function_3")
+            .select_from(FunctionCache)
+        ).one()
+        assert count_before == call_count, f"{count_before=} != {call_count=}"
+
+    time.sleep(1)
+    clear_cache(session_keys_with_postgresql_proc_and_enabled_cache)
+
+    # Check that keep=True entry remains even if expired
+    with DBManager(
+        session_keys_with_postgresql_proc_and_enabled_cache.sqlalchemy_db_url.get_secret_value()
+    ).get_session() as session:
+        count_after = session.exec(
+            select(func.count())
+            .where(FunctionCache.function_name == "cached_function_3")
+            .select_from(FunctionCache)
+        ).one()
+        assert count_after == count_before, f"{count_after=} != {count_before=}"
+
+    # Call again, should not use cache, as it's expired, but kept in the database.
+    result = cached_function_3(5)
+    assert result == 10
+    assert call_count == 2

@@ -24,6 +24,8 @@ def tavily_search(
     search_depth: t.Literal["basic", "advanced"] = "advanced",
     topic: t.Literal["general", "news"] = "general",
     news_since: date | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     max_results: int = 5,
     include_domains: t.Sequence[str] | None = None,
     exclude_domains: t.Sequence[str] | None = None,
@@ -48,6 +50,8 @@ def tavily_search(
         topic=topic,
         max_results=max_results,
         days=days,
+        start_date=start_date,
+        end_date=end_date,
         include_domains=include_domains,
         exclude_domains=exclude_domains,
         include_answer=include_answer,
@@ -67,6 +71,8 @@ def _tavily_search(
     search_depth: t.Literal["basic", "advanced"],
     topic: t.Literal["general", "news"],
     days: int | None,
+    start_date: date | None,
+    end_date: date | None,
     max_results: int,
     include_domains: t.Sequence[str] | None,
     exclude_domains: t.Sequence[str] | None,
@@ -83,9 +89,19 @@ def _tavily_search(
         api_key=(api_keys or APIKeys()).tavily_api_key.get_secret_value()
     )
 
-    # Optional `days` arg can only be specified if not None, otherwise Tavily
-    # will throw an error
-    kwargs = {"days": days} if days else {}
+    # Optional args can only be specified if not None, otherwise Tavily
+    # will throw an error. Tavily rejects combining days with start_date/end_date,
+    # and the client always sends days=7 by default, so we must explicitly
+    # override it to None when using start_date/end_date.
+    kwargs: dict[str, t.Any] = {}
+    if start_date is not None or end_date is not None:
+        kwargs["days"] = None
+        if start_date is not None:
+            kwargs["start_date"] = start_date.isoformat()
+        if end_date is not None:
+            kwargs["end_date"] = end_date.isoformat()
+    elif days:
+        kwargs["days"] = days
 
     response: dict[str, t.Any] = tavily.search(
         query=query,

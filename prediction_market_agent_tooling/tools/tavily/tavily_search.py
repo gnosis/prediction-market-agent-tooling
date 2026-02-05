@@ -38,10 +38,8 @@ def tavily_search(
     """
     Argument default values are different from the original method, to return everything by default, because it can be handy in the future and it doesn't increase the costs.
     """
-    if topic == "news" and news_since is None:
-        raise ValueError("When topic is 'news', news_since must be provided")
-    if topic == "general" and news_since is not None:
-        raise ValueError("When topic is 'general', news_since must be None")
+    if news_since is not None:
+        topic = "news"
 
     days = None if news_since is None else (date.today() - news_since).days
     response = _tavily_search(
@@ -90,14 +88,18 @@ def _tavily_search(
     )
 
     # Optional args can only be specified if not None, otherwise Tavily
-    # will throw an error
+    # will throw an error. Tavily rejects combining days with start_date/end_date,
+    # and the client always sends days=7 by default, so we must explicitly
+    # override it to None when using start_date/end_date.
     kwargs: dict[str, t.Any] = {}
-    if days:
+    if start_date is not None or end_date is not None:
+        kwargs["days"] = None
+        if start_date is not None:
+            kwargs["start_date"] = start_date.isoformat()
+        if end_date is not None:
+            kwargs["end_date"] = end_date.isoformat()
+    elif days:
         kwargs["days"] = days
-    if start_date is not None:
-        kwargs["start_date"] = start_date.isoformat()
-    if end_date is not None:
-        kwargs["end_date"] = end_date.isoformat()
 
     response: dict[str, t.Any] = tavily.search(
         query=query,

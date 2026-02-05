@@ -24,6 +24,8 @@ def tavily_search(
     search_depth: t.Literal["basic", "advanced"] = "advanced",
     topic: t.Literal["general", "news"] = "general",
     news_since: date | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     max_results: int = 5,
     include_domains: t.Sequence[str] | None = None,
     exclude_domains: t.Sequence[str] | None = None,
@@ -36,8 +38,10 @@ def tavily_search(
     """
     Argument default values are different from the original method, to return everything by default, because it can be handy in the future and it doesn't increase the costs.
     """
-    if news_since is not None:
-        topic = "news"
+    if topic == "news" and news_since is None:
+        raise ValueError("When topic is 'news', news_since must be provided")
+    if topic == "general" and news_since is not None:
+        raise ValueError("When topic is 'general', news_since must be None")
 
     days = None if news_since is None else (date.today() - news_since).days
     response = _tavily_search(
@@ -46,6 +50,8 @@ def tavily_search(
         topic=topic,
         max_results=max_results,
         days=days,
+        start_date=start_date,
+        end_date=end_date,
         include_domains=include_domains,
         exclude_domains=exclude_domains,
         include_answer=include_answer,
@@ -65,6 +71,8 @@ def _tavily_search(
     search_depth: t.Literal["basic", "advanced"],
     topic: t.Literal["general", "news"],
     days: int | None,
+    start_date: date | None,
+    end_date: date | None,
     max_results: int,
     include_domains: t.Sequence[str] | None,
     exclude_domains: t.Sequence[str] | None,
@@ -81,9 +89,15 @@ def _tavily_search(
         api_key=(api_keys or APIKeys()).tavily_api_key.get_secret_value()
     )
 
-    # Optional `days` arg can only be specified if not None, otherwise Tavily
+    # Optional args can only be specified if not None, otherwise Tavily
     # will throw an error
-    kwargs = {"days": days} if days else {}
+    kwargs: dict[str, t.Any] = {}
+    if days:
+        kwargs["days"] = days
+    if start_date is not None:
+        kwargs["start_date"] = start_date.isoformat()
+    if end_date is not None:
+        kwargs["end_date"] = end_date.isoformat()
 
     response: dict[str, t.Any] = tavily.search(
         query=query,

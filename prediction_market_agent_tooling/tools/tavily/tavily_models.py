@@ -7,7 +7,6 @@ class TavilyResult(BaseModel):
     content: str
     score: float
     raw_content: str | None
-    published_date: str | None = None
 
 
 class TavilyResponse(BaseModel):

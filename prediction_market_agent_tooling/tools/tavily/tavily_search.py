@@ -36,10 +36,8 @@ def tavily_search(
     """
     Argument default values are different from the original method, to return everything by default, because it can be handy in the future and it doesn't increase the costs.
     """
-    if topic == "news" and news_since is None:
-        raise ValueError("When topic is 'news', news_since must be provided")
-    if topic == "general" and news_since is not None:
-        raise ValueError("When topic is 'general', news_since must be None")
+    if news_since is not None:
+        topic = "news"
 
     days = None if news_since is None else (date.today() - news_since).days
     response = _tavily_search(

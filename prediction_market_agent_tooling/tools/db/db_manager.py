@@ -18,19 +18,35 @@ from prediction_market_agent_tooling.tools.caches.serializers import (
 class DBManager:
     _instances: dict[str, "DBManager"] = {}
 
-    def __new__(cls, sqlalchemy_db_url: str | None = None) -> "DBManager":
+    def __new__(
+        cls,
+        sqlalchemy_db_url: str | None = None,
+        pool_size: int = 2,
+        max_overflow: int = 10,
+    ) -> "DBManager":
         if sqlalchemy_db_url is None:
             sqlalchemy_db_url = APIKeys().sqlalchemy_db_url.get_secret_value()
 
-        # Hash the secret value to not store secrets in plain text.
-        url_hash = hashlib.md5(sqlalchemy_db_url.encode()).hexdigest()
-        # Return singleton per database connection.
-        if url_hash not in cls._instances:
-            instance = super(DBManager, cls).__new__(cls)
-            cls._instances[url_hash] = instance
-        return cls._instances[url_hash]
+        # Hash the arguments to have unique identifier for the given database connection parameters.
+        args_hash = (
+            hashlib.md5(sqlalchemy_db_url.encode()).hexdigest()
+            + f"{pool_size=}"
+            + f"{max_overflow=}"
+        )
 
-    def __init__(self, sqlalchemy_db_url: str | None = None) -> None:
+        # Return singleton per database connection.
+        if args_hash not in cls._instances:
+            instance = super(DBManager, cls).__new__(cls)
+            cls._instances[args_hash] = instance
+
+        return cls._instances[args_hash]
+
+    def __init__(
+        self,
+        sqlalchemy_db_url: str | None = None,
+        pool_size: int = 2,
+        max_overflow: int = 10,
+    ) -> None:
         if hasattr(self, "_initialized"):
             return
         sqlalchemy_db_url = (
@@ -40,7 +56,8 @@ class DBManager:
             sqlalchemy_db_url,
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
-            pool_size=2,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
         )
         self.cache_table_initialized: dict[str, bool] = {}
         self._initialized = True

@@ -1,10 +1,13 @@
 import typing as t
 from datetime import datetime, timedelta
+from typing import Optional
 
 import pytz
 from dateutil import parser
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
+from sqlalchemy import DateTime, TypeDecorator
+from sqlalchemy.engine import Dialect
 
 from prediction_market_agent_tooling.loggers import logger
 
@@ -83,4 +86,43 @@ class DatetimeUTC(datetime):
             value = datetime.fromtimestamp(value, tz=pytz.UTC)
         elif isinstance(value, str):
             value = parser.parse(value)
+        return DatetimeUTC.from_datetime(value)
+
+    def without_tz(self) -> datetime:
+        return datetime(
+            self.year,
+            self.month,
+            self.day,
+            self.hour,
+            self.minute,
+            self.second,
+            self.microsecond,
+            tzinfo=None,
+        )
+
+
+class DatetimeUTCType(TypeDecorator[DatetimeUTC]):
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(
+        self, value: Optional[DatetimeUTC], dialect: Dialect
+    ) -> Optional[datetime]:
+        if value is None:
+            return None
+        # We save it consistently as UTC in the database, regardless of the database vendor,
+        # but it needs to come without the tzinfo itself.
+        return value.without_tz()
+
+    def process_result_value(
+        self, value: Optional[datetime], dialect: Dialect
+    ) -> Optional[DatetimeUTC]:
+        """Converte datetime do banco para DatetimeUTC ao carregar"""
+        if value is None:
+            return None
+        # Database returns it in UTC, but without tzinfo.
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=pytz.UTC)
+        else:
+            raise ValueError("Unexpected, it should be without tzinfo here.")
         return DatetimeUTC.from_datetime(value)

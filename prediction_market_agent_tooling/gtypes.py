@@ -8,7 +8,7 @@ from eth_typing.evm import (  # noqa: F401  # Import for the sake of easy import
     HexAddress,
     HexStr,
 )
-from pydantic import BeforeValidator
+from pydantic import AfterValidator
 from pydantic.types import SecretStr
 from pydantic.v1.types import SecretStr as SecretStrV1
 from web3 import Web3
@@ -19,7 +19,6 @@ from web3.types import (  # noqa: F401  # Import for the sake of easy importing 
 )
 from web3.types import Wei as Web3Wei
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.tools._generic_value import _GenericValue
 from prediction_market_agent_tooling.tools.datetime_utc import (  # noqa: F401  # Import for the sake of easy importing with others from here.
     DatetimeUTC,
@@ -29,11 +28,11 @@ from prediction_market_agent_tooling.tools.hexbytes_custom import (  # noqa: F40
 )
 
 VerifiedChecksumAddress: TypeAlias = Annotated[
-    ChecksumAddress, BeforeValidator(Web3.to_checksum_address)
+    ChecksumAddress, AfterValidator(Web3.to_checksum_address)
 ]
 VerifiedChecksumAddressOrNone: TypeAlias = Annotated[
     ChecksumAddress | None,
-    BeforeValidator(lambda x: Web3.to_checksum_address(x) if x else None),
+    AfterValidator(lambda x: Web3.to_checksum_address(x) if x else None),
 ]
 
 

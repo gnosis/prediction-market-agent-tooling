@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prediction-market-agent-tooling"
-version = "0.69.30"
+version = "0.69.31"
 description = "Tools to benchmark, deploy and monitor prediction market agents."
 authors = ["Gnosis"]
 readme = "README.md"
@@ -63,6 +63,8 @@ types-cachetools = "^5.5.0.20240820"
 python-json-logger = "^3.3.0"
 pydantic-ai = "^1.0.3"
 py-clob-client = "^0.24.0"
+google-genai = "^1.64.0"
+openinference-instrumentation-google-genai = "^0.1.10"
 
 [tool.poetry.extras]
 openai = ["openai"]

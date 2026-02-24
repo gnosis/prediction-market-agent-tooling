@@ -12,6 +12,7 @@ from langfuse._client.environment_variables import (
     LANGFUSE_SECRET_KEY,
     LANGFUSE_TRACING_ENABLED,
 )
+from openinference.instrumentation.google_genai import GoogleGenAIInstrumentor
 from pydantic import computed_field
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
@@ -80,6 +81,7 @@ def initialize_langfuse(enable_langfuse: bool) -> None:
             secret_key=keys.langfuse_secret_key.get_secret_value(),
             host=keys.langfuse_host,
         )
+        GoogleGenAIInstrumentor().instrument()
     else:
         os.environ[LANGFUSE_TRACING_ENABLED] = "false"
         os.environ[

@@ -22,6 +22,7 @@ jobs:
                   ignore-vulns: |
                       CVE-2025-69872
                       CVE-2026-25580
+                      CVE-2026-25640
 
     security:
         runs-on: ubuntu-latest

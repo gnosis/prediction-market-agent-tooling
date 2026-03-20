@@ -24,6 +24,10 @@ jobs:
                   repository: gnosis/github-security-action
                   token: ${{ secrets.GSA_GH_TOKEN }}
                   path: .github/actions/github-security-action
+                  sparse-checkout-cone-mode: false
+                  sparse-checkout: |
+                      /*
+                      !/test*
 
             - name: Run security action
               uses: ./.github/actions/github-security-action

@@ -65,6 +65,7 @@ pydantic-ai = "^1.0.3"
 py-clob-client = "^0.24.0"
 google-genai = "^1.64.0"
 openinference-instrumentation-google-genai = "^0.1.10"
+griffe = "^1.0.0,<1.15.0" # Some version problem with newer ones that isn't locked properly in Langfuse
 
 [tool.poetry.extras]
 openai = ["openai"]

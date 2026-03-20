@@ -16,8 +16,7 @@ def persistent_inmemory_cache(
     func: None = None,
     *,
     in_memory_cache: bool = True,
-) -> Callable[[T], T]:
-    ...
+) -> Callable[[T], T]: ...
 
 
 @overload
@@ -25,8 +24,7 @@ def persistent_inmemory_cache(
     func: T,
     *,
     in_memory_cache: bool = True,
-) -> T:
-    ...
+) -> T: ...
 
 
 def persistent_inmemory_cache(

@@ -108,14 +108,12 @@ class _GenericValue(
         return type(self)(self.value * (other if isinstance(other, (int, float)) else other.value))  # type: ignore
 
     @overload
-    def __truediv__(self: GenericValueType, other: int | float) -> GenericValueType:
-        ...
+    def __truediv__(self: GenericValueType, other: int | float) -> GenericValueType: ...
 
     @overload
     def __truediv__(
         self: GenericValueType, other: GenericValueType
-    ) -> InternalValueType:
-        ...
+    ) -> InternalValueType: ...
 
     def __truediv__(
         self: GenericValueType, other: GenericValueType | int | float
@@ -132,14 +130,14 @@ class _GenericValue(
             return self.value / other.value  # type: ignore
 
     @overload
-    def __floordiv__(self: GenericValueType, other: int | float) -> GenericValueType:
-        ...
+    def __floordiv__(
+        self: GenericValueType, other: int | float
+    ) -> GenericValueType: ...
 
     @overload
     def __floordiv__(
         self: GenericValueType, other: GenericValueType
-    ) -> InternalValueType:
-        ...
+    ) -> InternalValueType: ...
 
     def __floordiv__(
         self: GenericValueType, other: GenericValueType | int | float

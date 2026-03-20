@@ -158,9 +158,9 @@ class PolymarketAgentMarket(AgentMarket):
             volume=CollateralToken(model.volume) if model.volume else None,
             outcome_token_pool=None,
             probabilities=probabilities,
-            liquidity_usd=USD(model.liquidity)
-            if model.liquidity is not None
-            else USD(0),
+            liquidity_usd=(
+                USD(model.liquidity) if model.liquidity is not None else USD(0)
+            ),
             token_ids=markets[0].token_ids,
         )
 

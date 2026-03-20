@@ -309,7 +309,7 @@ def process_trace(
 
 
 def get_agent_market_state(
-    input_data: dict[str, Any]
+    input_data: dict[str, Any],
 ) -> tuple[AgentMarket, MarketType]:
     if not input_data or "args" not in input_data:
         raise ValueError("Invalid input data: missing args")

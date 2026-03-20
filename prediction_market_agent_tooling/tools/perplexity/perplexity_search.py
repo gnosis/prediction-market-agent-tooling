@@ -28,8 +28,9 @@ def perplexity_search(
     query: str,
     api_keys: APIKeys,
     search_context_size: t.Literal["low", "medium", "high"] = "medium",
-    search_recency_filter: t.Literal["any", "day", "week", "month", "year"]
-    | None = None,
+    search_recency_filter: (
+        t.Literal["any", "day", "week", "month", "year"] | None
+    ) = None,
     search_filter_before_date: date | None = None,
     search_filter_after_date: date | None = None,
     search_return_related_questions: bool | None = None,
@@ -52,12 +53,16 @@ def perplexity_search(
     # Create a basic request parameters object with required base parameters
     request_params = PerplexityRequestParameters(
         search_domain_filter=include_domains,
-        search_after_date_filter=search_filter_after_date.strftime("%Y-%m-%d")
-        if search_filter_after_date
-        else None,
-        search_before_date_filter=search_filter_before_date.strftime("%Y-%m-%d")
-        if search_filter_before_date
-        else None,
+        search_after_date_filter=(
+            search_filter_after_date.strftime("%Y-%m-%d")
+            if search_filter_after_date
+            else None
+        ),
+        search_before_date_filter=(
+            search_filter_before_date.strftime("%Y-%m-%d")
+            if search_filter_before_date
+            else None
+        ),
         search_recency_filter=search_recency_filter,
         search_context_size=search_context_size,
         search_return_related_questions=search_return_related_questions,

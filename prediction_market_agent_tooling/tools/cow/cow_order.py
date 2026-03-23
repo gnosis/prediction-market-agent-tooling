@@ -49,6 +49,7 @@ from prediction_market_agent_tooling.markets.omen.cow_contracts import (
     CowGPv2SettlementContract,
 )
 from prediction_market_agent_tooling.tools.contract import ContractERC20BaseClass
+from prediction_market_agent_tooling.tools.cow.cow_client import ClientCoW
 from prediction_market_agent_tooling.tools.cow.models import MinimalisticTrade, Order
 from prediction_market_agent_tooling.tools.cow.semaphore import postgres_rate_limited
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -359,12 +360,11 @@ def get_trades_by_owner(
     owner: ChecksumAddress,
 ) -> list[MinimalisticTrade]:
     # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
-    response = httpx.get(
-        f"https://api.cow.fi/xdai/api/v1/trades",
+    response = ClientCoW().get(
+        "/xdai/api/v1/trades",
         params={"owner": owner},
     )
-    response.raise_for_status()
-    return [MinimalisticTrade.model_validate(i) for i in response.json()]
+    return [MinimalisticTrade.model_validate(i) for i in response]
 
 
 @tenacity.retry(
@@ -378,12 +378,11 @@ def get_trades_by_order_uid(
     order_uid: HexBytes,
 ) -> list[MinimalisticTrade]:
     # Using this until cowpy gets fixed (https://github.com/cowdao-grants/cow-py/issues/35)
-    response = httpx.get(
-        f"https://api.cow.fi/xdai/api/v1/trades",
+    response = ClientCoW().get(
+        "/xdai/api/v1/trades",
         params={"orderUid": order_uid.to_0x_hex()},
     )
-    response.raise_for_status()
-    return [MinimalisticTrade.model_validate(i) for i in response.json()]
+    return [MinimalisticTrade.model_validate(i) for i in response]
 
 
 @tenacity.retry(
@@ -395,7 +394,7 @@ def get_orders_by_owner(
     owner: ChecksumAddress,
 ) -> list[Order]:
     """Retrieves all orders with pagination."""
-    items = paginate_endpoint(f"https://api.cow.fi/xdai/api/v1/account/{owner}/orders")
+    items = paginate_endpoint(f"/xdai/api/v1/account/{owner}/orders")
     return [Order.model_validate(i) for i in items]
 
 
@@ -413,12 +412,10 @@ async def get_order_by_uid(
 async def get_order_by_uid_no_retry(
     uid: HexBytes,
 ) -> Order:
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"https://api.cow.fi/xdai/api/v1/orders/{uid.to_0x_hex()}"
-        )
-        response.raise_for_status()
-        return Order.model_validate(response.json())
+    response = await ClientCoW().get_async(
+        f"/xdai/api/v1/orders/{uid.to_0x_hex()}", params={}
+    )
+    return Order.model_validate(response)
 
 
 @tenacity.retry(
@@ -426,17 +423,15 @@ async def get_order_by_uid_no_retry(
     wait=wait_fixed(1),
     after=lambda x: logger.debug(f"paginate_endpoint failed, {x.attempt_number=}."),
 )
-def paginate_endpoint(url: str, limit: int = 1000) -> t.Any:
+def paginate_endpoint(endpoint: str, limit: int = 1000) -> list[t.Any]:
     offset = 0
-    results = []
+    results: list[t.Any] = []
 
     while True:
-        response = httpx.get(url, params={"offset": offset, "limit": limit})
-        response.raise_for_status()
-        items = response.json()
+        items = ClientCoW().get(endpoint, params={"offset": offset, "limit": limit})
         if not items:
             break
-
+        assert isinstance(items, list), f"Expected a list of items, got: {items}"
         results.extend(items)
         offset += limit
 

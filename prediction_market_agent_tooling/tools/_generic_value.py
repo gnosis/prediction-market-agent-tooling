@@ -85,7 +85,9 @@ class _GenericValue(
             raise TypeError("Cannot subtract different types")
         if type(self) is not type(other):
             raise TypeError("Cannot subtract different types")
-        return type(self)(self.value - other.value)
+        left = t.cast(t.Any, self.value)
+        right = t.cast(t.Any, other.value)
+        return type(self)(left - right)
 
     def __add__(
         self: GenericValueType, other: GenericValueType | t.Literal[0]
@@ -96,7 +98,9 @@ class _GenericValue(
             raise TypeError("Cannot add different types")
         if type(self) is not type(other):
             raise TypeError("Cannot add different types")
-        return type(self)(self.value + other.value)
+        left = t.cast(t.Any, self.value)
+        right = t.cast(t.Any, other.value)
+        return type(self)(left + right)
 
     def __mul__(
         self: GenericValueType, other: GenericValueType | int | float
@@ -160,7 +164,9 @@ class _GenericValue(
             raise TypeError("Cannot compare different types")
         if type(self) is not type(other):
             raise TypeError("Cannot compare different types")
-        return bool(self.value < other.value)
+        left = t.cast(t.Any, self.value)
+        right = t.cast(t.Any, other.value)
+        return bool(left < right)
 
     def __le__(self: GenericValueType, other: GenericValueType | t.Literal[0]) -> bool:
         if other == 0:
@@ -169,7 +175,9 @@ class _GenericValue(
             raise TypeError("Cannot compare different types")
         if type(self) is not type(other):
             raise TypeError("Cannot compare different types")
-        return bool(self.value <= other.value)
+        left = t.cast(t.Any, self.value)
+        right = t.cast(t.Any, other.value)
+        return bool(left <= right)
 
     def __gt__(self: GenericValueType, other: GenericValueType | t.Literal[0]) -> bool:
         if other == 0:
@@ -178,7 +186,9 @@ class _GenericValue(
             raise TypeError("Cannot compare different types")
         if type(self) is not type(other):
             raise TypeError("Cannot compare different types")
-        return bool(self.value > other.value)
+        left = t.cast(t.Any, self.value)
+        right = t.cast(t.Any, other.value)
+        return bool(left > right)
 
     def __ge__(self: GenericValueType, other: GenericValueType | t.Literal[0]) -> bool:
         if other == 0:
@@ -187,7 +197,9 @@ class _GenericValue(
             raise TypeError("Cannot compare different types")
         if type(self) is not type(other):
             raise TypeError("Cannot compare different types")
-        return bool(self.value >= other.value)
+        left = t.cast(t.Any, self.value)
+        right = t.cast(t.Any, other.value)
+        return bool(left >= right)
 
     def __eq__(self: GenericValueType, other: GenericValueType | t.Literal[0] | None) -> bool:  # type: ignore
         if other == 0:

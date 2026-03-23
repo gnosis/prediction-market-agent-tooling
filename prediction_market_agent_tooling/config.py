@@ -69,6 +69,8 @@ class APIKeys(BaseSettings):
     # Don't get fooled! Serper and Serp are two different services.
     SERPER_API_KEY: t.Optional[SecretStr] = None
 
+    COW_API_KEY: t.Optional[SecretStr] = None
+
     SQLALCHEMY_DB_URL: t.Optional[SecretStr] = None
 
     PERPLEXITY_API_KEY: t.Optional[SecretStr] = None

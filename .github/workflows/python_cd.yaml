@@ -3,7 +3,7 @@ name: Python CD
 on:
   pull_request:
   release:
-    types: [ published ]
+    types: [published]
 
 jobs:
   publish-pypi-package:
@@ -13,7 +13,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Verify the tag version in the pyproject.toml
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/python_prepare

@@ -69,8 +69,7 @@ def db_cache(
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
     keep: bool = False,
-) -> Callable[[FunctionT], FunctionT]:
-    ...
+) -> Callable[[FunctionT], FunctionT]: ...
 
 
 @overload
@@ -84,8 +83,7 @@ def db_cache(
     ignore_arg_types: Sequence[type] | None = None,
     log_error_on_unsavable_data: bool = True,
     keep: bool = False,
-) -> FunctionT:
-    ...
+) -> FunctionT: ...
 
 
 def db_cache(

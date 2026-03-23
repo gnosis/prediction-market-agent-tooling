@@ -1,16 +1,16 @@
-name: 'Google Cloud Auth'
-description: 'Authenticate to Google Cloud and set up the SDK'
+name: "Google Cloud Auth"
+description: "Authenticate to Google Cloud and set up the SDK"
 inputs:
   credentials_json:
-    description: 'Google Cloud service account key in JSON format'
+    description: "Google Cloud service account key in JSON format"
     required: true
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - id: 'auth'
-      name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@v2'
+    - id: "auth"
+      name: "Authenticate to Google Cloud"
+      uses: "google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed"
       with:
         credentials_json: ${{ inputs.credentials_json }}
-    - name: 'Set up Google Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v2'
+    - name: "Set up Google Cloud SDK"
+      uses: "google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f"

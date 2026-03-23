@@ -458,9 +458,9 @@ class SeerQuestionsCache(metaclass=SingletonMeta):
     """
 
     def __init__(self, seer_subgraph_handler: SeerSubgraphHandler | None = None):
-        self.market_id_to_questions: dict[
-            HexBytes, list[SeerMarketQuestions]
-        ] = defaultdict(list)
+        self.market_id_to_questions: dict[HexBytes, list[SeerMarketQuestions]] = (
+            defaultdict(list)
+        )
         self.seer_subgraph_handler = seer_subgraph_handler or SeerSubgraphHandler()
 
     def fetch_questions(self, market_ids: list[HexBytes]) -> None:

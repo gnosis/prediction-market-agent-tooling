@@ -323,7 +323,7 @@ def test_get_existing_image(omen_subgraph_handler: OmenSubgraphHandler) -> None:
     image_url = omen_subgraph_handler.get_market_image_url(market_id)
     assert (
         image_url
-        == "https://ipfs.io/ipfs/QmRiPQ4x7jAgKMyJMV8Uqw7vQir6vmgB851TXe7CgQx7cV"
+        == "https://gateway.pinata.cloud/ipfs/QmRiPQ4x7jAgKMyJMV8Uqw7vQir6vmgB851TXe7CgQx7cV"
     )
     image = omen_subgraph_handler.get_market_image(market_id)
     assert image is not None

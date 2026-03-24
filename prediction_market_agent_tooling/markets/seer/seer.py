@@ -473,7 +473,7 @@ class SeerAgentMarket(AgentMarket):
             if must_have_prices:
                 # Price calculation failed, so don't return the market
                 return None
-            probability_map = None
+            probability_map = {}
             outcome_token_pool = None
 
         resolution = SeerAgentMarket.build_resolution(model=model)

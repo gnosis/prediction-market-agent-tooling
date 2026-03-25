@@ -18,6 +18,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     OutcomeWei,
+    Probability,
     Wei,
     xDai,
 )
@@ -473,7 +474,9 @@ class SeerAgentMarket(AgentMarket):
             if must_have_prices:
                 # Price calculation failed, so don't return the market
                 return None
-            probability_map = {}
+            probability_map = {
+                OutcomeStr(outcome): Probability(0) for outcome in model.outcomes
+            }
             outcome_token_pool = None
 
         resolution = SeerAgentMarket.build_resolution(model=model)

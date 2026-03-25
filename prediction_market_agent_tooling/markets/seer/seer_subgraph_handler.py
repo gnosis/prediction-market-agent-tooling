@@ -161,6 +161,9 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case _:
                 raise ValueError(f"Unknown filter {filter_by}")
 
+        # Exclude markets with no collateral token set.
+        and_stms["collateralToken_not"] = ADDRESS_ZERO
+
         if parent_market_id:
             and_stms["parentMarket"] = parent_market_id.to_0x_hex().lower()
 

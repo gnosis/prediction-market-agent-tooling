@@ -91,7 +91,7 @@ def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
                 )
 
         api = OrderBookApi(config)
-        api.request_builder = AuthenticatedRequestStrategy()  # type: ignore[assignment]
+        api.request_builder.strategy = AuthenticatedRequestStrategy()
         return api
 
     return OrderBookApi(config)

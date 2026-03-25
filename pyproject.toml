@@ -61,7 +61,7 @@ proto-plus = "^1.0.0"
 protobuf = "^5.0.0"
 types-cachetools = "^5.5.0.20240820"
 python-json-logger = "^3.3.0"
-pydantic-ai = "^1.0.0"
+pydantic-ai-slim = {version = "^1.61.0", extras = ["openai", "anthropic", "logfire"]}
 py-clob-client = "^0.24.0"
 google-genai = "^1.64.0"
 openinference-instrumentation-google-genai = "^0.1.10"

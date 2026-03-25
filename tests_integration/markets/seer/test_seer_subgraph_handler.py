@@ -13,13 +13,13 @@ from prediction_market_agent_tooling.markets.seer.seer_subgraph_handler import (
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
-CONDITIONAL_MARKET_ID = HexBytes("0xfe2cc518b4d8c1d5db682db553c3de750d901ce0")
-BINARY_MARKET_ID = HexBytes("0x7d72aa56ecdda207005fd7a02dbfd33f92d0def7")
-BINARY_CONDITIONAL_MARKET_ID = HexBytes("0xbc82402814f7db8736980c0debb01df6aad8846e")
+CONDITIONAL_MARKET_ID = HexBytes("0x002c70343ddef063d0ad8da91104934318800d30")
+BINARY_MARKET_ID = HexBytes("0x000ee42357e8ad71dfe70b5a15bf0316efc7da6f")
+BINARY_CONDITIONAL_MARKET_ID = HexBytes("0x002c70343ddef063d0ad8da91104934318800d30")
 
 
 def test_get_all_seer_markets(seer_subgraph_handler_test: SeerSubgraphHandler) -> None:
-    markets = seer_subgraph_handler_test.get_markets(filter_by=FilterBy.NONE)
+    markets = seer_subgraph_handler_test.get_markets(filter_by=FilterBy.NONE, limit=100)
     assert len(markets) > 1
 
 
@@ -36,6 +36,7 @@ def test_conditional_market_not_retrieved(
     markets = seer_subgraph_handler_test.get_markets(
         conditional_filter_type=ConditionalFilterType.ONLY_NOT_CONDITIONAL,
         filter_by=FilterBy.NONE,
+        limit=500,
     )
     market_ids = [m.id for m in markets]
     assert CONDITIONAL_MARKET_ID not in market_ids
@@ -45,7 +46,9 @@ def test_conditional_market_retrieved(
     seer_subgraph_handler_test: SeerSubgraphHandler,
 ) -> None:
     markets = seer_subgraph_handler_test.get_markets(
-        conditional_filter_type=ConditionalFilterType.ALL, filter_by=FilterBy.NONE
+        conditional_filter_type=ConditionalFilterType.ALL,
+        filter_by=FilterBy.NONE,
+        limit=500,
     )
     market_ids = [m.id for m in markets]
     assert CONDITIONAL_MARKET_ID in market_ids
@@ -57,6 +60,7 @@ def test_binary_market_retrieved(
     markets = seer_subgraph_handler_test.get_markets(
         conditional_filter_type=ConditionalFilterType.ALL,
         filter_by=FilterBy.NONE,
+        limit=500,
     )
     market_ids = [m.id for m in markets]
     assert BINARY_MARKET_ID in market_ids

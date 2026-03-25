@@ -161,9 +161,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             case _:
                 raise ValueError(f"Unknown filter {filter_by}")
 
-        # Exclude markets with no collateral token set.
-        and_stms["collateralToken_not"] = ADDRESS_ZERO
-
         if parent_market_id:
             and_stms["parentMarket"] = parent_market_id.to_0x_hex().lower()
 
@@ -218,8 +215,12 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                     f"Unknown conditional filter {conditional_filter_type}"
                 )
 
-        all_filters = outcome_filters + [and_stms, conditional_filter]
-        where_stms: dict[str, t.Any] = {"and": all_filters}
+        all_filters = [
+            f
+            for f in outcome_filters + [and_stms, conditional_filter]
+            if f  # Exclude empty dicts — subgraph rejects them.
+        ]
+        where_stms: dict[str, t.Any] = {"and": all_filters} if all_filters else {}
         return where_stms
 
     def _build_sort_params(

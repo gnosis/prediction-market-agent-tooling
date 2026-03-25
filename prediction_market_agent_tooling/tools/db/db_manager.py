@@ -52,12 +52,16 @@ class DBManager:
         sqlalchemy_db_url = (
             sqlalchemy_db_url or APIKeys().sqlalchemy_db_url.get_secret_value()
         )
+        pool_kwargs = (
+            {"pool_size": pool_size, "max_overflow": max_overflow}
+            if not sqlalchemy_db_url.startswith("sqlite")
+            else {}
+        )
         self._engine = create_engine(
             sqlalchemy_db_url,
             json_serializer=json_serializer,
             json_deserializer=json_deserializer,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
+            **pool_kwargs,
         )
         self.cache_table_initialized: dict[str, bool] = {}
         self._initialized = True

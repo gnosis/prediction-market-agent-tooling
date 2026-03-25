@@ -1,9 +1,17 @@
+import pytest
 from web3 import Web3
 
 from prediction_market_agent_tooling.gtypes import OutcomeToken
 from prediction_market_agent_tooling.markets.omen.omen import OmenAgentMarket
 
 
+# TODO: Re-enable once agents are running again and the user below has active
+# positions with CoW liquidity. Currently skipped because the agents are shut
+# down, so the hardcoded user's positions have no liquidity on CoW, causing
+# NoLiquidityAvailableOnCowException on every run.
+@pytest.mark.skip(
+    reason="Agents are shut down, no CoW liquidity for this user's positions"
+)
 def test_get_positions_with_live() -> None:
     """
     Check the user's positions against 'market.get_token_balance'

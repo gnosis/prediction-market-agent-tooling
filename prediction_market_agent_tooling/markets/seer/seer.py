@@ -6,6 +6,7 @@ import cachetools
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from eth_typing import ChecksumAddress
 from web3 import Web3
+from web3.constants import ADDRESS_ZERO
 from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -458,6 +459,11 @@ class SeerAgentMarket(AgentMarket):
         seer_subgraph: SeerSubgraphHandler,
         must_have_prices: bool,
     ) -> t.Optional["SeerAgentMarket"]:
+        if model.collateral_token == ADDRESS_ZERO:
+            logger.info(
+                f"Skipping market {model.id.to_0x_hex()} with zero collateral token."
+            )
+            return None
         price_manager = PriceManager(seer_market=model, seer_subgraph=seer_subgraph)
         wrapped_tokens = [Web3.to_checksum_address(i) for i in model.wrapped_tokens]
         try:

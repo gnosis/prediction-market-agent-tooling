@@ -5,6 +5,7 @@ from datetime import timedelta
 import httpx
 import tenacity
 from cachetools import TTLCache, cached
+from cowdao_cowpy.common.api.api_base import RequestStrategy
 from cowdao_cowpy.common.api.errors import UnexpectedResponseError
 from cowdao_cowpy.common.chains import Chain
 from cowdao_cowpy.common.config import SupportedChainId
@@ -65,7 +66,35 @@ class NoLiquidityAvailableOnCowException(Exception):
 
 def get_order_book_api(env: Envs, chain: Chain) -> OrderBookApi:
     chain_id = SupportedChainId(chain.value[0])
-    return OrderBookApi(OrderBookAPIConfigFactory.get_config(env, chain_id))
+    config = OrderBookAPIConfigFactory.get_config(env, chain_id)
+
+    cow_api_key = APIKeys().COW_API_KEY
+    if cow_api_key is not None:
+        api_key_value = cow_api_key.get_secret_value()
+        # Use the partners API with the API key for higher rate limits.
+        config.config_map = {
+            k: v.replace("api.cow.fi", "partners.cow.fi")
+            for k, v in config.config_map.items()
+        }
+
+        class AuthenticatedRequestStrategy(RequestStrategy):
+            async def make_request(
+                self, client: t.Any, url: str, method: str, **request_kwargs: t.Any
+            ) -> t.Any:
+                headers = {
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                    "X-API-Key": api_key_value,
+                }
+                return await client.request(
+                    url=url, headers=headers, method=method, **request_kwargs
+                )
+
+        api = OrderBookApi(config)
+        api.request_builder = AuthenticatedRequestStrategy()  # type: ignore[assignment]
+        return api
+
+    return OrderBookApi(config)
 
 
 @tenacity.retry(

@@ -24,16 +24,16 @@ class AggregationItem(BaseModel):
 
 
 class Aggregation(BaseModel):
-    history: list[AggregationItem]
-    latest: AggregationItem | None
-    score_data: dict[str, Any]
+    history: list[AggregationItem] | None = None
+    latest: AggregationItem | None = None
+    score_data: dict[str, Any] | None = None
 
 
 class Aggregations(BaseModel):
-    recency_weighted: Aggregation
-    unweighted: Aggregation
-    single_aggregation: Aggregation
-    metaculus_prediction: Aggregation
+    recency_weighted: Aggregation | None = None
+    unweighted: Aggregation | None = None
+    single_aggregation: Aggregation | None = None
+    metaculus_prediction: Aggregation | None = None
 
 
 class MyForecast(BaseModel):
@@ -46,14 +46,14 @@ class MyForecast(BaseModel):
 
 
 class MyAggregation(BaseModel):
-    history: list[MyForecast]
-    latest: MyForecast | None
-    score_data: dict[str, Any]
+    history: list[MyForecast] | None = None
+    latest: MyForecast | None = None
+    score_data: dict[str, Any] | None = None
 
 
 class Question(BaseModel):
     aggregations: Aggregations
-    my_forecasts: MyAggregation
+    my_forecasts: MyAggregation | None = None
     type: QuestionType
     possibilities: dict[str, str] | None
     description: str

@@ -71,21 +71,23 @@ def test_seer_has_liquidity_caching(
         # --- Test Case 1: Caching with two instances of the SAME market ---
         # Goal: Assert that the second call is served from the cache.
 
-        # 1. Get data for a single market
+        # 1. Get data for markets, skipping any with invalid collateral.
         markets_data = seer_subgraph_handler_test.get_markets(
-            limit=2, filter_by=FilterBy.OPEN, sort_by=SortBy.HIGHEST_LIQUIDITY
+            limit=10, filter_by=FilterBy.OPEN, sort_by=SortBy.HIGHEST_LIQUIDITY
         )
-        market_A_data = markets_data[0]
-
-        # 2. Create two separate instances from the exact same market data.
-        # They are different objects in memory but share the same `id`.
-        market_A_instance_1 = check_not_none(
-            SeerAgentMarket.from_data_model_with_subgraph(
-                model=market_A_data,
+        valid_markets = []
+        for md in markets_data:
+            am = SeerAgentMarket.from_data_model_with_subgraph(
+                model=md,
                 seer_subgraph=seer_subgraph_handler_test,
                 must_have_prices=False,
             )
-        )
+            if am is not None:
+                valid_markets.append((md, am))
+            if len(valid_markets) >= 2:
+                break
+        assert len(valid_markets) >= 2, "Need at least 2 valid markets for this test"
+        market_A_data, market_A_instance_1 = valid_markets[0]
 
         market_A_instance_2 = market_A_instance_1.model_copy(deep=True)
 
@@ -120,7 +122,7 @@ def test_seer_has_liquidity_caching(
         # Goal: Assert that different markets have separate cache entries.
 
         # 1. Get data for a second, different market
-        market_B_data = markets_data[1]
+        market_B_data, _ = valid_markets[1]
         # Ensure the test data is valid and we have two unique markets
         assert market_B_data.id != market_A_data.id
 

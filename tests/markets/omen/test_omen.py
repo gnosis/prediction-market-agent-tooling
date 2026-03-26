@@ -131,17 +131,26 @@ def test_get_positions_1() -> None:
     """
     Check the user's positions against 'market.get_token_balance'
 
-    Also check that `larger_than` and `liquid_only` filters work
+    Also check that `larger_than` and `liquid_only` filters work.
+
+    Uses a mocked USD conversion to avoid flaky failures from live CoW API.
+    The full integration version lives in tests_integration/markets/omen/test_get_positions.py.
     """
+    from unittest.mock import patch
+
     # Pick a user that has active positions
     user_address = Web3.to_checksum_address(
         "0xf758C18402ddEf2d231911C4C326Aa46510788f0"
     )
-    positions = OmenAgentMarket.get_positions(user_id=user_address)
-    liquid_positions = OmenAgentMarket.get_positions(
-        user_id=user_address,
-        liquid_only=True,
-    )
+    with patch(
+        "prediction_market_agent_tooling.markets.omen.omen.get_token_in_usd",
+        side_effect=lambda x, _: USD(x.value),
+    ):
+        positions = OmenAgentMarket.get_positions(user_id=user_address)
+        liquid_positions = OmenAgentMarket.get_positions(
+            user_id=user_address,
+            liquid_only=True,
+        )
     assert len(positions) > len(liquid_positions)
 
     # Get position id with smallest total amount
@@ -156,12 +165,13 @@ def test_get_positions_1() -> None:
         min_amount_position.total_amount_ot, OutcomeToken(0.0001)
     )
 
-    large_positions = OmenAgentMarket.get_positions(
-        user_id=user_address, larger_than=min_amount_position_ot
-    )
-    # conflicting positions
-    # 1 - ExistingPosition(market_id='0x3cab82a2cce239bd4ad3b0620be32b4409fd74c0', amounts_current={'No': USD(1.2833016323746e-05)}, amounts_potential={'No': USD(1.2833016323746e-05)}, amounts_ot={'No': OutcomeToken(1.2833016323746e-05)})
-    # 2 (min from above) - ExistingPosition(market_id='0x626002415eef1117ba0257fc4d2f70753550bbb3', amounts_current={'No': USD(1.4388460783717888e-05)}, amounts_potential={'No': USD(1.4388460783717888e-05)}, amounts_ot={'No': OutcomeToken(1.2249484218406e-05)})
+    with patch(
+        "prediction_market_agent_tooling.markets.omen.omen.get_token_in_usd",
+        side_effect=lambda x, _: USD(x.value),
+    ):
+        large_positions = OmenAgentMarket.get_positions(
+            user_id=user_address, larger_than=min_amount_position_ot
+        )
     # Check that the smallest position has been filtered out
     assert all(position.market_id != min_position_id for position in large_positions)
     assert all(

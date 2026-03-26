@@ -59,7 +59,8 @@ class MetaculusAgentMarket(AgentMarket):
             close_time=model.scheduled_close_time,
             url=model.page_url,
             volume=None,
-            have_predicted=model.question.my_forecasts.latest is not None,
+            have_predicted=model.question.my_forecasts is not None
+            and model.question.my_forecasts.latest is not None,
             outcome_token_pool=None,
             description=model.question.description,
             fine_print=model.question.fine_print,

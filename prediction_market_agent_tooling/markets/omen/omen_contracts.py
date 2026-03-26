@@ -689,7 +689,7 @@ class OmenThumbnailMapping(ContractOnGnosisChain):
 
     @staticmethod
     def construct_ipfs_url(ipfs_hash: IPFSCIDVersion0) -> str:
-        return f"https://ipfs.io/ipfs/{ipfs_hash}"
+        return f"https://gateway.pinata.cloud/ipfs/{ipfs_hash}"
 
     def get(
         self,

@@ -33,10 +33,13 @@ def test_get_positions() -> None:
     assert len(holders) > 0, "No token holders found"
 
     subgraph = PolymarketSubgraphHandler()
+    found_position = False
     for holder in holders[:10]:
         pos = subgraph.get_market_positions_from_user(first=10, user=holder)
         if len(pos) > 0:
-            return
+            assert pos[0].market.condition.id is not None
+            assert pos[0].market.condition.outcomeSlotCount >= 2
+            found_position = True
+            break
 
-    # If none of the first 10 holders have positions, the test still passes
-    # as long as the subgraph query itself works (no exceptions).
+    assert found_position, "None of the first 10 token holders had subgraph positions"

@@ -53,18 +53,22 @@ def test_seer_mint_child_outcome_tokens(
         BET_FROM_PRIVATE_KEY=PrivateKey(SecretStr(fresh_account.key.hex())),
         SAFE_ADDRESS=None,
     )
-    market = seer_subgraph_handler_test.get_markets(
+    markets = seer_subgraph_handler_test.get_markets(
         filter_by=FilterBy.OPEN,
         sort_by=SortBy.HIGHEST_LIQUIDITY,
-        limit=1,
+        limit=10,
         question_type=QuestionType.CATEGORICAL,
-    )[0]
-
-    market_agent = SeerAgentMarket.from_data_model_with_subgraph(
-        model=market,
-        seer_subgraph=seer_subgraph_handler_test,
-        must_have_prices=False,
     )
+
+    market_agent = None
+    for market in markets:
+        market_agent = SeerAgentMarket.from_data_model_with_subgraph(
+            model=market,
+            seer_subgraph=seer_subgraph_handler_test,
+            must_have_prices=False,
+        )
+        if market_agent is not None:
+            break
     market_agent = check_not_none(market_agent)
     # 0. Auto-deposit sDAI
     amount_wei = Wei(xDai(1.0).as_xdai_wei.value)

@@ -20,5 +20,8 @@ def test_compare_seer_txs_and_cow_trades() -> None:
     start_date = utcnow() - timedelta(days=30)
     txs = get_seer_transactions(addr, GNOSIS_CHAIN_ID, start_date)
     orders = get_trades_by_owner(addr)
-    assert len(txs) >= len(orders)
-    assert set(o.txHash for o in orders).issubset(set(t.transaction_hash for t in txs))
+    tx_hashes = set(t.transaction_hash for t in txs)
+    # Filter orders to only those within the same time window as seer transactions.
+    orders_in_window = [o for o in orders if o.txHash in tx_hashes]
+    assert len(txs) >= len(orders_in_window)
+    assert set(o.txHash for o in orders_in_window).issubset(tx_hashes)

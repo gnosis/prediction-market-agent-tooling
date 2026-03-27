@@ -74,7 +74,10 @@ class TestModelWithDatetimeUTC(SQLModel, table=True):
 def sqlite_engine() -> Engine:
     """Create an in-memory SQLite engine for testing."""
     engine = create_engine("sqlite:///:memory:")
-    SQLModel.metadata.create_all(engine)
+    # Only create tables that are SQLite-compatible (not the JSONB-based function_cache).
+    TestModelWithDatetimeUTC.metadata.create_all(
+        engine, tables=[TestModelWithDatetimeUTC.__table__]  # type: ignore[attr-defined]
+    )
     return engine
 
 

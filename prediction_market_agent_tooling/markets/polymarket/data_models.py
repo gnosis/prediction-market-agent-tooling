@@ -78,7 +78,7 @@ class PolymarketGammaResponseDataItem(BaseModel):
     markets: list[PolymarketGammaMarket] | None = (
         None  # Some Polymarket markets have missing markets field. We skip these markets manually when retrieving.
     )
-    tags: list[PolymarketGammaTag]
+    tags: list[PolymarketGammaTag] = []
 
     @property
     def url(self) -> str:

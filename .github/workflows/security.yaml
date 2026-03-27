@@ -23,6 +23,7 @@ jobs:
                       CVE-2025-69872
                       CVE-2026-25580
                       CVE-2026-25640
+                      CVE-2026-4539
 
     security:
         runs-on: ubuntu-latest

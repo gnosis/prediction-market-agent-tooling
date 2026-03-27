@@ -5,6 +5,9 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
     BaseSubgraphHandler,
 )
+from prediction_market_agent_tooling.markets.polymarket.constants import (
+    POLYMARKET_CONDITIONS_SUBGRAPH_URL,
+)
 
 
 class ConditionSubgraphModel(BaseModel):
@@ -30,14 +33,11 @@ class MarketPosition(BaseModel):
 
 
 class PolymarketSubgraphHandler(BaseSubgraphHandler):
-    POLYMARKET_CONDITIONS_SUBGRAPH = "https://gateway.thegraph.com/api/{graph_api_key}/subgraphs/id/81Dm16JjuFSrqz813HysXoUPvzTwE7fsfPk2RTf66nyC"
-
     def __init__(self) -> None:
         super().__init__()
 
-        # Load the subgraph
         self.conditions_subgraph = self.sg.load_subgraph(
-            self.POLYMARKET_CONDITIONS_SUBGRAPH.format(
+            POLYMARKET_CONDITIONS_SUBGRAPH_URL.format(
                 graph_api_key=self.keys.graph_api_key.get_secret_value()
             )
         )
@@ -74,7 +74,9 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
         first: int = 1000,
         block_number: int | None = None,
     ) -> list[MarketPosition]:
-        # Not possible to filter using `market_.condition` on a subgraph level, bad indexers error.
+        # Limitation: Cannot filter by market_.condition at subgraph level (indexer error).
+        # This fetches ALL positions for the user (up to `first`), and callers must
+        # filter by condition_id client-side (see polymarket.py get_position()).
         positions = self.conditions_subgraph.Query.marketPositions(
             first=first,
             where={"user": user.lower()},

@@ -1,9 +1,14 @@
 import pytest
 
 from prediction_market_agent_tooling.gtypes import USD
+from prediction_market_agent_tooling.markets.polymarket.constants import (
+    POLYMARKET_MIN_LIQUIDITY_USD,
+)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
+
+ABOVE_THRESHOLD = USD(POLYMARKET_MIN_LIQUIDITY_USD.value + 0.01)
 
 
 @pytest.mark.parametrize(
@@ -12,8 +17,8 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket import (
         (True, False, USD(10), True),
         (True, True, USD(10), False),
         (False, False, USD(10), False),
-        (True, False, USD(5), False),
-        (True, False, USD(5.01), True),
+        (True, False, POLYMARKET_MIN_LIQUIDITY_USD, False),
+        (True, False, ABOVE_THRESHOLD, True),
         (True, False, USD(0), False),
     ],
     ids=[

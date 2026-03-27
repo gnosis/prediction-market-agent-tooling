@@ -8,6 +8,11 @@ import tenacity
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.polymarket.constants import (
+    MARKETS_LIMIT,
+    POLYMARKET_DATA_API_BASE_URL,
+    POLYMARKET_GAMMA_API_BASE_URL,
+)
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
@@ -18,9 +23,6 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
 from prediction_market_agent_tooling.tools.utils import response_to_model
-
-MARKETS_LIMIT = 100  # Polymarket will only return up to 100 markets
-POLYMARKET_GAMMA_API_BASE_URL = "https://gamma-api.polymarket.com/"
 
 
 class PolymarketOrderByEnum(str, Enum):
@@ -143,7 +145,7 @@ def get_user_positions(
     condition_ids: list[HexBytes] | None = None,
 ) -> list[PolymarketPositionResponse]:
     """Fetch a user's Polymarket positions; optionally filter by condition IDs."""
-    url = "https://data-api.polymarket.com/positions"
+    url = f"{POLYMARKET_DATA_API_BASE_URL}/positions"
     # ... rest of implementation ...
     client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
 

@@ -1,6 +1,5 @@
 import typing as t
 
-import cachetools
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -39,10 +38,11 @@ from prediction_market_agent_tooling.markets.polymarket.clob_manager import (
     PolymarketPriceSideEnum,
 )
 from prediction_market_agent_tooling.markets.polymarket.constants import (
+    POLYMARKET_BASE_URL,
+    POLYMARKET_MIN_LIQUIDITY_USD,
     POLYMARKET_TINY_BET_AMOUNT,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
-    POLYMARKET_BASE_URL,
     PolymarketGammaResponseDataItem,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
@@ -56,10 +56,6 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_hand
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.tokens.usd import get_token_in_usd
 from prediction_market_agent_tooling.tools.utils import check_not_none
-
-SHARED_CACHE: cachetools.TTLCache[t.Hashable, t.Any] = cachetools.TTLCache(
-    maxsize=256, ttl=10 * 60
-)
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -314,7 +310,7 @@ class PolymarketAgentMarket(AgentMarket):
         agent_name: str,
         web3: Web3 | None = None,
     ) -> None:
-        logger.info("Storing trades deactivated for Polymarket.")
+        logger.debug("Storing trades deactivated for Polymarket.")
         # Understand how market_id can be represented.
         # Condition_id could work but length doesn't seem to match.
 
@@ -343,8 +339,8 @@ class PolymarketAgentMarket(AgentMarket):
                 continue
 
             amounts_potential[OutcomeStr(p.outcome)] = USD(p.size)
-            amounts_ot[OutcomeStr(p.outcome)] = OutcomeToken(p.size)
-            amounts_current[OutcomeStr(p.outcome)] = USD(p.currentValue)
+            amounts_ot[OutcomeStr(p.outcome)] = p.size_as_outcome_token
+            amounts_current[OutcomeStr(p.outcome)] = p.current_value_usd
 
         return ExistingPosition(
             amounts_potential=amounts_potential,
@@ -357,8 +353,7 @@ class PolymarketAgentMarket(AgentMarket):
         return (
             self.active_flag_from_polymarket
             and not self.closed_flag_from_polymarket
-            and self.liquidity_usd
-            > USD(5)  # we conservatively require some positive liquidity to trade on
+            and self.liquidity_usd > POLYMARKET_MIN_LIQUIDITY_USD
         )
 
     def get_buy_token_amount(

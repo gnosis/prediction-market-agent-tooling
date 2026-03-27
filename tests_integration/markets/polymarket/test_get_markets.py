@@ -7,14 +7,12 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
-    SHARED_CACHE,
     PolymarketAgentMarket,
 )
 from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 def test_get_markets() -> None:
-    SHARED_CACHE.clear()
     limit = 10
     created_after = utcnow() - timedelta(days=14)
     markets = PolymarketAgentMarket.get_markets(
@@ -34,7 +32,6 @@ def test_get_markets() -> None:
 
 
 def test_open_markets() -> None:
-    SHARED_CACHE.clear()
     limit = 50
     created_after = utcnow() - timedelta(days=14)
     markets = PolymarketAgentMarket.get_markets(

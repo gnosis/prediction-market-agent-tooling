@@ -317,7 +317,7 @@ class RPCConfig(BaseSettings):
     GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosischain.com"))
     GNOSIS_RPC_BEARER: SecretStr | None = None
     CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
-    POLYGON_RPC_URL: URI = Field(default=URI("https://polygon-rpc.com"))
+    POLYGON_RPC_URL: URI = Field(default=URI("https://polygon.drpc.org"))
     POLYGON_RPC_BEARER: SecretStr | None = None
 
     @property
@@ -384,10 +384,23 @@ class RPCConfig(BaseSettings):
         key=lambda self: f"{self.model_dump_json()}",
     )
     def get_polygon_web3(self) -> Web3:
-        web3 = self.get_web3()
-        if self.chain_id != POLYGON_CHAIN_ID:
-            raise ValueError(f"Chain ID {self.chain_id} is not Polygon Mainnet")
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": construct_user_agent(
+                str(type(self)), self.__class__.__name__
+            ),
+        }
+        if bearer := self.chain_id_to_rpc_bearer(POLYGON_CHAIN_ID):
+            headers["Authorization"] = f"Bearer {bearer.get_secret_value()}"
 
+        web3 = Web3(
+            Web3.HTTPProvider(
+                self.chain_id_to_rpc_url(POLYGON_CHAIN_ID),
+                request_kwargs={
+                    "headers": headers,
+                },
+            )
+        )
         # We need to inject middleware into the Polygon web3 instance (https://web3py.readthedocs.io/en/stable/middleware.html#proof-of-authority)
         web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
         return web3

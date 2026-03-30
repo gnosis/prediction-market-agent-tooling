@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Dict
 
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import MarketOrderArgs, OrderType
@@ -15,6 +14,7 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
     CTF_EXCHANGE_POLYMARKET,
     NEG_RISK_ADAPTER,
     NEG_RISK_EXCHANGE,
+    POLYMARKET_CLOB_API_URL,
     POLYMARKET_TINY_BET_AMOUNT,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
@@ -22,13 +22,6 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts imp
     USDCeContract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import handle_allowance
-
-HOST = "https://clob.polymarket.com"
-
-
-class AllowanceResult(BaseModel):
-    balance: float
-    allowances: Dict[str, float]
 
 
 class PolymarketPriceSideEnum(str, Enum):
@@ -54,12 +47,16 @@ class CreateOrderResult(BaseModel):
 class PriceResponse(BaseModel):
     price: float
 
+    @property
+    def price_usd(self) -> USD:
+        return USD(self.price)
+
 
 class ClobManager:
     def __init__(self, api_keys: APIKeys):
         self.api_keys = api_keys
         self.clob_client = ClobClient(
-            HOST,
+            POLYMARKET_CLOB_API_URL,
             key=api_keys.bet_from_private_key.get_secret_value(),
             chain_id=POLYGON_CHAIN_ID,
         )
@@ -70,35 +67,25 @@ class ClobManager:
     def get_token_price(self, token_id: int, side: PolymarketPriceSideEnum) -> USD:
         price_data = self.clob_client.get_price(token_id=token_id, side=side.value)
         price_item = PriceResponse.model_validate(price_data)
-        return USD(price_item.price)
+        return price_item.price_usd
 
     def _place_market_order(
-        self, token_id: int, amount: float, side: PolymarketPriceSideEnum
+        self,
+        token_id: int,
+        amount: USD | OutcomeToken,
+        side: PolymarketPriceSideEnum,
     ) -> CreateOrderResult:
-        """Internal method to place a market order.
-
-        Args:
-            token_id: The token ID to trade
-            amount: The amount to trade (USDC for BUY, token shares for SELL)
-            side: Either BUY or SELL
-
-        Returns:
-            CreateOrderResult: The result of the order placement
-
-        Raises:
-            ValueError: If usdc_amount is < 1.0 for BUY orders
-        """
-        if side == PolymarketPriceSideEnum.BUY and amount < 1.0:
+        amount_float = amount.value
+        if side == PolymarketPriceSideEnum.BUY and amount_float < 1.0:
             raise ValueError(
-                f"usdc_amounts < 1.0 are not supported by Polymarket, got {amount}"
+                f"usdc_amounts < 1.0 are not supported by Polymarket, got {amount_float}"
             )
 
-        # We check allowances first
         self.__init_approvals()
 
         order_args = MarketOrderArgs(
             token_id=str(token_id),
-            amount=amount,
+            amount=amount_float,
             side=side.value,
         )
 
@@ -110,14 +97,12 @@ class ClobManager:
     def place_buy_market_order(
         self, token_id: int, usdc_amount: USD
     ) -> CreateOrderResult:
-        """Place a market buy order for the given token with the specified USDC amount."""
-        return self._place_market_order(token_id, usdc_amount.value, BUY)
+        return self._place_market_order(token_id, usdc_amount, BUY)
 
     def place_sell_market_order(
         self, token_id: int, token_shares: OutcomeToken
     ) -> CreateOrderResult:
-        """Place a market sell order for the given token with the specified number of shares."""
-        return self._place_market_order(token_id, token_shares.value, SELL)
+        return self._place_market_order(token_id, token_shares, SELL)
 
     def __init_approvals(
         self,

@@ -16,3 +16,8 @@ def test_get_conditions_using_subgraph() -> None:
     ]
     conditions = s.get_conditions(condition_ids=condition_ids)
     assert len(conditions) == len(condition_ids)
+
+    for condition in conditions:
+        assert condition.id in condition_ids
+        assert condition.outcomeSlotCount >= 2
+        assert condition.questionId is not None

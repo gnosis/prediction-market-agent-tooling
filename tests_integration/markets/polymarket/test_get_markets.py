@@ -25,6 +25,11 @@ def test_get_markets() -> None:
     assert len(markets) == limit
     assert all([m.is_resolved() for m in markets])
 
+    for m in markets:
+        assert m.question, "Market should have a non-empty question"
+        assert len(m.outcomes) >= 2, "Market should have at least 2 outcomes"
+        assert m.resolution is not None, "Resolved market should have a resolution"
+
 
 def test_open_markets() -> None:
     limit = 50
@@ -34,6 +39,13 @@ def test_open_markets() -> None:
     )
     assert len(markets) == limit
     assert not all([m.is_closed() for m in markets])
+
+    for m in markets:
+        assert m.condition_id is not None, "Market should have a condition_id"
+        prob_sum = sum(float(p) for p in m.probabilities.values())
+        assert (
+            0.99 <= prob_sum <= 1.01
+        ), f"Probabilities should sum to ~1.0, got {prob_sum}"
 
 
 def test_many_markets() -> None:

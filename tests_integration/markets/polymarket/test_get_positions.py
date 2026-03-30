@@ -1,42 +1,37 @@
-import requests
+import tenacity
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress
-from prediction_market_agent_tooling.markets.polymarket.api import (
-    PolymarketOrderByEnum,
-    get_polymarkets_with_pagination,
-)
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
+    MarketPosition,
     PolymarketSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
-def get_token_holders() -> list[ChecksumAddress]:
-    recent_markets = get_polymarkets_with_pagination(
-        limit=1, active=True, closed=False, order_by=PolymarketOrderByEnum.VOLUME_24HR
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(2))
+def get_positions_from_recent_account(
+    subgraph: PolymarketSubgraphHandler,
+) -> list[MarketPosition]:
+    """Query the subgraph for a recent account and retrieve its positions.
+
+    Retries because The Graph indexers are intermittently unavailable
+    for the marketPositions entity on this subgraph.
+    """
+    accounts = subgraph.conditions_subgraph.Query.accounts(
+        first=1, orderBy="lastTradedTimestamp", orderDirection="desc"
     )
-    market = recent_markets[0]
-    market_item = check_not_none(market.markets)[0]
-    params = {"market": market_item.conditionId.to_0x_hex()}
-    r = requests.get(url="https://data-api.polymarket.com/holders", params=params)
-    data = r.json()
-    return [
-        Web3.to_checksum_address(entry["holders"][0]["proxyWallet"])
-        for entry in data
-        if entry.get("holders")
-    ]
+    result = subgraph.sg.query_json([accounts.id])
+    items = subgraph._parse_items_from_json(result)
+    assert len(items) > 0, "No accounts found in conditions subgraph"
+
+    user = Web3.to_checksum_address(items[0]["id"])
+    pos = subgraph.get_market_positions_from_user(first=10, user=user)
+    if len(pos) == 0:
+        raise tenacity.TryAgain()
+    return pos
 
 
 def test_get_positions() -> None:
-    holders = get_token_holders()
-    assert len(holders) > 0, "No token holders found"
-
     subgraph = PolymarketSubgraphHandler()
-    for holder in holders[:10]:
-        pos = subgraph.get_market_positions_from_user(first=10, user=holder)
-        if len(pos) > 0:
-            return
-
-    # If none of the first 10 holders have positions, the test still passes
-    # as long as the subgraph query itself works (no exceptions).
+    pos = get_positions_from_recent_account(subgraph)
+    assert pos[0].market.condition.id is not None
+    assert pos[0].market.condition.outcomeSlotCount >= 2

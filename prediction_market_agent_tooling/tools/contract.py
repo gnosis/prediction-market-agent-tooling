@@ -610,10 +610,14 @@ class ContractOnGnosisChain(ContractBaseClass):
 
 class ContractOnPolygonChain(ContractBaseClass):
     """
-    Contract base class with Gnosis Chain configuration.
+    Contract base class with Polygon Chain configuration.
     """
 
     CHAIN_ID = POLYGON_CHAIN_ID
+
+    @classmethod
+    def get_web3(cls) -> Web3:
+        return RPCConfig().get_polygon_web3()
 
 
 class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):

@@ -29,6 +29,7 @@ class MarketPositionMarket(BaseModel):
 
 class MarketPosition(BaseModel):
     id: HexBytes
+    user: ChecksumAddress
     market: MarketPositionMarket
 
 
@@ -85,7 +86,7 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
 
         condition_fields = self._get_fields_for_condition(
             positions.market.condition
-        ) + [positions.id]
+        ) + [positions.id, positions.user]
 
         positions_models = self.do_query(
             fields=condition_fields, pydantic_model=MarketPosition

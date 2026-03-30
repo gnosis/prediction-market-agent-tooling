@@ -299,6 +299,7 @@ def omen_resolve_market_tx(
             n_outcomes=market.question.n_outcomes,
             web3=web3,
         )
+        logger.info(f"Resolved {market.url=}")
     except BaseException as e:
         e = extract_error_from_retry_error(e)
         if "condition not prepared or found" in str(e):

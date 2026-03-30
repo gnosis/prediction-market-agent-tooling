@@ -3,6 +3,9 @@ from web3 import Web3
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import Wei
 from prediction_market_agent_tooling.loggers import logger
+from prediction_market_agent_tooling.markets.omen.omen_constants import (
+    METRI_SUPER_GROUP_CONTRACT_ADDRESS,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ContractERC20BaseClass,
     ContractERC4626BaseClass,
@@ -24,6 +27,12 @@ def auto_withdraw_collateral_token(
     if not amount_wei:
         logger.warning(
             f"Amount to withdraw is zero, skipping withdrawal of {collateral_token_contract.symbol_cached(web3)}."
+        )
+        return
+
+    if collateral_token_contract.address == METRI_SUPER_GROUP_CONTRACT_ADDRESS:
+        logger.warning(
+            f"Collateral token is Metri Super Group ({METRI_SUPER_GROUP_CONTRACT_ADDRESS}), which is not withdrawable, because it doesn't have liquidity anymore. Skipping withdrawal."
         )
         return
 

@@ -64,8 +64,8 @@ def get_single_token_to_usd_rate(token_address: ChecksumAddress) -> USD:
 # A short cache to not spam CoW and prevent timeouts, but still have relatively fresh data.
 @cached(TTLCache(maxsize=100, ttl=5 * 60))
 def get_single_usd_to_token_rate(token_address: ChecksumAddress) -> CollateralToken:
-    # (w)xDai is a stable coin against USD, so use it to estimate USD worth.
-    if WRAPPED_XDAI_CONTRACT_ADDRESS == token_address:
+    # (w)xDai and USDC are stablecoins pegged to USD, so use it to estimate USD worth.
+    if token_address in [WRAPPED_XDAI_CONTRACT_ADDRESS, USDCeContract().address]:
         return CollateralToken(1.0)
     # sDai is ERC4626 with wxDai as asset, we can take the rate directly from there instead of calling CoW.
     if SDAI_CONTRACT_ADDRESS == token_address:

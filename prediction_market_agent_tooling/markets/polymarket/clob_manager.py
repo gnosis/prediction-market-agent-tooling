@@ -86,7 +86,7 @@ class ClobManager:
         order_args = MarketOrderArgs(
             token_id=str(token_id),
             amount=amount_float,
-            side=side.value,
+            side=side.value if isinstance(side, PolymarketPriceSideEnum) else side,
         )
 
         logger.info(f"Placing market order: {order_args}")

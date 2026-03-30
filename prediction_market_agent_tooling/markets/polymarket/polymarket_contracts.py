@@ -4,13 +4,28 @@ from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.tools.contract import (
     ConditionalTokenContract,
+    ContractDepositableWrapperERC20OnPolygonChain,
     ContractERC20BaseClass,
     ContractOnPolygonChain,
 )
 
 
+class WPOLContract(ContractDepositableWrapperERC20OnPolygonChain):
+    # Wrapped POL (formerly WMATIC) on Polygon.
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
+    )
+
+
+class USDCContract(ContractERC20BaseClass, ContractOnPolygonChain):
+    # Native USDC on Polygon.
+    address: ChecksumAddress = Web3.to_checksum_address(
+        "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
+    )
+
+
 class USDCeContract(ContractERC20BaseClass, ContractOnPolygonChain):
-    # USDC.e is used by Polymarket.
+    # USDC.e (bridged) is used by Polymarket.
     address: ChecksumAddress = Web3.to_checksum_address(
         "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
     )

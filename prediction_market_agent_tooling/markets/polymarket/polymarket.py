@@ -1,5 +1,6 @@
 import typing as t
 
+from cowdao_cowpy.common.chains import Chain
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
@@ -48,13 +49,25 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
     PolymarketConditionalTokenContract,
     USDCeContract,
+    WPOLContract,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
     ConditionSubgraphModel,
     PolymarketSubgraphHandler,
 )
+from prediction_market_agent_tooling.tools.cow.cow_order import (
+    get_sell_token_amount,
+    swap_tokens_waiting,
+)
+from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.tokens.usd import get_token_in_usd
+from prediction_market_agent_tooling.tools.tokens.main_token import (
+    MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
+)
+from prediction_market_agent_tooling.tools.tokens.usd import (
+    get_token_in_usd,
+    get_usd_in_token,
+)
 from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
@@ -166,6 +179,9 @@ class PolymarketAgentMarket(AgentMarket):
     def get_token_in_usd(self, x: CollateralToken) -> USD:
         return get_token_in_usd(x, self.collateral_token_address())
 
+    def get_usd_in_token(self, x: USD) -> CollateralToken:
+        return get_usd_in_token(x, self.collateral_token_address())
+
     @staticmethod
     def get_trade_balance(api_keys: APIKeys, web3: Web3 | None = None) -> USD:
         usdc_balance_wei = USDCeContract().balanceOf(
@@ -176,8 +192,71 @@ class PolymarketAgentMarket(AgentMarket):
     def get_liquidity(self, web3: Web3 | None = None) -> CollateralToken:
         return CollateralToken(self.liquidity_usd.value)
 
-    def place_bet(self, outcome: OutcomeStr, amount: USD) -> str:
-        raise NotImplementedError("TODO: Implement to allow betting on Polymarket.")
+    def place_bet(
+        self,
+        outcome: OutcomeStr,
+        amount: USD,
+        auto_deposit: bool = True,
+        web3: Web3 | None = None,
+        api_keys: APIKeys | None = None,
+    ) -> str:
+        api_keys = api_keys if api_keys is not None else APIKeys()
+        web3 = web3 or RPCConfig().get_polygon_web3()
+
+        usdce = USDCeContract()
+        need_usdce_wei = Wei(int(amount.value * 1e6))
+        usdce_balance = usdce.balanceOf(api_keys.public_key, web3=web3)
+
+        if auto_deposit and usdce_balance < need_usdce_wei:
+            # Not enough USDC.e — swap only the shortfall from POL via WPOL.
+            remaining_usdce_wei = Wei(need_usdce_wei.value - usdce_balance.value)
+            wpol = WPOLContract()
+            wpol_for_usdce = get_sell_token_amount(
+                buy_amount=remaining_usdce_wei,
+                sell_token=wpol.address,
+                buy_token=usdce.address,
+                chain=Chain.POLYGON,
+            )
+            gas_reserve_wei = Wei(int(MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES.value * 1e18))
+            total_pol_needed = Wei(wpol_for_usdce.value + gas_reserve_wei.value)
+
+            pol_balance = Wei(web3.eth.get_balance(api_keys.public_key))
+            if pol_balance < total_pol_needed:
+                raise OutOfFundsError(
+                    f"Not enough POL: need {total_pol_needed.value / 1e18:.4f} "
+                    f"({wpol_for_usdce.value / 1e18:.4f} for swap + "
+                    f"{gas_reserve_wei.value / 1e18:.4f} for gas), "
+                    f"have {pol_balance.value / 1e18:.4f} POL."
+                )
+
+            # Wrap exactly the swap amount from POL → WPOL.
+            wpol_balance = wpol.balanceOf(api_keys.public_key, web3=web3)
+            if wpol_balance < wpol_for_usdce:
+                left_to_wrap = Wei(wpol_for_usdce.value - wpol_balance.value)
+                logger.info(f"Wrapping {left_to_wrap.value / 1e18:.4f} POL → WPOL.")
+                wpol.deposit(api_keys=api_keys, amount_wei=left_to_wrap, web3=web3)
+
+            logger.info(
+                f"Swapping {wpol_for_usdce.value / 1e18:.4f} WPOL → USDC.e "
+                f"via CoW on Polygon."
+            )
+            swap_tokens_waiting(
+                amount_wei=wpol_for_usdce,
+                sell_token=wpol.address,
+                buy_token=usdce.address,
+                api_keys=api_keys,
+                chain=Chain.POLYGON,
+                web3=web3,
+            )
+
+        clob_manager = ClobManager(api_keys)
+        token_id = self.get_token_id_for_outcome(outcome)
+        created_order = clob_manager.place_buy_market_order(
+            token_id=token_id, usdc_amount=amount
+        )
+        if not created_order.success:
+            raise ValueError(f"Error creating order: {created_order}")
+        return created_order.transactionsHashes[0].to_0x_hex()
 
     @staticmethod
     def get_markets(
@@ -252,15 +331,37 @@ class PolymarketAgentMarket(AgentMarket):
         multiplier: float = 3.0,
         web3: Web3 | None = None,
     ) -> None:
-        balance_collateral = USDCeContract().balanceOf(
-            for_address=APIKeys().public_key, web3=web3
+        """Ensure the wallet has enough POL for gas on Polygon.
+
+        If POL is low, unwraps WPOL → POL. Same pattern as Seer's
+        send_keeping_token_to_eoa_xdai which unwraps wxDAI → xDAI.
+        """
+        api_keys = APIKeys()
+        web3 = web3 or RPCConfig().get_polygon_web3()
+
+        pol_balance_wei = Wei(web3.eth.get_balance(api_keys.public_key))
+        pol_balance = xDai(pol_balance_wei.value / 1e18)
+
+        if pol_balance >= min_required_balance:
+            return
+
+        need_pol = xDai((min_required_balance.value - pol_balance.value) * multiplier)
+        need_pol_wei = Wei(int(need_pol.value * 1e18))
+
+        wpol = WPOLContract()
+        wpol_balance = wpol.balanceOf(api_keys.public_key, web3=web3)
+
+        if wpol_balance >= need_pol_wei:
+            logger.info(f"Unwrapping {need_pol} WPOL → POL for gas.")
+            wpol.withdraw(api_keys=api_keys, amount_wei=need_pol_wei, web3=web3)
+            return
+
+        raise OutOfFundsError(
+            f"Not enough POL/WPOL for gas: "
+            f"need {need_pol.value:.4f} POL, "
+            f"have {pol_balance.value:.4f} POL, "
+            f"{wpol_balance.value / 1e18:.4f} WPOL."
         )
-        # USDC has 6 decimals, xDAI has 18. We convert from Wei into atomic units.
-        balance_collateral_atomic = CollateralToken(float(balance_collateral) / 1e6)
-        if balance_collateral_atomic < min_required_balance.as_token:
-            raise EnvironmentError(
-                f"USDC balance {balance_collateral_atomic} < {min_required_balance.as_token=}"
-            )
 
     @staticmethod
     def redeem_winnings(api_keys: APIKeys, web3: Web3 | None = None) -> None:
@@ -317,6 +418,17 @@ class PolymarketAgentMarket(AgentMarket):
     @classmethod
     def get_user_url(cls, keys: APIKeys) -> str:
         return f"https://polymarket.com/{keys.public_key}"
+
+    @staticmethod
+    def get_outcome_str_from_bool(outcome: bool) -> OutcomeStr:
+        return OutcomeStr("Yes") if outcome else OutcomeStr("No")
+
+    @staticmethod
+    def get_user_balance(user_id: str) -> float:
+        usdc_balance_wei = USDCeContract().balanceOf(
+            for_address=Web3.to_checksum_address(user_id)
+        )
+        return usdc_balance_wei.value * 1e-6
 
     def get_position(
         self, user_id: str, web3: Web3 | None = None
@@ -380,18 +492,6 @@ class PolymarketAgentMarket(AgentMarket):
         buy_token_amount = bet_amount.value / price.value
         logger.info(f"Buy token amount: {buy_token_amount=}")
         return OutcomeToken(buy_token_amount)
-
-    def buy_tokens(self, outcome: OutcomeStr, amount: USD) -> str:
-        clob_manager = ClobManager(APIKeys())
-        token_id = self.get_token_id_for_outcome(outcome)
-
-        created_order = clob_manager.place_buy_market_order(
-            token_id=token_id, usdc_amount=amount
-        )
-        if not created_order.success:
-            raise ValueError(f"Error creating order: {created_order}")
-
-        return created_order.transactionsHashes[0].to_0x_hex()
 
     def sell_tokens(
         self,

@@ -65,7 +65,6 @@ pydantic-ai-slim = {version = "^1.61.0", extras = ["openai", "anthropic", "logfi
 py-clob-client = "^0.24.0"
 google-genai = "^1.64.0"
 openinference-instrumentation-google-genai = "^0.1.10"
-griffe = "^1.0.0,<1.15.0" # Some version problem with newer ones that isn't locked properly in Langfuse
 requests = ">=2.33.0"
 cryptography = ">=46.0.6"
 

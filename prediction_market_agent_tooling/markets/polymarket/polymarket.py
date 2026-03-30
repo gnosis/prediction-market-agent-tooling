@@ -5,6 +5,7 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
+    POL,
     USD,
     ChecksumAddress,
     CollateralToken,
@@ -217,16 +218,17 @@ class PolymarketAgentMarket(AgentMarket):
                 buy_token=usdce.address,
                 chain=Chain.POLYGON,
             )
-            gas_reserve_wei = Wei(int(MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES.value * 1e18))
-            total_pol_needed = Wei(wpol_for_usdce.value + gas_reserve_wei.value)
+            gas_reserve = POL(MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES.value)
+            total_pol_needed = Wei(wpol_for_usdce.value + gas_reserve.as_wei.value)
 
-            pol_balance = Wei(web3.eth.get_balance(api_keys.public_key))
-            if pol_balance < total_pol_needed:
+            pol_balance_wei = Wei(web3.eth.get_balance(api_keys.public_key))
+            if pol_balance_wei < total_pol_needed:
+                pol_balance = POL(pol_balance_wei.value / 1e18)
                 raise OutOfFundsError(
                     f"Not enough POL: need {total_pol_needed.value / 1e18:.4f} "
                     f"({wpol_for_usdce.value / 1e18:.4f} for swap + "
-                    f"{gas_reserve_wei.value / 1e18:.4f} for gas), "
-                    f"have {pol_balance.value / 1e18:.4f} POL."
+                    f"{gas_reserve} for gas), "
+                    f"have {pol_balance} POL."
                 )
 
             # Wrap exactly the swap amount from POL → WPOL.
@@ -339,28 +341,30 @@ class PolymarketAgentMarket(AgentMarket):
         api_keys = APIKeys()
         web3 = web3 or RPCConfig().get_polygon_web3()
 
-        pol_balance_wei = Wei(web3.eth.get_balance(api_keys.public_key))
-        pol_balance = xDai(pol_balance_wei.value / 1e18)
+        # min_required_balance is typed as xDai in base class, but here
+        # it represents POL. Both are 18-decimal native tokens.
+        min_required = POL(min_required_balance.value)
+        pol_balance = POL(web3.eth.get_balance(api_keys.public_key) / 1e18)
 
-        if pol_balance >= min_required_balance:
+        if pol_balance >= min_required:
             return
 
-        need_pol = xDai((min_required_balance.value - pol_balance.value) * multiplier)
-        need_pol_wei = Wei(int(need_pol.value * 1e18))
+        need = POL((min_required.value - pol_balance.value) * multiplier)
+        need_wei = need.as_wei
 
         wpol = WPOLContract()
         wpol_balance = wpol.balanceOf(api_keys.public_key, web3=web3)
 
-        if wpol_balance >= need_pol_wei:
-            logger.info(f"Unwrapping {need_pol} WPOL → POL for gas.")
-            wpol.withdraw(api_keys=api_keys, amount_wei=need_pol_wei, web3=web3)
+        if wpol_balance >= need_wei:
+            logger.info(f"Unwrapping {need} WPOL → POL for gas.")
+            wpol.withdraw(api_keys=api_keys, amount_wei=need_wei, web3=web3)
             return
 
         raise OutOfFundsError(
             f"Not enough POL/WPOL for gas: "
-            f"need {need_pol.value:.4f} POL, "
-            f"have {pol_balance.value:.4f} POL, "
-            f"{wpol_balance.value / 1e18:.4f} WPOL."
+            f"need {need} POL, "
+            f"have {pol_balance} POL, "
+            f"{wpol_balance.as_token} WPOL."
         )
 
     @staticmethod

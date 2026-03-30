@@ -89,6 +89,14 @@ class xDai(_GenericValue[int | float | str | Decimal, float], parser=float):
         return xDaiWei(to_wei_inc_negative(self.value))
 
 
+class POL(_GenericValue[int | float | str | Decimal, float], parser=float):
+    """Represents values in POL (native token on Polygon)."""
+
+    @property
+    def as_wei(self) -> "Wei":
+        return Wei(to_wei_inc_negative(self.value))
+
+
 class Mana(_GenericValue[int | float | str | Decimal, float], parser=float):
     """Represents values in Manifold's Mana."""
 

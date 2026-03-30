@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 import base58
 import tenacity
+from eth_abi import decode
 from eth_account import Account
 from eth_typing import URI
 from eth_utils.currency import MAX_WEI, MIN_WEI
@@ -414,3 +415,9 @@ def get_receipt_block_timestamp(receipt_tx: TxReceipt, web3: Web3) -> int:
 
 def is_valid_wei(value: Web3Wei) -> bool:
     return MIN_WEI <= value <= MAX_WEI
+
+
+def decode_string_hex(error_hex: HexBytes) -> str:
+    data = bytes.fromhex(error_hex.to_0x_hex()[10:])
+    decoded: str = decode(["string"], data)[0]
+    return decoded

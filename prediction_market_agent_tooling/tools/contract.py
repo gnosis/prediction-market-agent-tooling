@@ -34,6 +34,7 @@ from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 from prediction_market_agent_tooling.tools.web3_utils import (
     call_function_on_contract,
+    decode_string_hex,
     send_function_on_contract_tx,
     send_function_on_contract_tx_using_safe,
 )
@@ -125,30 +126,45 @@ class ContractBaseClass(BaseModel):
         Used for changing a state (writing) to the contract.
         """
 
-        if api_keys.safe_address_checksum:
-            return send_function_on_contract_tx_using_safe(
+        try:
+            if api_keys.safe_address_checksum:
+                return send_function_on_contract_tx_using_safe(
+                    web3=web3 or self.get_web3(),
+                    contract_address=self.address,
+                    contract_abi=self.abi,
+                    from_private_key=api_keys.bet_from_private_key,
+                    safe_address=api_keys.safe_address_checksum,
+                    function_name=function_name,
+                    function_params=function_params,
+                    tx_params=tx_params,
+                    timeout=timeout,
+                    default_gas=default_gas,
+                )
+            return send_function_on_contract_tx(
                 web3=web3 or self.get_web3(),
                 contract_address=self.address,
                 contract_abi=self.abi,
                 from_private_key=api_keys.bet_from_private_key,
-                safe_address=api_keys.safe_address_checksum,
                 function_name=function_name,
                 function_params=function_params,
                 tx_params=tx_params,
                 timeout=timeout,
                 default_gas=default_gas,
             )
-        return send_function_on_contract_tx(
-            web3=web3 or self.get_web3(),
-            contract_address=self.address,
-            contract_abi=self.abi,
-            from_private_key=api_keys.bet_from_private_key,
-            function_name=function_name,
-            function_params=function_params,
-            tx_params=tx_params,
-            timeout=timeout,
-            default_gas=default_gas,
-        )
+        except (ContractLogicError, tenacity.RetryError) as e:
+            # Extract the actual error if it's wrapped in retry.
+            if isinstance(e, tenacity.RetryError) and isinstance(
+                e.last_attempt.exception(), ContractLogicError
+            ):
+                e = e.last_attempt.exception()
+
+            # In case of a general error message from the RPC, try to decode it for futher details.
+            if e.message == "execution reverted" and e.data is not None:
+                decoded_error = decode_string_hex(HexBytes(e.data))
+                raise ContractLogicError(decoded_error, e.data) from e
+
+            # If can't decode, just raise what we have.
+            raise
 
     def send_with_value(
         self,

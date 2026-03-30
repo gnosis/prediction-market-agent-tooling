@@ -159,7 +159,11 @@ class ContractBaseClass(BaseModel):
                 e = e.last_attempt.exception()
 
             # In case of a general error message from the RPC, try to decode it for futher details.
-            if e.message == "execution reverted" and e.data is not None:
+            if (
+                isinstance(e, ContractLogicError)
+                and e.message == "execution reverted"
+                and e.data is not None
+            ):
                 decoded_error = decode_string_hex(HexBytes(e.data))
                 raise ContractLogicError(decoded_error, e.data) from e
 

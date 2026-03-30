@@ -22,6 +22,7 @@ from prediction_market_agent_tooling.markets.omen.omen import (
     send_keeping_token_to_eoa_xdai,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
+    OmenConditionalTokenContract,
     OmenOracleContract,
     OmenRealitioContract,
 )
@@ -268,6 +269,27 @@ def omen_resolve_market_tx(
     Market can be resolved after the answer if finalized on Reality.
     """
     oracle_contract = OmenOracleContract()
+
+    conditional_token_contract = OmenConditionalTokenContract()
+    condition_id = conditional_token_contract.getConditionId(
+        question_id=market.question.question_id,
+        oracle_address=oracle_contract.address,
+        outcomes_slot_count=len(market.outcomes),
+        web3=web3,
+    )
+
+    if not conditional_token_contract.does_condition_exists(condition_id, web3=web3):
+        logger.warning(
+            f"Market {market.url=}, condition does not exist, preparing it before resolving."
+        )
+        conditional_token_contract.prepareCondition(
+            api_keys=api_keys,
+            question_id=market.question.question_id,
+            oracle_address=oracle_contract.address,
+            outcomes_slot_count=len(market.outcomes),
+            web3=web3,
+        )
+
     try:
         oracle_contract.resolve(
             api_keys=api_keys,

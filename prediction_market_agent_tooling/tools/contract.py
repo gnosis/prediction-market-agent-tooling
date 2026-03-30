@@ -153,19 +153,23 @@ class ContractBaseClass(BaseModel):
             )
         except (ContractLogicError, tenacity.RetryError) as e:
             # Extract the actual error if it's wrapped in retry.
-            if isinstance(e, tenacity.RetryError) and isinstance(
+            if isinstance(e, ContractLogicError):
+                actual_e = e
+            elif isinstance(e, tenacity.RetryError) and isinstance(
                 e.last_attempt.exception(), ContractLogicError
             ):
-                e = e.last_attempt.exception()
+                actual_e = t.cast(ContractLogicError, e.last_attempt.exception())
+            else:
+                actual_e = None
 
-            # In case of a general error message from the RPC, try to decode it for futher details.
+            # In case of a general error message from the RPC, try to decode it for further details.
             if (
-                isinstance(e, ContractLogicError)
-                and e.message == "execution reverted"
-                and e.data is not None
+                actual_e is not None
+                and actual_e.message == "execution reverted"
+                and actual_e.data is not None
             ):
-                decoded_error = decode_string_hex(HexBytes(e.data))
-                raise ContractLogicError(decoded_error, e.data) from e
+                decoded_error = decode_string_hex(HexBytes(str(actual_e.data)))
+                raise ContractLogicError(decoded_error, actual_e.data) from e
 
             # If can't decode, just raise what we have.
             raise

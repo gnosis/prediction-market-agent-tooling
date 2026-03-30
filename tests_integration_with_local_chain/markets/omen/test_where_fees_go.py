@@ -1,4 +1,3 @@
-import time
 from datetime import timedelta
 
 import numpy as np
@@ -35,7 +34,7 @@ from prediction_market_agent_tooling.markets.omen.omen_resolving import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
-from tests.utils import mint_new_block
+from tests.utils import advance_chain_time, mint_new_block
 
 
 def test_where_fees_go(
@@ -158,10 +157,8 @@ def test_where_fees_go(
         agent_market.get_liquidity(local_web3) == funds_t + additional_funds_t
     ), "Assumption was that fee is not added to the liquidity of the market"
 
-    # Wait for market's closing time
-    time.sleep(close_in * 1.2)
-    # Do a dummy block again, so the time in the contract is updated and it knows it's opened already.
-    mint_new_block(api_keys_A, local_web3)
+    # Advance chain time past the market's closing time.
+    advance_chain_time(local_web3, close_in + 1, api_keys_A)
 
     # Submit answer on reality.
     # Make the better be correct, so that we know that balance increase in other account is from fees and not incorrect bets.
@@ -173,10 +170,8 @@ def test_where_fees_go(
         web3=local_web3,
     )
 
-    # Wait for the finalization.
-    time.sleep(finalization_wait_time_seconds * 1.2)
-    # Update the time in the chain again.
-    mint_new_block(api_keys_A, local_web3)
+    # Advance chain time past the finalization period.
+    advance_chain_time(local_web3, finalization_wait_time_seconds + 1, api_keys_A)
 
     # Resolve the market.
     omen_resolve_market_tx(api_keys_A, omen_market, local_web3)

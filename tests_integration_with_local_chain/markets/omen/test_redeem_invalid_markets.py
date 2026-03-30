@@ -1,4 +1,3 @@
-import time
 from datetime import timedelta
 
 from ape_test import TestAccount
@@ -32,7 +31,7 @@ from prediction_market_agent_tooling.markets.omen.omen_resolving import (
 )
 from prediction_market_agent_tooling.tools.balances import get_balances
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
-from tests.utils import mint_new_block
+from tests.utils import advance_chain_time, mint_new_block
 
 
 def test_redeem_invalid_market(
@@ -142,10 +141,8 @@ def test_redeem_invalid_market(
         balance_after_buying_C < starting_balance_C
     ), "Balance of C should have been lowered from betting"
 
-    # Wait for market's closing time
-    time.sleep(close_in * 1.2)
-    # Do a dummy block again, so the time in the contract is updated and it knows it's opened already.
-    mint_new_block(api_keys_A, local_web3)
+    # Advance chain time past the market's closing time.
+    advance_chain_time(local_web3, close_in + 1, api_keys_A)
 
     # Submit invalid answer on reality.
     omen_submit_invalid_answer_market_tx(
@@ -155,10 +152,8 @@ def test_redeem_invalid_market(
         web3=local_web3,
     )
 
-    # Wait for the finalization.
-    time.sleep(finalization_wait_time_seconds * 1.2)
-    # Update the time in the chain again.
-    mint_new_block(api_keys_A, local_web3)
+    # Advance chain time past the finalization period.
+    advance_chain_time(local_web3, finalization_wait_time_seconds + 1, api_keys_A)
 
     # Resolve the market.
     omen_resolve_market_tx(api_keys_A, omen_market, local_web3)

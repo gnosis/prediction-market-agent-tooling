@@ -1,4 +1,3 @@
-import time
 from datetime import timedelta
 
 from ape_test import TestAccount
@@ -28,7 +27,7 @@ from prediction_market_agent_tooling.tools.tokens.auto_withdraw import (
     auto_withdraw_collateral_token,
 )
 from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
-from tests.utils import mint_new_block
+from tests.utils import advance_chain_time, mint_new_block
 
 
 def test_redeem_and_withdraw(
@@ -88,10 +87,8 @@ def test_redeem_and_withdraw(
         web3=local_web3,
     )
 
-    # Wait for market's closing time
-    time.sleep(close_in * 1.2)
-    # Do a dummy block again, so the time in the contract is updated and it knows it's opened already.
-    mint_new_block(api_keys, local_web3)
+    # Advance chain time past the market's closing time.
+    advance_chain_time(local_web3, close_in + 1, api_keys)
 
     # Submit invalid answer on reality.
     omen_submit_invalid_answer_market_tx(
@@ -101,10 +98,8 @@ def test_redeem_and_withdraw(
         web3=local_web3,
     )
 
-    # Wait for the finalization.
-    time.sleep(finalization_wait_time_seconds * 1.2)
-    # Update the time in the chain again.
-    mint_new_block(api_keys, local_web3)
+    # Advance chain time past the finalization period.
+    advance_chain_time(local_web3, finalization_wait_time_seconds + 1, api_keys)
 
     # Resolve the market.
     omen_resolve_market_tx(api_keys, omen_market, local_web3)

@@ -80,10 +80,7 @@ def test_invalid_token_pool() -> None:
 @pytest.mark.parametrize(
     "market_type",
     [
-        pytest.param(
-            MarketType.POLYMARKET,
-            marks=pytest.mark.skip(reason="Failing for Polymarket, see issue PMAT-574"),
-        ),
+        MarketType.POLYMARKET,
         MarketType.MANIFOLD,
         MarketType.OMEN,
         MarketType.METACULUS,
@@ -111,10 +108,7 @@ def test_get_pool_tokens(market_type: MarketType) -> None:
 @pytest.mark.parametrize(
     "market_type",
     [
-        pytest.param(
-            MarketType.POLYMARKET,
-            marks=pytest.mark.skip(reason="Failing for Polymarket, see issue PMAT-574"),
-        ),
+        MarketType.POLYMARKET,
         MarketType.MANIFOLD,
         MarketType.OMEN,
         MarketType.METACULUS,

@@ -2,17 +2,25 @@ import json
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import USDC, OutcomeStr, Probability
+from prediction_market_agent_tooling.gtypes import (
+    USD,
+    USDC,
+    OutcomeStr,
+    OutcomeToken,
+    Probability,
+)
 from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.polymarket.constants import (
+    POLYMARKET_BASE_URL,
+)
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 POLYMARKET_TRUE_OUTCOME = "Yes"
 POLYMARKET_FALSE_OUTCOME = "No"
 
-POLYMARKET_BASE_URL = "https://polymarket.com"
 
-
+# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
 class PolymarketRewards(BaseModel):
     min_size: int
     max_spread: float | None
@@ -41,20 +49,32 @@ class PolymarketGammaMarket(BaseModel):
 
     @property
     def token_ids(self) -> list[int]:
-        # If market has no token_ids, we halt for safety since it will fail later on.
         if not self.clobTokenIds:
             raise ValueError("Market has no token_ids")
-        return [int(i) for i in json.loads(self.clobTokenIds)]
+        try:
+            return [int(i) for i in json.loads(self.clobTokenIds)]
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            raise ValueError(
+                f"Invalid clobTokenIds JSON '{self.clobTokenIds}': {e}"
+            ) from e
 
     @property
     def outcomes_list(self) -> list[OutcomeStr]:
-        return [OutcomeStr(i) for i in json.loads(self.outcomes)]
+        try:
+            return [OutcomeStr(i) for i in json.loads(self.outcomes)]
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Invalid outcomes JSON '{self.outcomes}': {e}") from e
 
     @property
     def outcome_prices(self) -> list[float] | None:
         if not self.outcomePrices:
             return None
-        return [float(i) for i in json.loads(self.outcomePrices)]
+        try:
+            return [float(i) for i in json.loads(self.outcomePrices)]
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            raise ValueError(
+                f"Invalid outcomePrices JSON '{self.outcomePrices}': {e}"
+            ) from e
 
 
 class PolymarketGammaTag(BaseModel):
@@ -94,6 +114,7 @@ class PolymarketGammaResponse(BaseModel):
     pagination: PolymarketGammaPagination
 
 
+# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
 class PolymarketMarket(BaseModel):
     enable_order_book: bool
     active: bool
@@ -158,6 +179,7 @@ class PolymarketMarket(BaseModel):
             )
 
 
+# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
 class MarketsEndpointResponse(BaseModel):
     limit: int
     count: int
@@ -165,6 +187,7 @@ class MarketsEndpointResponse(BaseModel):
     data: list[PolymarketMarket]
 
 
+# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
 class PolymarketPriceResponse(BaseModel):
     price: str
 
@@ -207,6 +230,18 @@ class PolymarketPositionResponse(BaseModel):
     redeemable: bool
     outcome: str
     outcomeIndex: int
+
+    @property
+    def size_as_outcome_token(self) -> OutcomeToken:
+        return OutcomeToken(self.size)
+
+    @property
+    def current_value_usd(self) -> USD:
+        return USD(self.currentValue)
+
+    @property
+    def cash_pnl_usd(self) -> USD:
+        return USD(self.cashPnl)
 
 
 def construct_polymarket_url(slug: str) -> str:

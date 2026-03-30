@@ -5,8 +5,8 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
 
-# Fresh address with no Polymarket positions
-EMPTY_ADDRESS = "0x0000000000000000000000000000000000000001"
+# Random address with no Polymarket positions
+EMPTY_ADDRESS = "0xE3a5F17BC84F63545E0e893810A7a4b89BaDC134"
 
 
 def test_redeem_winnings_no_positions() -> None:

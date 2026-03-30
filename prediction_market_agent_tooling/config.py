@@ -317,7 +317,7 @@ class RPCConfig(BaseSettings):
     GNOSIS_RPC_URL: URI = Field(default=URI("https://rpc.gnosischain.com"))
     GNOSIS_RPC_BEARER: SecretStr | None = None
     CHAIN_ID: ChainID = Field(default=GNOSIS_CHAIN_ID)
-    POLYGON_RPC_URL: URI = Field(default=URI("https://polygon-rpc.com"))
+    POLYGON_RPC_URL: URI = Field(default=URI("https://polygon.drpc.org"))
     POLYGON_RPC_BEARER: SecretStr | None = None
 
     @property

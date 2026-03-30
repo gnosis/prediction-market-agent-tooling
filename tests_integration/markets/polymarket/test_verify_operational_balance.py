@@ -8,8 +8,8 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket import (
 # Vitalik's address — known to exist on Polygon with some balance
 KNOWN_POLYGON_ADDRESS = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
 
-# Fresh address with no POL
-EMPTY_POLYGON_ADDRESS = "0x0000000000000000000000000000000000000001"
+# Random address with no POL on Polygon
+EMPTY_POLYGON_ADDRESS = "0xE3a5F17BC84F63545E0e893810A7a4b89BaDC134"
 
 
 def test_verify_operational_balance_known_address() -> None:

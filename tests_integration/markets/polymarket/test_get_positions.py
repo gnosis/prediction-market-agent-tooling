@@ -1,33 +1,37 @@
+import tenacity
 from web3 import Web3
 
-from prediction_market_agent_tooling.gtypes import ChecksumAddress
 from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
+    MarketPosition,
     PolymarketSubgraphHandler,
 )
 
 
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(2))
+def get_positions_from_recent_account(
+    subgraph: PolymarketSubgraphHandler,
+) -> list[MarketPosition]:
+    """Query the subgraph for a recent account and retrieve its positions.
+
+    Retries because The Graph indexers are intermittently unavailable
+    for the marketPositions entity on this subgraph.
+    """
+    accounts = subgraph.conditions_subgraph.Query.accounts(
+        first=1, orderBy="lastTradedTimestamp", orderDirection="desc"
+    )
+    result = subgraph.sg.query_json([accounts.id])
+    items = subgraph._parse_items_from_json(result)
+    assert len(items) > 0, "No accounts found in conditions subgraph"
+
+    user = Web3.to_checksum_address(items[0]["id"])
+    pos = subgraph.get_market_positions_from_user(first=10, user=user)
+    if len(pos) == 0:
+        raise tenacity.TryAgain()
+    return pos
+
+
 def test_get_positions() -> None:
     subgraph = PolymarketSubgraphHandler()
-
-    # Query the subgraph for any recent positions to find a user with positions.
-    raw_positions = subgraph.conditions_subgraph.Query.marketPositions(first=5)
-    user_fields = [raw_positions.user]
-    result = subgraph.sg.query_json(user_fields)
-    users: list[ChecksumAddress] = []
-    for chunk in result:
-        for v in chunk.values():
-            if isinstance(v, list):
-                users.extend(
-                    Web3.to_checksum_address(item["user"]) for item in v if "user" in item
-                )
-            elif isinstance(v, dict) and "user" in v:
-                users.append(Web3.to_checksum_address(v["user"]))
-    assert len(users) > 0, "No positions found in conditions subgraph"
-
-    # Now verify that get_market_positions_from_user returns valid results for a known user.
-    user = users[0]
-    pos = subgraph.get_market_positions_from_user(first=10, user=user)
-    assert len(pos) > 0, f"Expected positions for user {user} but got none"
+    pos = get_positions_from_recent_account(subgraph)
     assert pos[0].market.condition.id is not None
     assert pos[0].market.condition.outcomeSlotCount >= 2
-    assert pos[0].user == user

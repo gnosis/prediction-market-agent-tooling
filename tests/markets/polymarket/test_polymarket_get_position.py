@@ -62,7 +62,7 @@ def test_get_position_filters_by_condition_id(
     mock_polymarket_market: PolymarketAgentMarket,
 ) -> None:
     different_condition = (
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
     )
     position = _make_position_response("Yes", 0, size=10.0, current_value=8.0)
     position.conditionId = different_condition

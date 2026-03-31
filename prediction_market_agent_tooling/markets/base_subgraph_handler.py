@@ -127,12 +127,15 @@ class BaseSubgraphHandler(metaclass=SingletonMeta):
             return [item] if item else []
 
         # Collection query with automatic pagination
-        requested = first if first is not None else float("inf")
         all_items: list[dict[str, t.Any]] = []
         skip = 0
 
-        while len(all_items) < requested:
-            batch_size = min(GRAPH_QUERY_LIMIT, int(requested - len(all_items)))
+        while first is None or len(all_items) < first:
+            batch_size = (
+                GRAPH_QUERY_LIMIT
+                if first is None
+                else min(GRAPH_QUERY_LIMIT, first - len(all_items))
+            )
             query = self._build_query(
                 entity=entity,
                 fields=fields,

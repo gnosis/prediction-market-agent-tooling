@@ -17,6 +17,11 @@ from prediction_market_agent_tooling.tools.tokens.slippage import (
 )
 from prediction_market_agent_tooling.tools.utils import should_not_happen
 
+NON_WITHDRAWABLE_COLLATERAL_TOKENS = {
+    # No solvers are providing this anymore.
+    METRI_SUPER_GROUP_CONTRACT_ADDRESS,
+}
+
 
 def auto_withdraw_collateral_token(
     collateral_token_contract: ContractERC20BaseClass,
@@ -30,13 +35,12 @@ def auto_withdraw_collateral_token(
         )
         return
 
-    if collateral_token_contract.address == METRI_SUPER_GROUP_CONTRACT_ADDRESS:
+    if collateral_token_contract.address in NON_WITHDRAWABLE_COLLATERAL_TOKENS:
         logger.warning(
-            f"Collateral token is Metri Super Group ({METRI_SUPER_GROUP_CONTRACT_ADDRESS}), which is not withdrawable, because it doesn't have liquidity anymore. Skipping withdrawal."
+            f"Collateral token {collateral_token_contract.address} is in the list of non-withdrawable tokens. Skipping withdrawal."
         )
         return
-
-    if collateral_token_contract.address == KEEPING_ERC20_TOKEN.address:
+    elif collateral_token_contract.address == KEEPING_ERC20_TOKEN.address:
         # Do nothing, as this is the token we want to keep.
         logger.info(
             f"Collateral token {collateral_token_contract.symbol_cached(web3)} is the same as KEEPING_ERC20_TOKEN. Not withdrawing."

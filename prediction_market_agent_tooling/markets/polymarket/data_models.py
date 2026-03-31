@@ -5,11 +5,12 @@ from pydantic import BaseModel
 from prediction_market_agent_tooling.gtypes import (
     USD,
     USDC,
+    CollateralToken,
     OutcomeStr,
     OutcomeToken,
     Probability,
 )
-from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.data_models import Bet, Resolution, ResolvedBet
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     POLYMARKET_BASE_URL,
 )
@@ -242,6 +243,74 @@ class PolymarketPositionResponse(BaseModel):
     @property
     def cash_pnl_usd(self) -> USD:
         return USD(self.cashPnl)
+
+
+class PolymarketBet(BaseModel):
+    id: str
+    taker_order_id: str
+    market: str  # condition_id
+    asset_id: str  # token_id
+    side: str  # "BUY" or "SELL"
+    size: float  # number of outcome tokens
+    fee_rate_bps: int
+    price: float  # execution price (0-1)
+    status: str
+    match_time: DatetimeUTC
+    outcome: OutcomeStr
+    event_slug: str
+    title: str
+
+    @property
+    def cost(self) -> CollateralToken:
+        return CollateralToken(self.size * self.price)
+
+    def get_profit(self, resolution: Resolution) -> CollateralToken:
+        if resolution.invalid or resolution.outcome is None:
+            return CollateralToken(0)
+
+        is_winning = self.outcome == resolution.outcome
+
+        if self.side == "BUY":
+            if is_winning:
+                return CollateralToken(self.size * (1 - self.price))
+            else:
+                return CollateralToken(-self.size * self.price)
+        else:  # SELL
+            if is_winning:
+                return CollateralToken(-self.size * (1 - self.price))
+            else:
+                return CollateralToken(self.size * self.price)
+
+    def to_bet(self) -> Bet:
+        return Bet(
+            id=self.id,
+            amount=self.cost,
+            outcome=self.outcome,
+            created_time=self.match_time,
+            market_question=self.title,
+            market_id=self.market,
+        )
+
+    def to_generic_resolved_bet(
+        self, resolution: Resolution, resolved_time: DatetimeUTC
+    ) -> ResolvedBet:
+        if resolution.invalid or resolution.outcome is None:
+            raise ValueError(
+                f"Trade {self.id} cannot be converted to a resolved bet: "
+                f"resolution is invalid or has no outcome."
+            )
+
+        return ResolvedBet(
+            id=self.id,
+            amount=self.cost,
+            outcome=self.outcome,
+            created_time=self.match_time,
+            market_question=self.title,
+            market_id=self.market,
+            market_outcome=resolution.outcome,
+            resolved_time=resolved_time,
+            profit=self.get_profit(resolution),
+        )
 
 
 def construct_polymarket_url(slug: str) -> str:

@@ -200,19 +200,23 @@ def _prepare_tx_params(
     if access_list is not None:
         tx_params_new["accessList"] = access_list
 
-    # Set EIP-1559 gas params with buffer if not already provided.
+    # Set gas price params with buffer if not already provided.
     # This prevents "max fee per gas less than block base fee" errors
     # when base fee increases between estimation and submission.
     if "maxFeePerGas" not in tx_params_new and "gasPrice" not in tx_params_new:
         latest_block = web3.eth.get_block("latest")
         base_fee = latest_block.get("baseFeePerGas", 0)
         if base_fee:
+            # EIP-1559 supported: use maxFeePerGas/maxPriorityFeePerGas
             max_priority_fee = web3.eth.max_priority_fee
             # Add 50% buffer to base fee to handle fluctuations
             tx_params_new["maxPriorityFeePerGas"] = max_priority_fee
             tx_params_new["maxFeePerGas"] = Web3Wei(
                 int(base_fee * 1.5) + max_priority_fee
             )
+        else:
+            # Legacy chain (no EIP-1559): use gasPrice
+            tx_params_new["gasPrice"] = web3.eth.gas_price
 
     return tx_params_new
 

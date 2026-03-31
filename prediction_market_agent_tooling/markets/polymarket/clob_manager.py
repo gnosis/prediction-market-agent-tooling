@@ -91,7 +91,34 @@ class ClobManager:
         logger.info(f"Placing market order: {order_args}")
         signed_order = self.clob_client.create_market_order(order_args)
         resp = self.clob_client.post_order(signed_order, orderType=OrderType.FOK)
-        return CreateOrderResult.model_validate(resp)
+        result = CreateOrderResult.model_validate(resp)
+
+        if result.success and result.transactionsHashes:
+            self._verify_order_on_chain(result)
+
+        return result
+
+    def _verify_order_on_chain(self, result: CreateOrderResult) -> None:
+        """Verify that a FOK order was actually filled by checking the tx on-chain.
+
+        The CLOB returns success=True even for killed FOK orders, so we must
+        verify the transaction hash exists on Polygon.
+        """
+        tx_hash = result.transactionsHashes[0]
+        try:
+            receipt = self.polygon_web3.eth.get_transaction_receipt(tx_hash)
+            if receipt["status"] != 1:
+                raise ValueError(
+                    f"Order transaction {tx_hash.to_0x_hex()} failed on-chain "
+                    f"(status={receipt['status']})"
+                )
+        except Exception as e:
+            if "not found" in str(e).lower():
+                raise ValueError(
+                    f"Order was not filled — transaction {tx_hash.to_0x_hex()} "
+                    f"not found on-chain"
+                ) from e
+            raise
 
     def place_buy_market_order(
         self, token_id: int, usdc_amount: USD

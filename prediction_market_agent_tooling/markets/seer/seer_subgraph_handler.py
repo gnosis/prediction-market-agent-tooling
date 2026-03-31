@@ -4,7 +4,6 @@ from collections import defaultdict
 from enum import Enum
 from typing import Any
 
-from subgrounds import FieldPath
 from web3.constants import ADDRESS_ZERO
 
 from prediction_market_agent_tooling.deploy.constants import (
@@ -40,7 +39,6 @@ from prediction_market_agent_tooling.tools.utils import (
     to_int_timestamp,
     utcnow,
 )
-from prediction_market_agent_tooling.tools.web3_utils import unwrap_generic_value
 
 
 class TemplateId(int, Enum):
@@ -49,6 +47,36 @@ class TemplateId(int, Enum):
     SCALAR = 1
     CATEGORICAL = 2
     MULTICATEGORICAL = 3
+
+
+# GraphQL field selections
+_SEER_MARKET_BASE_FIELDS = (
+    "id factory creator conditionId marketName outcomesSupply "
+    "parentOutcome outcomes payoutReported payoutNumerators "
+    "hasAnswers blockTimestamp openingTs finalizeTs "
+    "wrappedTokens collateralToken upperBound lowerBound templateId"
+)
+
+# Market fields with one level of parentMarket nesting
+SEER_MARKET_FIELDS = (
+    f"{_SEER_MARKET_BASE_FIELDS} "
+    f"parentMarket {{ {_SEER_MARKET_BASE_FIELDS} }}"
+)
+
+SEER_QUESTION_FIELDS = "question { id best_answer finalize_ts } market { id }"
+
+SEER_TOKEN_FIELDS = "id name symbol"
+
+SWAPR_POOL_FIELDS = (
+    "id liquidity sqrtPrice token0Price token1Price "
+    "totalValueLockedToken0 totalValueLockedToken1 "
+    f"token0 {{ {SEER_TOKEN_FIELDS} }} token1 {{ {SEER_TOKEN_FIELDS} }}"
+)
+
+SWAPR_SWAP_FIELDS = (
+    "id pool { id } sender recipient price amount0 amount1 timestamp "
+    f"token0 {{ {SEER_TOKEN_FIELDS} }} token1 {{ {SEER_TOKEN_FIELDS} }}"
+)
 
 
 class SeerSubgraphHandler(BaseSubgraphHandler):
@@ -65,54 +93,11 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     def __init__(self) -> None:
         super().__init__()
 
-        self.seer_subgraph = self.sg.load_subgraph(
-            self.SEER_SUBGRAPH.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
+        api_key = self.keys.graph_api_key.get_secret_value()
+        self.seer_subgraph_url = self.SEER_SUBGRAPH.format(graph_api_key=api_key)
+        self.swapr_algebra_subgraph_url = self.SWAPR_ALGEBRA_SUBGRAPH.format(
+            graph_api_key=api_key
         )
-        self.swapr_algebra_subgraph = self.sg.load_subgraph(
-            self.SWAPR_ALGEBRA_SUBGRAPH.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
-        )
-
-    def _get_fields_for_markets(
-        self, markets_field: FieldPath, current_level: int = 0, max_level: int = 1
-    ) -> list[FieldPath]:
-        fields = [
-            markets_field.id,
-            markets_field.factory,
-            markets_field.creator,
-            markets_field.conditionId,
-            markets_field.marketName,
-            markets_field.outcomesSupply,
-            markets_field.parentOutcome,
-            markets_field.outcomes,
-            markets_field.payoutReported,
-            markets_field.payoutNumerators,
-            markets_field.hasAnswers,
-            markets_field.blockTimestamp,
-            markets_field.openingTs,
-            markets_field.finalizeTs,
-            markets_field.wrappedTokens,
-            markets_field.collateralToken,
-            markets_field.upperBound,
-            markets_field.lowerBound,
-            markets_field.templateId,
-        ]
-        if current_level < max_level:
-            fields.extend(
-                self._get_fields_for_markets(
-                    markets_field.parentMarket, current_level + 1, max_level
-                )
-            )
-            # TODO: Same situation as with `questions` field above.
-            # fields.extend(
-            #     self._get_fields_for_markets(
-            #         markets_field.childMarkets, current_level + 1, max_level
-            #     )
-            # )
-        return fields
 
     @staticmethod
     def filter_bicategorical_markets(markets: list[SeerMarket]) -> list[SeerMarket]:
@@ -225,29 +210,21 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
 
     def _build_sort_params(
         self, sort_by: SortBy
-    ) -> tuple[str | None, FieldPath | None]:
-        sort_direction: str | None
-        sort_by_field: FieldPath | None
-
+    ) -> tuple[str | None, str | None]:
         match sort_by:
             case SortBy.NEWEST:
-                sort_direction = "desc"
-                sort_by_field = self.seer_subgraph.Market.blockTimestamp
+                return "desc", "blockTimestamp"
             case SortBy.CLOSING_SOONEST:
-                sort_direction = "asc"
-                sort_by_field = self.seer_subgraph.Market.openingTs
+                return "asc", "openingTs"
             case SortBy.HIGHEST_LIQUIDITY | SortBy.LOWEST_LIQUIDITY:
                 sort_direction = (
                     "desc" if sort_by == SortBy.HIGHEST_LIQUIDITY else "asc"
                 )
-                sort_by_field = self.seer_subgraph.Market.outcomesSupply
+                return sort_direction, "outcomesSupply"
             case SortBy.NONE:
-                sort_direction = None
-                sort_by_field = None
+                return None, None
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
-
-        return sort_direction, sort_by_field
 
     def get_markets(
         self,
@@ -269,22 +246,16 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             conditional_filter_type=conditional_filter_type,
         )
 
-        # These values can not be set to `None`, but they can be omitted.
-        optional_params = {}
-        if sort_by_field is not None:
-            optional_params["orderBy"] = sort_by_field
-        if sort_direction is not None:
-            optional_params["orderDirection"] = sort_direction
-
-        markets_field = self.seer_subgraph.Query.markets(
-            first=(
-                limit if limit else sys.maxsize
-            ),  # if not limit, we fetch all possible markets,
-            where=unwrap_generic_value(where_stms),
-            **optional_params,
+        markets = self.do_query(
+            url=self.seer_subgraph_url,
+            entity="markets",
+            fields=SEER_MARKET_FIELDS,
+            pydantic_model=SeerMarket,
+            where=where_stms,
+            first=limit if limit else sys.maxsize,
+            order_by=sort_by_field,
+            order_direction=sort_direction,
         )
-        fields = self._get_fields_for_markets(markets_field)
-        markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         market_ids = [m.id for m in markets]
         # We fetch questions from all markets and all parents in one go
         parent_market_ids = [
@@ -304,20 +275,23 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
     def get_questions_for_markets(
         self, market_ids: list[HexBytes]
     ) -> list[SeerMarketQuestions]:
-        where = unwrap_generic_value(
-            {"market_in": [market_id.to_0x_hex().lower() for market_id in market_ids]}
+        where = {"market_in": [market_id.to_0x_hex().lower() for market_id in market_ids]}
+        return self.do_query(
+            url=self.seer_subgraph_url,
+            entity="marketQuestions",
+            fields=SEER_QUESTION_FIELDS,
+            pydantic_model=SeerMarketQuestions,
+            where=where,
         )
-        markets_field = self.seer_subgraph.Query.marketQuestions(where=where)
-        fields = self._get_fields_for_questions(markets_field)
-        questions = self.do_query(fields=fields, pydantic_model=SeerMarketQuestions)
-        return questions
 
     def get_market_by_id(self, market_id: HexBytes) -> SeerMarketWithQuestions:
-        markets_field = self.seer_subgraph.Query.market(
-            id=market_id.to_0x_hex().lower()
+        markets = self.do_query(
+            url=self.seer_subgraph_url,
+            entity="market",
+            fields=SEER_MARKET_FIELDS,
+            pydantic_model=SeerMarket,
+            entity_id=market_id.to_0x_hex().lower(),
         )
-        fields = self._get_fields_for_markets(markets_field)
-        markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         if len(markets) != 1:
             raise ValueError(
                 f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
@@ -330,50 +304,20 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         )
         return s
 
-    def _get_fields_for_questions(self, questions_field: FieldPath) -> list[FieldPath]:
-        fields = [
-            questions_field.question.id,
-            questions_field.question.best_answer,
-            questions_field.question.finalize_ts,
-            questions_field.market.id,
-        ]
-        return fields
-
     def get_market_by_wrapped_token(self, tokens: list[ChecksumAddress]) -> SeerMarket:
         where_stms = {"wrappedTokens_contains": tokens}
-        markets_field = self.seer_subgraph.Query.markets(
-            where=unwrap_generic_value(where_stms)
+        markets = self.do_query(
+            url=self.seer_subgraph_url,
+            entity="markets",
+            fields=SEER_MARKET_FIELDS,
+            pydantic_model=SeerMarket,
+            where=where_stms,
         )
-        fields = self._get_fields_for_markets(markets_field)
-        markets = self.do_query(fields=fields, pydantic_model=SeerMarket)
         if len(markets) != 1:
             raise ValueError(
                 f"Fetched wrong number of markets. Expected 1 but got {len(markets)}"
             )
         return markets[0]
-
-    def _get_fields_for_seer_token(self, fields: FieldPath) -> list[FieldPath]:
-        return [
-            fields.id,
-            fields.name,
-            fields.symbol,
-        ]
-
-    def _get_fields_for_pools(self, pools_field: FieldPath) -> list[FieldPath]:
-        fields = (
-            [
-                pools_field.id,
-                pools_field.liquidity,
-                pools_field.sqrtPrice,
-                pools_field.token0Price,
-                pools_field.token1Price,
-                pools_field.totalValueLockedToken0,
-                pools_field.totalValueLockedToken1,
-            ]
-            + self._get_fields_for_seer_token(pools_field.token0)
-            + self._get_fields_for_seer_token(pools_field.token1)
-        )
-        return fields
 
     def get_pool_by_token(
         self, token_address: ChecksumAddress, collateral_address: ChecksumAddress
@@ -392,16 +336,16 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
                 },
             ]
         }
-        optional_params = {}
-        optional_params["orderBy"] = self.swapr_algebra_subgraph.Pool.liquidity
-        optional_params["orderDirection"] = "desc"
 
-        pools_field = self.swapr_algebra_subgraph.Query.pools(
-            where=unwrap_generic_value(where_argument), **optional_params
+        pools = self.do_query(
+            url=self.swapr_algebra_subgraph_url,
+            entity="pools",
+            fields=SWAPR_POOL_FIELDS,
+            pydantic_model=SwaprPool,
+            where=where_argument,
+            order_by="liquidity",
+            order_direction="desc",
         )
-
-        fields = self._get_fields_for_pools(pools_field)
-        pools = self.do_query(fields=fields, pydantic_model=SwaprPool)
         # We assume there is only one pool for outcomeToken/sDAI.
         if len(pools) > 1:
             logger.info(
@@ -411,23 +355,6 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
             # We select the first one
             return pools[0]
         return None
-
-    def _get_fields_for_swaps(self, swaps_field: FieldPath) -> list[FieldPath]:
-        fields = (
-            [
-                swaps_field.id,
-                swaps_field.pool.id,
-                swaps_field.sender,
-                swaps_field.recipient,
-                swaps_field.price,
-                swaps_field.amount0,
-                swaps_field.amount1,
-                swaps_field.timestamp,
-            ]
-            + self._get_fields_for_seer_token(swaps_field.token0)
-            + self._get_fields_for_seer_token(swaps_field.token1)
-        )
-        return fields
 
     def get_swaps(
         self,
@@ -441,11 +368,13 @@ class SeerSubgraphHandler(BaseSubgraphHandler):
         if timestamp_lt is not None:
             where_argument["timestamp_lt"] = to_int_timestamp(timestamp_lt)
 
-        swaps_field = self.swapr_algebra_subgraph.Query.swaps(where=where_argument)
-        fields = self._get_fields_for_swaps(swaps_field)
-        swaps = self.do_query(fields=fields, pydantic_model=SwaprSwap)
-
-        return swaps
+        return self.do_query(
+            url=self.swapr_algebra_subgraph_url,
+            entity="swaps",
+            fields=SWAPR_SWAP_FIELDS,
+            pydantic_model=SwaprSwap,
+            where=where_argument,
+        )
 
 
 class SeerQuestionsCache(metaclass=SingletonMeta):

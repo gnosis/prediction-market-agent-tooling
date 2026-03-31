@@ -70,15 +70,15 @@ def test_place_bet_failure_raises(
         )
 
 
-@patch("prediction_market_agent_tooling.markets.polymarket.polymarket.USDCeContract")
+@patch(
+    "prediction_market_agent_tooling.markets.polymarket.polymarket.auto_deposit_collateral_token"
+)
 @patch("prediction_market_agent_tooling.markets.polymarket.polymarket.ClobManager")
 def test_buy_tokens_delegates_to_place_bet(
     mock_clob_cls: MagicMock,
-    mock_usdce_cls: MagicMock,
+    mock_auto_deposit: MagicMock,
     mock_polymarket_market: PolymarketAgentMarket,
 ) -> None:
-    # Pretend wallet has enough USDC.e so auto_deposit skips the swap.
-    mock_usdce_cls.return_value.balanceOf.return_value = Wei(100_000_000)
     mock_clob = mock_clob_cls.return_value
     mock_clob.place_buy_market_order.return_value = _success_order_result()
 

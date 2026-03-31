@@ -1,3 +1,4 @@
+from cowdao_cowpy.common.chains import Chain
 from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
@@ -35,6 +36,8 @@ def auto_deposit_collateral_token(
     api_keys: APIKeys,
     web3: Web3 | None = None,
     surplus: float = 0.01,
+    chain: Chain = Chain.GNOSIS,
+    keeping_erc20_token: ContractERC20BaseClass | None = None,
 ) -> None:
     collateral_amount_wei = (
         collateral_amount_wei_or_usd
@@ -62,7 +65,12 @@ def auto_deposit_collateral_token(
 
     elif isinstance(collateral_token_contract, ContractERC20BaseClass):
         auto_deposit_erc20(
-            collateral_token_contract, collateral_amount_wei, api_keys, web3
+            collateral_token_contract,
+            collateral_amount_wei,
+            api_keys,
+            web3,
+            chain=chain,
+            keeping_erc20_token=keeping_erc20_token,
         )
 
     else:
@@ -140,7 +148,10 @@ def auto_deposit_erc20(
     collateral_amount_wei: Wei,
     api_keys: APIKeys,
     web3: Web3 | None,
+    chain: Chain = Chain.GNOSIS,
+    keeping_erc20_token: ContractERC20BaseClass | None = None,
 ) -> None:
+    keeping_token = keeping_erc20_token or KEEPING_ERC20_TOKEN
     # How much do we have already in the other token (collateral token).
     collateral_balance_wei = collateral_token_contract.balanceOf(
         api_keys.bet_from_address
@@ -154,31 +165,31 @@ def auto_deposit_erc20(
     # Get of how much of the source token we need to sell in order to fill the remaining collateral amount.
     amount_to_sell_wei = get_sell_token_amount(
         remaining_to_get_in_collateral_wei,
-        sell_token=KEEPING_ERC20_TOKEN.address,
+        sell_token=keeping_token.address,
         buy_token=collateral_token_contract.address,
+        chain=chain,
     )
     # If we don't have enough of the source token.
-    if amount_to_sell_wei > ContractERC20OnGnosisChain(
-        address=KEEPING_ERC20_TOKEN.address
-    ).balanceOf(api_keys.bet_from_address):
+    if amount_to_sell_wei > keeping_token.balanceOf(api_keys.bet_from_address):
         # Try to deposit it, if it's depositable token (like Wrapped xDai, agent could have xDai).
-        if isinstance(KEEPING_ERC20_TOKEN, ContractDepositableWrapperERC20BaseClass):
+        if isinstance(keeping_token, ContractDepositableWrapperERC20BaseClass):
             auto_deposit_depositable_wrapper_erc20(
-                KEEPING_ERC20_TOKEN, amount_to_sell_wei, api_keys, web3
+                keeping_token, amount_to_sell_wei, api_keys, web3
             )
         else:
             raise ValueError(
                 "Not enough of the source token to sell to get the desired amount of the collateral token."
             )
     slippage_tolerance = get_slippage_tolerance_per_token(
-        KEEPING_ERC20_TOKEN.address, collateral_token_contract.address
+        keeping_token.address, collateral_token_contract.address
     )
     swap_tokens_waiting(
         amount_wei=amount_to_sell_wei,
-        sell_token=KEEPING_ERC20_TOKEN.address,
+        sell_token=keeping_token.address,
         buy_token=collateral_token_contract.address,
         api_keys=api_keys,
         web3=web3,
+        chain=chain,
         slippage_tolerance=slippage_tolerance,
     )
 

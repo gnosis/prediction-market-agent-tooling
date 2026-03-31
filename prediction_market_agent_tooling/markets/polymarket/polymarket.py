@@ -56,14 +56,10 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_hand
     ConditionSubgraphModel,
     PolymarketSubgraphHandler,
 )
-from prediction_market_agent_tooling.tools.cow.cow_order import (
-    get_sell_token_amount,
-    swap_tokens_waiting,
-)
 from prediction_market_agent_tooling.tools.custom_exceptions import OutOfFundsError
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
-from prediction_market_agent_tooling.tools.tokens.main_token import (
-    MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES,
+from prediction_market_agent_tooling.tools.tokens.auto_deposit import (
+    auto_deposit_collateral_token,
 )
 from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
@@ -204,51 +200,16 @@ class PolymarketAgentMarket(AgentMarket):
         api_keys = api_keys if api_keys is not None else APIKeys()
         web3 = web3 or RPCConfig().get_polygon_web3()
 
-        usdce = USDCeContract()
-        need_usdce_wei = Wei(int(amount.value * 1e6))
-        usdce_balance = usdce.balanceOf(api_keys.public_key, web3=web3)
-
-        if auto_deposit and usdce_balance < need_usdce_wei:
-            # Not enough USDC.e — swap only the shortfall from POL via WPOL.
-            remaining_usdce_wei = Wei(need_usdce_wei.value - usdce_balance.value)
-            wpol = WPOLContract()
-            wpol_for_usdce = get_sell_token_amount(
-                buy_amount=remaining_usdce_wei,
-                sell_token=wpol.address,
-                buy_token=usdce.address,
-                chain=Chain.POLYGON,
-            )
-            gas_reserve = POL(MINIMUM_NATIVE_TOKEN_IN_EOA_FOR_FEES.value)
-            total_pol_needed = Wei(wpol_for_usdce.value + gas_reserve.as_wei.value)
-
-            pol_balance_wei = Wei(web3.eth.get_balance(api_keys.public_key))
-            if pol_balance_wei < total_pol_needed:
-                pol_balance = POL(pol_balance_wei.value / 1e18)
-                raise OutOfFundsError(
-                    f"Not enough POL: need {total_pol_needed.value / 1e18:.4f} "
-                    f"({wpol_for_usdce.value / 1e18:.4f} for swap + "
-                    f"{gas_reserve} for gas), "
-                    f"have {pol_balance} POL."
-                )
-
-            # Wrap exactly the swap amount from POL → WPOL.
-            wpol_balance = wpol.balanceOf(api_keys.public_key, web3=web3)
-            if wpol_balance < wpol_for_usdce:
-                left_to_wrap = Wei(wpol_for_usdce.value - wpol_balance.value)
-                logger.info(f"Wrapping {left_to_wrap.value / 1e18:.4f} POL → WPOL.")
-                wpol.deposit(api_keys=api_keys, amount_wei=left_to_wrap, web3=web3)
-
-            logger.info(
-                f"Swapping {wpol_for_usdce.value / 1e18:.4f} WPOL → USDC.e "
-                f"via CoW on Polygon."
-            )
-            swap_tokens_waiting(
-                amount_wei=wpol_for_usdce,
-                sell_token=wpol.address,
-                buy_token=usdce.address,
+        if auto_deposit:
+            need_usdce_wei = Wei(int(amount.value * 1e6))
+            auto_deposit_collateral_token(
+                collateral_token_contract=USDCeContract(),
+                collateral_amount_wei_or_usd=need_usdce_wei,
                 api_keys=api_keys,
-                chain=Chain.POLYGON,
                 web3=web3,
+                surplus=0,
+                chain=Chain.POLYGON,
+                keeping_erc20_token=WPOLContract(),
             )
 
         clob_manager = ClobManager(api_keys)

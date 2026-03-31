@@ -4,7 +4,6 @@ import typing as t
 import requests
 from PIL import Image
 from PIL.Image import Image as ImageType
-from subgrounds import FieldPath
 
 from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
@@ -47,7 +46,6 @@ from prediction_market_agent_tooling.tools.utils import (
 from prediction_market_agent_tooling.tools.web3_utils import (
     ZERO_BYTES,
     byte32_to_ipfscidv0,
-    unwrap_generic_value,
 )
 
 SAFE_COLLATERAL_TOKENS = [
@@ -60,6 +58,57 @@ SAFE_COLLATERAL_TOKENS = [
 SAFE_COLLATERAL_TOKENS_ADDRESSES = [
     contract.address for contract in SAFE_COLLATERAL_TOKENS
 ]
+
+# GraphQL field selections
+OMEN_MARKET_QUESTION_FIELDS = (
+    "id title outcomes answerFinalizedTimestamp currentAnswer "
+    "data templateId isPendingArbitration openingTimestamp timeout"
+)
+
+OMEN_MARKET_FIELDS = (
+    "id title creator collateralVolume usdVolume "
+    "liquidityParameter collateralToken outcomes "
+    "outcomeTokenAmounts outcomeTokenMarginalPrices "
+    "lastActiveDay lastActiveHour fee "
+    "answerFinalizedTimestamp resolutionTimestamp "
+    "currentAnswer creationTimestamp category "
+    f"condition {{ id outcomeSlotCount }} "
+    f"question {{ {OMEN_MARKET_QUESTION_FIELDS} }}"
+)
+
+OMEN_BET_FIELDS = (
+    "id title collateralToken outcomeTokenMarginalPrice "
+    "oldOutcomeTokenMarginalPrice type "
+    "creator { id } "
+    "creationTimestamp collateralAmount feeAmount "
+    "outcomeIndex outcomeTokensTraded transactionHash "
+    f"fpmm {{ {OMEN_MARKET_FIELDS} }}"
+)
+
+REALITY_QUESTION_FIELDS = (
+    "id user updatedTimestamp questionId contentHash "
+    "historyHash answerFinalizedTimestamp "
+    "currentScheduledFinalizationTimestamp"
+)
+
+REALITY_ANSWER_FIELDS = (
+    "id answer bondAggregate lastBond timestamp createdBlock "
+    f"question {{ {REALITY_QUESTION_FIELDS} }}"
+)
+
+REALITY_RESPONSE_FIELDS = (
+    "id timestamp answer isUnrevealed isCommitment bond "
+    "user historyHash createdBlock revealedBlock "
+    f"question {{ {REALITY_QUESTION_FIELDS} }}"
+)
+
+POSITION_FIELDS = "id conditionIds collateralTokenAddress indexSets"
+
+USER_POSITION_FIELDS = f"id balance wrappedBalance totalBalance position {{ {POSITION_FIELDS} }}"
+
+IMAGE_MAPPING_FIELDS = "id image_hash"
+
+PREDICTION_FIELDS = "publisherAddress ipfsHash txHashes estimatedProbabilityBps"
 
 
 class OmenSubgraphHandler(BaseSubgraphHandler):
@@ -82,136 +131,22 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
     def __init__(self) -> None:
         super().__init__()
 
-        # Load the subgraph
-        self.trades_subgraph = self.sg.load_subgraph(
-            self.OMEN_TRADES_SUBGRAPH.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
+        api_key = self.keys.graph_api_key.get_secret_value()
+        self.trades_subgraph_url = self.OMEN_TRADES_SUBGRAPH.format(
+            graph_api_key=api_key
         )
-        self.conditional_tokens_subgraph = self.sg.load_subgraph(
-            self.CONDITIONAL_TOKENS_SUBGRAPH.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
+        self.conditional_tokens_subgraph_url = (
+            self.CONDITIONAL_TOKENS_SUBGRAPH.format(graph_api_key=api_key)
         )
-        self.realityeth_subgraph = self.sg.load_subgraph(
-            self.REALITYETH_GRAPH_URL.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
+        self.realityeth_subgraph_url = self.REALITYETH_GRAPH_URL.format(
+            graph_api_key=api_key
         )
-        self.omen_image_mapping_subgraph = self.sg.load_subgraph(
-            self.OMEN_IMAGE_MAPPING_GRAPH_URL.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
+        self.omen_image_mapping_url = self.OMEN_IMAGE_MAPPING_GRAPH_URL.format(
+            graph_api_key=api_key
         )
-
-        self.omen_agent_result_mapping_subgraph = self.sg.load_subgraph(
-            self.OMEN_AGENT_RESULT_MAPPING_GRAPH_URL.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
+        self.omen_agent_result_mapping_url = (
+            self.OMEN_AGENT_RESULT_MAPPING_GRAPH_URL.format(graph_api_key=api_key)
         )
-
-    def _get_fields_for_bets(self, bets_field: FieldPath) -> list[FieldPath]:
-        markets = bets_field.fpmm
-        fields_for_markets = self._get_fields_for_markets(markets)
-
-        fields_for_bets = [
-            bets_field.id,
-            bets_field.title,
-            bets_field.collateralToken,
-            bets_field.outcomeTokenMarginalPrice,
-            bets_field.oldOutcomeTokenMarginalPrice,
-            bets_field.type,
-            bets_field.creator.id,
-            bets_field.creationTimestamp,
-            bets_field.collateralAmount,
-            bets_field.feeAmount,
-            bets_field.outcomeIndex,
-            bets_field.outcomeTokensTraded,
-            bets_field.transactionHash,
-        ]
-        return fields_for_bets + fields_for_markets
-
-    def _get_fields_for_reality_questions(
-        self, questions_field: FieldPath
-    ) -> list[FieldPath]:
-        # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
-        return [
-            questions_field.id,
-            questions_field.user,
-            questions_field.updatedTimestamp,
-            questions_field.questionId,
-            questions_field.contentHash,
-            questions_field.historyHash,
-            questions_field.answerFinalizedTimestamp,
-            questions_field.currentScheduledFinalizationTimestamp,
-        ]
-
-    def _get_fields_for_answers(self, answers_field: FieldPath) -> list[FieldPath]:
-        return [
-            answers_field.id,
-            answers_field.answer,
-            answers_field.bondAggregate,
-            answers_field.lastBond,
-            answers_field.timestamp,
-            answers_field.createdBlock,
-        ] + self._get_fields_for_reality_questions(answers_field.question)
-
-    def _get_fields_for_responses(self, responses_field: FieldPath) -> list[FieldPath]:
-        return [
-            responses_field.id,
-            responses_field.timestamp,
-            responses_field.answer,
-            responses_field.isUnrevealed,
-            responses_field.isCommitment,
-            responses_field.bond,
-            responses_field.user,
-            responses_field.historyHash,
-            responses_field.createdBlock,
-            responses_field.revealedBlock,
-        ] + self._get_fields_for_reality_questions(responses_field.question)
-
-    def _get_fields_for_market_questions(
-        self, questions_field: FieldPath
-    ) -> list[FieldPath]:
-        # Note: Fields available on the Omen's subgraph Question are different from the Reality's subgraph Question.
-        return [
-            questions_field.id,
-            questions_field.title,
-            questions_field.outcomes,
-            questions_field.answerFinalizedTimestamp,
-            questions_field.currentAnswer,
-            questions_field.data,
-            questions_field.templateId,
-            questions_field.isPendingArbitration,
-            questions_field.openingTimestamp,
-            questions_field.timeout,
-        ]
-
-    def _get_fields_for_markets(self, markets_field: FieldPath) -> list[FieldPath]:
-        # In theory it's possible to store the subgraph schema locally (see https://github.com/0xPlaygrounds/subgrounds/issues/41).
-        # Since it's still not working, we hardcode the schema to be fetched below.
-        return [
-            markets_field.id,
-            markets_field.title,
-            markets_field.creator,
-            markets_field.collateralVolume,
-            markets_field.usdVolume,
-            markets_field.liquidityParameter,
-            markets_field.collateralToken,
-            markets_field.outcomes,
-            markets_field.outcomeTokenAmounts,
-            markets_field.outcomeTokenMarginalPrices,
-            markets_field.lastActiveDay,
-            markets_field.lastActiveHour,
-            markets_field.fee,
-            markets_field.answerFinalizedTimestamp,
-            markets_field.resolutionTimestamp,
-            markets_field.currentAnswer,
-            markets_field.creationTimestamp,
-            markets_field.category,
-            markets_field.condition.id,
-            markets_field.condition.outcomeSlotCount,
-        ] + self._get_fields_for_market_questions(markets_field.question)
 
     def _build_where_statements(
         self,
@@ -277,7 +212,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["creationTimestamp_gt"] = to_int_timestamp(created_after)
 
         if liquidity_bigger_than is not None:
-            where_stms["liquidityParameter_gt"] = liquidity_bigger_than
+            where_stms["liquidityParameter_gt"] = liquidity_bigger_than.value
 
         if condition_id_in is not None:
             where_stms["condition_"]["id_in"] = [x.to_0x_hex() for x in condition_id_in]
@@ -299,38 +234,20 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
 
     def _build_sort_params(
         self, sort_by: SortBy
-    ) -> tuple[str | None, FieldPath | None]:
-        sort_direction: str | None
-        sort_by_field: FieldPath | None
-
+    ) -> tuple[str | None, str | None]:
         match sort_by:
             case SortBy.NEWEST:
-                sort_direction = "desc"
-                sort_by_field = (
-                    self.trades_subgraph.FixedProductMarketMaker.creationTimestamp
-                )
+                return "desc", "creationTimestamp"
             case SortBy.CLOSING_SOONEST:
-                sort_direction = "asc"
-                sort_by_field = (
-                    self.trades_subgraph.FixedProductMarketMaker.openingTimestamp
-                )
+                return "asc", "openingTimestamp"
             case SortBy.HIGHEST_LIQUIDITY:
-                sort_direction = "desc"
-                sort_by_field = (
-                    self.trades_subgraph.FixedProductMarketMaker.liquidityMeasure
-                )
+                return "desc", "liquidityMeasure"
             case SortBy.LOWEST_LIQUIDITY:
-                sort_direction = "asc"
-                sort_by_field = (
-                    self.trades_subgraph.FixedProductMarketMaker.liquidityMeasure
-                )
+                return "asc", "liquidityMeasure"
             case SortBy.NONE:
-                sort_direction = None
-                sort_by_field = None
+                return None, None
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
-
-        return sort_direction, sort_by_field
 
     def get_omen_markets_simple(
         self,
@@ -408,7 +325,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         liquidity_bigger_than: Wei | None = None,
         condition_id_in: list[HexBytes] | None = None,
         id_in: list[str] | None = None,
-        sort_by_field: FieldPath | None = None,
+        sort_by_field: str | None = None,
         sort_direction: str | None = None,
         collateral_token_address_in: (
             t.Sequence[ChecksumAddress] | None
@@ -444,37 +361,30 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             include_scalar_markets=include_scalar_markets,
         )
 
-        # These values can not be set to `None`, but they can be omitted.
-        optional_params = {}
-        if sort_by_field is not None:
-            optional_params["orderBy"] = sort_by_field
-        if sort_direction is not None:
-            optional_params["orderDirection"] = sort_direction
-
-        markets = self.trades_subgraph.Query.fixedProductMarketMakers(
-            first=(
-                limit if limit else sys.maxsize
-            ),  # if not limit, we fetch all possible markets
-            where=unwrap_generic_value(where_stms),
-            **optional_params,
+        return self.do_query(
+            url=self.trades_subgraph_url,
+            entity="fixedProductMarketMakers",
+            fields=OMEN_MARKET_FIELDS,
+            pydantic_model=OmenMarket,
+            where=where_stms,
+            first=limit if limit else sys.maxsize,
+            order_by=sort_by_field,
+            order_direction=sort_direction,
         )
-
-        fields = self._get_fields_for_markets(markets)
-
-        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
-        return omen_markets
 
     def get_omen_market_by_market_id(
         self, market_id: HexAddress, block_number: int | None = None
     ) -> OmenMarket:
-        query_filters: dict[str, t.Any] = {"id": market_id.lower()}
-        if block_number:
-            query_filters["block"] = {"number": block_number}
+        block = {"number": block_number} if block_number else None
 
-        markets = self.trades_subgraph.Query.fixedProductMarketMaker(**query_filters)
-
-        fields = self._get_fields_for_markets(markets)
-        omen_markets = self.do_query(fields=fields, pydantic_model=OmenMarket)
+        omen_markets = self.do_query(
+            url=self.trades_subgraph_url,
+            entity="fixedProductMarketMaker",
+            fields=OMEN_MARKET_FIELDS,
+            pydantic_model=OmenMarket,
+            entity_id=market_id.lower(),
+            block=block,
+        )
 
         if len(omen_markets) != 1:
             raise ValueError(
@@ -482,24 +392,6 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             )
 
         return omen_markets[0]
-
-    def _get_fields_for_user_positions(
-        self, user_positions: FieldPath
-    ) -> list[FieldPath]:
-        return [
-            user_positions.id,
-            user_positions.balance,
-            user_positions.wrappedBalance,
-            user_positions.totalBalance,
-        ] + self._get_fields_for_positions(user_positions.position)
-
-    def _get_fields_for_positions(self, positions: FieldPath) -> list[FieldPath]:
-        return [
-            positions.id,
-            positions.conditionIds,
-            positions.collateralTokenAddress,
-            positions.indexSets,
-        ]
 
     def get_positions(
         self,
@@ -510,13 +402,14 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         if condition_id is not None:
             where_stms["conditionIds_contains"] = [condition_id.to_0x_hex()]
 
-        positions = self.conditional_tokens_subgraph.Query.positions(
-            first=sys.maxsize, where=unwrap_generic_value(where_stms)
+        return self.do_query(
+            url=self.conditional_tokens_subgraph_url,
+            entity="positions",
+            fields=POSITION_FIELDS,
+            pydantic_model=OmenPosition,
+            where=where_stms,
+            first=sys.maxsize,
         )
-        fields = self._get_fields_for_positions(positions)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        return [OmenPosition.model_validate(i) for i in items]
 
     def get_user_positions(
         self,
@@ -533,7 +426,7 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             where_stms["user"] = better_address.lower()
 
         if total_balance_bigger_than is not None:
-            where_stms["totalBalance_gt"] = total_balance_bigger_than
+            where_stms["totalBalance_gt"] = total_balance_bigger_than.value
 
         if user_position_id_in is not None:
             where_stms["id_in"] = [x.to_0x_hex() for x in user_position_id_in]
@@ -543,13 +436,14 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
                 x.to_0x_hex() for x in position_id_in
             ]
 
-        positions = self.conditional_tokens_subgraph.Query.userPositions(
-            first=sys.maxsize, where=unwrap_generic_value(where_stms)
+        return self.do_query(
+            url=self.conditional_tokens_subgraph_url,
+            entity="userPositions",
+            fields=USER_POSITION_FIELDS,
+            pydantic_model=OmenUserPosition,
+            where=where_stms,
+            first=sys.maxsize,
         )
-        fields = self._get_fields_for_user_positions(positions)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        return [OmenUserPosition.model_validate(i) for i in items]
 
     def get_trades(
         self,
@@ -564,60 +458,55 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         market_resolved_before: DatetimeUTC | None = None,
         market_resolved_after: DatetimeUTC | None = None,
         collateral_amount_more_than: Wei | None = None,
-        sort_by_field: FieldPath | None = None,
+        sort_by_field: str | None = None,
         sort_direction: str | None = None,
     ) -> list[OmenBet]:
         if not end_time:
             end_time = utcnow()
 
-        trade = self.trades_subgraph.FpmmTrade
-        where_stms = []
+        where_stms: dict[str, t.Any] = {}
+        fpmm_filter: dict[str, t.Any] = {}
+
         if start_time:
-            where_stms.append(trade.creationTimestamp >= to_int_timestamp(start_time))
+            where_stms["creationTimestamp_gte"] = to_int_timestamp(start_time)
         if end_time:
-            where_stms.append(trade.creationTimestamp <= to_int_timestamp(end_time))
+            where_stms["creationTimestamp_lte"] = to_int_timestamp(end_time)
         if type_:
-            where_stms.append(trade.type == type_)
+            where_stms["type"] = type_
         if better_address:
-            where_stms.append(trade.creator == better_address.lower())
+            where_stms["creator"] = better_address.lower()
         if market_id:
-            where_stms.append(trade.fpmm == market_id.lower())
+            where_stms["fpmm"] = market_id.lower()
         if filter_by_answer_finalized_not_null:
-            where_stms.append(trade.fpmm.answerFinalizedTimestamp != None)
+            fpmm_filter["answerFinalizedTimestamp_not"] = None
         if market_opening_after is not None:
-            where_stms.append(
-                trade.fpmm.openingTimestamp > to_int_timestamp(market_opening_after)
+            fpmm_filter["openingTimestamp_gt"] = to_int_timestamp(
+                market_opening_after
             )
         if market_resolved_after is not None:
-            where_stms.append(
-                trade.fpmm.resolutionTimestamp > to_int_timestamp(market_resolved_after)
+            fpmm_filter["resolutionTimestamp_gt"] = to_int_timestamp(
+                market_resolved_after
             )
         if market_resolved_before is not None:
-            where_stms.append(
-                trade.fpmm.resolutionTimestamp
-                < to_int_timestamp(market_resolved_before)
+            fpmm_filter["resolutionTimestamp_lt"] = to_int_timestamp(
+                market_resolved_before
             )
         if collateral_amount_more_than is not None:
-            where_stms.append(
-                trade.collateralAmount > collateral_amount_more_than.value
-            )
+            where_stms["collateralAmount_gt"] = collateral_amount_more_than.value
 
-        # These values can not be set to `None`, but they can be omitted.
-        optional_params = {}
-        if sort_by_field is not None:
-            optional_params["orderBy"] = sort_by_field
-        if sort_direction is not None:
-            optional_params["orderDirection"] = sort_direction
+        if fpmm_filter:
+            where_stms["fpmm_"] = fpmm_filter
 
-        trades = self.trades_subgraph.Query.fpmmTrades(
+        return self.do_query(
+            url=self.trades_subgraph_url,
+            entity="fpmmTrades",
+            fields=OMEN_BET_FIELDS,
+            pydantic_model=OmenBet,
+            where=where_stms,
             first=limit if limit else sys.maxsize,
-            where=unwrap_generic_value(where_stms),
-            **optional_params,
+            order_by=sort_by_field,
+            order_direction=sort_direction,
         )
-        fields = self._get_fields_for_bets(trades)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        return [OmenBet.model_validate(i) for i in items]
 
     def get_bets(
         self,
@@ -846,31 +735,28 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             opened_after=opened_after,
             excluded_titles=excluded_titles,
         )
-        questions = self.realityeth_subgraph.Query.questions(
-            first=(
-                limit if limit else sys.maxsize
-            ),  # if not limit, we fetch all possible
-            where=unwrap_generic_value(where_stms),
+
+        return self.do_query(
+            url=self.realityeth_subgraph_url,
+            entity="questions",
+            fields=REALITY_QUESTION_FIELDS,
+            pydantic_model=RealityQuestion,
+            where=where_stms,
+            first=limit if limit else sys.maxsize,
         )
-        fields = self._get_fields_for_reality_questions(questions)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        return [RealityQuestion.model_validate(i) for i in items]
 
     def get_answers(self, question_id: HexBytes) -> list[RealityAnswer]:
-        answer = self.realityeth_subgraph.Answer
-        # subgrounds complains if bytes is passed, hence we convert it to HexStr
-        where_stms = [
-            answer.question.questionId == question_id.to_0x_hex(),
-        ]
+        where_stms: dict[str, t.Any] = {
+            "question_": {"questionId": question_id.to_0x_hex()},
+        }
 
-        answers = self.realityeth_subgraph.Query.answers(
-            where=unwrap_generic_value(where_stms)
+        return self.do_query(
+            url=self.realityeth_subgraph_url,
+            entity="answers",
+            fields=REALITY_ANSWER_FIELDS,
+            pydantic_model=RealityAnswer,
+            where=where_stms,
         )
-        fields = self._get_fields_for_answers(answers)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        return [RealityAnswer.model_validate(i) for i in items]
 
     def get_responses(
         self,
@@ -909,16 +795,14 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
             excluded_titles=question_excluded_titles,
         )
 
-        responses = self.realityeth_subgraph.Query.responses(
-            first=(
-                limit if limit else sys.maxsize
-            ),  # if not limit, we fetch all possible
-            where=unwrap_generic_value(where_stms),
+        return self.do_query(
+            url=self.realityeth_subgraph_url,
+            entity="responses",
+            fields=REALITY_RESPONSE_FIELDS,
+            pydantic_model=RealityResponse,
+            where=where_stms,
+            first=limit if limit else sys.maxsize,
         )
-        fields = self._get_fields_for_responses(responses)
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
-        return [RealityResponse.model_validate(i) for i in items]
 
     def get_markets_from_all_user_positions(
         self, user_positions: list[OmenUserPosition]
@@ -944,12 +828,12 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
         return markets[0]
 
     def get_market_image_url(self, market_id: HexAddress) -> str | None:
-        image = self.omen_image_mapping_subgraph.Query.omenThumbnailMapping(
-            id=market_id.lower()
+        items = self.query_subgraph(
+            url=self.omen_image_mapping_url,
+            entity="omenThumbnailMapping",
+            fields=IMAGE_MAPPING_FIELDS,
+            entity_id=market_id.lower(),
         )
-        fields = [image.id, image.image_hash]
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
         if not items:
             return None
         parsed = byte32_to_ipfscidv0(HexBytes(items[0]["image_hash"]))
@@ -966,25 +850,18 @@ class OmenSubgraphHandler(BaseSubgraphHandler):
     def get_agent_results_for_market(
         self, market_id: HexAddress | None = None
     ) -> list[ContractPrediction]:
-        where_stms = {}
+        where_stms: dict[str, t.Any] = {}
         if market_id:
             where_stms["marketAddress"] = market_id.lower()
 
-        prediction_added = (
-            self.omen_agent_result_mapping_subgraph.Query.predictionAddeds(
-                where=unwrap_generic_value(where_stms),
-                orderBy="blockNumber",
-                orderDirection="asc",
-            )
+        items = self.query_subgraph(
+            url=self.omen_agent_result_mapping_url,
+            entity="predictionAddeds",
+            fields=PREDICTION_FIELDS,
+            where=where_stms,
+            order_by="blockNumber",
+            order_direction="asc",
         )
-        fields = [
-            prediction_added.publisherAddress,
-            prediction_added.ipfsHash,
-            prediction_added.txHashes,
-            prediction_added.estimatedProbabilityBps,
-        ]
-        result = self.sg.query_json(fields)
-        items = self._parse_items_from_json(result)
         if not items:
             return []
         return [ContractPrediction.model_validate(i) for i in items]

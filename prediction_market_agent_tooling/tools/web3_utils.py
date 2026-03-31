@@ -200,6 +200,20 @@ def _prepare_tx_params(
     if access_list is not None:
         tx_params_new["accessList"] = access_list
 
+    # Set EIP-1559 gas params with buffer if not already provided.
+    # This prevents "max fee per gas less than block base fee" errors
+    # when base fee increases between estimation and submission.
+    if "maxFeePerGas" not in tx_params_new and "gasPrice" not in tx_params_new:
+        latest_block = web3.eth.get_block("latest")
+        base_fee = latest_block.get("baseFeePerGas", 0)
+        if base_fee:
+            max_priority_fee = web3.eth.max_priority_fee
+            # Add 50% buffer to base fee to handle fluctuations
+            tx_params_new["maxPriorityFeePerGas"] = max_priority_fee
+            tx_params_new["maxFeePerGas"] = Web3Wei(
+                int(base_fee * 1.5) + max_priority_fee
+            )
+
     return tx_params_new
 
 
@@ -365,14 +379,13 @@ def send_xdai_to(
         tx_params_new.update(tx_params)
     tx_params_new = _prepare_tx_params(web3, from_address, tx_params=tx_params_new)
 
-    # We need gas and gasPrice here (and not elsewhere) because we are not calling
+    # We need gas here (and not elsewhere) because we are not calling
     # contract.functions.myFunction().build_transaction, which autofills some params
-    # with defaults, incl. gas and gasPrice.
+    # with defaults, incl. gas. Gas price params are handled by _prepare_tx_params.
     gas = web3.eth.estimate_gas(tx_params_new)
     tx_params_new["gas"] = int(
         gas * 1.5
     )  # We conservatively overestimate gas here, knowing it will be returned if unused
-    tx_params_new["gasPrice"] = web3.eth.gas_price
 
     receipt_tx = sign_send_and_get_receipt_tx(
         web3, tx_params_new, from_private_key, timeout

@@ -10,7 +10,11 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     Probability,
 )
-from prediction_market_agent_tooling.markets.data_models import Bet, Resolution, ResolvedBet
+from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
+    Resolution,
+    ResolvedBet,
+)
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     POLYMARKET_BASE_URL,
 )
@@ -310,6 +314,50 @@ class PolymarketBet(BaseModel):
             market_outcome=resolution.outcome,
             resolved_time=resolved_time,
             profit=self.get_profit(resolution),
+        )
+
+
+class PolymarketTradeResponse(BaseModel):
+    proxyWallet: str
+    side: str  # "BUY" or "SELL"
+    asset: str  # token_id
+    conditionId: str  # 0x-prefixed hex condition ID
+    size: float  # number of outcome tokens
+    price: float  # execution price (0-1)
+    timestamp: DatetimeUTC  # unix timestamp
+    title: str
+    slug: str
+    icon: str
+    eventSlug: str
+    outcome: OutcomeStr
+    outcomeIndex: int
+    name: str
+    pseudonym: str
+    bio: str
+    profileImage: str
+    profileImageOptimized: str
+    transactionHash: str
+
+    @property
+    def cost(self) -> CollateralToken:
+        return CollateralToken(self.size * self.price)
+
+    def to_polymarket_bet(self) -> PolymarketBet:
+        """Convert Data API trade to PolymarketBet for profit/bet logic reuse."""
+        return PolymarketBet(
+            id=self.transactionHash,
+            taker_order_id="",
+            market=self.conditionId,
+            asset_id=self.asset,
+            side=self.side,
+            size=self.size,
+            fee_rate_bps=0,
+            price=self.price,
+            status="MATCHED",
+            match_time=self.timestamp,
+            outcome=self.outcome,
+            event_slug=self.eventSlug,
+            title=self.title,
         )
 
 

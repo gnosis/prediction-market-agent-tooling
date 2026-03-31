@@ -2,10 +2,8 @@ import pytest
 
 from prediction_market_agent_tooling.gtypes import CollateralToken, OutcomeStr
 from prediction_market_agent_tooling.markets.data_models import Resolution
-from prediction_market_agent_tooling.markets.polymarket.data_models import (
-    PolymarketBet,
-)
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
+from prediction_market_agent_tooling.markets.polymarket.data_models import PolymarketBet
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 
 def _make_trade_response(**kwargs: object) -> PolymarketBet:

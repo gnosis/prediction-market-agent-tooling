@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, OutcomeToken, Wei
+from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, OutcomeToken
 from prediction_market_agent_tooling.markets.polymarket.clob_manager import (
     CreateOrderResult,
     OrderStatusEnum,

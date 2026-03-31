@@ -163,7 +163,7 @@ def estimate_gas_with_timeout(
             delayed(function_call.estimate_gas)(tx_params) for _ in range(1)
         )
         estimated_gas = result[0]
-        return int(estimated_gas * 1.2)  # Add 20% buffer
+        return int(estimated_gas * 1.5)  # Add 50% buffer
     except (TimeoutError, multiprocessing.context.TimeoutError):
         logger.warning(
             f"Gas estimation timed out after {timeout} seconds, using default: {default_gas}"

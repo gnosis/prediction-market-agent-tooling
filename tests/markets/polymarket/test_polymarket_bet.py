@@ -10,7 +10,7 @@ def _make_trade_response(**kwargs: object) -> PolymarketBet:
     defaults = dict(
         id="trade-1",
         taker_order_id="order-1",
-        market="0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c",
+        market="0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c",  # web3-private-key-ok
         asset_id="12345",
         side="BUY",
         size=100.0,

@@ -30,7 +30,7 @@ def _make_trade_dict(**overrides: object) -> dict[str, object]:
         "proxyWallet": "0x775634755e33a2e196172d4f8fc1276b241dc666",
         "side": "BUY",
         "asset": "12345",
-        "conditionId": "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c",
+        "conditionId": "0x9deb0baac40648821f96f01339229a422e2f5c877de55dc4dbf981f95a1e709c",  # web3-private-key-ok
         "size": 100.0,
         "price": 0.6,
         "timestamp": 1700000000,

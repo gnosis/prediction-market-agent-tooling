@@ -12,6 +12,7 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
     get_user_trades,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    PolymarketSideEnum,
     PolymarketTradeResponse,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
@@ -54,11 +55,11 @@ def _make_trade_dict(**overrides: object) -> dict[str, object]:
 class TestPolymarketTradeResponse:
     def test_model_validation(self) -> None:
         trade = PolymarketTradeResponse.model_validate(_make_trade_dict())
-        assert trade.side == "BUY"
+        assert trade.side == PolymarketSideEnum.BUY
         assert trade.size == 100.0
         assert trade.price == 0.6
         assert trade.outcome == OutcomeStr("Yes")
-        assert trade.transactionHash == "0xabc123"
+        assert trade.transactionHash == HexBytes("0xabc123")
 
     def test_cost_property(self) -> None:
         trade = PolymarketTradeResponse.model_validate(
@@ -70,10 +71,10 @@ class TestPolymarketTradeResponse:
         trade = PolymarketTradeResponse.model_validate(_make_trade_dict())
         bet = trade.to_polymarket_bet()
 
-        assert bet.id == "0xabc123"
+        assert bet.id == trade.transactionHash.to_0x_hex()
         assert bet.market == trade.conditionId
         assert bet.asset_id == trade.asset
-        assert bet.side == "BUY"
+        assert bet.side == PolymarketSideEnum.BUY
         assert bet.size == 100.0
         assert bet.price == 0.6
         assert bet.match_time == trade.timestamp
@@ -137,7 +138,7 @@ class TestGetUserTrades:
         result = get_user_trades(user_address=MOCK_USER, after=after)
 
         assert len(result) == 1
-        assert result[0].transactionHash == "0xa"
+        assert result[0].transactionHash == HexBytes("0xa")
 
     @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
     def test_time_filtering_before(self, mock_client_cls: MagicMock) -> None:
@@ -153,8 +154,8 @@ class TestGetUserTrades:
         result = get_user_trades(user_address=MOCK_USER, before=before)
 
         assert len(result) == 2
-        assert result[0].transactionHash == "0xb"
-        assert result[1].transactionHash == "0xc"
+        assert result[0].transactionHash == HexBytes("0xb")
+        assert result[1].transactionHash == HexBytes("0xc")
 
     @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
     def test_time_filtering_combined(self, mock_client_cls: MagicMock) -> None:
@@ -171,7 +172,7 @@ class TestGetUserTrades:
         result = get_user_trades(user_address=MOCK_USER, after=after, before=before)
 
         assert len(result) == 1
-        assert result[0].transactionHash == "0xb"
+        assert result[0].transactionHash == HexBytes("0xb")
 
     @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
     def test_empty_response(self, mock_client_cls: MagicMock) -> None:

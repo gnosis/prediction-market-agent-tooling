@@ -4,7 +4,9 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
     get_trades_for_market,
     get_user_trades,
 )
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    PolymarketSideEnum,
+)
 
 KNOWN_ACTIVE_USER = Web3.to_checksum_address(
     "0x4849c5c87f275016c25f39d0f37838a726db410b"
@@ -18,7 +20,7 @@ def test_get_user_trades() -> None:
     assert len(trades) > 0
     assert len(trades) <= 5
     for trade in trades:
-        assert trade.side in {"BUY", "SELL"}
+        assert trade.side in {PolymarketSideEnum.BUY, PolymarketSideEnum.SELL}
         assert trade.size > 0
         assert 0 <= trade.price <= 1
         assert trade.conditionId
@@ -44,21 +46,21 @@ def test_get_trades_for_market() -> None:
     user_trades = get_user_trades(user_address=KNOWN_ACTIVE_USER, limit=1)
     assert len(user_trades) > 0
 
-    condition_id = HexBytes(user_trades[0].conditionId)
+    condition_id = user_trades[0].conditionId
     market_trades = get_trades_for_market(market=condition_id)
 
     assert len(market_trades) > 0
     for trade in market_trades:
-        assert trade.conditionId == condition_id.to_0x_hex()
+        assert trade.conditionId == condition_id
 
 
 def test_get_trades_for_market_with_user() -> None:
     user_trades = get_user_trades(user_address=KNOWN_ACTIVE_USER, limit=1)
     assert len(user_trades) > 0
 
-    condition_id = HexBytes(user_trades[0].conditionId)
+    condition_id = user_trades[0].conditionId
     filtered = get_trades_for_market(market=condition_id, user=KNOWN_ACTIVE_USER)
 
     assert len(filtered) > 0
     for trade in filtered:
-        assert trade.conditionId == condition_id.to_0x_hex()
+        assert trade.conditionId == condition_id

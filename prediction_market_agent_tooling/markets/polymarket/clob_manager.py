@@ -16,16 +16,14 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
     POLYMARKET_CLOB_API_URL,
     POLYMARKET_TINY_BET_AMOUNT,
 )
+from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    PolymarketSideEnum,
+)
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
     PolymarketConditionalTokenContract,
     USDCeContract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import handle_allowance
-
-
-class PolymarketPriceSideEnum(str, Enum):
-    BUY = "BUY"
-    SELL = "SELL"
 
 
 class OrderStatusEnum(str, Enum):
@@ -63,7 +61,7 @@ class ClobManager:
         self.polygon_web3 = RPCConfig().get_polygon_web3()
         self.__init_approvals(polygon_web3=self.polygon_web3)
 
-    def get_token_price(self, token_id: int, side: PolymarketPriceSideEnum) -> USD:
+    def get_token_price(self, token_id: int, side: PolymarketSideEnum) -> USD:
         price_data = self.clob_client.get_price(token_id=token_id, side=side.value)
         price_item = PriceResponse.model_validate(price_data)
         return price_item.price_usd
@@ -72,10 +70,10 @@ class ClobManager:
         self,
         token_id: int,
         amount: USD | OutcomeToken,
-        side: PolymarketPriceSideEnum,
+        side: PolymarketSideEnum,
     ) -> CreateOrderResult:
         amount_float = amount.value
-        if side == PolymarketPriceSideEnum.BUY and amount_float < 1.0:
+        if side == PolymarketSideEnum.BUY and amount_float < 1.0:
             raise ValueError(
                 f"usdc_amounts < 1.0 are not supported by Polymarket, got {amount_float}"
             )
@@ -123,16 +121,12 @@ class ClobManager:
     def place_buy_market_order(
         self, token_id: int, usdc_amount: USD
     ) -> CreateOrderResult:
-        return self._place_market_order(
-            token_id, usdc_amount, PolymarketPriceSideEnum.BUY
-        )
+        return self._place_market_order(token_id, usdc_amount, PolymarketSideEnum.BUY)
 
     def place_sell_market_order(
         self, token_id: int, token_shares: OutcomeToken
     ) -> CreateOrderResult:
-        return self._place_market_order(
-            token_id, token_shares, PolymarketPriceSideEnum.SELL
-        )
+        return self._place_market_order(token_id, token_shares, PolymarketSideEnum.SELL)
 
     def __init_approvals(
         self,

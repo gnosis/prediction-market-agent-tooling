@@ -6,7 +6,9 @@ from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, OutcomeToken
 from prediction_market_agent_tooling.markets.polymarket.clob_manager import (
     CreateOrderResult,
     OrderStatusEnum,
-    PolymarketPriceSideEnum,
+)
+from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    PolymarketSideEnum,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
@@ -125,7 +127,7 @@ def test_sell_tokens_with_usd(
 
     assert tx_hash == MOCK_TX_HASH.to_0x_hex()
     mock_clob.get_token_price.assert_called_once_with(
-        token_id=111, side=PolymarketPriceSideEnum.SELL
+        token_id=111, side=PolymarketSideEnum.SELL
     )
     mock_clob.place_sell_market_order.assert_called_once_with(
         token_id=111, token_shares=OutcomeToken(20.0)

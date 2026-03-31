@@ -23,7 +23,7 @@ def _make_trade_response(**kwargs: object) -> PolymarketBet:
         title="Will it rain tomorrow?",
     )
     defaults.update(kwargs)
-    return PolymarketBet(**defaults)  # type: ignore[arg-type]
+    return PolymarketBet.model_validate(defaults)
 
 
 class TestToBet:
@@ -36,7 +36,7 @@ class TestToBet:
         assert bet.outcome == OutcomeStr("Yes")
         assert bet.created_time == trade.match_time
         assert bet.market_question == "Will it rain tomorrow?"
-        assert bet.market_id == trade.market
+        assert bet.market_id == trade.market.to_0x_hex()
 
     def test_to_bet_sell(self) -> None:
         trade = _make_trade_response(side="SELL", size=100.0, price=0.6)

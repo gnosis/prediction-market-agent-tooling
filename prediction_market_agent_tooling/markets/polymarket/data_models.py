@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 
 from pydantic import BaseModel
 
@@ -9,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
     Probability,
+    VerifiedChecksumAddress,
 )
 from prediction_market_agent_tooling.markets.data_models import (
     Bet,
@@ -23,6 +25,11 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 POLYMARKET_TRUE_OUTCOME = "Yes"
 POLYMARKET_FALSE_OUTCOME = "No"
+
+
+class PolymarketSideEnum(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL"
 
 
 # TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
@@ -252,9 +259,9 @@ class PolymarketPositionResponse(BaseModel):
 class PolymarketBet(BaseModel):
     id: str
     taker_order_id: str
-    market: str  # condition_id
-    asset_id: str  # token_id
-    side: str  # "BUY" or "SELL"
+    market: HexBytes
+    asset_id: str  # token_id (large integer)
+    side: PolymarketSideEnum
     size: float  # number of outcome tokens
     fee_rate_bps: int
     price: float  # execution price (0-1)
@@ -274,7 +281,7 @@ class PolymarketBet(BaseModel):
 
         is_winning = self.outcome == resolution.outcome
 
-        if self.side == "BUY":
+        if self.side == PolymarketSideEnum.BUY:
             if is_winning:
                 return CollateralToken(self.size * (1 - self.price))
             else:
@@ -292,7 +299,7 @@ class PolymarketBet(BaseModel):
             outcome=self.outcome,
             created_time=self.match_time,
             market_question=self.title,
-            market_id=self.market,
+            market_id=self.market.to_0x_hex(),
         )
 
     def to_generic_resolved_bet(
@@ -310,7 +317,7 @@ class PolymarketBet(BaseModel):
             outcome=self.outcome,
             created_time=self.match_time,
             market_question=self.title,
-            market_id=self.market,
+            market_id=self.market.to_0x_hex(),
             market_outcome=resolution.outcome,
             resolved_time=resolved_time,
             profit=self.get_profit(resolution),
@@ -318,13 +325,13 @@ class PolymarketBet(BaseModel):
 
 
 class PolymarketTradeResponse(BaseModel):
-    proxyWallet: str
-    side: str  # "BUY" or "SELL"
-    asset: str  # token_id
-    conditionId: str  # 0x-prefixed hex condition ID
-    size: float  # number of outcome tokens
+    proxyWallet: VerifiedChecksumAddress
+    side: PolymarketSideEnum
+    asset: str  # token_id (large integer)
+    conditionId: HexBytes
+    size: float  # outcome tokens (can be fractional)
     price: float  # execution price (0-1)
-    timestamp: DatetimeUTC  # unix timestamp
+    timestamp: DatetimeUTC
     title: str
     slug: str
     icon: str
@@ -336,7 +343,7 @@ class PolymarketTradeResponse(BaseModel):
     bio: str
     profileImage: str
     profileImageOptimized: str
-    transactionHash: str
+    transactionHash: HexBytes
 
     @property
     def cost(self) -> CollateralToken:
@@ -345,7 +352,7 @@ class PolymarketTradeResponse(BaseModel):
     def to_polymarket_bet(self) -> PolymarketBet:
         """Convert Data API trade to PolymarketBet for profit/bet logic reuse."""
         return PolymarketBet(
-            id=self.transactionHash,
+            id=self.transactionHash.to_0x_hex(),
             taker_order_id="",
             market=self.conditionId,
             asset_id=self.asset,

@@ -3,10 +3,12 @@ import pytest
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import USD, OutcomeToken
 from prediction_market_agent_tooling.markets.polymarket.api import get_user_trades
+from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    PolymarketSideEnum,
+)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
 from tests.utils import RUN_PAID_TESTS
 
 
@@ -42,8 +44,8 @@ def test_place_and_sell_bet_real() -> None:
         f"got {len(trades_after_buy)} (before: {len(trades_before)})"
     )
     buy_trade = trades_after_buy[0]
-    assert buy_trade.conditionId == HexBytes(market.condition_id).to_0x_hex()
-    assert buy_trade.side == "BUY"
+    assert buy_trade.conditionId == market.condition_id
+    assert buy_trade.side == PolymarketSideEnum.BUY
 
     # --- SELL ---
     position_before_sell = market.get_position(user_id=user_address)
@@ -64,8 +66,8 @@ def test_place_and_sell_bet_real() -> None:
     trades_after_sell = get_user_trades(user_address=user_address)
     assert len(trades_after_sell) > len(trades_after_buy)
     sell_trade = trades_after_sell[0]
-    assert sell_trade.conditionId == HexBytes(market.condition_id).to_0x_hex()
-    assert sell_trade.side == "SELL"
+    assert sell_trade.conditionId == market.condition_id
+    assert sell_trade.side == PolymarketSideEnum.SELL
 
     # Verify position is gone or zero
     position_after_sell = market.get_position(user_id=user_address)

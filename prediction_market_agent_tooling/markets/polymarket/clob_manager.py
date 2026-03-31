@@ -2,7 +2,6 @@ from enum import Enum
 
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import MarketOrderArgs, OrderType
-from py_clob_client.order_builder.constants import BUY, SELL
 from pydantic import BaseModel
 from web3 import Web3
 
@@ -97,12 +96,16 @@ class ClobManager:
     def place_buy_market_order(
         self, token_id: int, usdc_amount: USD
     ) -> CreateOrderResult:
-        return self._place_market_order(token_id, usdc_amount, BUY)
+        return self._place_market_order(
+            token_id, usdc_amount, PolymarketPriceSideEnum.BUY
+        )
 
     def place_sell_market_order(
         self, token_id: int, token_shares: OutcomeToken
     ) -> CreateOrderResult:
-        return self._place_market_order(token_id, token_shares, SELL)
+        return self._place_market_order(
+            token_id, token_shares, PolymarketPriceSideEnum.SELL
+        )
 
     def __init_approvals(
         self,

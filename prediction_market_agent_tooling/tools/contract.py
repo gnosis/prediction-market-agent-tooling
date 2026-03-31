@@ -620,6 +620,20 @@ class ContractOnPolygonChain(ContractBaseClass):
         return RPCConfig().get_polygon_web3()
 
 
+class ContractERC20OnPolygonChain(ContractERC20BaseClass, ContractOnPolygonChain):
+    """
+    ERC-20 standard base class with Polygon Chain configuration.
+    """
+
+
+class ContractDepositableWrapperERC20OnPolygonChain(
+    ContractDepositableWrapperERC20BaseClass, ContractERC20OnPolygonChain
+):
+    """
+    Depositable Wrapper ERC-20 standard base class with Polygon Chain configuration.
+    """
+
+
 class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):
     """
     Proxy contract base class with Gnosis Chain configuration.

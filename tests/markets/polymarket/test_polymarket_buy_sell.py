@@ -39,8 +39,44 @@ def _failed_order_result() -> CreateOrderResult:
 
 
 @patch("prediction_market_agent_tooling.markets.polymarket.polymarket.ClobManager")
-def test_buy_tokens_success(
+def test_place_bet_success(
     mock_clob_cls: MagicMock,
+    mock_polymarket_market: PolymarketAgentMarket,
+) -> None:
+    mock_clob = mock_clob_cls.return_value
+    mock_clob.place_buy_market_order.return_value = _success_order_result()
+
+    tx_hash = mock_polymarket_market.place_bet(
+        outcome=OutcomeStr("Yes"), amount=USD(10), auto_deposit=False
+    )
+
+    assert tx_hash == MOCK_TX_HASH.to_0x_hex()
+    mock_clob.place_buy_market_order.assert_called_once_with(
+        token_id=111, usdc_amount=USD(10)
+    )
+
+
+@patch("prediction_market_agent_tooling.markets.polymarket.polymarket.ClobManager")
+def test_place_bet_failure_raises(
+    mock_clob_cls: MagicMock,
+    mock_polymarket_market: PolymarketAgentMarket,
+) -> None:
+    mock_clob = mock_clob_cls.return_value
+    mock_clob.place_buy_market_order.return_value = _failed_order_result()
+
+    with pytest.raises(ValueError, match="Error creating order"):
+        mock_polymarket_market.place_bet(
+            outcome=OutcomeStr("Yes"), amount=USD(10), auto_deposit=False
+        )
+
+
+@patch(
+    "prediction_market_agent_tooling.markets.polymarket.polymarket.auto_deposit_collateral_token"
+)
+@patch("prediction_market_agent_tooling.markets.polymarket.polymarket.ClobManager")
+def test_buy_tokens_delegates_to_place_bet(
+    mock_clob_cls: MagicMock,
+    mock_auto_deposit: MagicMock,
     mock_polymarket_market: PolymarketAgentMarket,
 ) -> None:
     mock_clob = mock_clob_cls.return_value
@@ -54,18 +90,6 @@ def test_buy_tokens_success(
     mock_clob.place_buy_market_order.assert_called_once_with(
         token_id=111, usdc_amount=USD(10)
     )
-
-
-@patch("prediction_market_agent_tooling.markets.polymarket.polymarket.ClobManager")
-def test_buy_tokens_failure_raises(
-    mock_clob_cls: MagicMock,
-    mock_polymarket_market: PolymarketAgentMarket,
-) -> None:
-    mock_clob = mock_clob_cls.return_value
-    mock_clob.place_buy_market_order.return_value = _failed_order_result()
-
-    with pytest.raises(ValueError, match="Error creating order"):
-        mock_polymarket_market.buy_tokens(outcome=OutcomeStr("Yes"), amount=USD(10))
 
 
 @patch("prediction_market_agent_tooling.markets.polymarket.polymarket.ClobManager")

@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from subgrounds import FieldPath
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.markets.base_subgraph_handler import (
@@ -32,41 +31,35 @@ class MarketPosition(BaseModel):
     market: MarketPositionMarket
 
 
+CONDITION_FIELDS = (
+    "id questionId payoutNumerators payoutDenominator outcomeSlotCount resolutionTimestamp"
+)
+
+MARKET_POSITION_FIELDS = (
+    f"id market {{ condition {{ {CONDITION_FIELDS} }} }}"
+)
+
+
 class PolymarketSubgraphHandler(BaseSubgraphHandler):
     def __init__(self) -> None:
         super().__init__()
 
-        self.conditions_subgraph = self.sg.load_subgraph(
-            POLYMARKET_CONDITIONS_SUBGRAPH_URL.format(
-                graph_api_key=self.keys.graph_api_key.get_secret_value()
-            )
+        self.conditions_subgraph_url = POLYMARKET_CONDITIONS_SUBGRAPH_URL.format(
+            graph_api_key=self.keys.graph_api_key.get_secret_value()
         )
-
-    def _get_fields_for_condition(self, field: FieldPath) -> list[FieldPath]:
-        return [
-            field.id,
-            field.questionId,
-            field.payoutNumerators,
-            field.payoutDenominator,
-            field.outcomeSlotCount,
-            field.resolutionTimestamp,
-        ]
 
     def get_conditions(
         self, condition_ids: list[HexBytes]
     ) -> list[ConditionSubgraphModel]:
         where_stms = {"id_in": [i.to_0x_hex() for i in condition_ids]}
-        conditions = self.conditions_subgraph.Query.conditions(
-            first=len(condition_ids),
+        return self.do_query(
+            url=self.conditions_subgraph_url,
+            entity="conditions",
+            fields=CONDITION_FIELDS,
+            pydantic_model=ConditionSubgraphModel,
             where=where_stms,
+            first=len(condition_ids),
         )
-
-        condition_fields = self._get_fields_for_condition(conditions)
-
-        conditions_models = self.do_query(
-            fields=condition_fields, pydantic_model=ConditionSubgraphModel
-        )
-        return conditions_models
 
     def get_market_positions_from_user(
         self,
@@ -77,17 +70,15 @@ class PolymarketSubgraphHandler(BaseSubgraphHandler):
         # Limitation: Cannot filter by market_.condition at subgraph level (indexer error).
         # This fetches ALL positions for the user (up to `first`), and callers must
         # filter by condition_id client-side (see polymarket.py get_position()).
-        positions = self.conditions_subgraph.Query.marketPositions(
+        where_stms = {"user": user.lower()}
+        block = {"number": block_number} if block_number else None
+
+        return self.do_query(
+            url=self.conditions_subgraph_url,
+            entity="marketPositions",
+            fields=MARKET_POSITION_FIELDS,
+            pydantic_model=MarketPosition,
+            where=where_stms,
             first=first,
-            where={"user": user.lower()},
-            block={"number": block_number} if block_number else None,
+            block=block,
         )
-
-        condition_fields = self._get_fields_for_condition(
-            positions.market.condition
-        ) + [positions.id]
-
-        positions_models = self.do_query(
-            fields=condition_fields, pydantic_model=MarketPosition
-        )
-        return positions_models

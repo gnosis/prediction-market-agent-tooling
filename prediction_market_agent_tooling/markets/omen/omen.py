@@ -674,7 +674,7 @@ class OmenAgentMarket(AgentMarket):
     def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
         sgh = OmenSubgraphHandler()
         trades = sgh.get_trades(
-            sort_by_field=sgh.trades_subgraph.FpmmTrade.creationTimestamp,
+            sort_by_field="creationTimestamp",
             sort_direction="desc",
             limit=1,
             better_address=Web3.to_checksum_address(user_id),

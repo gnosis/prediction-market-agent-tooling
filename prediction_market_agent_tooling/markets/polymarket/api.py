@@ -247,6 +247,41 @@ def get_trades_for_market(
     stop=tenacity.stop_after_attempt(2),
     wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(
+        f"get_gamma_event_by_id failed, attempt={x.attempt_number}."
+    ),
+)
+def get_gamma_event_by_id(event_id: str) -> PolymarketGammaResponseDataItem:
+    """Fetch a single Polymarket event by its Gamma API event ID."""
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, f"events/{event_id}")
+    r = client.get(url)
+    r.raise_for_status()
+    return response_to_model(r, PolymarketGammaResponseDataItem)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_gamma_event_by_slug failed, attempt={x.attempt_number}."
+    ),
+)
+def get_gamma_event_by_slug(slug: str) -> PolymarketGammaResponseDataItem:
+    """Fetch a single Polymarket event by its slug."""
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, "events")
+    r = client.get(url, params={"slug": slug})
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        raise ValueError(f"No event found for slug '{slug}'")
+    return PolymarketGammaResponseDataItem.model_validate(data[0])
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
         f"get_last_trade_price_from_clob failed, attempt={x.attempt_number}."
     ),
 )

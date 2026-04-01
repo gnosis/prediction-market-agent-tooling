@@ -10,6 +10,7 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     MARKETS_LIMIT,
+    POLYMARKET_CLOB_API_URL,
     POLYMARKET_DATA_API_BASE_URL,
     POLYMARKET_GAMMA_API_BASE_URL,
     TRADES_LIMIT,
@@ -240,3 +241,23 @@ def get_trades_for_market(
     """Fetch trades for a specific market, optionally filtered by user."""
     params: dict[str, t.Any] = {"market": market.to_0x_hex(), "user": user}
     return _fetch_trades_paginated(params)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_last_trade_price_from_clob failed, attempt={x.attempt_number}."
+    ),
+)
+def get_last_trade_price_from_clob(token_id: int) -> float | None:
+    """Fetch the last execution price for a token from the Polymarket CLOB (no auth required)."""
+    url = f"{POLYMARKET_CLOB_API_URL}/last-trade-price"
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    response = client.get(url, params={"token_id": token_id})
+    response.raise_for_status()
+    data = response.json()
+    price = data.get("price")
+    if price is None or price == "":
+        return None
+    return float(price)

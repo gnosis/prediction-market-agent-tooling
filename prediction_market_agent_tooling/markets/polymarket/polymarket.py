@@ -35,10 +35,7 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
     get_polymarkets_with_pagination,
     get_user_positions,
 )
-from prediction_market_agent_tooling.markets.polymarket.clob_manager import (
-    ClobManager,
-    PolymarketPriceSideEnum,
-)
+from prediction_market_agent_tooling.markets.polymarket.clob_manager import ClobManager
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     POLYMARKET_BASE_URL,
     POLYMARKET_MIN_LIQUIDITY_USD,
@@ -46,6 +43,7 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponseDataItem,
+    PolymarketSideEnum,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
     PolymarketConditionalTokenContract,
@@ -446,7 +444,7 @@ class PolymarketAgentMarket(AgentMarket):
         token_id = self.get_token_id_for_outcome(outcome_str)
 
         price = ClobManager(APIKeys()).get_token_price(
-            token_id=token_id, side=PolymarketPriceSideEnum.BUY
+            token_id=token_id, side=PolymarketSideEnum.BUY
         )
         if not price:
             raise ValueError(
@@ -477,7 +475,7 @@ class PolymarketAgentMarket(AgentMarket):
             token_shares = amount
         elif isinstance(amount, USD):
             token_price = clob_manager.get_token_price(
-                token_id=token_id, side=PolymarketPriceSideEnum.SELL
+                token_id=token_id, side=PolymarketSideEnum.SELL
             )
             # We expect that our order sizes don't move the price too much.
             token_shares = OutcomeToken(amount.value / token_price.value)

@@ -8,8 +8,8 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeStr,
     OutcomeToken,
 )
-from prediction_market_agent_tooling.markets.polymarket.clob_manager import (
-    PolymarketPriceSideEnum,
+from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    PolymarketSideEnum,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
@@ -29,7 +29,7 @@ def test_valid_calculation(
 
     assert result == OutcomeToken(25.0)
     mock_clob_cls.return_value.get_token_price.assert_called_once_with(
-        token_id=111, side=PolymarketPriceSideEnum.BUY
+        token_id=111, side=PolymarketSideEnum.BUY
     )
 
 

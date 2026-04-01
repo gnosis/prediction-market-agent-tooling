@@ -123,6 +123,12 @@ def test_place_bet_local_chain(polygon_local_web3: Web3) -> None:
         mock_clob_client.create_market_order.return_value = {"mock": "signed_order"}
         mock_clob_client.post_order.return_value = mock_order_result
 
+        # Mock on-chain verification since the tx hash is fake
+        mock_receipt = {"status": 1}
+        polygon_local_web3.eth.get_transaction_receipt = mock.MagicMock(  # type: ignore[method-assign]
+            return_value=mock_receipt
+        )
+
         tx_hash = market.place_bet(
             outcome=market.outcomes[0],
             amount=USD(2),

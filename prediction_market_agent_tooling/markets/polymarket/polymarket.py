@@ -451,9 +451,9 @@ class PolymarketAgentMarket(AgentMarket):
             return []
 
         # Group positions by conditionId
-        positions_by_condition: dict[str, list[PolymarketPositionResponse]] = (
-            defaultdict(list)
-        )
+        positions_by_condition: dict[
+            str, list[PolymarketPositionResponse]
+        ] = defaultdict(list)
         for p in all_pos:
             positions_by_condition[p.conditionId].append(p)
 

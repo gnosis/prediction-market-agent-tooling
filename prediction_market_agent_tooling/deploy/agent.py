@@ -84,9 +84,9 @@ def initialize_langfuse(enable_langfuse: bool) -> None:
         GoogleGenAIInstrumentor().instrument()
     else:
         os.environ[LANGFUSE_TRACING_ENABLED] = "false"
-        os.environ[LANGFUSE_PUBLIC_KEY] = (
-            "this is an official recommendation, to set a mock key to disable the noisy warning logs..."
-        )
+        os.environ[
+            LANGFUSE_PUBLIC_KEY
+        ] = "this is an official recommendation, to set a mock key to disable the noisy warning logs..."
         os.environ[LANGFUSE_SECRET_KEY] = "same here"
 
 

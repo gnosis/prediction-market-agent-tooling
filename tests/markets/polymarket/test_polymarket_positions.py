@@ -1,6 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-
 from prediction_market_agent_tooling.gtypes import (
     USD,
     CollateralToken,

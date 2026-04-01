@@ -221,9 +221,9 @@ class CategoricalProbabilisticAnswer(BaseModel):
             raise ValueError("Market with no outcomes")
 
         probabilities[OutcomeStr(UP_OUTCOME_LOWERCASE_IDENTIFIER.upper())] = answer.p_up
-        probabilities[OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper())] = (
-            answer.p_down
-        )
+        probabilities[
+            OutcomeStr(DOWN_OUTCOME_LOWERCASE_IDENTIFIER.upper())
+        ] = answer.p_down
 
         if market_outcomes and any(is_invalid_outcome(o) for o in market_outcomes):
             probabilities[

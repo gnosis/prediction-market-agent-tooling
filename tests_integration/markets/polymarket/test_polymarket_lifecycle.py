@@ -5,7 +5,6 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
 
 
 def test_get_binary_market() -> None:

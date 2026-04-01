@@ -12,7 +12,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
 )
 
 
-def _mock_event_json() -> dict:
+def _mock_event_json() -> dict[str, object]:
     return {
         "id": "12345",
         "slug": "test-market",

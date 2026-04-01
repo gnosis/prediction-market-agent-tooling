@@ -14,6 +14,9 @@ from prediction_market_agent_tooling.markets.manifold.data_models import (
     ManifoldUser,
 )
 from prediction_market_agent_tooling.tools.parallelism import par_map
+from prediction_market_agent_tooling.tools.simple_rate_limiter import (
+    SimpleSyncRateLimiter,
+)
 from prediction_market_agent_tooling.tools.utils import (
     DatetimeUTC,
     response_list_to_model,
@@ -30,6 +33,8 @@ Note: There is an existing wrapper here: https://github.com/vluzko/manifoldpy. C
 
 MANIFOLD_API_BASE_URL = "https://api.manifold.markets"
 MARKETS_LIMIT = 1000  # Manifold will only return up to 1000 markets
+
+_MANIFOLD_GET_MARKET_RATE_LIMITER = SimpleSyncRateLimiter(5)
 
 
 def get_manifold_binary_markets(
@@ -101,7 +106,7 @@ def get_one_manifold_binary_market() -> ManifoldMarket:
 
 @tenacity.retry(
     stop=tenacity.stop_after_attempt(3),
-    wait=tenacity.wait_fixed(1),
+    wait=tenacity.wait_random_exponential(min=1, max=5),
     after=lambda x: logger.debug(f"place_bet failed, {x.attempt_number=}."),
 )
 def place_bet(
@@ -147,17 +152,18 @@ def get_authenticated_user(api_key: str) -> ManifoldUser:
 
 @tenacity.retry(
     stop=tenacity.stop_after_attempt(3),
-    wait=tenacity.wait_fixed(1),
+    wait=tenacity.wait_random_exponential(min=1, max=5),
     after=lambda x: logger.debug(f"get_manifold_market failed, {x.attempt_number=}."),
 )
 def get_manifold_market(market_id: str) -> FullManifoldMarket:
+    _MANIFOLD_GET_MARKET_RATE_LIMITER.acquire()
     url = f"{MANIFOLD_API_BASE_URL}/v0/market/{market_id}"
     return response_to_model(requests.get(url), FullManifoldMarket)
 
 
 @tenacity.retry(
     stop=tenacity.stop_after_attempt(3),
-    wait=tenacity.wait_fixed(1),
+    wait=tenacity.wait_random_exponential(min=1, max=5),
     after=lambda x: logger.debug(f"get_manifold_bets failed, {x.attempt_number=}."),
 )
 def get_manifold_bets(

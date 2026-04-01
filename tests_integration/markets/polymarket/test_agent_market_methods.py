@@ -1,9 +1,11 @@
+from datetime import timedelta
+
 from web3 import Web3
 
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC
+from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
 
 KNOWN_ACTIVE_USER = Web3.to_checksum_address(
     "0x4849c5c87f275016c25f39d0f37838a726db410b"
@@ -16,7 +18,7 @@ KNOWN_ACTIVE_TOKEN_ID = (
 
 
 def test_get_bets_made_since() -> None:
-    start = DatetimeUTC.to_datetime_utc(0)
+    start = utcnow() - timedelta(days=30)
     bets = PolymarketAgentMarket.get_bets_made_since(KNOWN_ACTIVE_USER, start)
 
     assert len(bets) > 0
@@ -26,7 +28,7 @@ def test_get_bets_made_since() -> None:
 
 
 def test_get_bets_made_since_sorted() -> None:
-    start = DatetimeUTC.to_datetime_utc(0)
+    start = utcnow() - timedelta(days=30)
     bets = PolymarketAgentMarket.get_bets_made_since(KNOWN_ACTIVE_USER, start)
 
     for i in range(1, len(bets)):

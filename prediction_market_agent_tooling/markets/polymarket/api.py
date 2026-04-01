@@ -202,8 +202,8 @@ def _fetch_trades_paginated(
             break
         if limit is not None and len(all_trades) >= limit:
             break
-        if offset >= 10000:
-            logger.warning("Hit Polymarket Data API offset cap of 10000")
+        if offset >= 3000:
+            logger.warning("Hit Polymarket Data API offset cap of 3000")
             break
 
     return all_trades[:limit] if limit else all_trades
@@ -237,10 +237,11 @@ def get_user_trades(
 def get_trades_for_market(
     market: HexBytes,
     user: t.Optional[ChecksumAddress] = None,
+    limit: t.Optional[int] = None,
 ) -> list[PolymarketTradeResponse]:
     """Fetch trades for a specific market, optionally filtered by user."""
     params: dict[str, t.Any] = {"market": market.to_0x_hex(), "user": user}
-    return _fetch_trades_paginated(params)
+    return _fetch_trades_paginated(params, limit=limit)
 
 
 @tenacity.retry(

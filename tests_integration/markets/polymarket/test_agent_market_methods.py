@@ -5,7 +5,7 @@ from web3 import Web3
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
-from prediction_market_agent_tooling.tools.utils import DatetimeUTC, utcnow
+from prediction_market_agent_tooling.tools.utils import utcnow
 
 KNOWN_ACTIVE_USER = Web3.to_checksum_address(
     "0x4849c5c87f275016c25f39d0f37838a726db410b"

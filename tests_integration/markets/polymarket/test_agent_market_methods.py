@@ -1,6 +1,5 @@
 from web3 import Web3
 
-from prediction_market_agent_tooling.markets.polymarket.api import get_user_trades
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )

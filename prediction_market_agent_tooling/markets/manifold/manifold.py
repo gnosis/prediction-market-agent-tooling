@@ -1,6 +1,8 @@
 import typing as t
 from datetime import timedelta
 
+from tqdm import tqdm
+
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
     USD,
@@ -139,12 +141,14 @@ class ManifoldAgentMarket(AgentMarket):
 
         return [
             ManifoldAgentMarket.from_data_model(get_manifold_market(m.id))
-            for m in get_manifold_binary_markets(
-                limit=limit,
-                sort=sort,
-                created_after=created_after,
-                filter_=filter_,
-                excluded_questions=excluded_questions,
+            for m in tqdm(
+                get_manifold_binary_markets(
+                    limit=limit,
+                    sort=sort,
+                    created_after=created_after,
+                    filter_=filter_,
+                    excluded_questions=excluded_questions,
+                )
             )
         ]
 

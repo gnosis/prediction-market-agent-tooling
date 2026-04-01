@@ -29,12 +29,9 @@ from prediction_market_agent_tooling.markets.omen.data_models import (
     RealityResponse,
 )
 from prediction_market_agent_tooling.markets.omen.omen_contracts import (
-    COWContract,
     EUReContract,
     GNOContract,
-    MetriSuperGroup,
     OmenThumbnailMapping,
-    SAFEContract,
     WETHContract,
     WrappedxDaiContract,
     sDaiContract,
@@ -59,9 +56,6 @@ SAFE_COLLATERAL_TOKENS = [
     GNOContract(),
     WETHContract(),
     EUReContract(),
-    SAFEContract(),
-    COWContract(),
-    MetriSuperGroup(),
 ]
 SAFE_COLLATERAL_TOKENS_ADDRESSES = [
     contract.address for contract in SAFE_COLLATERAL_TOKENS

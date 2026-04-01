@@ -1,4 +1,5 @@
 import typing as t
+from datetime import timedelta
 
 from cowdao_cowpy.common.chains import Chain
 from web3 import Web3
@@ -27,13 +28,18 @@ from prediction_market_agent_tooling.markets.agent_market import (
     SortBy,
 )
 from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
     ExistingPosition,
     Resolution,
+    ResolvedBet,
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
+    get_last_trade_price_from_clob,
     get_polymarkets_with_pagination,
+    get_trades_for_market,
     get_user_positions,
+    get_user_trades,
 )
 from prediction_market_agent_tooling.markets.polymarket.clob_manager import ClobManager
 from prediction_market_agent_tooling.markets.polymarket.constants import (
@@ -42,6 +48,8 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
     POLYMARKET_TINY_BET_AMOUNT,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
+    POLYMARKET_FALSE_OUTCOME,
+    POLYMARKET_TRUE_OUTCOME,
     PolymarketGammaResponseDataItem,
     PolymarketSideEnum,
 )
@@ -63,7 +71,7 @@ from prediction_market_agent_tooling.tools.tokens.usd import (
     get_token_in_usd,
     get_usd_in_token,
 )
-from prediction_market_agent_tooling.tools.utils import check_not_none
+from prediction_market_agent_tooling.tools.utils import check_not_none, utcnow
 
 
 class PolymarketAgentMarket(AgentMarket):
@@ -489,3 +497,86 @@ class PolymarketAgentMarket(AgentMarket):
             raise ValueError(f"Error creating order: {created_order}")
 
         return created_order.transactionsHashes[0].to_0x_hex()
+
+    def get_last_trade_p_yes(self) -> Probability | None:
+        yes_token_id = self.get_token_id_for_outcome(
+            OutcomeStr(POLYMARKET_TRUE_OUTCOME)
+        )
+        price = get_last_trade_price_from_clob(token_id=yes_token_id)
+        if price is None:
+            return None
+        return Probability(price)
+
+    def get_last_trade_p_no(self) -> Probability | None:
+        p_yes = self.get_last_trade_p_yes()
+        if p_yes is None:
+            return None
+        return Probability(1.0 - p_yes)
+
+    @staticmethod
+    def get_bets_made_since(
+        better_address: ChecksumAddress, start_time: DatetimeUTC
+    ) -> list[Bet]:
+        trades = get_user_trades(user_address=better_address, after=start_time)
+        bets = [t.to_polymarket_bet().to_bet() for t in trades]
+        bets.sort(key=lambda b: b.created_time)
+        return bets
+
+    @staticmethod
+    def get_resolved_bets_made_since(
+        better_address: ChecksumAddress,
+        start_time: DatetimeUTC,
+        end_time: DatetimeUTC | None,
+    ) -> list[ResolvedBet]:
+        trades = get_user_trades(
+            user_address=better_address, after=start_time, before=end_time
+        )
+        if not trades:
+            return []
+
+        unique_condition_ids = list(set(t.conditionId for t in trades))
+        conditions = PolymarketSubgraphHandler().get_conditions(unique_condition_ids)
+        condition_dict = {c.id: c for c in conditions}
+
+        binary_outcomes = [
+            OutcomeStr(POLYMARKET_TRUE_OUTCOME),
+            OutcomeStr(POLYMARKET_FALSE_OUTCOME),
+        ]
+
+        resolved_bets: list[ResolvedBet] = []
+        for trade in trades:
+            resolution = PolymarketAgentMarket.build_resolution_from_condition(
+                condition_id=trade.conditionId,
+                condition_model_dict=condition_dict,
+                outcomes=binary_outcomes,
+            )
+            if resolution is None or resolution.outcome is None:
+                continue
+
+            condition = condition_dict[trade.conditionId]
+            resolved_time = DatetimeUTC.to_datetime_utc(
+                check_not_none(condition.resolutionTimestamp)
+            )
+            resolved_bets.append(
+                trade.to_polymarket_bet().to_generic_resolved_bet(
+                    resolution, resolved_time
+                )
+            )
+
+        return resolved_bets
+
+    def have_bet_on_market_since(self, keys: APIKeys, since: timedelta) -> bool:
+        trades = get_trades_for_market(
+            market=self.condition_id, user=keys.bet_from_address
+        )
+        cutoff = utcnow() - since
+        return any(t.timestamp >= cutoff for t in trades)
+
+    def get_most_recent_trade_datetime(self, user_id: str) -> DatetimeUTC | None:
+        trades = get_trades_for_market(
+            market=self.condition_id,
+            user=Web3.to_checksum_address(user_id),
+        )
+        if not trades:
+            return None
+        return max(t.timestamp for t in trades)

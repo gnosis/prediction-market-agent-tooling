@@ -10,8 +10,10 @@ from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     MARKETS_LIMIT,
+    POLYMARKET_CLOB_API_URL,
     POLYMARKET_DATA_API_BASE_URL,
     POLYMARKET_GAMMA_API_BASE_URL,
+    TRADES_LIMIT,
 )
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
@@ -19,6 +21,7 @@ from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaResponse,
     PolymarketGammaResponseDataItem,
     PolymarketPositionResponse,
+    PolymarketTradeResponse,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.httpx_cached_client import HttpxCachedClient
@@ -163,3 +166,98 @@ def get_user_positions(
     data = response.json()
     items = [PolymarketPositionResponse.model_validate(d) for d in data]
     return items
+
+
+def _fetch_trades_paginated(
+    params: dict[str, t.Any],
+    after: t.Optional[DatetimeUTC] = None,
+    before: t.Optional[DatetimeUTC] = None,
+    limit: t.Optional[int] = None,
+) -> list[PolymarketTradeResponse]:
+    url = f"{POLYMARKET_DATA_API_BASE_URL}/trades"
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    all_trades: list[PolymarketTradeResponse] = []
+    offset = 0
+
+    while True:
+        params["offset"] = offset
+        params["limit"] = TRADES_LIMIT
+        response = client.get(
+            url, params={k: v for k, v in params.items() if v is not None}
+        )
+        response.raise_for_status()
+        raw_batch = response.json()
+        batch = [PolymarketTradeResponse.model_validate(d) for d in raw_batch]
+
+        for trade in batch:
+            if after and trade.timestamp < after:
+                continue
+            if before and trade.timestamp > before:
+                continue
+            all_trades.append(trade)
+
+        offset += len(raw_batch)
+
+        if len(raw_batch) < TRADES_LIMIT:
+            break
+        if limit is not None and len(all_trades) >= limit:
+            break
+        if offset >= 10000:
+            logger.warning("Hit Polymarket Data API offset cap of 10000")
+            break
+
+    return all_trades[:limit] if limit else all_trades
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_user_trades failed, attempt={x.attempt_number}."
+    ),
+)
+def get_user_trades(
+    user_address: ChecksumAddress,
+    after: t.Optional[DatetimeUTC] = None,
+    before: t.Optional[DatetimeUTC] = None,
+    limit: t.Optional[int] = None,
+) -> list[PolymarketTradeResponse]:
+    """Fetch a user's trade history from the Polymarket Data API."""
+    params: dict[str, t.Any] = {"user": user_address}
+    return _fetch_trades_paginated(params, after=after, before=before, limit=limit)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_trades_for_market failed, attempt={x.attempt_number}."
+    ),
+)
+def get_trades_for_market(
+    market: HexBytes,
+    user: t.Optional[ChecksumAddress] = None,
+) -> list[PolymarketTradeResponse]:
+    """Fetch trades for a specific market, optionally filtered by user."""
+    params: dict[str, t.Any] = {"market": market.to_0x_hex(), "user": user}
+    return _fetch_trades_paginated(params)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_last_trade_price_from_clob failed, attempt={x.attempt_number}."
+    ),
+)
+def get_last_trade_price_from_clob(token_id: int) -> float | None:
+    """Fetch the last execution price for a token from the Polymarket CLOB (no auth required)."""
+    url = f"{POLYMARKET_CLOB_API_URL}/last-trade-price"
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    response = client.get(url, params={"token_id": token_id})
+    response.raise_for_status()
+    data = response.json()
+    price = data.get("price")
+    if price is None or price == "":
+        return None
+    return float(price)

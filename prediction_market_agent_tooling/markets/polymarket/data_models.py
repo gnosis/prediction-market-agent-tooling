@@ -1,15 +1,22 @@
 import json
+from enum import Enum
 
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.gtypes import (
     USD,
     USDC,
+    CollateralToken,
     OutcomeStr,
     OutcomeToken,
     Probability,
+    VerifiedChecksumAddress,
 )
-from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.data_models import (
+    Bet,
+    Resolution,
+    ResolvedBet,
+)
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     POLYMARKET_BASE_URL,
 )
@@ -18,6 +25,11 @@ from prediction_market_agent_tooling.tools.utils import DatetimeUTC
 
 POLYMARKET_TRUE_OUTCOME = "Yes"
 POLYMARKET_FALSE_OUTCOME = "No"
+
+
+class PolymarketSideEnum(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL"
 
 
 # TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
@@ -242,6 +254,118 @@ class PolymarketPositionResponse(BaseModel):
     @property
     def cash_pnl_usd(self) -> USD:
         return USD(self.cashPnl)
+
+
+class PolymarketBet(BaseModel):
+    id: str
+    taker_order_id: str
+    market: HexBytes
+    asset_id: str  # token_id (large integer)
+    side: PolymarketSideEnum
+    size: float  # number of outcome tokens
+    fee_rate_bps: int
+    price: float  # execution price (0-1)
+    status: str
+    match_time: DatetimeUTC
+    outcome: OutcomeStr
+    event_slug: str
+    title: str
+
+    @property
+    def cost(self) -> CollateralToken:
+        return CollateralToken(self.size * self.price)
+
+    def get_profit(self, resolution: Resolution) -> CollateralToken:
+        if resolution.invalid or resolution.outcome is None:
+            return CollateralToken(0)
+
+        is_winning = self.outcome == resolution.outcome
+
+        if self.side == PolymarketSideEnum.BUY:
+            if is_winning:
+                return CollateralToken(self.size * (1 - self.price))
+            else:
+                return CollateralToken(-self.size * self.price)
+        else:  # SELL
+            if is_winning:
+                return CollateralToken(-self.size * (1 - self.price))
+            else:
+                return CollateralToken(self.size * self.price)
+
+    def to_bet(self) -> Bet:
+        return Bet(
+            id=self.id,
+            amount=self.cost,
+            outcome=self.outcome,
+            created_time=self.match_time,
+            market_question=self.title,
+            market_id=self.market.to_0x_hex(),
+        )
+
+    def to_generic_resolved_bet(
+        self, resolution: Resolution, resolved_time: DatetimeUTC
+    ) -> ResolvedBet:
+        if resolution.invalid or resolution.outcome is None:
+            raise ValueError(
+                f"Trade {self.id} cannot be converted to a resolved bet: "
+                f"resolution is invalid or has no outcome."
+            )
+
+        return ResolvedBet(
+            id=self.id,
+            amount=self.cost,
+            outcome=self.outcome,
+            created_time=self.match_time,
+            market_question=self.title,
+            market_id=self.market.to_0x_hex(),
+            market_outcome=resolution.outcome,
+            resolved_time=resolved_time,
+            profit=self.get_profit(resolution),
+        )
+
+
+class PolymarketTradeResponse(BaseModel):
+    proxyWallet: VerifiedChecksumAddress
+    side: PolymarketSideEnum
+    asset: str  # token_id (large integer)
+    conditionId: HexBytes
+    size: float  # outcome tokens (can be fractional)
+    price: float  # execution price (0-1)
+    timestamp: DatetimeUTC
+    title: str
+    slug: str
+    icon: str
+    eventSlug: str
+    outcome: OutcomeStr
+    outcomeIndex: int
+    name: str
+    pseudonym: str
+    bio: str
+    profileImage: str
+    profileImageOptimized: str
+    transactionHash: HexBytes
+
+    @property
+    def cost(self) -> CollateralToken:
+        return CollateralToken(self.size * self.price)
+
+    def to_polymarket_bet(self) -> PolymarketBet:
+        """Convert Data API trade to PolymarketBet for profit/bet logic reuse."""
+        return PolymarketBet(
+            id=self.transactionHash.to_0x_hex(),
+            taker_order_id="",
+            market=self.conditionId,
+            asset_id=self.asset,
+            side=self.side,
+            size=self.size,
+            fee_rate_bps=0,
+            price=self.price,
+            status="MATCHED",
+            match_time=self.timestamp,
+            outcome=self.outcome,
+            event_slug=self.eventSlug,
+            title=self.title,
+        )
 
 
 def construct_polymarket_url(slug: str) -> str:

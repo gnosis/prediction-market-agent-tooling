@@ -127,7 +127,7 @@ def streamlit_escape(message: str) -> str:
     # Replace escaped newlines with actual newlines.
     message = message.replace("\\n", "\n")
     # Fix malformed dollar signs in the messages.
-    message = message.replace("$", "\$")
+    message = message.replace("$", r"\$")
 
     return message
 

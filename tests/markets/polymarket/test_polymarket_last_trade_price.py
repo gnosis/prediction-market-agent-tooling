@@ -1,3 +1,4 @@
+import typing as t
 from unittest.mock import MagicMock, patch
 
 from prediction_market_agent_tooling.markets.polymarket.api import (
@@ -5,7 +6,7 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
 )
 
 
-def _mock_response(json_data: dict, status_code: int = 200) -> MagicMock:
+def _mock_response(json_data: dict[str, t.Any], status_code: int = 200) -> MagicMock:
     resp = MagicMock()
     resp.status_code = status_code
     resp.json.return_value = json_data

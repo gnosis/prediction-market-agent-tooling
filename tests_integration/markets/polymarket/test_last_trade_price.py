@@ -6,7 +6,9 @@ from prediction_market_agent_tooling.markets.polymarket.api import (
 
 # Token ID for "Yes" on an active, high-volume Polymarket market.
 # 2024 US Presidential Election — "Will a Republican win?" Yes token.
-KNOWN_ACTIVE_TOKEN_ID = 21742633143463906290569050155826241533067272736897614950488156847949938836455
+KNOWN_ACTIVE_TOKEN_ID = (
+    21742633143463906290569050155826241533067272736897614950488156847949938836455
+)
 
 
 @pytest.mark.parametrize("token_id", [KNOWN_ACTIVE_TOKEN_ID])

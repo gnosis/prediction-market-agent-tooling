@@ -16,7 +16,11 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_hand
     ConditionSubgraphModel,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from tests.markets.polymarket.conftest import MOCK_CONDITION_ID
+from tests.markets.polymarket.conftest import (
+    MOCK_CONDITION_ID,
+    MOCK_CONDITION_ID_2,
+    MOCK_CONDITION_ID_3,
+)
 
 
 def test_from_data_model_valid_market(
@@ -28,7 +32,8 @@ def test_from_data_model_valid_market(
     )
 
     assert market is not None
-    assert market.id == mock_gamma_response.id
+    assert market.id == MOCK_CONDITION_ID.to_0x_hex()
+    assert market.event_id == mock_gamma_response.id
     assert market.question == mock_gamma_response.title
     assert market.outcomes == [OutcomeStr("Yes"), OutcomeStr("No")]
     assert market.probabilities == {
@@ -102,3 +107,92 @@ def test_from_data_model_none_liquidity(
 
     assert market is not None
     assert market.liquidity_usd == USD(0)
+
+
+# ── Multi-inner-market tests ───────────────────────────────────────────
+
+
+def test_from_data_model_with_condition_id_selects_correct_inner_market(
+    mock_multi_market_gamma_response: PolymarketGammaResponseDataItem,
+    mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
+) -> None:
+    market = PolymarketAgentMarket.from_data_model(
+        mock_multi_market_gamma_response,
+        mock_multi_condition_dict,
+        condition_id=MOCK_CONDITION_ID_2,
+    )
+
+    assert market is not None
+    assert market.condition_id == MOCK_CONDITION_ID_2
+    assert market.id == MOCK_CONDITION_ID_2.to_0x_hex()
+    assert market.event_id == "multi-event-1"
+    assert market.token_ids == [333, 444]
+    assert market.question == "Will Trump win?"
+
+
+def test_from_data_model_nonexistent_condition_id_returns_none(
+    mock_multi_market_gamma_response: PolymarketGammaResponseDataItem,
+    mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
+) -> None:
+    nonexistent = HexBytes("0x" + "dd" * 32)
+    market = PolymarketAgentMarket.from_data_model(
+        mock_multi_market_gamma_response,
+        mock_multi_condition_dict,
+        condition_id=nonexistent,
+    )
+    assert market is None
+
+
+def test_from_data_model_all_returns_all_inner_markets(
+    mock_multi_market_gamma_response: PolymarketGammaResponseDataItem,
+    mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
+) -> None:
+    markets = PolymarketAgentMarket.from_data_model_all(
+        mock_multi_market_gamma_response,
+        mock_multi_condition_dict,
+    )
+
+    assert len(markets) == 3
+    condition_ids = {m.condition_id for m in markets}
+    assert condition_ids == {
+        MOCK_CONDITION_ID,
+        MOCK_CONDITION_ID_2,
+        MOCK_CONDITION_ID_3,
+    }
+    assert all(m.event_id == "multi-event-1" for m in markets)
+
+
+def test_from_data_model_all_unique_ids(
+    mock_multi_market_gamma_response: PolymarketGammaResponseDataItem,
+    mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
+) -> None:
+    markets = PolymarketAgentMarket.from_data_model_all(
+        mock_multi_market_gamma_response,
+        mock_multi_condition_dict,
+    )
+
+    ids = [m.id for m in markets]
+    assert len(ids) == len(set(ids))
+
+
+def test_from_data_model_multi_market_uses_inner_question(
+    mock_multi_market_gamma_response: PolymarketGammaResponseDataItem,
+    mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
+) -> None:
+    """Inner markets with a question field use it instead of the event title."""
+    markets = PolymarketAgentMarket.from_data_model_all(
+        mock_multi_market_gamma_response,
+        mock_multi_condition_dict,
+    )
+
+    # First inner market has no question field set, falls back to event title
+    first = next(m for m in markets if m.condition_id == MOCK_CONDITION_ID)
+    assert first.question == "Who wins the election?"
+
+    # Second inner market has question="Will Trump win?"
+    second = next(m for m in markets if m.condition_id == MOCK_CONDITION_ID_2)
+    assert second.question == "Will Trump win?"
+
+    # Third inner market has question="Will RFK win?"
+    third = next(m for m in markets if m.condition_id == MOCK_CONDITION_ID_3)
+    assert third.question == "Will RFK win?"

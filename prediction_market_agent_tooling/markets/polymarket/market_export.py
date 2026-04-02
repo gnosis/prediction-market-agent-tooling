@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
@@ -136,22 +137,22 @@ def fetch_and_export_markets(
         created_after=created_after,
     )
 
-    condition_ids = list(
-        {
-            item.markets[0].conditionId
-            for item in gamma_items
-            if item.markets is not None
-        }
+    all_condition_ids: set[HexBytes] = set()
+    for item in gamma_items:
+        if item.markets is not None:
+            for inner in item.markets:
+                all_condition_ids.add(inner.conditionId)
+
+    condition_models = PolymarketSubgraphHandler().get_conditions(
+        list(all_condition_ids)
     )
-    condition_models = PolymarketSubgraphHandler().get_conditions(condition_ids)
     condition_dict = {c.id: c for c in condition_models}
 
     results: list[MarketExportData] = []
     for item in gamma_items:
-        market = PolymarketAgentMarket.from_data_model(item, condition_dict)
-        if market is None:
-            continue
+        agent_markets = PolymarketAgentMarket.from_data_model_all(item, condition_dict)
         tags = [tag.label for tag in item.tags]
-        results.append(export_market(market, tags=tags))
+        for market in agent_markets:
+            results.append(export_market(market, tags=tags))
 
     return results

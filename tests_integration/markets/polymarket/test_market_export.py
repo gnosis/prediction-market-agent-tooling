@@ -68,3 +68,72 @@ def test_fetch_and_export_json_roundtrip() -> None:
         restored = MarketExportData.model_validate(item)
         assert restored.source == "polymarket"
         assert restored.market_id
+
+
+def test_fetch_and_export_multi_inner_market() -> None:
+    """Export with multi-inner-market events included.
+
+    Fetches events (including multi-inner-market ones) and verifies that
+    all inner markets are exported with unique market_ids and valid data.
+    """
+    from prediction_market_agent_tooling.markets.polymarket.api import (
+        get_polymarkets_with_pagination,
+    )
+    from prediction_market_agent_tooling.markets.polymarket.polymarket import (
+        PolymarketAgentMarket,
+    )
+    from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
+        PolymarketSubgraphHandler,
+    )
+    from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
+
+    gamma_items = get_polymarkets_with_pagination(
+        limit=200,
+        only_binary=False,
+    )
+
+    multi_events = [
+        item
+        for item in gamma_items
+        if item.markets is not None and len(item.markets) > 1
+    ]
+    assert len(multi_events) > 0, "Expected at least one multi-inner-market event"
+
+    # Collect all condition_ids across all inner markets
+    all_condition_ids: set[HexBytes] = set()
+    for item in multi_events[:5]:
+        for inner in item.markets:  # type: ignore[union-attr]
+            all_condition_ids.add(inner.conditionId)
+
+    conditions = PolymarketSubgraphHandler().get_conditions(list(all_condition_ids))
+    condition_dict = {c.id: c for c in conditions}
+
+    # Export all inner markets from the first few multi-events
+    from prediction_market_agent_tooling.markets.polymarket.market_export import (
+        export_market,
+    )
+
+    exported_items: list[MarketExportData] = []
+    for item in multi_events[:5]:
+        agent_markets = PolymarketAgentMarket.from_data_model_all(item, condition_dict)
+        for market in agent_markets:
+            exported_items.append(export_market(market))
+
+    assert (
+        len(exported_items) >= 2
+    ), f"Expected at least 2 exported items, got {len(exported_items)}"
+
+    # All should have unique market_ids
+    market_ids = [e.market_id for e in exported_items]
+    assert len(market_ids) == len(set(market_ids)), "Exported market_ids must be unique"
+
+    for exported in exported_items:
+        assert exported.source == "polymarket"
+        assert exported.condition_id.startswith("0x")
+        assert exported.market_id.startswith("0x")
+        assert exported.question
+        assert len(exported.outcomes) >= 2
+        prob_sum = sum(exported.probabilities.values())
+        assert (
+            0.99 <= prob_sum <= 1.01
+        ), f"Probability sum {prob_sum} out of range for {exported.market_id}"

@@ -7,6 +7,7 @@ from prediction_market_agent_tooling.gtypes import (
     OutcomeToken,
     OutcomeWei,
 )
+from prediction_market_agent_tooling.markets.data_models import ExistingPosition
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketPositionResponse,
     PolymarketSideEnum,
@@ -15,11 +16,11 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
 )
 from prediction_market_agent_tooling.tools.hexbytes_custom import HexBytes
-from tests.markets.polymarket.conftest import MOCK_CONDITION_ID
+from tests.markets.polymarket.conftest import MOCK_CONDITION_ID, MOCK_CONDITION_ID_2
 
 MOCK_USER_ID = "0x0000000000000000000000000000000000001234"
 
-SECOND_CONDITION_ID = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # web3-private-key-ok
+SECOND_CONDITION_ID = MOCK_CONDITION_ID_2.to_0x_hex()
 
 
 def _make_position_response(
@@ -272,11 +273,9 @@ def test_liquidate_sells_non_target_outcomes(
     mock_sell_tokens: MagicMock,
     mock_polymarket_market: PolymarketAgentMarket,
 ) -> None:
-    from prediction_market_agent_tooling.markets.data_models import ExistingPosition
-
     mock_get_positions.return_value = [
         ExistingPosition(
-            market_id="1",
+            market_id=mock_polymarket_market.id,
             amounts_ot={
                 OutcomeStr("Yes"): OutcomeToken(10.0),
                 OutcomeStr("No"): OutcomeToken(5.0),
@@ -323,7 +322,7 @@ def test_liquidate_no_positions_does_nothing(
     "prediction_market_agent_tooling.markets.polymarket.polymarket.PolymarketSubgraphHandler"
 )
 @patch(
-    "prediction_market_agent_tooling.markets.polymarket.polymarket.get_gamma_event_by_id"
+    "prediction_market_agent_tooling.markets.polymarket.polymarket.get_gamma_event_by_condition_id"
 )
 def test_get_binary_market(
     mock_get_event: MagicMock,
@@ -334,9 +333,104 @@ def test_get_binary_market(
     mock_get_event.return_value = mock_gamma_response
     mock_subgraph_cls.return_value.get_conditions.return_value = [mock_condition_model]
 
-    market = PolymarketAgentMarket.get_binary_market(id="test-1")
+    market = PolymarketAgentMarket.get_binary_market(id=MOCK_CONDITION_ID.to_0x_hex())
 
     assert isinstance(market, PolymarketAgentMarket)
-    assert market.id == "test-1"
+    assert market.id == MOCK_CONDITION_ID.to_0x_hex()
     assert market.condition_id == MOCK_CONDITION_ID
-    mock_get_event.assert_called_once_with("test-1")
+    mock_get_event.assert_called_once_with(MOCK_CONDITION_ID)
+
+
+# ── Multi-inner-market tests ───────────────────────────────────────────
+
+
+@patch(
+    "prediction_market_agent_tooling.markets.polymarket.polymarket.PolymarketSubgraphHandler"
+)
+@patch(
+    "prediction_market_agent_tooling.markets.polymarket.polymarket.get_gamma_event_by_slug"
+)
+@patch(
+    "prediction_market_agent_tooling.markets.polymarket.polymarket.get_user_positions"
+)
+def test_get_positions_multi_inner_market(
+    mock_get_positions: MagicMock,
+    mock_get_event: MagicMock,
+    mock_subgraph_cls: MagicMock,
+    mock_multi_market_gamma_response: MagicMock,
+    mock_multi_condition_dict: MagicMock,
+) -> None:
+    """Positions from different inner markets of the same event are all resolved."""
+    cid1 = MOCK_CONDITION_ID.to_0x_hex()
+    cid2 = MOCK_CONDITION_ID_2.to_0x_hex()
+    mock_get_positions.return_value = [
+        _make_position_response(
+            cid1, "Yes", 0, size=10.0, current_value=8.0, event_slug="who-wins"
+        ),
+        _make_position_response(
+            cid2, "Yes", 0, size=5.0, current_value=3.0, event_slug="who-wins"
+        ),
+    ]
+    mock_get_event.return_value = mock_multi_market_gamma_response
+    mock_subgraph_cls.return_value.get_conditions.return_value = list(
+        mock_multi_condition_dict.values()
+    )
+
+    result = list(PolymarketAgentMarket.get_positions(user_id=MOCK_USER_ID))
+
+    assert len(result) == 2
+    market_ids = {p.market_id for p in result}
+    assert cid1 in market_ids
+    assert cid2 in market_ids
+
+
+@patch.object(PolymarketAgentMarket, "sell_tokens")
+@patch.object(PolymarketAgentMarket, "get_positions")
+def test_liquidate_only_sells_matching_market(
+    mock_get_positions: MagicMock,
+    mock_sell_tokens: MagicMock,
+    mock_polymarket_market: PolymarketAgentMarket,
+) -> None:
+    """liquidate_existing_positions only sells tokens for the current market."""
+    other_cid = "0x" + "ff" * 32
+    mock_get_positions.return_value = [
+        ExistingPosition(
+            market_id=mock_polymarket_market.id,
+            amounts_ot={
+                OutcomeStr("Yes"): OutcomeToken(10.0),
+                OutcomeStr("No"): OutcomeToken(5.0),
+            },
+            amounts_current={
+                OutcomeStr("Yes"): USD(8.0),
+                OutcomeStr("No"): USD(3.0),
+            },
+            amounts_potential={
+                OutcomeStr("Yes"): USD(10.0),
+                OutcomeStr("No"): USD(5.0),
+            },
+        ),
+        ExistingPosition(
+            market_id=other_cid,
+            amounts_ot={
+                OutcomeStr("Yes"): OutcomeToken(20.0),
+                OutcomeStr("No"): OutcomeToken(15.0),
+            },
+            amounts_current={
+                OutcomeStr("Yes"): USD(16.0),
+                OutcomeStr("No"): USD(10.0),
+            },
+            amounts_potential={
+                OutcomeStr("Yes"): USD(20.0),
+                OutcomeStr("No"): USD(15.0),
+            },
+        ),
+    ]
+    mock_sell_tokens.return_value = "0xabc"
+
+    mock_polymarket_market.liquidate_existing_positions(outcome=OutcomeStr("Yes"))
+
+    # Should only sell "No" from matching market, not from the other market
+    mock_sell_tokens.assert_called_once()
+    call_kwargs = mock_sell_tokens.call_args
+    assert call_kwargs[1]["outcome"] == OutcomeStr("No")
+    assert call_kwargs[1]["amount"] == OutcomeToken(5.0)

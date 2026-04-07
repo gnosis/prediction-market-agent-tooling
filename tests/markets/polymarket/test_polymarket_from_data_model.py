@@ -185,9 +185,9 @@ def test_from_data_model_multi_market_uses_inner_question(
         mock_multi_condition_dict,
     )
 
-    # First inner market has no question field set, falls back to event title
+    # First inner market uses its own question field
     first = next(m for m in markets if m.condition_id == MOCK_CONDITION_ID)
-    assert first.question == "Who wins the election?"
+    assert first.question == "Will Biden win?"
 
     # Second inner market has question="Will Trump win?"
     second = next(m for m in markets if m.condition_id == MOCK_CONDITION_ID_2)

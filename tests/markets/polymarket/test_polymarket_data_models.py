@@ -17,6 +17,7 @@ def _make_gamma_market(**kwargs: object) -> PolymarketGammaMarket:
         createdAt=utcnow(),
         archived=False,
         clobTokenIds="[111, 222]",
+        question="Will it rain?",
     )
     defaults.update(kwargs)
     return PolymarketGammaMarket(**defaults)  # type: ignore[arg-type]

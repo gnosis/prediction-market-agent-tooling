@@ -300,12 +300,13 @@ def get_gamma_event_by_condition_id(
             f"No market found for condition_id '{condition_id.to_0x_hex()}'"
         )
     market_data = data[0]
-    event_slug = market_data.get("eventSlug") or market_data.get("slug")
-    if not event_slug:
+    events = market_data.get("events", [])
+    if not events:
         raise ValueError(
-            f"No event slug found for condition_id '{condition_id.to_0x_hex()}'"
+            f"No event found for condition_id '{condition_id.to_0x_hex()}'"
         )
-    return get_gamma_event_by_slug(event_slug)
+    event_id = events[0]["id"]
+    return get_gamma_event_by_id(event_id)
 
 
 @tenacity.retry(

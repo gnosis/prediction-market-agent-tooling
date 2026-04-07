@@ -48,6 +48,7 @@ def mock_gamma_market() -> PolymarketGammaMarket:
         createdAt=utcnow(),
         archived=False,
         clobTokenIds="[111, 222]",
+        question="Will Biden win?",
     )
 
 

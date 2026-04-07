@@ -58,7 +58,7 @@ class PolymarketGammaMarket(BaseModel):
     archived: bool
     questionId: str | None = None
     clobTokenIds: str | None = None  # int-encoded hex
-    question: str | None = None
+    question: str
     negRisk: bool | None = None
     negRiskMarketID: str | None = None
     negRiskFeeBips: int | None = None

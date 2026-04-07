@@ -233,15 +233,17 @@ class PolymarketAgentMarket(AgentMarket):
         return created_order.transactionsHashes[0].to_0x_hex()
 
     @staticmethod
-    def get_markets(
+    def _fetch_gamma_markets_with_conditions(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        question_type: QuestionType = QuestionType.ALL,
-        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
-    ) -> t.Sequence["PolymarketAgentMarket"]:
+        only_binary: bool = True,
+    ) -> tuple[
+        list[PolymarketGammaResponseDataItem],
+        dict[HexBytes, ConditionSubgraphModel],
+    ]:
         closed: bool | None
 
         if filter_by == FilterBy.OPEN:
@@ -263,20 +265,23 @@ class PolymarketAgentMarket(AgentMarket):
                 order_by = PolymarketOrderByEnum.END_DATE
             case SortBy.HIGHEST_LIQUIDITY:
                 order_by = PolymarketOrderByEnum.LIQUIDITY
+            case SortBy.LOWEST_LIQUIDITY:
+                order_by = PolymarketOrderByEnum.LIQUIDITY
+                ascending = True
             case SortBy.NONE:
                 order_by = PolymarketOrderByEnum.VOLUME_24HR
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
 
         # closed markets also have property active=True, hence ignoring active.
-        markets = get_polymarkets_with_pagination(
+        gamma_items = get_polymarkets_with_pagination(
             limit=limit,
             closed=closed,
             order_by=order_by,
             ascending=ascending,
             created_after=created_after,
             excluded_questions=excluded_questions,
-            only_binary=question_type is not QuestionType.CATEGORICAL,
+            only_binary=only_binary,
         )
 
         condition_models = PolymarketSubgraphHandler().get_conditions(
@@ -284,17 +289,40 @@ class PolymarketAgentMarket(AgentMarket):
                 set(
                     [
                         market.markets[0].conditionId
-                        for market in markets
+                        for market in gamma_items
                         if market.markets is not None
                     ]
                 )
             )
         )
-        condition_models_dict = {c.id: c for c in condition_models}
+        condition_dict = {c.id: c for c in condition_models}
+
+        return gamma_items, condition_dict
+
+    @staticmethod
+    def get_markets(
+        limit: int,
+        sort_by: SortBy = SortBy.NONE,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[DatetimeUTC] = None,
+        excluded_questions: set[str] | None = None,
+        question_type: QuestionType = QuestionType.ALL,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
+    ) -> t.Sequence["PolymarketAgentMarket"]:
+        gamma_items, condition_dict = (
+            PolymarketAgentMarket._fetch_gamma_markets_with_conditions(
+                limit=limit,
+                sort_by=sort_by,
+                filter_by=filter_by,
+                created_after=created_after,
+                excluded_questions=excluded_questions,
+                only_binary=question_type is not QuestionType.CATEGORICAL,
+            )
+        )
 
         result_markets: list[PolymarketAgentMarket] = []
-        for m in markets:
-            market = PolymarketAgentMarket.from_data_model(m, condition_models_dict)
+        for m in gamma_items:
+            market = PolymarketAgentMarket.from_data_model(m, condition_dict)
             if market is not None:
                 result_markets.append(market)
         return result_markets

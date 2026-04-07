@@ -5,15 +5,8 @@ from collections.abc import Sequence
 from pydantic import BaseModel
 
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
-from prediction_market_agent_tooling.markets.polymarket.api import (
-    PolymarketOrderByEnum,
-    get_polymarkets_with_pagination,
-)
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
-)
-from prediction_market_agent_tooling.markets.polymarket.polymarket_subgraph_handler import (
-    PolymarketSubgraphHandler,
 )
 from prediction_market_agent_tooling.tools.datetime_utc import DatetimeUTC
 from prediction_market_agent_tooling.tools.utils import utcnow
@@ -101,50 +94,14 @@ def fetch_and_export_markets(
     sort_by: SortBy = SortBy.NONE,
     created_after: t.Optional[DatetimeUTC] = None,
 ) -> list[MarketExportData]:
-    # Translate filter_by to Polymarket's closed parameter
-    closed: bool | None
-    if filter_by == FilterBy.OPEN:
-        closed = False
-    elif filter_by == FilterBy.RESOLVED:
-        closed = True
-    elif filter_by == FilterBy.NONE:
-        closed = None
-    else:
-        raise ValueError(f"Unknown filter_by: {filter_by}")
-
-    # Translate sort_by to Polymarket's order_by + ascending
-    ascending: bool = False
-    match sort_by:
-        case SortBy.NEWEST:
-            order_by = PolymarketOrderByEnum.START_DATE
-            ascending = False
-        case SortBy.CLOSING_SOONEST:
-            ascending = True
-            order_by = PolymarketOrderByEnum.END_DATE
-        case SortBy.HIGHEST_LIQUIDITY:
-            order_by = PolymarketOrderByEnum.LIQUIDITY
-        case SortBy.NONE:
-            order_by = PolymarketOrderByEnum.VOLUME_24HR
-        case _:
-            raise ValueError(f"Unknown sort_by: {sort_by}")
-
-    gamma_items = get_polymarkets_with_pagination(
-        limit=limit,
-        closed=closed,
-        order_by=order_by,
-        ascending=ascending,
-        created_after=created_after,
+    gamma_items, condition_dict = (
+        PolymarketAgentMarket._fetch_gamma_markets_with_conditions(
+            limit=limit,
+            sort_by=sort_by,
+            filter_by=filter_by,
+            created_after=created_after,
+        )
     )
-
-    condition_ids = list(
-        {
-            item.markets[0].conditionId
-            for item in gamma_items
-            if item.markets is not None
-        }
-    )
-    condition_models = PolymarketSubgraphHandler().get_conditions(condition_ids)
-    condition_dict = {c.id: c for c in condition_models}
 
     results: list[MarketExportData] = []
     for item in gamma_items:

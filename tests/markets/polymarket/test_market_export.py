@@ -1,7 +1,6 @@
 import json
 from datetime import timedelta
 
-
 from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import Resolution
 from prediction_market_agent_tooling.markets.polymarket.market_export import (

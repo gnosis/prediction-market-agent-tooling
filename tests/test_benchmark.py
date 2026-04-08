@@ -9,6 +9,7 @@ from prediction_market_agent_tooling.markets.data_models import (
     CategoricalProbabilisticAnswer,
     Resolution,
 )
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.omen.data_models import (
     OMEN_FALSE_OUTCOME,
     OMEN_TRUE_OUTCOME,
@@ -95,6 +96,7 @@ def test_benchmark_run(
                 token_ids=[1, 2],
                 closed_flag_from_polymarket=False,
                 active_flag_from_polymarket=True,
+                fees=MarketFees(trading_fee_rate=0.1),
             )
         ],
         agents=[dummy_agent, dummy_agent_no_prediction],
@@ -153,6 +155,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
                 token_ids=[1, 2],
                 closed_flag_from_polymarket=False,
                 active_flag_from_polymarket=True,
+                fees=MarketFees(trading_fee_rate=0.1),
             )
         ]
         benchmarker = bm.Benchmarker(
@@ -227,6 +230,7 @@ def test_benchmarker_cancelled_markets() -> None:
             token_ids=[1, 2],
             closed_flag_from_polymarket=False,
             active_flag_from_polymarket=True,
+            fees=MarketFees(trading_fee_rate=0.1),
         )
     ]
     with pytest.raises(ValueError) as e:
@@ -262,6 +266,7 @@ def test_market_probable_resolution() -> None:
             token_ids=[1, 2],
             closed_flag_from_polymarket=False,
             active_flag_from_polymarket=True,
+            fees=MarketFees(trading_fee_rate=0.1),
         ).probable_resolution
     assert "Unknown resolution" in str(e)
     assert PolymarketAgentMarket(
@@ -284,6 +289,7 @@ def test_market_probable_resolution() -> None:
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,
         active_flag_from_polymarket=True,
+        fees=MarketFees(trading_fee_rate=0.1),
     ).probable_resolution == Resolution(outcome=OutcomeStr("Yes"), invalid=False)
     assert PolymarketAgentMarket(
         description=None,
@@ -305,6 +311,7 @@ def test_market_probable_resolution() -> None:
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,
         active_flag_from_polymarket=True,
+        fees=MarketFees(trading_fee_rate=0.1),
     ).probable_resolution == Resolution(outcome=OutcomeStr("No"), invalid=False)
     assert PolymarketAgentMarket(
         description=None,
@@ -326,6 +333,7 @@ def test_market_probable_resolution() -> None:
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,
         active_flag_from_polymarket=True,
+        fees=MarketFees(trading_fee_rate=0.1),
     ).probable_resolution == Resolution(outcome=OutcomeStr("No"), invalid=False)
     assert PolymarketAgentMarket(
         description=None,
@@ -347,4 +355,5 @@ def test_market_probable_resolution() -> None:
         token_ids=[1, 2],
         closed_flag_from_polymarket=False,
         active_flag_from_polymarket=True,
+        fees=MarketFees(trading_fee_rate=0.1),
     ).probable_resolution == Resolution(outcome=OutcomeStr("Yes"), invalid=False)

@@ -50,16 +50,25 @@ class PriceResponse(BaseModel):
 
 
 class ClobManager:
-    def __init__(self, api_keys: APIKeys):
-        self.api_keys = api_keys
+    def __init__(self, api_keys: APIKeys | None = None) -> None:
+        self.api_keys = api_keys or APIKeys()
         self.clob_client = ClobClient(
             POLYMARKET_CLOB_API_URL,
-            key=api_keys.bet_from_private_key.get_secret_value(),
+            key=self.api_keys.bet_from_private_key.get_secret_value(),
             chain_id=POLYGON_CHAIN_ID,
         )
         self.clob_client.set_api_creds(self.clob_client.create_or_derive_api_creds())
         self.polygon_web3 = RPCConfig().get_polygon_web3()
-        self.__init_approvals(polygon_web3=self.polygon_web3)
+
+    def get_token_fee_bps(self, token_id: int) -> int:
+        in_bps: int = self.clob_client.get_fee_rate_bps(token_id=token_id)
+        return in_bps
+
+    def get_token_fee_rate(self, token_id: int) -> float:
+        in_bps: int = self.get_token_fee_bps(token_id=token_id)
+        return (
+            in_bps / 100 / 100
+        )  # convert from bps to percentage and percentage to decimal
 
     def get_token_price(self, token_id: int, side: PolymarketSideEnum) -> USD:
         price_data = self.clob_client.get_price(token_id=token_id, side=side.value)

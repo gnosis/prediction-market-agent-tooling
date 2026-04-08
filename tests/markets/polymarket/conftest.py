@@ -3,6 +3,7 @@ from datetime import timedelta
 import pytest
 
 from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, Probability
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketGammaMarket,
     PolymarketGammaResponseDataItem,
@@ -104,4 +105,5 @@ def mock_polymarket_market() -> PolymarketAgentMarket:
         token_ids=[111, 222],
         closed_flag_from_polymarket=False,
         active_flag_from_polymarket=True,
+        fees=MarketFees(trading_fee_rate=0.1),
     )

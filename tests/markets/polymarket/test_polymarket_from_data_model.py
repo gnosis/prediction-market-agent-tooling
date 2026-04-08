@@ -24,7 +24,7 @@ def test_from_data_model_valid_market(
     mock_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, mock_condition_dict
+        mock_gamma_response, mock_condition_dict, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -49,7 +49,9 @@ def test_from_data_model_missing_prices_returns_none(
     mock_gamma_market.outcomePrices = None
     response = mock_gamma_response.model_copy(update={"markets": [mock_gamma_market]})
 
-    result = PolymarketAgentMarket.from_data_model(response, mock_condition_dict)
+    result = PolymarketAgentMarket.from_data_model(
+        response, mock_condition_dict, trading_fee_rate=0.1
+    )
 
     assert result is None
 
@@ -59,7 +61,7 @@ def test_from_data_model_with_resolved_condition(
     mock_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, mock_condition_dict
+        mock_gamma_response, mock_condition_dict, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -70,7 +72,7 @@ def test_from_data_model_no_matching_condition(
     mock_gamma_response: PolymarketGammaResponseDataItem,
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, condition_model_dict={}
+        mock_gamma_response, condition_model_dict={}, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -82,7 +84,7 @@ def test_from_data_model_volume_and_liquidity(
     mock_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, mock_condition_dict
+        mock_gamma_response, mock_condition_dict, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -98,7 +100,9 @@ def test_from_data_model_none_liquidity(
 ) -> None:
     response = mock_gamma_response.model_copy(update={"liquidity": None})
 
-    market = PolymarketAgentMarket.from_data_model(response, mock_condition_dict)
+    market = PolymarketAgentMarket.from_data_model(
+        response, mock_condition_dict, trading_fee_rate=0.1
+    )
 
     assert market is not None
     assert market.liquidity_usd == USD(0)

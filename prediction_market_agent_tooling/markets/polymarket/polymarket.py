@@ -81,11 +81,7 @@ class PolymarketAgentMarket(AgentMarket):
 
     base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
 
-    # Based on https://docs.polymarket.com/#fees, there are currently no fees, except for transactions fees.
-    # However they do have `maker_fee_base_rate` and `taker_fee_base_rate`, but impossible to test out our implementation without them actually taking the fees.
-    # But then in the new subgraph API, they have `fee: BigInt! (Percentage fee of trades taken by market maker. A 2% fee is represented as 2*10^16)`.
-    # TODO: Check out the fees while integrating the subgraph API or if we implement placing of bets on Polymarket.
-    fees: MarketFees = MarketFees.get_zero_fees()
+    fees: MarketFees
     condition_id: HexBytes
     liquidity_usd: USD
     token_ids: list[int]
@@ -137,6 +133,7 @@ class PolymarketAgentMarket(AgentMarket):
     def from_data_model(
         model: PolymarketGammaResponseDataItem,
         condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
+        trading_fee_rate: float,
     ) -> t.Optional["PolymarketAgentMarket"]:
         # If len(model.markets) > 0, this denotes a categorical market.
         markets = check_not_none(model.markets)
@@ -153,6 +150,13 @@ class PolymarketAgentMarket(AgentMarket):
             condition_id=condition_id,
             condition_model_dict=condition_model_dict,
             outcomes=outcomes,
+        )
+
+        # https://docs.polymarket.com/trading/fees
+        fees = MarketFees(
+            bet_proportion=0,
+            absolute=0,
+            trading_fee_rate=trading_fee_rate,
         )
 
         return PolymarketAgentMarket(
@@ -174,6 +178,7 @@ class PolymarketAgentMarket(AgentMarket):
                 USD(model.liquidity) if model.liquidity is not None else USD(0)
             ),
             token_ids=markets[0].token_ids,
+            fees=fees,
         )
 
     def get_tiny_bet_amount(self) -> CollateralToken:
@@ -287,9 +292,19 @@ class PolymarketAgentMarket(AgentMarket):
         )
         condition_models_dict = {c.id: c for c in condition_models}
 
+        clob_manager = ClobManager()
+        # Fee is dependent only on market category, so we can get it just for one market/token.
+        trading_fee_rate = clob_manager.get_token_fee_rate(
+            markets[0].markets[0].token_ids[0]
+        )
+
         result_markets: list[PolymarketAgentMarket] = []
         for m in markets:
-            market = PolymarketAgentMarket.from_data_model(m, condition_models_dict)
+            market = PolymarketAgentMarket.from_data_model(
+                m,
+                condition_models_dict,
+                trading_fee_rate=trading_fee_rate,
+            )
             if market is not None:
                 result_markets.append(market)
         return result_markets

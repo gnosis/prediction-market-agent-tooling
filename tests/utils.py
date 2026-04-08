@@ -6,7 +6,7 @@ from web3.types import RPCEndpoint
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.tools.contract import DebuggingContract
 
-RUN_PAID_TESTS = os.environ.get("RUN_PAID_TESTS", "0") == "1"
+RUN_PAID_TESTS = APIKeys().RUN_PAID_TESTS
 
 
 def mint_new_block(keys: APIKeys, web3: Web3) -> None:

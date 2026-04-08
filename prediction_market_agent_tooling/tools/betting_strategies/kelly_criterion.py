@@ -112,7 +112,7 @@ def get_kelly_bet_full(
     ```
     """
     fee = fees.bet_proportion
-    if fees.absolute > 0:
+    if fees.absolute or fees.trading_fee_rate:
         raise RuntimeError(
             f"Kelly works only with bet-proportional fees, but the fees are {fees=}."
         )
@@ -195,7 +195,13 @@ def get_kelly_bets_categorical_simplified(
         estimated_probabilities
     ), "Mismatch in number of outcomes"
 
-    f = 1 - fees.bet_proportion
+    fee = fees.bet_proportion
+    if fees.absolute or fees.trading_fee_rate:
+        raise RuntimeError(
+            f"Kelly works only with bet-proportional fees, but the fees are {fees=}."
+        )
+
+    f = 1 - fee
 
     total_kelly_fraction = 0.0
     kelly_fractions = []

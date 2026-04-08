@@ -21,6 +21,7 @@ def test_place_and_sell_bet_real() -> None:
     """
     api_keys = APIKeys()
     user_address = api_keys.bet_from_address
+    print(f"Trading polymarket from {user_address}")
 
     trades_before = get_user_trades(user_address=user_address)
 

@@ -35,7 +35,9 @@ def _get_market_and_holder() -> tuple[PolymarketAgentMarket, ChecksumAddress]:
         )
         condition_dict = {c.id: c for c in conditions}
 
-        market = PolymarketAgentMarket.from_data_model(market_data, condition_dict)
+        market = PolymarketAgentMarket.from_data_model(
+            market_data, condition_dict, trading_fee_rate=0.1
+        )
         if market is None:
             continue
 

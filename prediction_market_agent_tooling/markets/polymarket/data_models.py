@@ -107,9 +107,7 @@ class PolymarketGammaResponseDataItem(BaseModel):
     archived: bool
     closed: bool
     active: bool
-    markets: list[PolymarketGammaMarket] | None = (
-        None  # Some Polymarket markets have missing markets field. We skip these markets manually when retrieving.
-    )
+    markets: list[PolymarketGammaMarket]
     tags: list[PolymarketGammaTag] = []
 
     @property

@@ -145,7 +145,10 @@ class PolymarketAgentMarket(AgentMarket):
         condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
         condition_id: HexBytes | None = None,
     ) -> t.Optional["PolymarketAgentMarket"]:
-        markets = check_not_none(model.markets)
+        if model.markets is None:
+            logger.info(f"Market has no inner markets. Skipping. {model.id=}")
+            return None
+        markets = model.markets
 
         if condition_id is not None:
             target_market = next(

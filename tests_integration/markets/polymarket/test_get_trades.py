@@ -47,7 +47,7 @@ def test_get_trades_for_market() -> None:
     assert len(user_trades) > 0
 
     condition_id = user_trades[0].conditionId
-    market_trades = get_trades_for_market(market=condition_id)
+    market_trades = get_trades_for_market(market=condition_id, limit=10)
 
     assert len(market_trades) > 0
     for trade in market_trades:

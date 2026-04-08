@@ -32,7 +32,7 @@ class PolymarketSideEnum(str, Enum):
     SELL = "SELL"
 
 
-# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
+# TODO: Use when CLOB API is introduced for real-time trading.
 class PolymarketRewards(BaseModel):
     min_size: int
     max_spread: float | None
@@ -58,6 +58,15 @@ class PolymarketGammaMarket(BaseModel):
     archived: bool
     questionId: str | None = None
     clobTokenIds: str | None = None  # int-encoded hex
+    question: str
+    negRisk: bool | None = None
+    negRiskMarketID: str | None = None
+    negRiskFeeBips: int | None = None
+    acceptingOrders: bool | None = None
+    enableOrderBook: bool | None = None
+    makerBaseFee: int | None = None
+    takerBaseFee: int | None = None
+    fee: str | None = None
 
     @property
     def token_ids(self) -> list[int]:
@@ -110,6 +119,10 @@ class PolymarketGammaResponseDataItem(BaseModel):
     markets: list[PolymarketGammaMarket] | None = (
         None  # Some Polymarket markets have missing markets field. We skip these markets manually when retrieving.
     )
+    negRisk: bool | None = None
+    negRiskMarketID: str | None = None
+    negRiskFeeBips: int | None = None
+    enableNegRisk: bool | None = None
     tags: list[PolymarketGammaTag] = []
 
     @property
@@ -126,7 +139,7 @@ class PolymarketGammaResponse(BaseModel):
     pagination: PolymarketGammaPagination
 
 
-# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
+# TODO: Use when CLOB API is introduced for real-time trading.
 class PolymarketMarket(BaseModel):
     enable_order_book: bool
     active: bool
@@ -191,7 +204,7 @@ class PolymarketMarket(BaseModel):
             )
 
 
-# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
+# TODO: Use when CLOB API is introduced for real-time trading.
 class MarketsEndpointResponse(BaseModel):
     limit: int
     count: int
@@ -199,7 +212,7 @@ class MarketsEndpointResponse(BaseModel):
     data: list[PolymarketMarket]
 
 
-# TODO: Currently unused. Wire into epic tasks #2/#4/#6 or remove if not needed.
+# TODO: Use when CLOB API is introduced for real-time trading.
 class PolymarketPriceResponse(BaseModel):
     price: str
 

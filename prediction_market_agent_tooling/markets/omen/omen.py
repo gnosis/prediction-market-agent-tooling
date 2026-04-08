@@ -567,13 +567,15 @@ class OmenAgentMarket(AgentMarket):
                 omen_position
             )
 
-        # We include categorical markets below simply because we are already filtering on condition_ids.
         omen_markets: dict[HexBytes, OmenMarket] = {
             m.condition.id: m
             for m in sgh.get_omen_markets(
                 limit=None,
                 condition_id_in=list(omen_positions_dict.keys()),
+                # We include categorical markets below simply because we are already filtering on condition_ids.
                 include_categorical_markets=True,
+                # Same for collateral token.
+                collateral_token_address_in=None,
             )
         }
 

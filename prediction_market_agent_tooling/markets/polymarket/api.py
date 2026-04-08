@@ -283,6 +283,52 @@ def get_gamma_event_by_slug(slug: str) -> PolymarketGammaResponseDataItem:
     stop=tenacity.stop_after_attempt(2),
     wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(
+        f"get_gamma_event_by_condition_id failed, attempt={x.attempt_number}."
+    ),
+)
+def get_gamma_event_by_condition_id(
+    condition_id: HexBytes,
+) -> PolymarketGammaResponseDataItem:
+    """Fetch a Polymarket event by one of its inner market condition IDs.
+
+    Uses the CLOB API to resolve condition_id → slug, then the Gamma API
+    to resolve slug → event, because the Gamma /markets endpoint does not
+    support filtering by condition_id.
+    """
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+
+    # CLOB API supports direct lookup by condition_id.
+    clob_url = f"{POLYMARKET_CLOB_API_URL}/markets/{condition_id.to_0x_hex()}"
+    r = client.get(clob_url)
+    r.raise_for_status()
+    slug = r.json()["market_slug"]
+
+    # Gamma /markets?slug= returns the market with its parent event.
+    # Closed markets require closed=true to be returned.
+    gamma_url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, "markets")
+    r = client.get(gamma_url, params={"slug": slug})
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        r = client.get(gamma_url, params={"slug": slug, "closed": "true"})
+        r.raise_for_status()
+        data = r.json()
+    if not data:
+        raise ValueError(
+            f"No Gamma market found for slug '{slug}' (condition_id '{condition_id.to_0x_hex()}')"
+        )
+    events = data[0].get("events", [])
+    if not events:
+        raise ValueError(
+            f"No event found for slug '{slug}' (condition_id '{condition_id.to_0x_hex()}')"
+        )
+    return get_gamma_event_by_id(events[0]["id"])
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
         f"get_last_trade_price_from_clob failed, attempt={x.attempt_number}."
     ),
 )

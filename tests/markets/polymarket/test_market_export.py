@@ -19,7 +19,8 @@ from tests.markets.polymarket.conftest import MOCK_CONDITION_ID
 def _make_market(**overrides: object) -> PolymarketAgentMarket:
     now = utcnow()
     defaults: dict[str, object] = {
-        "id": "1",
+        "id": MOCK_CONDITION_ID.to_0x_hex(),
+        "event_id": "1",
         "description": "Test description",
         "volume": None,
         "url": "https://polymarket.com/event/test",
@@ -48,7 +49,7 @@ def test_export_market_field_mapping() -> None:
     exported = export_market(market)
 
     assert exported.source == "polymarket"
-    assert exported.market_id == "1"
+    assert exported.market_id == MOCK_CONDITION_ID.to_0x_hex()
     assert exported.condition_id == MOCK_CONDITION_ID.to_0x_hex()
     assert exported.question == "Will GNO go up?"
     assert exported.description == "Test description"
@@ -115,18 +116,19 @@ def test_export_market_inactive() -> None:
 
 
 def test_export_markets_batch() -> None:
-    markets = [_make_market(id=str(i)) for i in range(3)]
+    markets = [_make_market(id=f"id-{i}") for i in range(3)]
     exported = export_markets_batch(markets)
 
     assert len(exported) == 3
-    assert [e.market_id for e in exported] == ["0", "1", "2"]
+    assert [e.market_id for e in exported] == ["id-0", "id-1", "id-2"]
 
 
 def test_export_markets_batch_with_tags() -> None:
-    markets = [_make_market(id="1"), _make_market(id="2")]
+    m1 = _make_market(id="id-1")
+    m2 = _make_market(id="id-2")
     exported = export_markets_batch(
-        markets,
-        tags_by_market_id={"1": ["crypto"]},
+        [m1, m2],
+        tags_by_market_id={"id-1": ["crypto"]},
     )
 
     assert exported[0].tags == ["crypto"]
@@ -162,14 +164,14 @@ def test_export_markets_to_json_valid() -> None:
 
 
 def test_export_markets_to_json_roundtrip() -> None:
-    markets = [_make_market(), _make_market(id="2")]
+    markets = [_make_market(), _make_market(id="id-2")]
     json_str = export_markets_to_json(markets)
     parsed = json.loads(json_str)
 
     for item in parsed:
         restored = MarketExportData.model_validate(item)
         assert restored.source == "polymarket"
-        assert restored.market_id in ("1", "2")
+        assert restored.market_id in (MOCK_CONDITION_ID.to_0x_hex(), "id-2")
 
 
 def test_export_markets_to_json_file_output(tmp_path: object) -> None:

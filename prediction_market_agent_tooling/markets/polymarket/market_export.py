@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
+from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
@@ -105,10 +106,9 @@ def fetch_and_export_markets(
 
     results: list[MarketExportData] = []
     for item in gamma_items:
-        market = PolymarketAgentMarket.from_data_model(item, condition_dict)
-        if market is None:
-            continue
+        agent_markets = PolymarketAgentMarket.from_data_model_all(item, condition_dict)
         tags = [tag.label for tag in item.tags]
-        results.append(export_market(market, tags=tags))
+        for market in agent_markets:
+            results.append(export_market(market, tags=tags))
 
     return results

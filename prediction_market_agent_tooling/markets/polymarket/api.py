@@ -283,6 +283,36 @@ def get_gamma_event_by_slug(slug: str) -> PolymarketGammaResponseDataItem:
     stop=tenacity.stop_after_attempt(2),
     wait=tenacity.wait_fixed(1),
     after=lambda x: logger.debug(
+        f"get_gamma_event_by_condition_id failed, attempt={x.attempt_number}."
+    ),
+)
+def get_gamma_event_by_condition_id(
+    condition_id: HexBytes,
+) -> PolymarketGammaResponseDataItem:
+    """Fetch a Polymarket event by one of its inner market condition IDs."""
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, "markets")
+    r = client.get(url, params={"condition_id": condition_id.to_0x_hex()})
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        raise ValueError(
+            f"No market found for condition_id '{condition_id.to_0x_hex()}'"
+        )
+    market_data = data[0]
+    events = market_data.get("events", [])
+    if not events:
+        raise ValueError(
+            f"No event found for condition_id '{condition_id.to_0x_hex()}'"
+        )
+    event_id = events[0]["id"]
+    return get_gamma_event_by_id(event_id)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
         f"get_last_trade_price_from_clob failed, attempt={x.attempt_number}."
     ),
 )

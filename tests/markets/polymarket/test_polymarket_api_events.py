@@ -30,6 +30,7 @@ def _mock_event_json() -> dict[str, object]:
                 "createdAt": "2025-01-01T00:00:00Z",
                 "archived": False,
                 "clobTokenIds": "[111,222]",
+                "question": "Will it rain?",
             }
         ],
     }

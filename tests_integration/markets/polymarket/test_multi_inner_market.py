@@ -104,7 +104,13 @@ def test_get_binary_market_by_condition_id() -> None:
     event = get_gamma_event_by_id(event_id)
 
     inner_markets = check_not_none(event.markets)
-    target_cid = inner_markets[0].conditionId
+    # Pick an inner market that has outcome prices so from_data_model won't
+    # return None and get_binary_market's check_not_none won't fail.
+    target = next(
+        (m for m in inner_markets if m.outcome_prices),
+        inner_markets[0],
+    )
+    target_cid = target.conditionId
 
     market = PolymarketAgentMarket.get_binary_market(id=target_cid.to_0x_hex())
 

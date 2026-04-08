@@ -289,24 +289,40 @@ def get_gamma_event_by_slug(slug: str) -> PolymarketGammaResponseDataItem:
 def get_gamma_event_by_condition_id(
     condition_id: HexBytes,
 ) -> PolymarketGammaResponseDataItem:
-    """Fetch a Polymarket event by one of its inner market condition IDs."""
+    """Fetch a Polymarket event by one of its inner market condition IDs.
+
+    Uses the CLOB API to resolve condition_id → slug, then the Gamma API
+    to resolve slug → event, because the Gamma /markets endpoint does not
+    support filtering by condition_id.
+    """
     client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
-    url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, "markets")
-    r = client.get(url, params={"condition_id": condition_id.to_0x_hex()})
+
+    # CLOB API supports direct lookup by condition_id.
+    clob_url = f"{POLYMARKET_CLOB_API_URL}/markets/{condition_id.to_0x_hex()}"
+    r = client.get(clob_url)
+    r.raise_for_status()
+    slug = r.json()["market_slug"]
+
+    # Gamma /markets?slug= returns the market with its parent event.
+    # Closed markets require closed=true to be returned.
+    gamma_url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, "markets")
+    r = client.get(gamma_url, params={"slug": slug})
     r.raise_for_status()
     data = r.json()
     if not data:
+        r = client.get(gamma_url, params={"slug": slug, "closed": "true"})
+        r.raise_for_status()
+        data = r.json()
+    if not data:
         raise ValueError(
-            f"No market found for condition_id '{condition_id.to_0x_hex()}'"
+            f"No Gamma market found for slug '{slug}' (condition_id '{condition_id.to_0x_hex()}')"
         )
-    market_data = data[0]
-    events = market_data.get("events", [])
+    events = data[0].get("events", [])
     if not events:
         raise ValueError(
-            f"No event found for condition_id '{condition_id.to_0x_hex()}'"
+            f"No event found for slug '{slug}' (condition_id '{condition_id.to_0x_hex()}')"
         )
-    event_id = events[0]["id"]
-    return get_gamma_event_by_id(event_id)
+    return get_gamma_event_by_id(events[0]["id"])
 
 
 @tenacity.retry(

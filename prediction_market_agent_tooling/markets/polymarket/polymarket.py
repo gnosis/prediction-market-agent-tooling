@@ -54,6 +54,7 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
+    PolymarketGammaMarket,
     PolymarketGammaResponseDataItem,
     PolymarketPositionResponse,
     PolymarketSideEnum,
@@ -145,10 +146,7 @@ class PolymarketAgentMarket(AgentMarket):
         condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
         condition_id: HexBytes | None = None,
     ) -> t.Optional["PolymarketAgentMarket"]:
-        if model.markets is None:
-            logger.info(f"Market has no inner markets. Skipping. {model.id=}")
-            return None
-        markets = model.markets
+        markets: list[PolymarketGammaMarket] = model.markets  # type: ignore[assignment]
 
         if condition_id is not None:
             target_market = next(

@@ -4,7 +4,6 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
-from prediction_market_agent_tooling.gtypes import HexBytes
 from prediction_market_agent_tooling.markets.agent_market import FilterBy, SortBy
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,

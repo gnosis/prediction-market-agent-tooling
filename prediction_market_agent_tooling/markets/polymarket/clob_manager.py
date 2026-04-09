@@ -1,5 +1,6 @@
 from enum import Enum
 
+import tenacity
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import MarketOrderArgs, OrderType
 from pydantic import BaseModel
@@ -24,6 +25,10 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts imp
     USDCeContract,
 )
 from prediction_market_agent_tooling.tools.cow.cow_order import handle_allowance
+
+
+class OrderNotFoundError(Exception):
+    pass
 
 
 class OrderStatusEnum(str, Enum):
@@ -96,6 +101,12 @@ class ClobManager:
 
         return result
 
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(max=5),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception_type(OrderNotFoundError),
+        reraise=True,
+    )
     def _verify_order_on_chain(self, result: CreateOrderResult) -> None:
         """Verify that a FOK order was actually filled by checking the tx on-chain.
 
@@ -110,10 +121,11 @@ class ClobManager:
                     f"Order transaction {tx_hash.to_0x_hex()} failed on-chain "
                     f"(status={receipt['status']})"
                 )
+
         except Exception as e:
             if "not found" in str(e).lower():
-                raise ValueError(
-                    f"Order was not filled — transaction {tx_hash.to_0x_hex()} "
+                raise OrderNotFoundError(
+                    f"Order was not found — transaction {tx_hash.to_0x_hex()} "
                     f"not found on-chain"
                 ) from e
             raise

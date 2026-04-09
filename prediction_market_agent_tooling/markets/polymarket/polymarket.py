@@ -606,6 +606,9 @@ class PolymarketAgentMarket(AgentMarket):
         outcome: OutcomeStr,
         api_keys: APIKeys | None = None,
     ) -> None:
+        """
+        Sell all positions for this user in this market.
+        """
         api_keys = api_keys if api_keys is not None else APIKeys()
         better_address = api_keys.bet_from_address
         larger_than = self.get_liquidatable_amount()
@@ -633,6 +636,59 @@ class PolymarketAgentMarket(AgentMarket):
             model, condition_dict, condition_id=cid
         )
         return check_not_none(market)
+
+    @staticmethod
+    def sell_all_user_positions(api_keys: APIKeys | None = None) -> list[str]:
+        """Sell all non-zero outcome token positions for this user across all markets."""
+        api_keys = api_keys or APIKeys()
+        positions = get_user_positions(
+            user_id=Web3.to_checksum_address(api_keys.bet_from_address)
+        )
+
+        if not positions:
+            logger.info(f"No user positions found for {api_keys.bet_from_address}.")
+            return []
+
+        clob_manager = ClobManager(api_keys=api_keys)
+        tx_hashes: list[str] = []
+        sold_positions_count = 0
+        sold_outcome_tokens = OutcomeToken(0)
+        sold_usd = USD(0)
+
+        for position in positions:
+            token_amount = position.size_as_outcome_token
+            if token_amount <= OutcomeToken(0):
+                continue
+
+            if position.redeemable:
+                logger.info(
+                    f"Skipping redeemable position for condition_id={position.conditionId} outcome={position.outcome}."
+                )
+                continue
+
+            token_id = int(position.asset)
+            created_order = clob_manager.place_sell_market_order(
+                token_id=token_id,
+                token_shares=token_amount,
+            )
+            if not created_order.success:
+                raise ValueError(
+                    "Error creating order for "
+                    f"condition_id={position.conditionId}, "
+                    f"outcome={position.outcome}: {created_order}"
+                )
+
+            tx_hash = created_order.transactionsHashes[0].to_0x_hex()
+            tx_hashes.append(tx_hash)
+            sold_positions_count += 1
+            sold_outcome_tokens += token_amount
+            sold_usd += position.current_value_usd
+
+        logger.info(
+            f"Sold positions summary for {api_keys.bet_from_address}: {sold_positions_count=}, {sold_outcome_tokens=}, {sold_usd=}",
+        )
+
+        return tx_hashes
 
     def can_be_traded(self) -> bool:
         return (

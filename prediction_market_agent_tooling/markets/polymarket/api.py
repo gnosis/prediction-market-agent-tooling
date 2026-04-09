@@ -57,7 +57,7 @@ def get_polymarkets_with_pagination(
     Binary markets have len(model.markets) == 1.
     Categorical markets have len(model.markets) > 1
     """
-    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    client = httpx.Client()
     all_markets: list[PolymarketGammaResponseDataItem] = []
     offset = 0
     remaining = limit
@@ -150,7 +150,7 @@ def get_user_positions(
     """Fetch a user's Polymarket positions; optionally filter by condition IDs."""
     url = f"{POLYMARKET_DATA_API_BASE_URL}/positions"
     # ... rest of implementation ...
-    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    client = httpx.Client()
 
     params = {
         "user": user_id,
@@ -175,7 +175,7 @@ def _fetch_trades_paginated(
     limit: t.Optional[int] = None,
 ) -> list[PolymarketTradeResponse]:
     url = f"{POLYMARKET_DATA_API_BASE_URL}/trades"
-    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    client = httpx.Client()
     all_trades: list[PolymarketTradeResponse] = []
     offset = 0
 

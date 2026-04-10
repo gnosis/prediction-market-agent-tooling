@@ -79,6 +79,7 @@ def test_benchmark_run(
             PolymarketAgentMarket(
                 description=None,
                 id="1",
+                event_id="1",
                 volume=None,
                 url="url",
                 question="Will GNO go up?",
@@ -138,6 +139,7 @@ def test_benchmarker_cache(dummy_agent: DummyAgent) -> None:
             PolymarketAgentMarket(
                 description=None,
                 id="1",
+                event_id="1",
                 volume=None,
                 url="url",
                 question="Will GNO go up?",
@@ -213,6 +215,7 @@ def test_benchmarker_cancelled_markets() -> None:
         PolymarketAgentMarket(
             description=None,
             id="1",
+            event_id="1",
             volume=None,
             url="url",
             question="Will GNO go up?",
@@ -249,6 +252,7 @@ def test_market_probable_resolution() -> None:
         PolymarketAgentMarket(
             description=None,
             id="1",
+            event_id="1",
             volume=None,
             url="url",
             question="Will GNO go up?",
@@ -272,6 +276,7 @@ def test_market_probable_resolution() -> None:
     assert PolymarketAgentMarket(
         description=None,
         id="1",
+        event_id="1",
         volume=None,
         url="url",
         question="Will GNO go up?",
@@ -294,6 +299,7 @@ def test_market_probable_resolution() -> None:
     assert PolymarketAgentMarket(
         description=None,
         id="1",
+        event_id="1",
         volume=None,
         url="url",
         question="Will GNO go up?",
@@ -316,6 +322,7 @@ def test_market_probable_resolution() -> None:
     assert PolymarketAgentMarket(
         description=None,
         id="1",
+        event_id="1",
         volume=None,
         url="url",
         question="Will GNO go up?",
@@ -338,6 +345,7 @@ def test_market_probable_resolution() -> None:
     assert PolymarketAgentMarket(
         description=None,
         id="1",
+        event_id="1",
         volume=None,
         url="url",
         question="Will GNO go up?",

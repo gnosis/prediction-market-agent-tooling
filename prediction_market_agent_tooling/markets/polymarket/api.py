@@ -202,8 +202,8 @@ def _fetch_trades_paginated(
             break
         if limit is not None and len(all_trades) >= limit:
             break
-        if offset >= 10000:
-            logger.warning("Hit Polymarket Data API offset cap of 10000")
+        if offset >= 3000:
+            logger.warning("Hit Polymarket Data API offset cap of 3000")
             break
 
     return all_trades[:limit] if limit else all_trades
@@ -237,10 +237,92 @@ def get_user_trades(
 def get_trades_for_market(
     market: HexBytes,
     user: t.Optional[ChecksumAddress] = None,
+    limit: t.Optional[int] = None,
 ) -> list[PolymarketTradeResponse]:
     """Fetch trades for a specific market, optionally filtered by user."""
     params: dict[str, t.Any] = {"market": market.to_0x_hex(), "user": user}
-    return _fetch_trades_paginated(params)
+    return _fetch_trades_paginated(params, limit=limit)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_gamma_event_by_id failed, attempt={x.attempt_number}."
+    ),
+)
+def get_gamma_event_by_id(event_id: str) -> PolymarketGammaResponseDataItem:
+    """Fetch a single Polymarket event by its Gamma API event ID."""
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, f"events/{event_id}")
+    r = client.get(url)
+    r.raise_for_status()
+    return response_to_model(r, PolymarketGammaResponseDataItem)
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_gamma_event_by_slug failed, attempt={x.attempt_number}."
+    ),
+)
+def get_gamma_event_by_slug(slug: str) -> PolymarketGammaResponseDataItem:
+    """Fetch a single Polymarket event by its slug."""
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, "events")
+    r = client.get(url, params={"slug": slug})
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        raise ValueError(f"No event found for slug '{slug}'")
+    return PolymarketGammaResponseDataItem.model_validate(data[0])
+
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(2),
+    wait=tenacity.wait_fixed(1),
+    after=lambda x: logger.debug(
+        f"get_gamma_event_by_condition_id failed, attempt={x.attempt_number}."
+    ),
+)
+def get_gamma_event_by_condition_id(
+    condition_id: HexBytes,
+) -> PolymarketGammaResponseDataItem:
+    """Fetch a Polymarket event by one of its inner market condition IDs.
+
+    Uses the CLOB API to resolve condition_id → slug, then the Gamma API
+    to resolve slug → event, because the Gamma /markets endpoint does not
+    support filtering by condition_id.
+    """
+    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+
+    # CLOB API supports direct lookup by condition_id.
+    clob_url = f"{POLYMARKET_CLOB_API_URL}/markets/{condition_id.to_0x_hex()}"
+    r = client.get(clob_url)
+    r.raise_for_status()
+    slug = r.json()["market_slug"]
+
+    # Gamma /markets?slug= returns the market with its parent event.
+    # Closed markets require closed=true to be returned.
+    gamma_url = urljoin(POLYMARKET_GAMMA_API_BASE_URL, "markets")
+    r = client.get(gamma_url, params={"slug": slug})
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        r = client.get(gamma_url, params={"slug": slug, "closed": "true"})
+        r.raise_for_status()
+        data = r.json()
+    if not data:
+        raise ValueError(
+            f"No Gamma market found for slug '{slug}' (condition_id '{condition_id.to_0x_hex()}')"
+        )
+    events = data[0].get("events", [])
+    if not events:
+        raise ValueError(
+            f"No event found for slug '{slug}' (condition_id '{condition_id.to_0x_hex()}')"
+        )
+    return get_gamma_event_by_id(events[0]["id"])
 
 
 @tenacity.retry(

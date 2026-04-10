@@ -1,8 +1,10 @@
 import typing as t
+from collections import defaultdict
 from datetime import timedelta
 
 from cowdao_cowpy.common.chains import Chain
 from web3 import Web3
+from web3.constants import HASH_ZERO
 
 from prediction_market_agent_tooling.config import APIKeys, RPCConfig
 from prediction_market_agent_tooling.gtypes import (
@@ -35,6 +37,8 @@ from prediction_market_agent_tooling.markets.data_models import (
 )
 from prediction_market_agent_tooling.markets.polymarket.api import (
     PolymarketOrderByEnum,
+    get_gamma_event_by_condition_id,
+    get_gamma_event_by_slug,
     get_last_trade_price_from_clob,
     get_polymarkets_with_pagination,
     get_trades_for_market,
@@ -50,7 +54,9 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
+    PolymarketGammaMarket,
     PolymarketGammaResponseDataItem,
+    PolymarketPositionResponse,
     PolymarketSideEnum,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts import (
@@ -82,6 +88,7 @@ class PolymarketAgentMarket(AgentMarket):
     base_url: t.ClassVar[str] = POLYMARKET_BASE_URL
 
     fees: MarketFees
+    event_id: str
     condition_id: HexBytes
     liquidity_usd: USD
     token_ids: list[int]
@@ -134,20 +141,33 @@ class PolymarketAgentMarket(AgentMarket):
         model: PolymarketGammaResponseDataItem,
         condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
         trading_fee_rate: float,
+        condition_id: HexBytes | None = None,
     ) -> t.Optional["PolymarketAgentMarket"]:
-        # If len(model.markets) > 0, this denotes a categorical market.
-        markets = check_not_none(model.markets)
-        outcomes = markets[0].outcomes_list
-        outcome_prices = markets[0].outcome_prices
+        markets: list[PolymarketGammaMarket] = model.markets  # type: ignore[assignment]
+
+        if condition_id is not None:
+            target_market = next(
+                (m for m in markets if m.conditionId == condition_id), None
+            )
+            if target_market is None:
+                logger.warning(
+                    f"condition_id {condition_id.to_0x_hex()} not found in event {model.id}"
+                )
+                return None
+        else:
+            target_market = markets[0]
+
+        outcomes = target_market.outcomes_list
+        outcome_prices = target_market.outcome_prices
         if not outcome_prices:
             logger.info(f"Market has no outcome prices. Skipping. {model=}")
             return None
 
         probabilities = {o: Probability(op) for o, op in zip(outcomes, outcome_prices)}
 
-        condition_id = markets[0].conditionId
+        cid = target_market.conditionId
         resolution = PolymarketAgentMarket.build_resolution_from_condition(
-            condition_id=condition_id,
+            condition_id=cid,
             condition_model_dict=condition_model_dict,
             outcomes=outcomes,
         )
@@ -158,11 +178,15 @@ class PolymarketAgentMarket(AgentMarket):
             absolute=0,
             trading_fee_rate=trading_fee_rate,
         )
+        question = model.title
+        if len(markets) > 1 and target_market.question:
+            question = target_market.question
 
         return PolymarketAgentMarket(
-            id=model.id,
-            condition_id=condition_id,
-            question=model.title,
+            id=cid.to_0x_hex(),
+            event_id=model.id,
+            condition_id=cid,
+            question=question,
             description=model.description,
             outcomes=outcomes,
             resolution=resolution,
@@ -177,9 +201,25 @@ class PolymarketAgentMarket(AgentMarket):
             liquidity_usd=(
                 USD(model.liquidity) if model.liquidity is not None else USD(0)
             ),
-            token_ids=markets[0].token_ids,
             fees=fees,
+            token_ids=target_market.token_ids,
         )
+
+    @staticmethod
+    def from_data_model_all(
+        model: PolymarketGammaResponseDataItem,
+        condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
+    ) -> list["PolymarketAgentMarket"]:
+        """Convert all inner markets of a Gamma event into PolymarketAgentMarkets."""
+        markets_list = check_not_none(model.markets)
+        results = []
+        for inner in markets_list:
+            market = PolymarketAgentMarket.from_data_model(
+                model, condition_model_dict, condition_id=inner.conditionId
+            )
+            if market is not None:
+                results.append(market)
+        return results
 
     def get_tiny_bet_amount(self) -> CollateralToken:
         return CollateralToken(POLYMARKET_TINY_BET_AMOUNT.value)
@@ -233,15 +273,17 @@ class PolymarketAgentMarket(AgentMarket):
         return created_order.transactionsHashes[0].to_0x_hex()
 
     @staticmethod
-    def get_markets(
+    def _fetch_gamma_markets_with_conditions(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
         created_after: t.Optional[DatetimeUTC] = None,
         excluded_questions: set[str] | None = None,
-        question_type: QuestionType = QuestionType.ALL,
-        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
-    ) -> t.Sequence["PolymarketAgentMarket"]:
+        only_binary: bool = True,
+    ) -> tuple[
+        list[PolymarketGammaResponseDataItem],
+        dict[HexBytes, ConditionSubgraphModel],
+    ]:
         closed: bool | None
 
         if filter_by == FilterBy.OPEN:
@@ -263,34 +305,58 @@ class PolymarketAgentMarket(AgentMarket):
                 order_by = PolymarketOrderByEnum.END_DATE
             case SortBy.HIGHEST_LIQUIDITY:
                 order_by = PolymarketOrderByEnum.LIQUIDITY
+            case SortBy.LOWEST_LIQUIDITY:
+                order_by = PolymarketOrderByEnum.LIQUIDITY
+                ascending = True
             case SortBy.NONE:
                 order_by = PolymarketOrderByEnum.VOLUME_24HR
             case _:
                 raise ValueError(f"Unknown sort_by: {sort_by}")
 
         # closed markets also have property active=True, hence ignoring active.
-        markets = get_polymarkets_with_pagination(
+        gamma_items = get_polymarkets_with_pagination(
             limit=limit,
             closed=closed,
             order_by=order_by,
             ascending=ascending,
             created_after=created_after,
             excluded_questions=excluded_questions,
-            only_binary=question_type is not QuestionType.CATEGORICAL,
+            only_binary=only_binary,
         )
 
+        all_condition_ids: set[HexBytes] = set()
+        for market in gamma_items:
+            if market.markets is not None:
+                for inner in market.markets:
+                    all_condition_ids.add(inner.conditionId)
+
         condition_models = PolymarketSubgraphHandler().get_conditions(
-            condition_ids=list(
-                set(
-                    [
-                        market.markets[0].conditionId
-                        for market in markets
-                        if market.markets is not None
-                    ]
-                )
+            condition_ids=list(all_condition_ids)
+        )
+        condition_dict = {c.id: c for c in condition_models}
+
+        return gamma_items, condition_dict
+
+    @staticmethod
+    def get_markets(
+        limit: int,
+        sort_by: SortBy = SortBy.NONE,
+        filter_by: FilterBy = FilterBy.OPEN,
+        created_after: t.Optional[DatetimeUTC] = None,
+        excluded_questions: set[str] | None = None,
+        question_type: QuestionType = QuestionType.ALL,
+        conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
+    ) -> t.Sequence["PolymarketAgentMarket"]:
+        gamma_items, condition_dict = (
+            PolymarketAgentMarket._fetch_gamma_markets_with_conditions(
+                limit=limit,
+                sort_by=sort_by,
+                filter_by=filter_by,
+                created_after=created_after,
+                excluded_questions=excluded_questions,
+                only_binary=question_type is not QuestionType.CATEGORICAL,
             )
         )
-        condition_models_dict = {c.id: c for c in condition_models}
 
         clob_manager = ClobManager()
         # Fee is dependent only on market category, so we can get it just for one market/token.
@@ -299,14 +365,15 @@ class PolymarketAgentMarket(AgentMarket):
         )
 
         result_markets: list[PolymarketAgentMarket] = []
-        for m in markets:
-            market = PolymarketAgentMarket.from_data_model(
-                m,
-                condition_models_dict,
-                trading_fee_rate=trading_fee_rate,
+        for m in gamma_items:
+            result_markets.extend(
+                PolymarketAgentMarket.from_data_model_all(
+                  m,
+                  condition_dict,
+                  trading_fee_rate=trading_fee_rate,
+                )
             )
-            if market is not None:
-                result_markets.append(market)
+
         return result_markets
 
     def ensure_min_native_balance(
@@ -446,6 +513,141 @@ class PolymarketAgentMarket(AgentMarket):
             market_id=self.id,
             amounts_current=amounts_current,
         )
+
+    @classmethod
+    def get_positions(
+        cls,
+        user_id: str,
+        liquid_only: bool = False,
+        larger_than: OutcomeToken = OutcomeToken(0),
+    ) -> t.Sequence[ExistingPosition]:
+        all_pos = get_user_positions(
+            user_id=Web3.to_checksum_address(user_id), condition_ids=None
+        )
+        if not all_pos:
+            return []
+
+        # Group positions by conditionId
+        positions_by_condition: dict[str, list[PolymarketPositionResponse]] = (
+            defaultdict(list)
+        )
+        for p in all_pos:
+            positions_by_condition[p.conditionId].append(p)
+
+        # Collect unique event slugs, mapping slug -> condition_ids
+        slug_to_conditions: dict[str, list[str]] = defaultdict(list)
+        for cid, pos_list in positions_by_condition.items():
+            slug_to_conditions[pos_list[0].eventSlug].append(cid)
+
+        # Fetch conditions from subgraph for resolution data
+        all_condition_ids = [HexBytes(cid) for cid in positions_by_condition.keys()]
+        conditions = PolymarketSubgraphHandler().get_conditions(all_condition_ids)
+        condition_dict = {c.id: c for c in conditions}
+
+        # Fetch markets from Gamma API by slug, resolve each condition_id
+        markets_by_condition: dict[str, "PolymarketAgentMarket"] = {}
+        for slug, condition_ids_for_slug in slug_to_conditions.items():
+            event = get_gamma_event_by_slug(slug)
+            for cid_str in condition_ids_for_slug:
+                cid_bytes = HexBytes(cid_str)
+                market = cls.from_data_model(
+                    event, condition_dict, condition_id=cid_bytes
+                )
+                if market is not None:
+                    markets_by_condition[cid_bytes.to_0x_hex()] = market
+
+        # Build ExistingPosition for each condition group
+        positions: list[ExistingPosition] = []
+        for cid, pos_list in positions_by_condition.items():
+            market = markets_by_condition.get(cid)
+
+            if liquid_only and (market is None or not market.can_be_traded()):
+                continue
+
+            amounts_ot = {
+                OutcomeStr(p.outcome): p.size_as_outcome_token for p in pos_list
+            }
+            amounts_current = {
+                OutcomeStr(p.outcome): p.current_value_usd for p in pos_list
+            }
+            amounts_potential = {OutcomeStr(p.outcome): USD(p.size) for p in pos_list}
+
+            if all(ot <= larger_than for ot in amounts_ot.values()):
+                continue
+
+            market_id = market.id if market is not None else pos_list[0].eventSlug
+
+            positions.append(
+                ExistingPosition(
+                    market_id=market_id,
+                    amounts_ot=amounts_ot,
+                    amounts_current=amounts_current,
+                    amounts_potential=amounts_potential,
+                )
+            )
+
+        return positions
+
+    def get_token_balance(
+        self, user_id: str, outcome: OutcomeStr, web3: Web3 | None = None
+    ) -> OutcomeToken:
+        outcome_index = self.get_outcome_index(outcome)
+        index_set = 1 << outcome_index
+        ctf = PolymarketConditionalTokenContract()
+        collection_id = ctf.getCollectionId(
+            HexBytes(HASH_ZERO), self.condition_id, index_set, web3=web3
+        )
+        position_id = ctf.getPositionId(
+            self.collateral_token_address(), collection_id, web3=web3
+        )
+        balance = ctf.balanceOf(
+            Web3.to_checksum_address(user_id), position_id, web3=web3
+        )
+        return balance.as_outcome_token
+
+    def get_sell_value_of_outcome_token(
+        self, outcome: OutcomeStr, amount: OutcomeToken
+    ) -> CollateralToken:
+        if amount == OutcomeToken(0):
+            return CollateralToken(0)
+        token_id = self.get_token_id_for_outcome(outcome)
+        sell_price = ClobManager(APIKeys()).get_token_price(
+            token_id=token_id, side=PolymarketSideEnum.SELL
+        )
+        return CollateralToken(sell_price.value * amount.value)
+
+    def liquidate_existing_positions(
+        self,
+        outcome: OutcomeStr,
+        api_keys: APIKeys | None = None,
+    ) -> None:
+        api_keys = api_keys if api_keys is not None else APIKeys()
+        better_address = api_keys.bet_from_address
+        larger_than = self.get_liquidatable_amount()
+        prev_positions = self.get_positions(
+            user_id=better_address, liquid_only=True, larger_than=larger_than
+        )
+        for prev_position in prev_positions:
+            if prev_position.market_id != self.id:
+                continue
+            for position_outcome, token_amount in prev_position.amounts_ot.items():
+                if position_outcome != outcome:
+                    self.sell_tokens(
+                        outcome=position_outcome,
+                        amount=token_amount,
+                        api_keys=api_keys,
+                    )
+
+    @staticmethod
+    def get_binary_market(id: str) -> "PolymarketAgentMarket":
+        cid = HexBytes(id)
+        model = get_gamma_event_by_condition_id(cid)
+        conditions = PolymarketSubgraphHandler().get_conditions([cid])
+        condition_dict = {c.id: c for c in conditions}
+        market = PolymarketAgentMarket.from_data_model(
+            model, condition_dict, condition_id=cid
+        )
+        return check_not_none(market)
 
     def can_be_traded(self) -> bool:
         return (

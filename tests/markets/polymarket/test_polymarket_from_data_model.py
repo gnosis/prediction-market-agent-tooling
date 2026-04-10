@@ -124,6 +124,7 @@ def test_from_data_model_with_condition_id_selects_correct_inner_market(
         mock_multi_market_gamma_response,
         mock_multi_condition_dict,
         condition_id=MOCK_CONDITION_ID_2,
+        trading_fee_rate=0,
     )
 
     assert market is not None
@@ -143,6 +144,7 @@ def test_from_data_model_nonexistent_condition_id_returns_none(
         mock_multi_market_gamma_response,
         mock_multi_condition_dict,
         condition_id=nonexistent,
+        trading_fee_rate=0,
     )
     assert market is None
 
@@ -152,8 +154,7 @@ def test_from_data_model_all_returns_all_inner_markets(
     mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     markets = PolymarketAgentMarket.from_data_model_all(
-        mock_multi_market_gamma_response,
-        mock_multi_condition_dict,
+        mock_multi_market_gamma_response, mock_multi_condition_dict, trading_fee_rate=0
     )
 
     assert len(markets) == 3
@@ -171,8 +172,7 @@ def test_from_data_model_all_unique_ids(
     mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     markets = PolymarketAgentMarket.from_data_model_all(
-        mock_multi_market_gamma_response,
-        mock_multi_condition_dict,
+        mock_multi_market_gamma_response, mock_multi_condition_dict, trading_fee_rate=0
     )
 
     ids = [m.id for m in markets]
@@ -185,8 +185,7 @@ def test_from_data_model_multi_market_uses_inner_question(
 ) -> None:
     """Inner markets with a question field use it instead of the event title."""
     markets = PolymarketAgentMarket.from_data_model_all(
-        mock_multi_market_gamma_response,
-        mock_multi_condition_dict,
+        mock_multi_market_gamma_response, mock_multi_condition_dict, trading_fee_rate=0
     )
 
     # First inner market uses its own question field

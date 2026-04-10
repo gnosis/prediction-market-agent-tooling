@@ -102,7 +102,7 @@ def test_fetch_and_export_multi_inner_market() -> None:
     # Collect all condition_ids across all inner markets
     all_condition_ids: set[HexBytes] = set()
     for item in multi_events[:5]:
-        for inner in item.markets:  # type: ignore[union-attr]
+        for inner in item.markets:
             all_condition_ids.add(inner.conditionId)
 
     conditions = PolymarketSubgraphHandler().get_conditions(list(all_condition_ids))
@@ -115,7 +115,9 @@ def test_fetch_and_export_multi_inner_market() -> None:
 
     exported_items: list[MarketExportData] = []
     for item in multi_events[:5]:
-        agent_markets = PolymarketAgentMarket.from_data_model_all(item, condition_dict)
+        agent_markets = PolymarketAgentMarket.from_data_model_all(
+            item, condition_dict, trading_fee_rate=0
+        )
         for market in agent_markets:
             exported_items.append(export_market(market))
 

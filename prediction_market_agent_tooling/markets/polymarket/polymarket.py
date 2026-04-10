@@ -54,7 +54,6 @@ from prediction_market_agent_tooling.markets.polymarket.constants import (
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     POLYMARKET_FALSE_OUTCOME,
     POLYMARKET_TRUE_OUTCOME,
-    PolymarketGammaMarket,
     PolymarketGammaResponseDataItem,
     PolymarketPositionResponse,
     PolymarketSideEnum,
@@ -143,11 +142,9 @@ class PolymarketAgentMarket(AgentMarket):
         trading_fee_rate: float,
         condition_id: HexBytes | None = None,
     ) -> t.Optional["PolymarketAgentMarket"]:
-        markets: list[PolymarketGammaMarket] = model.markets  # type: ignore[assignment]
-
         if condition_id is not None:
             target_market = next(
-                (m for m in markets if m.conditionId == condition_id), None
+                (m for m in model.markets if m.conditionId == condition_id), None
             )
             if target_market is None:
                 logger.warning(
@@ -155,7 +152,7 @@ class PolymarketAgentMarket(AgentMarket):
                 )
                 return None
         else:
-            target_market = markets[0]
+            target_market = model.markets[0]
 
         outcomes = target_market.outcomes_list
         outcome_prices = target_market.outcome_prices
@@ -179,7 +176,7 @@ class PolymarketAgentMarket(AgentMarket):
             trading_fee_rate=trading_fee_rate,
         )
         question = model.title
-        if len(markets) > 1 and target_market.question:
+        if len(model.markets) > 1 and target_market.question:
             question = target_market.question
 
         return PolymarketAgentMarket(
@@ -209,13 +206,17 @@ class PolymarketAgentMarket(AgentMarket):
     def from_data_model_all(
         model: PolymarketGammaResponseDataItem,
         condition_model_dict: dict[HexBytes, ConditionSubgraphModel],
+        trading_fee_rate: float,
     ) -> list["PolymarketAgentMarket"]:
         """Convert all inner markets of a Gamma event into PolymarketAgentMarkets."""
         markets_list = check_not_none(model.markets)
         results = []
         for inner in markets_list:
             market = PolymarketAgentMarket.from_data_model(
-                model, condition_model_dict, condition_id=inner.conditionId
+                model,
+                condition_model_dict,
+                condition_id=inner.conditionId,
+                trading_fee_rate=trading_fee_rate,
             )
             if market is not None:
                 results.append(market)
@@ -273,7 +274,7 @@ class PolymarketAgentMarket(AgentMarket):
         return created_order.transactionsHashes[0].to_0x_hex()
 
     @staticmethod
-    def _fetch_gamma_markets_with_conditions(
+    def _fetch_gamma_markets_with_conditions_and_fees(
         limit: int,
         sort_by: SortBy = SortBy.NONE,
         filter_by: FilterBy = FilterBy.OPEN,
@@ -283,6 +284,7 @@ class PolymarketAgentMarket(AgentMarket):
     ) -> tuple[
         list[PolymarketGammaResponseDataItem],
         dict[HexBytes, ConditionSubgraphModel],
+        dict[str, float],
     ]:
         closed: bool | None
 
@@ -326,16 +328,21 @@ class PolymarketAgentMarket(AgentMarket):
 
         all_condition_ids: set[HexBytes] = set()
         for market in gamma_items:
-            if market.markets is not None:
-                for inner in market.markets:
-                    all_condition_ids.add(inner.conditionId)
+            for inner in market.markets:
+                all_condition_ids.add(inner.conditionId)
 
         condition_models = PolymarketSubgraphHandler().get_conditions(
             condition_ids=list(all_condition_ids)
         )
         condition_dict = {c.id: c for c in condition_models}
 
-        return gamma_items, condition_dict
+        gamma_id_to_trading_fee = {
+            # Fee is dependent only on market category, so we can get it just for one market/token.
+            item.id: ClobManager().get_token_fee_rate(item.markets[0].token_ids[0])
+            for item in gamma_items
+        }
+
+        return gamma_items, condition_dict, gamma_id_to_trading_fee
 
     @staticmethod
     def get_markets(
@@ -347,8 +354,8 @@ class PolymarketAgentMarket(AgentMarket):
         question_type: QuestionType = QuestionType.ALL,
         conditional_filter_type: ConditionalFilterType = ConditionalFilterType.ONLY_NOT_CONDITIONAL,
     ) -> t.Sequence["PolymarketAgentMarket"]:
-        gamma_items, condition_dict = (
-            PolymarketAgentMarket._fetch_gamma_markets_with_conditions(
+        gamma_items, condition_dict, trading_fees = (
+            PolymarketAgentMarket._fetch_gamma_markets_with_conditions_and_fees(
                 limit=limit,
                 sort_by=sort_by,
                 filter_by=filter_by,
@@ -358,19 +365,13 @@ class PolymarketAgentMarket(AgentMarket):
             )
         )
 
-        clob_manager = ClobManager()
-        # Fee is dependent only on market category, so we can get it just for one market/token.
-        trading_fee_rate = clob_manager.get_token_fee_rate(
-            markets[0].markets[0].token_ids[0]
-        )
-
         result_markets: list[PolymarketAgentMarket] = []
         for m in gamma_items:
             result_markets.extend(
                 PolymarketAgentMarket.from_data_model_all(
-                  m,
-                  condition_dict,
-                  trading_fee_rate=trading_fee_rate,
+                    m,
+                    condition_dict,
+                    trading_fee_rate=trading_fees[m.id],
                 )
             )
 
@@ -551,7 +552,10 @@ class PolymarketAgentMarket(AgentMarket):
             for cid_str in condition_ids_for_slug:
                 cid_bytes = HexBytes(cid_str)
                 market = cls.from_data_model(
-                    event, condition_dict, condition_id=cid_bytes
+                    event,
+                    condition_dict,
+                    condition_id=cid_bytes,
+                    trading_fee_rate=0,  # No need for fees in this method, so we dont' fetch it.
                 )
                 if market is not None:
                     markets_by_condition[cid_bytes.to_0x_hex()] = market
@@ -644,8 +648,15 @@ class PolymarketAgentMarket(AgentMarket):
         model = get_gamma_event_by_condition_id(cid)
         conditions = PolymarketSubgraphHandler().get_conditions([cid])
         condition_dict = {c.id: c for c in conditions}
+        trading_fee_rate = ClobManager().get_token_fee_rate(
+            # Fee is dependent only on market category, so we can get it just for one market/token.
+            model.markets[0].token_ids[0]
+        )
         market = PolymarketAgentMarket.from_data_model(
-            model, condition_dict, condition_id=cid
+            model,
+            condition_dict,
+            condition_id=cid,
+            trading_fee_rate=trading_fee_rate,
         )
         return check_not_none(market)
 

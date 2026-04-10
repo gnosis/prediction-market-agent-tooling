@@ -197,6 +197,14 @@ class PolymarketCopyTrader:
                 skip_reason=f"Trade size {usd_amount} below minimum {self.min_trade_size}",
             )
 
+        if self.dry_run:
+            return self._make_result(
+                trade,
+                replicated_amount=usd_amount.value,
+                skipped=True,
+                skip_reason="dry_run",
+            )
+
         # Check balance
         balance = PolymarketAgentMarket.get_trade_balance(self.api_keys)
         if balance < usd_amount:
@@ -205,14 +213,6 @@ class PolymarketCopyTrader:
                 replicated_amount=usd_amount.value,
                 skipped=True,
                 skip_reason=f"Insufficient balance: {balance} < {usd_amount}",
-            )
-
-        if self.dry_run:
-            return self._make_result(
-                trade,
-                replicated_amount=usd_amount.value,
-                skipped=True,
-                skip_reason="dry_run",
             )
 
         try:
@@ -247,6 +247,14 @@ class PolymarketCopyTrader:
     ) -> ReplicatedTradeResult:
         scaled_tokens = OutcomeToken(trade.size * self.copy_ratio)
 
+        if self.dry_run:
+            return self._make_result(
+                trade,
+                replicated_amount=scaled_tokens.value,
+                skipped=True,
+                skip_reason="dry_run",
+            )
+
         # Check we actually hold tokens
         our_balance = market.get_token_balance(
             user_id=self.api_keys.bet_from_address, outcome=trade.outcome
@@ -261,14 +269,6 @@ class PolymarketCopyTrader:
 
         # Sell the minimum of our balance and the scaled amount
         sell_amount = min(scaled_tokens, our_balance)
-
-        if self.dry_run:
-            return self._make_result(
-                trade,
-                replicated_amount=sell_amount.value,
-                skipped=True,
-                skip_reason="dry_run",
-            )
 
         try:
             tx_hash = market.sell_tokens(

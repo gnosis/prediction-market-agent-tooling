@@ -158,7 +158,7 @@ class PolymarketCopyTrader:
                 trade.conditionId.to_0x_hex()
             )
         except Exception as e:
-            logger.warning(
+            logger.exception(
                 f"Market lookup failed for condition {trade.conditionId.to_0x_hex()}: {e}"
             )
             return self._make_result(

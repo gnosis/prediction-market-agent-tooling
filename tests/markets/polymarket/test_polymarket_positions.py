@@ -318,6 +318,7 @@ def test_liquidate_no_positions_does_nothing(
 # ── get_binary_market ────────────────────────────────────────────────────
 
 
+@patch("prediction_market_agent_tooling.markets.polymarket.polymarket.ClobManager")
 @patch(
     "prediction_market_agent_tooling.markets.polymarket.polymarket.PolymarketSubgraphHandler"
 )
@@ -327,11 +328,13 @@ def test_liquidate_no_positions_does_nothing(
 def test_get_binary_market(
     mock_get_event: MagicMock,
     mock_subgraph_cls: MagicMock,
+    mock_clob_cls: MagicMock,
     mock_gamma_response: MagicMock,
     mock_condition_model: MagicMock,
 ) -> None:
     mock_get_event.return_value = mock_gamma_response
     mock_subgraph_cls.return_value.get_conditions.return_value = [mock_condition_model]
+    mock_clob_cls.return_value.get_token_fee_rate.return_value = 0.01
 
     market = PolymarketAgentMarket.get_binary_market(id=MOCK_CONDITION_ID.to_0x_hex())
 
@@ -339,6 +342,7 @@ def test_get_binary_market(
     assert market.id == MOCK_CONDITION_ID.to_0x_hex()
     assert market.condition_id == MOCK_CONDITION_ID
     mock_get_event.assert_called_once_with(MOCK_CONDITION_ID)
+    mock_clob_cls.return_value.get_token_fee_rate.assert_called_once_with(111)
 
 
 # ── Multi-inner-market tests ───────────────────────────────────────────

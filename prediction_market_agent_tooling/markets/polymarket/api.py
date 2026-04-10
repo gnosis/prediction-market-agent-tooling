@@ -36,8 +36,8 @@ class PolymarketOrderByEnum(str, Enum):
 
 
 @tenacity.retry(
-    stop=tenacity.stop_after_attempt(2),
-    wait=tenacity.wait_fixed(1),
+    stop=tenacity.stop_after_attempt(5),
+    wait=tenacity.wait_exponential(multiplier=2, min=2, max=30),
     after=lambda x: logger.debug(
         f"get_polymarkets_with_pagination failed, {x.attempt_number=}."
     ),
@@ -83,7 +83,7 @@ def get_polymarkets_with_pagination(
             f"events/pagination",
         )
 
-        r = client.get(url, params=params_not_none)
+        r = client.get(url, params=params_not_none, timeout=60.0)
         r.raise_for_status()
 
         market_response = response_to_model(r, PolymarketGammaResponse)

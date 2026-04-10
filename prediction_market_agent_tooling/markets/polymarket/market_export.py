@@ -94,8 +94,8 @@ def fetch_and_export_markets(
     sort_by: SortBy = SortBy.NONE,
     created_after: t.Optional[DatetimeUTC] = None,
 ) -> list[MarketExportData]:
-    gamma_items, condition_dict = (
-        PolymarketAgentMarket._fetch_gamma_markets_with_conditions(
+    gamma_items, condition_dict, trading_fees = (
+        PolymarketAgentMarket._fetch_gamma_markets_with_conditions_and_fees(
             limit=limit,
             sort_by=sort_by,
             filter_by=filter_by,
@@ -105,7 +105,11 @@ def fetch_and_export_markets(
 
     results: list[MarketExportData] = []
     for item in gamma_items:
-        agent_markets = PolymarketAgentMarket.from_data_model_all(item, condition_dict)
+        agent_markets = PolymarketAgentMarket.from_data_model_all(
+            item,
+            condition_dict,
+            trading_fee_rate=trading_fees[item.id],
+        )
         tags = [tag.label for tag in item.tags]
         for market in agent_markets:
             results.append(export_market(market, tags=tags))

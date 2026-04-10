@@ -44,7 +44,9 @@ def test_fetch_multi_inner_market_event() -> None:
     condition_dict = {c.id: c for c in conditions}
 
     # Convert to agent markets
-    agent_markets = PolymarketAgentMarket.from_data_model_all(event, condition_dict)
+    agent_markets = PolymarketAgentMarket.from_data_model_all(
+        event, condition_dict, trading_fee_rate=0
+    )
 
     assert (
         len(agent_markets) >= 2
@@ -88,7 +90,7 @@ def test_from_data_model_selects_specific_inner_market() -> None:
     condition_dict = {c.id: c for c in conditions}
 
     market = PolymarketAgentMarket.from_data_model(
-        event, condition_dict, condition_id=target_cid
+        event, condition_dict, condition_id=target_cid, trading_fee_rate=0
     )
 
     assert market is not None

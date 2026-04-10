@@ -1390,7 +1390,7 @@ def calculate_buy_outcome_token(
             new_pool_balances=new_pool_balances,
         )
 
-    investment_amount_minus_fees = fees.get_after_fees(investment_amount)
+    investment_amount_minus_fees = fees.get_after_fees(investment_amount, price=None)
     investment_amount_minus_fees_as_ot = OutcomeToken(
         investment_amount_minus_fees.value
     )

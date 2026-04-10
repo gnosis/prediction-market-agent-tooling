@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from prediction_market_agent_tooling.gtypes import USD, OutcomeStr, Probability
 from prediction_market_agent_tooling.markets.data_models import Resolution
+from prediction_market_agent_tooling.markets.market_fees import MarketFees
 from prediction_market_agent_tooling.markets.polymarket.market_export import (
     MarketExportData,
     export_market,
@@ -39,6 +40,7 @@ def _make_market(**overrides: object) -> PolymarketAgentMarket:
         "token_ids": [111, 222],
         "closed_flag_from_polymarket": False,
         "active_flag_from_polymarket": True,
+        "fees": MarketFees.get_zero_fees(),
     }
     defaults.update(overrides)
     return PolymarketAgentMarket(**defaults)  # type: ignore[arg-type]

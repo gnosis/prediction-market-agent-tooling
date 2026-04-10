@@ -28,7 +28,7 @@ def test_from_data_model_valid_market(
     mock_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, mock_condition_dict
+        mock_gamma_response, mock_condition_dict, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -54,7 +54,9 @@ def test_from_data_model_missing_prices_returns_none(
     mock_gamma_market.outcomePrices = None
     response = mock_gamma_response.model_copy(update={"markets": [mock_gamma_market]})
 
-    result = PolymarketAgentMarket.from_data_model(response, mock_condition_dict)
+    result = PolymarketAgentMarket.from_data_model(
+        response, mock_condition_dict, trading_fee_rate=0.1
+    )
 
     assert result is None
 
@@ -64,7 +66,7 @@ def test_from_data_model_with_resolved_condition(
     mock_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, mock_condition_dict
+        mock_gamma_response, mock_condition_dict, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -75,7 +77,7 @@ def test_from_data_model_no_matching_condition(
     mock_gamma_response: PolymarketGammaResponseDataItem,
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, condition_model_dict={}
+        mock_gamma_response, condition_model_dict={}, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -87,7 +89,7 @@ def test_from_data_model_volume_and_liquidity(
     mock_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     market = PolymarketAgentMarket.from_data_model(
-        mock_gamma_response, mock_condition_dict
+        mock_gamma_response, mock_condition_dict, trading_fee_rate=0.1
     )
 
     assert market is not None
@@ -103,7 +105,9 @@ def test_from_data_model_none_liquidity(
 ) -> None:
     response = mock_gamma_response.model_copy(update={"liquidity": None})
 
-    market = PolymarketAgentMarket.from_data_model(response, mock_condition_dict)
+    market = PolymarketAgentMarket.from_data_model(
+        response, mock_condition_dict, trading_fee_rate=0.1
+    )
 
     assert market is not None
     assert market.liquidity_usd == USD(0)
@@ -120,6 +124,7 @@ def test_from_data_model_with_condition_id_selects_correct_inner_market(
         mock_multi_market_gamma_response,
         mock_multi_condition_dict,
         condition_id=MOCK_CONDITION_ID_2,
+        trading_fee_rate=0,
     )
 
     assert market is not None
@@ -139,6 +144,7 @@ def test_from_data_model_nonexistent_condition_id_returns_none(
         mock_multi_market_gamma_response,
         mock_multi_condition_dict,
         condition_id=nonexistent,
+        trading_fee_rate=0,
     )
     assert market is None
 
@@ -148,8 +154,7 @@ def test_from_data_model_all_returns_all_inner_markets(
     mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     markets = PolymarketAgentMarket.from_data_model_all(
-        mock_multi_market_gamma_response,
-        mock_multi_condition_dict,
+        mock_multi_market_gamma_response, mock_multi_condition_dict, trading_fee_rate=0
     )
 
     assert len(markets) == 3
@@ -167,8 +172,7 @@ def test_from_data_model_all_unique_ids(
     mock_multi_condition_dict: dict[HexBytes, ConditionSubgraphModel],
 ) -> None:
     markets = PolymarketAgentMarket.from_data_model_all(
-        mock_multi_market_gamma_response,
-        mock_multi_condition_dict,
+        mock_multi_market_gamma_response, mock_multi_condition_dict, trading_fee_rate=0
     )
 
     ids = [m.id for m in markets]
@@ -181,8 +185,7 @@ def test_from_data_model_multi_market_uses_inner_question(
 ) -> None:
     """Inner markets with a question field use it instead of the event title."""
     markets = PolymarketAgentMarket.from_data_model_all(
-        mock_multi_market_gamma_response,
-        mock_multi_condition_dict,
+        mock_multi_market_gamma_response, mock_multi_condition_dict, trading_fee_rate=0
     )
 
     # First inner market uses its own question field

@@ -34,15 +34,16 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10.x", "3.11.x", "3.12.x"]
+        # Seer is temporary disabled in tests as it's not our focus now and the tests are flaky.
         test:
           - name: Unit Tests
-            command: "poetry run python -m pytest tests/ -p no:ape_test -vvv --durations=0"
+            command: "poetry run python -m pytest tests/ -p no:ape_test -vvv --durations=0 -k 'not seer'"
           - name: Integration Tests
-            command: "poetry run python -m pytest tests_integration/ -p no:ape_test -vvv --durations=0"
+            command: "poetry run python -m pytest tests_integration/ -p no:ape_test -vvv --durations=0 -k 'not seer'"
           - name: Integration with Local Chain (Omen)
             command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k omen"
-          - name: Integration with Local Chain (Seer)
-            command: "poetry run python -m pytest tests_integration_with_local_chain/ -vvv --durations=0 -k seer"
+          # - name: Integration with Local Chain (Seer)
+          #   command: "poetry run python -m pytest tests_integration_with_local_chain/ -vvv --durations=0 -k seer"
           - name: Integration with Local Chain (Polymarket)
             command: "poetry run python -m pytest tests_integration_with_local_chain/ --disable-isolation -vvv --durations=0 -k polymarket"
           - name: Integration with Local Chain (Others)

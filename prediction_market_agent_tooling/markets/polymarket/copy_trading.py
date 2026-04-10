@@ -15,6 +15,7 @@ from prediction_market_agent_tooling.gtypes import (
     ChecksumAddress,
     OutcomeStr,
     OutcomeToken,
+    VerifiedChecksumAddress,
 )
 from prediction_market_agent_tooling.loggers import logger
 from prediction_market_agent_tooling.markets.data_models import Resolution
@@ -47,7 +48,7 @@ class TraderSortBy(str, Enum):
 
 
 class TraderProfile(BaseModel):
-    address: ChecksumAddress
+    address: VerifiedChecksumAddress
     total_volume: USD
     total_pnl: USD
     roi: float
@@ -157,6 +158,9 @@ class PolymarketCopyTrader:
                 trade.conditionId.to_0x_hex()
             )
         except Exception as e:
+            logger.warning(
+                f"Market lookup failed for condition {trade.conditionId.to_0x_hex()}: {e}"
+            )
             return self._make_result(
                 trade,
                 replicated_amount=0,
@@ -219,6 +223,9 @@ class PolymarketCopyTrader:
                 api_keys=self.api_keys,
             )
         except Exception as e:
+            logger.exception(
+                f"Buy execution failed for trade {trade.transactionHash.to_0x_hex()}: {e}"
+            )
             return self._make_result(
                 trade,
                 replicated_amount=usd_amount.value,
@@ -270,6 +277,9 @@ class PolymarketCopyTrader:
                 api_keys=self.api_keys,
             )
         except Exception as e:
+            logger.exception(
+                f"Sell execution failed for trade {trade.transactionHash.to_0x_hex()}: {e}"
+            )
             return self._make_result(
                 trade,
                 replicated_amount=sell_amount.value,

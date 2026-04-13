@@ -116,7 +116,7 @@ class PolymarketGammaResponseDataItem(BaseModel):
     archived: bool
     closed: bool
     active: bool
-    markets: list[PolymarketGammaMarket]
+    markets: list[PolymarketGammaMarket] = []
     negRisk: bool | None = None
     negRiskMarketID: str | None = None
     negRiskFeeBips: int | None = None

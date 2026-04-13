@@ -93,9 +93,7 @@ def test_fetch_and_export_multi_inner_market() -> None:
     )
 
     multi_events = [
-        item
-        for item in gamma_items
-        if item.markets is not None and len(item.markets) > 1
+        item for item in gamma_items if item.markets and len(item.markets) > 1
     ]
     assert len(multi_events) > 0, "Expected at least one multi-inner-market event"
 

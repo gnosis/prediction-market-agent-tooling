@@ -3,6 +3,7 @@ from enum import Enum
 import tenacity
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import MarketOrderArgs, OrderType
+from py_clob_client.exceptions import PolyApiException
 from pydantic import BaseModel
 from web3 import Web3
 
@@ -66,7 +67,13 @@ class ClobManager:
         self.polygon_web3 = RPCConfig().get_polygon_web3()
 
     def get_token_fee_bps(self, token_id: int) -> int:
-        in_bps: int = self.clob_client.get_fee_rate_bps(token_id=token_id)
+        try:
+            in_bps: int = self.clob_client.get_fee_rate_bps(token_id=token_id)
+        except PolyApiException as e:
+            if "fee rate not found" in str(e.error_msg):
+                return 0
+            raise
+
         return in_bps
 
     def get_token_fee_rate(self, token_id: int) -> float:

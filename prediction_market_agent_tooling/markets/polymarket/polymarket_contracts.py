@@ -2,10 +2,14 @@ from web3 import Web3
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import ChecksumAddress
+from prediction_market_agent_tooling.markets.polymarket.constants import (
+    STATA_POL_USDCN_ADDRESS,
+)
 from prediction_market_agent_tooling.tools.contract import (
     ConditionalTokenContract,
     ContractDepositableWrapperERC20OnPolygonChain,
     ContractERC20BaseClass,
+    ContractERC4626OnPolygonChain,
     ContractOnPolygonChain,
 )
 
@@ -29,6 +33,12 @@ class USDCeContract(ContractERC20BaseClass, ContractOnPolygonChain):
     address: ChecksumAddress = Web3.to_checksum_address(
         "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
     )
+
+
+class StataPolUSDCnContract(ContractERC4626OnPolygonChain):
+    # Aave V3 static ERC-4626 wrapper over the aToken for USDC native on
+    # Polygon. Asset is USDC native (0x3c499c54…). Non-rebasing.
+    address: ChecksumAddress = STATA_POL_USDCN_ADDRESS
 
 
 class PolymarketConditionalTokenContract(

@@ -1571,10 +1571,10 @@ test = ["pytest"]
 name = "dataclasses-json"
 version = "0.6.7"
 description = "Easily serialize dataclasses to and from JSON."
-optional = false
+optional = true
 python-versions = "<4.0,>=3.7"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "dataclasses_json-0.6.7-py3-none-any.whl", hash = "sha256:0dbf33f26c8d5305befd61b39d2b3414e8a407bedc2834dea9b8d642666fb40a"},
     {file = "dataclasses_json-0.6.7.tar.gz", hash = "sha256:b6b3e528266ea45b9535223bc53ca645f5208833c29229e847b3f26a1cc55fc0"},
@@ -2971,10 +2971,10 @@ zstd = ["zstandard (>=0.18.0)"]
 name = "httpx-sse"
 version = "0.4.3"
 description = "Consume Server-Sent Event (SSE) messages with HTTPX."
-optional = false
+optional = true
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "httpx_sse-0.4.3-py3-none-any.whl", hash = "sha256:0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc"},
     {file = "httpx_sse-0.4.3.tar.gz", hash = "sha256:9b1ed0127459a66014aec3c56bebd93da3c1bc8bb6618c8082039a44889a755d"},
@@ -3392,10 +3392,10 @@ files = [
 name = "jsonpatch"
 version = "1.33"
 description = "Apply JSON-Patches (RFC 6902)"
-optional = false
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "jsonpatch-1.33-py2.py3-none-any.whl", hash = "sha256:0ae28c0cd062bbd8b8ecc26d7d164fbbea9652a1a3693f3b956c1eae5145dade"},
     {file = "jsonpatch-1.33.tar.gz", hash = "sha256:9fcd4009c41e6d12348b4a0ff2563ba56a2923a7dfee731d004e212e1ee5030c"},
@@ -3408,10 +3408,10 @@ jsonpointer = ">=1.9"
 name = "jsonpointer"
 version = "3.1.1"
 description = "Identify specific nodes in a JSON document (RFC 6901) "
-optional = false
+optional = true
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "jsonpointer-3.1.1-py3-none-any.whl", hash = "sha256:8ff8b95779d071ba472cf5bc913028df06031797532f08a7d5b602d8b2a488ca"},
     {file = "jsonpointer-3.1.1.tar.gz", hash = "sha256:0b801c7db33a904024f6004d526dcc53bbb8a4a0f4e32bfd10beadf60adf1900"},
@@ -3510,10 +3510,10 @@ xai = ["langchain-xai"]
 name = "langchain-classic"
 version = "1.0.3"
 description = "Building applications with LLMs through composability"
-optional = false
+optional = true
 python-versions = "<4.0.0,>=3.10.0"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "langchain_classic-1.0.3-py3-none-any.whl", hash = "sha256:26df1ec9806b1fbff19d9085a747ea7d8d82d7e3fb1d25132859979de627ef79"},
     {file = "langchain_classic-1.0.3.tar.gz", hash = "sha256:168ef1dfbfb18cae5a9ff0accecc9413a5b5aa3464b53fa841561a3384b6324a"},
@@ -3549,10 +3549,10 @@ xai = ["langchain-xai"]
 name = "langchain-community"
 version = "0.4.1"
 description = "Community contributed LangChain integrations."
-optional = false
+optional = true
 python-versions = "<4.0.0,>=3.10.0"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "langchain_community-0.4.1-py3-none-any.whl", hash = "sha256:2135abb2c7748a35c84613108f7ebf30f8505b18c3c18305ffaecfc7651f6c6a"},
     {file = "langchain_community-0.4.1.tar.gz", hash = "sha256:f3b211832728ee89f169ddce8579b80a085222ddb4f4ed445a46e977d17b1e85"},
@@ -3576,10 +3576,10 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<10.0.0"
 name = "langchain-core"
 version = "1.2.23"
 description = "Building applications with LLMs through composability"
-optional = false
+optional = true
 python-versions = "<4.0.0,>=3.10.0"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "langchain_core-1.2.23-py3-none-any.whl", hash = "sha256:70866dfc5275b7840ce272ff70f0ff216c8666ab25dc1b41964a4ef58c02a3ff"},
     {file = "langchain_core-1.2.23.tar.gz", hash = "sha256:fdec64f90cfea25317e88d9803c44684af1f4e30dec4e58320dd7393bb0f0785"},
@@ -3617,10 +3617,10 @@ tiktoken = ">=0.7.0,<1.0.0"
 name = "langchain-text-splitters"
 version = "1.1.1"
 description = "LangChain text splitting utilities"
-optional = false
+optional = true
 python-versions = "<4.0.0,>=3.10.0"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "langchain_text_splitters-1.1.1-py3-none-any.whl", hash = "sha256:5ed0d7bf314ba925041e7d7d17cd8b10f688300d5415fb26c29442f061e329dc"},
     {file = "langchain_text_splitters-1.1.1.tar.gz", hash = "sha256:34861abe7c07d9e49d4dc852d0129e26b32738b60a74486853ec9b6d6a8e01d2"},
@@ -3730,10 +3730,10 @@ orjson = ">=3.11.5"
 name = "langsmith"
 version = "0.7.23"
 description = "Client library to connect to the LangSmith Observability and Evaluation Platform."
-optional = false
+optional = true
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "langsmith-0.7.23-py3-none-any.whl", hash = "sha256:3d2ea8f973f7f01c8d89bb5f02b14a906e75ee893739bf4b19d74f7f26a510c3"},
     {file = "langsmith-0.7.23.tar.gz", hash = "sha256:38581c4cb35794ad37df9d20912e0dd740f4ba619534971eee2e8419efede50d"},
@@ -4325,10 +4325,10 @@ files = [
 name = "marshmallow"
 version = "3.26.2"
 description = "A lightweight library for converting complex datatypes to and from native Python datatypes."
-optional = false
+optional = true
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "marshmallow-3.26.2-py3-none-any.whl", hash = "sha256:013fa8a3c4c276c24d26d84ce934dc964e2aa794345a0f8c7e5a7191482c8a73"},
     {file = "marshmallow-3.26.2.tar.gz", hash = "sha256:bbe2adb5a03e6e3571b573f42527c6fe926e17467833660bebd11593ab8dfd57"},
@@ -4753,11 +4753,11 @@ description = "Type system extensions for programs checked with the mypy type ch
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "dev"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
 files = [
     {file = "mypy_extensions-1.1.0-py3-none-any.whl", hash = "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505"},
     {file = "mypy_extensions-1.1.0.tar.gz", hash = "sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558"},
 ]
+markers = {main = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\"", dev = "implementation_name == \"cpython\" or implementation_name == \"pypy\""}
 
 [[package]]
 name = "narwhals"
@@ -5118,10 +5118,10 @@ test = ["fakeredis[lua]", "greenlet", "grpcio", "kaleido (<0.4)", "moto", "proto
 name = "orjson"
 version = "3.11.8"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
-optional = false
+optional = true
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and (platform_python_implementation != \"PyPy\" or extra == \"langchain\")"
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "orjson-3.11.8-cp310-cp310-macosx_10_15_x86_64.macosx_11_0_arm64.macosx_10_15_universal2.whl", hash = "sha256:e6693ff90018600c72fd18d3d22fa438be26076cd3c823da5f63f7bab28c11cb"},
     {file = "orjson-3.11.8-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:93de06bc920854552493c81f1f729fab7213b7db4b8195355db5fda02c7d1363"},
@@ -7124,7 +7124,6 @@ description = "YAML parser and emitter for Python"
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "dev"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
 files = [
     {file = "PyYAML-6.0.3-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:c2514fceb77bc5e7a2f7adfaa1feb2fb311607c9cb518dbc378688ec73d8292f"},
     {file = "PyYAML-6.0.3-cp38-cp38-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9c57bb8c96f6d1808c030b1687b9b5fb476abaa47f0db9c0101f5e9f394e97f4"},
@@ -7200,6 +7199,7 @@ files = [
     {file = "pyyaml-6.0.3-cp39-cp39-win_amd64.whl", hash = "sha256:2e71d11abed7344e42a8849600193d15b6def118602c4c176f748e4583246007"},
     {file = "pyyaml-6.0.3.tar.gz", hash = "sha256:d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f"},
 ]
+markers = {main = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and (extra == \"langchain\" or extra == \"optuna\")", dev = "implementation_name == \"cpython\" or implementation_name == \"pypy\""}
 
 [[package]]
 name = "referencing"
@@ -7371,10 +7371,10 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<8)"]
 name = "requests-toolbelt"
 version = "1.0.0"
 description = "A utility belt for advanced users of python-requests"
-optional = false
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "requests-toolbelt-1.0.0.tar.gz", hash = "sha256:7681a0a3d047012b5bdc0ee37d7f8f07ebe76ab08caeccfc3921ce23c88d5bc6"},
     {file = "requests_toolbelt-1.0.0-py2.py3-none-any.whl", hash = "sha256:cccfdd665f0a24fcf4726e690f65639d272bb0637b9b92dfd91a5568ccf6bd06"},
@@ -8480,10 +8480,10 @@ files = [
 name = "typing-inspect"
 version = "0.9.0"
 description = "Runtime inspection utilities for typing module."
-optional = false
+optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "typing_inspect-0.9.0-py3-none-any.whl", hash = "sha256:9ee6fc59062311ef8547596ab6b955e1b8aa46242d854bfc78f4f6b0eff35f9f"},
     {file = "typing_inspect-0.9.0.tar.gz", hash = "sha256:b23fc42ff6f6ef6954e4852c1fb512cdd18dbea03134f91f856a95ccc9461f78"},
@@ -8577,10 +8577,10 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 name = "uuid-utils"
 version = "0.14.1"
 description = "Fast, drop-in replacement for Python's uuid module, powered by Rust."
-optional = false
+optional = true
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "uuid_utils-0.14.1-cp39-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:93a3b5dc798a54a1feb693f2d1cb4cf08258c32ff05ae4929b5f0a2ca624a4f0"},
     {file = "uuid_utils-0.14.1-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:ccd65a4b8e83af23eae5e56d88034b2fe7264f465d3e830845f10d1591b81741"},
@@ -8958,10 +8958,10 @@ files = [
 name = "xxhash"
 version = "3.6.0"
 description = "Python binding for xxHash"
-optional = false
+optional = true
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "xxhash-3.6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:87ff03d7e35c61435976554477a7f4cd1704c3596a89a8300d5ce7fc83874a71"},
     {file = "xxhash-3.6.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f572dfd3d0e2eb1a57511831cf6341242f5a9f8298a45862d085f5b93394a27d"},
@@ -9274,10 +9274,10 @@ type = ["pytest-mypy"]
 name = "zstandard"
 version = "0.25.0"
 description = "Zstandard bindings for Python"
-optional = false
+optional = true
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "implementation_name == \"cpython\" or implementation_name == \"pypy\""
+markers = "(implementation_name == \"cpython\" or implementation_name == \"pypy\") and extra == \"langchain\""
 files = [
     {file = "zstandard-0.25.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:e59fdc271772f6686e01e1b3b74537259800f57e24280be3f29c8a0deb1904dd"},
     {file = "zstandard-0.25.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4d441506e9b372386a5271c64125f72d5df6d2a8e8a2a45a0ae09b03cb781ef7"},
@@ -9385,11 +9385,11 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 
 [extras]
 google = ["google-api-python-client"]
-langchain = ["langchain", "langchain-openai"]
+langchain = ["langchain", "langchain-community", "langchain-openai"]
 openai = ["openai"]
 optuna = ["optuna"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "e6881e20b034db36fadab8f5f8b247f17053f34f2bca48ab071f551477412dd8"
+content-hash = "3c5df1daf712c39b61b53b02abf5ff4b05fbd9bcf1504c02a7c49f53ec65b901"

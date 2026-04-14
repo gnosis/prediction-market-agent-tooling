@@ -57,7 +57,12 @@ def auto_deposit_collateral_token(
 
     elif isinstance(collateral_token_contract, ContractERC4626BaseClass):
         auto_deposit_erc4626(
-            collateral_token_contract, collateral_amount_wei, api_keys, web3
+            collateral_token_contract,
+            collateral_amount_wei,
+            api_keys,
+            web3,
+            chain=chain,
+            keeping_erc20_token=keeping_erc20_token,
         )
 
     elif isinstance(collateral_token_contract, ContractWrapped1155BaseClass):
@@ -104,43 +109,56 @@ def auto_deposit_erc4626(
     collateral_amount_wei: Wei,
     api_keys: APIKeys,
     web3: Web3 | None,
+    chain: Chain = Chain.GNOSIS,
+    keeping_erc20_token: ContractERC20BaseClass | None = None,
 ) -> None:
     for_address = api_keys.bet_from_address
     collateral_token_balance_in_shares = collateral_token_contract.balanceOf(
         for_address=for_address, web3=web3
-    )
-    asset_amount_wei = collateral_token_contract.convertToAssets(
-        collateral_amount_wei, web3
     )
 
     # If we have enough shares, we don't need to deposit.
     if collateral_token_balance_in_shares >= collateral_amount_wei:
         return
 
-    # If we need to deposit into erc4626, we first need to have enough of the asset token.
+    asset_amount_wei = collateral_token_contract.convertToAssets(
+        collateral_amount_wei, web3
+    )
+    collateral_token_balance_in_assets = collateral_token_contract.convertToAssets(
+        collateral_token_balance_in_shares, web3
+    )
+    left_to_deposit = asset_amount_wei - collateral_token_balance_in_assets
+
     asset_token_contract = collateral_token_contract.get_asset_token_contract(web3=web3)
 
     if isinstance(asset_token_contract, ContractDepositableWrapperERC20BaseClass):
-        # If the asset token is Depositable Wrapper ERC-20, we don't need to go through DEX.
-        # First, calculate how much of asset token we need to deposit into the vault.
-        collateral_token_balance_in_assets = collateral_token_contract.convertToAssets(
-            collateral_token_balance_in_shares, web3
-        )
-        left_to_deposit = asset_amount_wei - collateral_token_balance_in_assets
+        # Asset is a Depositable Wrapper ERC-20 (e.g. wxDai backing sDAI on Gnosis):
+        # ensure we have enough of the wrapper via its native deposit, no DEX needed.
         if (
             collateral_token_contract.get_asset_token_balance(for_address, web3)
             < left_to_deposit
         ):
-            # If we don't have enough of asset token to deposit into the vault, deposit that one first.
             auto_deposit_depositable_wrapper_erc20(
                 asset_token_contract, left_to_deposit, api_keys, web3
             )
-        # And finally, we can deposit the asset token into the erc4626 vault directly as well, without DEX.
-        collateral_token_contract.deposit_asset_token(left_to_deposit, api_keys, web3)
-
     else:
-        # Otherwise, we need to go through DEX.
-        auto_deposit_erc20(collateral_token_contract, asset_amount_wei, api_keys, web3)
+        # Asset is a plain ERC-20 (e.g. USDC native backing stataPolUSDCn on Polygon):
+        # ensure enough of the asset via DEX swap from the keeping token.
+        if (
+            collateral_token_contract.get_asset_token_balance(for_address, web3)
+            < left_to_deposit
+        ):
+            auto_deposit_erc20(
+                asset_token_contract,
+                left_to_deposit,
+                api_keys,
+                web3,
+                chain=chain,
+                keeping_erc20_token=keeping_erc20_token,
+            )
+
+    # Deposit the asset into the ERC-4626 vault to mint shares.
+    collateral_token_contract.deposit_asset_token(left_to_deposit, api_keys, web3)
 
 
 def auto_deposit_erc20(

@@ -359,6 +359,8 @@ def discover_top_traders(
     all_trades: list[PolymarketTradeResponse] = []
     condition_ids: set[str] = set()
     for item in gamma_items:
+        if item.markets is None:
+            continue
         for market in item.markets:
             cid = market.conditionId
             condition_ids.add(cid.to_0x_hex())

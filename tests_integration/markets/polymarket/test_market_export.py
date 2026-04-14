@@ -100,7 +100,7 @@ def test_fetch_and_export_multi_inner_market() -> None:
     # Collect all condition_ids across all inner markets
     all_condition_ids: set[HexBytes] = set()
     for item in multi_events[:5]:
-        for inner in item.markets:
+        for inner in item.markets or []:
             all_condition_ids.add(inner.conditionId)
 
     conditions = PolymarketSubgraphHandler().get_conditions(list(all_condition_ids))

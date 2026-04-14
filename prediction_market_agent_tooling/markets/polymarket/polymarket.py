@@ -142,9 +142,13 @@ class PolymarketAgentMarket(AgentMarket):
         trading_fee_rate: float,
         condition_id: HexBytes | None = None,
     ) -> t.Optional["PolymarketAgentMarket"]:
+        if model.markets is None:
+            return None
+
         if condition_id is not None:
             target_market = next(
-                (m for m in model.markets if m.conditionId == condition_id), None
+                (m for m in model.markets if m.conditionId == condition_id),
+                None,
             )
             if target_market is None:
                 logger.warning(
@@ -328,7 +332,7 @@ class PolymarketAgentMarket(AgentMarket):
 
         all_condition_ids: set[HexBytes] = set()
         for market in gamma_items:
-            for inner in market.markets:
+            for inner in market.markets or []:
                 all_condition_ids.add(inner.conditionId)
 
         condition_models = PolymarketSubgraphHandler().get_conditions(
@@ -338,7 +342,11 @@ class PolymarketAgentMarket(AgentMarket):
 
         gamma_id_to_trading_fee = {
             # Fee is dependent only on market category, so we can get it just for one market/token.
-            item.id: ClobManager().get_token_fee_rate(item.markets[0].token_ids[0])
+            item.id: (
+                ClobManager().get_token_fee_rate(item.markets[0].token_ids[0])
+                if item.markets
+                else 0
+            )
             for item in gamma_items
         }
 
@@ -651,9 +659,13 @@ class PolymarketAgentMarket(AgentMarket):
         model = get_gamma_event_by_condition_id(cid)
         conditions = PolymarketSubgraphHandler().get_conditions([cid])
         condition_dict = {c.id: c for c in conditions}
-        trading_fee_rate = ClobManager().get_token_fee_rate(
-            # Fee is dependent only on market category, so we can get it just for one market/token.
-            model.markets[0].token_ids[0]
+        trading_fee_rate = (
+            ClobManager().get_token_fee_rate(
+                # Fee is dependent only on market category, so we can get it just for one market/token.
+                model.markets[0].token_ids[0]
+            )
+            if model.markets
+            else 0
         )
         market = PolymarketAgentMarket.from_data_model(
             model,

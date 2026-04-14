@@ -21,6 +21,11 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractOnPolygonChain,
     PayoutRedemptionEvent,
 )
+from prediction_market_agent_tooling.tools.web3_utils import (
+    SafeBatchCall,
+    encode_contract_call,
+    send_safe_batch_tx,
+)
 
 
 class WPOLContract(ContractDepositableWrapperERC20OnPolygonChain):
@@ -139,4 +144,72 @@ class PolymarketConditionalTokenContract(
             condition_id=condition_id,
             index_sets=index_sets,
             web3=web3,
+        )
+
+    def mint_full_set_via_safe_batch(
+        self,
+        api_keys: APIKeys,
+        collateral_token: ContractERC20BaseClass,
+        condition_id: HexBytes,
+        amount: Wei,
+        outcome_slot_count: int = 2,
+        web3: Web3 | None = None,
+    ) -> TxReceipt:
+        """Atomic approve + splitPosition through a Safe MultiSend batch.
+
+        Requires `api_keys.safe_address_checksum`. Combines the two legs into
+        a single on-chain tx — either both succeed or both revert, and we pay
+        gas once.
+        """
+        safe_address = api_keys.safe_address_checksum
+        if safe_address is None:
+            raise ValueError(
+                "mint_full_set_via_safe_batch requires a configured Safe "
+                "(set SAFE_ADDRESS). Use mint_full_set for the EOA path."
+            )
+        web3 = web3 or self.get_web3()
+        partition: list[int] = [2**i for i in range(outcome_slot_count)]
+        calls = [
+            encode_contract_call(
+                web3=web3,
+                contract_address=collateral_token.address,
+                contract_abi=collateral_token.abi,
+                function_name="approve",
+                function_params=[self.address, amount],
+            ),
+            encode_contract_call(
+                web3=web3,
+                contract_address=self.address,
+                contract_abi=self.abi,
+                function_name="splitPosition",
+                function_params=[
+                    collateral_token.address,
+                    bytes(HexBytes(b"\x00" * 32)),
+                    bytes(condition_id),
+                    partition,
+                    amount,
+                ],
+            ),
+        ]
+        return send_safe_batch_tx(
+            web3=web3,
+            safe_address=safe_address,
+            from_private_key=api_keys.bet_from_private_key,
+            calls=calls,
+        )
+
+    @staticmethod
+    def _collateral_approve_call(
+        web3: Web3,
+        collateral_token: ContractERC20BaseClass,
+        spender: ChecksumAddress,
+        amount: Wei,
+    ) -> SafeBatchCall:
+        """Build a `SafeBatchCall` for `collateral.approve(spender, amount)`."""
+        return encode_contract_call(
+            web3=web3,
+            contract_address=collateral_token.address,
+            contract_abi=collateral_token.abi,
+            function_name="approve",
+            function_params=[spender, amount],
         )

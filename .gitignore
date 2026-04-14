@@ -166,3 +166,6 @@ tests_files/*
 bet_strategy_benchmark*
 rate_limit.db
 CLAUDE.md
+
+# Claude Code agent state
+.claude/

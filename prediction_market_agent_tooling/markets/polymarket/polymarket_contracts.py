@@ -168,27 +168,10 @@ class PolymarketConditionalTokenContract(
                 "(set SAFE_ADDRESS). Use mint_full_set for the EOA path."
             )
         web3 = web3 or self.get_web3()
-        partition: list[int] = [2**i for i in range(outcome_slot_count)]
         calls = [
-            encode_contract_call(
-                web3=web3,
-                contract_address=collateral_token.address,
-                contract_abi=collateral_token.abi,
-                function_name="approve",
-                function_params=[self.address, amount],
-            ),
-            encode_contract_call(
-                web3=web3,
-                contract_address=self.address,
-                contract_abi=self.abi,
-                function_name="splitPosition",
-                function_params=[
-                    collateral_token.address,
-                    bytes(HexBytes(b"\x00" * 32)),
-                    bytes(condition_id),
-                    partition,
-                    amount,
-                ],
+            self._collateral_approve_call(web3, collateral_token, self.address, amount),
+            self._split_position_call(
+                web3, collateral_token, condition_id, outcome_slot_count, amount
             ),
         ]
         return send_safe_batch_tx(
@@ -212,4 +195,65 @@ class PolymarketConditionalTokenContract(
             contract_abi=collateral_token.abi,
             function_name="approve",
             function_params=[spender, amount],
+        )
+
+    def _split_position_call(
+        self,
+        web3: Web3,
+        collateral_token: ContractERC20BaseClass,
+        condition_id: HexBytes,
+        outcome_slot_count: int,
+        amount: Wei,
+    ) -> SafeBatchCall:
+        """Build a `SafeBatchCall` for `CTF.splitPosition(collateral, 0x0, cond, partition, amount)`."""
+        partition: list[int] = [2**i for i in range(outcome_slot_count)]
+        return encode_contract_call(
+            web3=web3,
+            contract_address=self.address,
+            contract_abi=self.abi,
+            function_name="splitPosition",
+            function_params=[
+                collateral_token.address,
+                bytes(HexBytes(b"\x00" * 32)),
+                bytes(condition_id),
+                partition,
+                amount,
+            ],
+        )
+
+    def _erc1155_transfer_call(
+        self,
+        web3: Web3,
+        frm: ChecksumAddress,
+        to: ChecksumAddress,
+        position_id: int,
+        amount: OutcomeWei,
+    ) -> SafeBatchCall:
+        """Build a `SafeBatchCall` for ERC1155 `safeTransferFrom(frm, to, id, amount, b'')`."""
+        return encode_contract_call(
+            web3=web3,
+            contract_address=self.address,
+            contract_abi=self.abi,
+            function_name="safeTransferFrom",
+            function_params=[frm, to, position_id, amount.value, b""],
+        )
+
+    def _position_id_for(
+        self,
+        collateral_address: ChecksumAddress,
+        condition_id: HexBytes,
+        index_set: int,
+        web3: Web3 | None = None,
+    ) -> int:
+        """Compute the ERC1155 positionId for a (collateral, condition, index_set)."""
+        collection_id = self.getCollectionId(
+            parent_collection_id=HexBytes(b"\x00" * 32),
+            condition_id=condition_id,
+            index_set=index_set,
+            web3=web3,
+        )
+        return self.getPositionId(
+            collateral_token_address=collateral_address,
+            collection_id=collection_id,
+            web3=web3,
         )

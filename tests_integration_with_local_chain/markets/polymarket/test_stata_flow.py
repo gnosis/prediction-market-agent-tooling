@@ -109,9 +109,11 @@ def test_auto_deposit_usdc_native_to_stata(polygon_local_web3: Web3) -> None:
     )
 
     stata_balance = stata.balanceOf(api_keys.bet_from_address, web3=polygon_local_web3)
-    # Shares >= requested shares (share-price is > 1 USDC since stata accrues yield)
-    assert stata_balance.value >= want_shares.value
-    # USDC native spent
+    # ERC-4626 round-trip (shares -> asset -> shares) can lose a wei or two
+    # to rounding. We should receive essentially the requested share amount.
+    tolerance_wei = 10
+    assert abs(stata_balance.value - want_shares.value) <= tolerance_wei
+    # USDC native spent.
     usdc_balance = usdc.balanceOf(api_keys.bet_from_address, web3=polygon_local_web3)
     assert usdc_balance.value < int(20 * 1e6)
 

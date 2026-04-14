@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 
 import httpx
 import tenacity
+from httpx import Client
 
 from prediction_market_agent_tooling.gtypes import ChecksumAddress, HexBytes
 from prediction_market_agent_tooling.loggers import logger
@@ -57,7 +58,7 @@ def get_polymarkets_with_pagination(
     Binary markets have len(model.markets) == 1.
     Categorical markets have len(model.markets) > 1
     """
-    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    client = Client()
     all_markets: list[PolymarketGammaResponseDataItem] = []
     offset = 0
     remaining = limit
@@ -80,7 +81,7 @@ def get_polymarkets_with_pagination(
         params_not_none = {k: v for k, v in params.items() if v is not None}
         url = urljoin(
             POLYMARKET_GAMMA_API_BASE_URL,
-            f"events/pagination",
+            "events/pagination",
         )
 
         r = client.get(url, params=params_not_none, timeout=60.0)
@@ -91,7 +92,7 @@ def get_polymarkets_with_pagination(
         markets_to_add = []
         for m in market_response.data:
             # Some Polymarket markets are missing the markets field
-            if m.markets is None or m.markets[0].clobTokenIds is None:
+            if not m.markets or m.markets[0].clobTokenIds is None:
                 continue
             if excluded_questions and m.title in excluded_questions:
                 continue
@@ -114,7 +115,7 @@ def get_polymarkets_with_pagination(
             markets_to_add = [
                 market
                 for market in markets_to_add
-                if market.markets is not None and len(market.markets) == 1
+                if market.markets and len(market.markets) == 1
             ]
 
         # Add the markets from this batch to our results
@@ -150,7 +151,7 @@ def get_user_positions(
     """Fetch a user's Polymarket positions; optionally filter by condition IDs."""
     url = f"{POLYMARKET_DATA_API_BASE_URL}/positions"
     # ... rest of implementation ...
-    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    client = Client()
 
     params = {
         "user": user_id,
@@ -175,7 +176,7 @@ def _fetch_trades_paginated(
     limit: t.Optional[int] = None,
 ) -> list[PolymarketTradeResponse]:
     url = f"{POLYMARKET_DATA_API_BASE_URL}/trades"
-    client: httpx.Client = HttpxCachedClient(ttl=timedelta(seconds=60)).get_client()
+    client = Client()
     all_trades: list[PolymarketTradeResponse] = []
     offset = 0
 

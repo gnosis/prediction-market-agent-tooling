@@ -18,7 +18,7 @@ def _find_multi_inner_market_event() -> str:
         only_binary=False,
     )
     for item in items:
-        if item.markets is not None and len(item.markets) > 1:
+        if item.markets and len(item.markets) > 1:
             return item.id
     raise RuntimeError("No multi-inner-market event found on Polymarket")
 

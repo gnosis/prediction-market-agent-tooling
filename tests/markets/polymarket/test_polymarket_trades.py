@@ -91,10 +91,10 @@ def _mock_response(data: list[dict[str, object]]) -> MagicMock:
 
 
 class TestGetUserTrades:
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_single_page(self, mock_client_cls: MagicMock) -> None:
         trades = [_make_trade_dict(transactionHash=f"0x{i}") for i in range(3)]
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response(trades)
 
         result = get_user_trades(user_address=MOCK_USER)
@@ -102,11 +102,11 @@ class TestGetUserTrades:
         assert len(result) == 3
         mock_client.get.assert_called_once()
 
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_multi_page_pagination(self, mock_client_cls: MagicMock) -> None:
         page1 = [_make_trade_dict(transactionHash=f"0x{i}") for i in range(100)]
         page2 = [_make_trade_dict(transactionHash=f"0x{i}") for i in range(100, 150)]
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.side_effect = [_mock_response(page1), _mock_response(page2)]
 
         result = get_user_trades(user_address=MOCK_USER)
@@ -124,14 +124,14 @@ class TestGetUserTrades:
 
         assert len(result) == 50
 
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_time_filtering_after(self, mock_client_cls: MagicMock) -> None:
         trades = [
             _make_trade_dict(timestamp=1700000100, transactionHash="0xa"),
             _make_trade_dict(timestamp=1700000050, transactionHash="0xb"),
             _make_trade_dict(timestamp=1700000000, transactionHash="0xc"),
         ]
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response(trades)
 
         after = DatetimeUTC.to_datetime_utc(1700000060)
@@ -140,14 +140,14 @@ class TestGetUserTrades:
         assert len(result) == 1
         assert result[0].transactionHash == HexBytes("0xa")
 
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_time_filtering_before(self, mock_client_cls: MagicMock) -> None:
         trades = [
             _make_trade_dict(timestamp=1700000100, transactionHash="0xa"),
             _make_trade_dict(timestamp=1700000050, transactionHash="0xb"),
             _make_trade_dict(timestamp=1700000000, transactionHash="0xc"),
         ]
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response(trades)
 
         before = DatetimeUTC.to_datetime_utc(1700000060)
@@ -157,14 +157,14 @@ class TestGetUserTrades:
         assert result[0].transactionHash == HexBytes("0xb")
         assert result[1].transactionHash == HexBytes("0xc")
 
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_time_filtering_combined(self, mock_client_cls: MagicMock) -> None:
         trades = [
             _make_trade_dict(timestamp=1700000100, transactionHash="0xa"),
             _make_trade_dict(timestamp=1700000050, transactionHash="0xb"),
             _make_trade_dict(timestamp=1700000000, transactionHash="0xc"),
         ]
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response(trades)
 
         after = DatetimeUTC.to_datetime_utc(1700000010)
@@ -174,9 +174,9 @@ class TestGetUserTrades:
         assert len(result) == 1
         assert result[0].transactionHash == HexBytes("0xb")
 
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_empty_response(self, mock_client_cls: MagicMock) -> None:
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response([])
 
         result = get_user_trades(user_address=MOCK_USER)
@@ -185,10 +185,10 @@ class TestGetUserTrades:
 
 
 class TestGetTradesForMarket:
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_market_filter(self, mock_client_cls: MagicMock) -> None:
         trades = [_make_trade_dict()]
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response(trades)
 
         result = get_trades_for_market(market=MOCK_CONDITION_ID)
@@ -197,10 +197,10 @@ class TestGetTradesForMarket:
         call_params = mock_client.get.call_args[1]["params"]
         assert call_params["market"] == MOCK_CONDITION_ID.to_0x_hex()
 
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_market_with_user_filter(self, mock_client_cls: MagicMock) -> None:
         trades = [_make_trade_dict()]
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response(trades)
 
         result = get_trades_for_market(market=MOCK_CONDITION_ID, user=MOCK_USER)
@@ -209,9 +209,9 @@ class TestGetTradesForMarket:
         call_params = mock_client.get.call_args[1]["params"]
         assert call_params["user"] == MOCK_USER
 
-    @patch("prediction_market_agent_tooling.markets.polymarket.api.HttpxCachedClient")
+    @patch("prediction_market_agent_tooling.markets.polymarket.api.Client")
     def test_market_without_user_omits_param(self, mock_client_cls: MagicMock) -> None:
-        mock_client = mock_client_cls.return_value.get_client.return_value
+        mock_client = mock_client_cls.return_value
         mock_client.get.return_value = _mock_response([])
 
         get_trades_for_market(market=MOCK_CONDITION_ID)

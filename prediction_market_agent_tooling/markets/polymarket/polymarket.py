@@ -142,9 +142,13 @@ class PolymarketAgentMarket(AgentMarket):
         trading_fee_rate: float,
         condition_id: HexBytes | None = None,
     ) -> t.Optional["PolymarketAgentMarket"]:
+        if model.markets is None:
+            return None
+
         if condition_id is not None:
             target_market = next(
-                (m for m in model.markets if m.conditionId == condition_id), None
+                (m for m in model.markets if m.conditionId == condition_id),
+                None,
             )
             if target_market is None:
                 logger.warning(
@@ -328,7 +332,7 @@ class PolymarketAgentMarket(AgentMarket):
 
         all_condition_ids: set[HexBytes] = set()
         for market in gamma_items:
-            for inner in market.markets:
+            for inner in market.markets or []:
                 all_condition_ids.add(inner.conditionId)
 
         condition_models = PolymarketSubgraphHandler().get_conditions(
@@ -338,7 +342,11 @@ class PolymarketAgentMarket(AgentMarket):
 
         gamma_id_to_trading_fee = {
             # Fee is dependent only on market category, so we can get it just for one market/token.
-            item.id: ClobManager().get_token_fee_rate(item.markets[0].token_ids[0])
+            item.id: (
+                ClobManager().get_token_fee_rate(item.markets[0].token_ids[0])
+                if item.markets
+                else 0
+            )
             for item in gamma_items
         }
 
@@ -625,6 +633,9 @@ class PolymarketAgentMarket(AgentMarket):
         outcome: OutcomeStr,
         api_keys: APIKeys | None = None,
     ) -> None:
+        """
+        Sell all positions for this user in this market.
+        """
         api_keys = api_keys if api_keys is not None else APIKeys()
         better_address = api_keys.bet_from_address
         larger_than = self.get_liquidatable_amount()
@@ -648,9 +659,13 @@ class PolymarketAgentMarket(AgentMarket):
         model = get_gamma_event_by_condition_id(cid)
         conditions = PolymarketSubgraphHandler().get_conditions([cid])
         condition_dict = {c.id: c for c in conditions}
-        trading_fee_rate = ClobManager().get_token_fee_rate(
-            # Fee is dependent only on market category, so we can get it just for one market/token.
-            model.markets[0].token_ids[0]
+        trading_fee_rate = (
+            ClobManager().get_token_fee_rate(
+                # Fee is dependent only on market category, so we can get it just for one market/token.
+                model.markets[0].token_ids[0]
+            )
+            if model.markets
+            else 0
         )
         market = PolymarketAgentMarket.from_data_model(
             model,
@@ -659,6 +674,59 @@ class PolymarketAgentMarket(AgentMarket):
             trading_fee_rate=trading_fee_rate,
         )
         return check_not_none(market)
+
+    @staticmethod
+    def sell_all_user_positions(api_keys: APIKeys | None = None) -> list[str]:
+        """Sell all non-zero outcome token positions for this user across all markets."""
+        api_keys = api_keys or APIKeys()
+        positions = get_user_positions(
+            user_id=Web3.to_checksum_address(api_keys.bet_from_address)
+        )
+
+        if not positions:
+            logger.info(f"No user positions found for {api_keys.bet_from_address}.")
+            return []
+
+        clob_manager = ClobManager(api_keys=api_keys)
+        tx_hashes: list[str] = []
+        sold_positions_count = 0
+        sold_outcome_tokens = OutcomeToken(0)
+        sold_usd = USD(0)
+
+        for position in positions:
+            token_amount = position.size_as_outcome_token
+            if token_amount <= OutcomeToken(0):
+                continue
+
+            if position.redeemable:
+                logger.info(
+                    f"Skipping redeemable position for condition_id={position.conditionId} outcome={position.outcome}."
+                )
+                continue
+
+            token_id = int(position.asset)
+            created_order = clob_manager.place_sell_market_order(
+                token_id=token_id,
+                token_shares=token_amount,
+            )
+            if not created_order.success:
+                raise ValueError(
+                    "Error creating order for "
+                    f"condition_id={position.conditionId}, "
+                    f"outcome={position.outcome}: {created_order}"
+                )
+
+            tx_hash = created_order.transactionsHashes[0].to_0x_hex()
+            tx_hashes.append(tx_hash)
+            sold_positions_count += 1
+            sold_outcome_tokens += token_amount
+            sold_usd += position.current_value_usd
+
+        logger.info(
+            f"Sold positions summary for {api_keys.bet_from_address}: {sold_positions_count=}, {sold_outcome_tokens=}, {sold_usd=}",
+        )
+
+        return tx_hashes
 
     def can_be_traded(self) -> bool:
         return (

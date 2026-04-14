@@ -1,10 +1,13 @@
+import time
+
 import pytest
 
 from prediction_market_agent_tooling.config import APIKeys
-from prediction_market_agent_tooling.gtypes import USD, OutcomeToken
+from prediction_market_agent_tooling.gtypes import USD, ChecksumAddress, OutcomeToken
 from prediction_market_agent_tooling.markets.polymarket.api import get_user_trades
 from prediction_market_agent_tooling.markets.polymarket.data_models import (
     PolymarketSideEnum,
+    PolymarketTradeResponse,
 )
 from prediction_market_agent_tooling.markets.polymarket.polymarket import (
     PolymarketAgentMarket,
@@ -39,10 +42,8 @@ def test_place_and_sell_bet_real() -> None:
     assert buy_tx.startswith("0x")
 
     # Verify the buy trade shows up in the Data API
-    trades_after_buy = get_user_trades(user_address=user_address)
-    assert len(trades_after_buy) > len(trades_before), (
-        f"Expected more trades after buy, "
-        f"got {len(trades_after_buy)} (before: {len(trades_before)})"
+    trades_after_buy = _get_user_trades_above_count(
+        user_address=user_address, min_count=len(trades_before) + 1
     )
     buy_trade = trades_after_buy[0]
     assert buy_trade.conditionId == market.condition_id
@@ -64,8 +65,9 @@ def test_place_and_sell_bet_real() -> None:
     assert sell_tx.startswith("0x")
 
     # Verify the sell trade shows up
-    trades_after_sell = get_user_trades(user_address=user_address)
-    assert len(trades_after_sell) > len(trades_after_buy)
+    trades_after_sell = _get_user_trades_above_count(
+        user_address=user_address, min_count=len(trades_after_buy) + 1
+    )
     sell_trade = trades_after_sell[0]
     assert sell_trade.conditionId == market.condition_id
     assert sell_trade.side == PolymarketSideEnum.SELL
@@ -74,3 +76,23 @@ def test_place_and_sell_bet_real() -> None:
     position_after_sell = market.get_position(user_id=user_address)
     if position_after_sell is not None:
         assert position_after_sell.amounts_ot[outcome] == OutcomeToken(0)
+
+
+def _get_user_trades_above_count(
+    user_address: ChecksumAddress,
+    min_count: int,
+    retries: int = 120,
+    delay: int = 5,
+) -> list[PolymarketTradeResponse]:
+    """
+    Helper to fetch user trades, retrying until we have at least min_count trades.
+    The default retries/delay are high, but it really takes so much time for data api to get updated.
+    """
+    for _ in range(retries):
+        trades = get_user_trades(user_address=user_address)
+        if len(trades) >= min_count:
+            return trades
+        time.sleep(delay)
+    raise AssertionError(
+        f"Expected at least {min_count} trades for user {user_address}, got {len(trades)}"
+    )

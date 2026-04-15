@@ -12,6 +12,19 @@ NEG_RISK_EXCHANGE = Web3.to_checksum_address(
 NEG_RISK_ADAPTER = Web3.to_checksum_address(
     "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296"
 )
+# Aave V3 static (ERC-4626) wrapper over the aToken for USDC native on Polygon.
+# Non-rebasing — yield accrues via share-price appreciation, which is what
+# CTF splitPosition requires (rebasing aTokens would "freeze" yield at mint).
+STATA_POL_USDCN_ADDRESS = Web3.to_checksum_address(
+    "0x2DCA80061632f3F87c9cA28364d1d0c30cD79a19"
+)
+# Canonical Gnosis Guild Wrapped1155Factory — deployed by us on Polygon.
+# Wraps any CTF ERC1155 outcome token into a per-(tokenId, data) ERC20 via
+# deterministic CREATE2, so positions can trade on ERC20 venues (CoW,
+# Uniswap, Balancer).
+WRAPPED_1155_FACTORY_ADDRESS = Web3.to_checksum_address(
+    "0x60106ef4e33C56becf54D2FFbE55139418d4aAAE"
+)
 
 # API URLs
 POLYMARKET_BASE_URL = "https://polymarket.com"

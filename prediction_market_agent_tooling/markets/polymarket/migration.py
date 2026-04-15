@@ -34,9 +34,12 @@ from prediction_market_agent_tooling.markets.polymarket.polymarket_contracts imp
     PolymarketConditionalTokenContract,
     StataPolUSDCnContract,
     USDCeContract,
+    Wrapped1155Contract,
+    Wrapped1155FactoryContract,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     SafeBatchCall,
+    encode_contract_call,
     send_safe_batch_tx,
 )
 
@@ -51,6 +54,25 @@ class MigrationResult:
     amount_in_wei: OutcomeWei
     amount_out_wei: OutcomeWei
     leftover_no_wei: OutcomeWei
+    wrapped_erc20_address: ChecksumAddress | None = None
+
+
+def _default_wrap_metadata(
+    condition_id: HexBytes, outcome_index: int
+) -> tuple[str, str, int]:
+    """Derive ERC-20 name/symbol for the wrapped outcome token.
+
+    Short-string form caps at 31 bytes — we use the leading 6 hex chars of
+    the condition id to keep the symbol human-recognisable without blowing
+    the limit.
+    """
+    outcome = "YES" if outcome_index == 0 else f"OUT{outcome_index}"
+    cond_prefix = condition_id.to_0x_hex()[2:10]
+    return (
+        f"wstata-{outcome}-{cond_prefix}",
+        f"wS{outcome}-{cond_prefix}",
+        6,
+    )
 
 
 def _resolve_amount_out(
@@ -100,6 +122,56 @@ def _precheck(
         )
 
 
+def _final_push_legs(
+    web3: Web3,
+    ctf: PolymarketConditionalTokenContract,
+    safe_address: ChecksumAddress,
+    user_address: ChecksumAddress,
+    target_position_id: int,
+    amount_out: OutcomeWei,
+    wrap_metadata: bytes | None,
+) -> list[SafeBatchCall]:
+    """Either push raw ERC-1155 to user, or route via factory to produce ERC-20.
+
+    `wrap_metadata is None` → single leg, raw ERC-1155 to user.
+    `wrap_metadata is not None` → two legs, factory wraps then Safe transfers
+    the freshly-minted ERC-20 to the user.
+    """
+    if wrap_metadata is None:
+        return [
+            ctf._erc1155_transfer_call(
+                web3, safe_address, user_address, target_position_id, amount_out
+            )
+        ]
+    factory = Wrapped1155FactoryContract()
+    wrapped_address = factory.get_wrapped_1155(
+        multi_token=ctf.address,
+        token_id=target_position_id,
+        data=wrap_metadata,
+        web3=web3,
+    )
+    wrapped_erc20 = Wrapped1155Contract(address=wrapped_address)
+    return [
+        # Safe hands ERC-1155 to the factory with the metadata payload;
+        # factory CREATE2-deploys the ERC-20 if needed and mints to Safe.
+        ctf._erc1155_transfer_call(
+            web3,
+            safe_address,
+            factory.address,
+            target_position_id,
+            amount_out,
+            wrap_metadata,
+        ),
+        encode_contract_call(
+            web3=web3,
+            contract_address=wrapped_erc20.address,
+            contract_abi=wrapped_erc20.abi,
+            function_name="transfer",
+            function_params=[user_address, amount_out.value],
+        ),
+    ]
+
+
 def _build_inventory_calls(
     web3: Web3,
     ctf: PolymarketConditionalTokenContract,
@@ -109,13 +181,20 @@ def _build_inventory_calls(
     target_position_id: int,
     amount_in: OutcomeWei,
     amount_out: OutcomeWei,
+    wrap_metadata: bytes | None,
 ) -> list[SafeBatchCall]:
     return [
         ctf._erc1155_transfer_call(
             web3, user_address, safe_address, source_position_id, amount_in
         ),
-        ctf._erc1155_transfer_call(
-            web3, safe_address, user_address, target_position_id, amount_out
+        *_final_push_legs(
+            web3,
+            ctf,
+            safe_address,
+            user_address,
+            target_position_id,
+            amount_out,
+            wrap_metadata,
         ),
     ]
 
@@ -132,6 +211,7 @@ def _build_fresh_mint_calls(
     amount_in: OutcomeWei,
     amount_out: OutcomeWei,
     outcome_slot_count: int,
+    wrap_metadata: bytes | None,
 ) -> list[SafeBatchCall]:
     split_amount = Wei(amount_out.value)
     return [
@@ -144,8 +224,14 @@ def _build_fresh_mint_calls(
         ctf._erc1155_transfer_call(
             web3, user_address, safe_address, source_position_id, amount_in
         ),
-        ctf._erc1155_transfer_call(
-            web3, safe_address, user_address, target_position_id, amount_out
+        *_final_push_legs(
+            web3,
+            ctf,
+            safe_address,
+            user_address,
+            target_position_id,
+            amount_out,
+            wrap_metadata,
         ),
     ]
 
@@ -182,12 +268,14 @@ def migrate_from_inventory(
     outcome_index: int = 0,
     outcome_slot_count: int = 2,
     exchange_rate: ExchangeRate = "one_to_one",
+    wrap_output: bool = False,
     web3: Web3 | None = None,
 ) -> MigrationResult:
     """Swap using stata outcome tokens already held by the Safe.
 
-    No mint leg in the batch — only two ERC1155 transfers. Reverts if the
-    Safe does not already hold at least `amount_out` stata-<outcome>.
+    No mint leg in the batch — only two ERC1155 transfers (or three legs
+    when `wrap_output=True`: ERC1155 pull + wrap + ERC20 transfer). Reverts
+    if the Safe does not already hold at least `amount_out` stata-<outcome>.
     """
     safe_address = api_keys.safe_address_checksum
     if safe_address is None:
@@ -226,6 +314,20 @@ def migrate_from_inventory(
         )
 
     w3 = web3 or ctf.get_web3()
+    wrap_metadata: bytes | None = None
+    wrapped_erc20_address: ChecksumAddress | None = None
+    if wrap_output:
+        name, symbol, decimals = _default_wrap_metadata(condition_id, outcome_index)
+        wrap_metadata = Wrapped1155FactoryContract.encode_metadata(
+            name, symbol, decimals
+        )
+        wrapped_erc20_address = Wrapped1155FactoryContract().get_wrapped_1155(
+            multi_token=ctf.address,
+            token_id=target_position_id,
+            data=wrap_metadata,
+            web3=w3,
+        )
+
     calls = _build_inventory_calls(
         web3=w3,
         ctf=ctf,
@@ -235,10 +337,12 @@ def migrate_from_inventory(
         target_position_id=target_position_id,
         amount_in=amount,
         amount_out=amount_out,
+        wrap_metadata=wrap_metadata,
     )
     logger.info(
         f"Migration path=inventory condition={condition_id.to_0x_hex()} "
-        f"user={user_address} amount_in={amount} amount_out={amount_out}"
+        f"user={user_address} amount_in={amount} amount_out={amount_out} "
+        f"wrap_output={wrap_output}"
     )
     receipt = send_safe_batch_tx(
         web3=w3,
@@ -253,6 +357,7 @@ def migrate_from_inventory(
         amount_in_wei=amount,
         amount_out_wei=amount_out,
         leftover_no_wei=OutcomeWei(0),
+        wrapped_erc20_address=wrapped_erc20_address,
     )
 
 
@@ -265,6 +370,7 @@ def migrate_via_fresh_mint(
     outcome_index: int = 0,
     outcome_slot_count: int = 2,
     exchange_rate: ExchangeRate = "one_to_one",
+    wrap_output: bool = False,
     web3: Web3 | None = None,
 ) -> MigrationResult:
     """Split a fresh stata full set inside the batch, then swap one outcome.
@@ -272,6 +378,10 @@ def migrate_via_fresh_mint(
     The Safe must hold at least `amount_out` stata shares up front. After
     the batch the Safe holds: the user's source outcome ERC1155 and all
     non-migrated stata outcome ERC1155s (`amount_out` each).
+
+    `wrap_output=True` adds two trailing legs: route the user's target
+    outcome ERC1155 through `Wrapped1155Factory` to produce an ERC-20, then
+    transfer that ERC-20 to the user.
     """
     safe_address = api_keys.safe_address_checksum
     if safe_address is None:
@@ -308,6 +418,20 @@ def migrate_via_fresh_mint(
         )
 
     w3 = web3 or ctf.get_web3()
+    wrap_metadata: bytes | None = None
+    wrapped_erc20_address: ChecksumAddress | None = None
+    if wrap_output:
+        name, symbol, decimals = _default_wrap_metadata(condition_id, outcome_index)
+        wrap_metadata = Wrapped1155FactoryContract.encode_metadata(
+            name, symbol, decimals
+        )
+        wrapped_erc20_address = Wrapped1155FactoryContract().get_wrapped_1155(
+            multi_token=ctf.address,
+            token_id=target_position_id,
+            data=wrap_metadata,
+            web3=w3,
+        )
+
     calls = _build_fresh_mint_calls(
         web3=w3,
         ctf=ctf,
@@ -320,10 +444,12 @@ def migrate_via_fresh_mint(
         amount_in=amount,
         amount_out=amount_out,
         outcome_slot_count=outcome_slot_count,
+        wrap_metadata=wrap_metadata,
     )
     logger.info(
         f"Migration path=fresh_mint condition={condition_id.to_0x_hex()} "
-        f"user={user_address} amount_in={amount} amount_out={amount_out}"
+        f"user={user_address} amount_in={amount} amount_out={amount_out} "
+        f"wrap_output={wrap_output}"
     )
     receipt = send_safe_batch_tx(
         web3=w3,
@@ -338,6 +464,7 @@ def migrate_via_fresh_mint(
         amount_in_wei=amount,
         amount_out_wei=amount_out,
         leftover_no_wei=amount_out,
+        wrapped_erc20_address=wrapped_erc20_address,
     )
 
 
@@ -351,6 +478,7 @@ def migrate_position(
     outcome_slot_count: int = 2,
     exchange_rate: ExchangeRate = "one_to_one",
     auto_reconcile: bool = False,
+    wrap_output: bool = False,
     web3: Web3 | None = None,
 ) -> MigrationResult:
     """Dispatch: take the inventory path when the Safe already has enough
@@ -360,6 +488,10 @@ def migrate_position(
     merges any matched YES+NO held by the Safe (per collateral) back into
     collateral. This is a no-op unless the Safe already held the counter
     outcome for either the USDC.e or stata leg.
+
+    `wrap_output=True` routes the user's resulting outcome token through
+    `Wrapped1155Factory`, so the user receives a tradeable ERC-20 instead
+    of a raw CTF ERC-1155.
     """
     safe_address = api_keys.safe_address_checksum
     if safe_address is None:
@@ -387,6 +519,7 @@ def migrate_position(
             outcome_index=outcome_index,
             outcome_slot_count=outcome_slot_count,
             exchange_rate=exchange_rate,
+            wrap_output=wrap_output,
             web3=web3,
         )
     else:
@@ -399,6 +532,7 @@ def migrate_position(
             outcome_index=outcome_index,
             outcome_slot_count=outcome_slot_count,
             exchange_rate=exchange_rate,
+            wrap_output=wrap_output,
             web3=web3,
         )
 

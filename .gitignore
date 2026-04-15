@@ -169,3 +169,9 @@ CLAUDE.md
 
 # Claude Code agent state
 .claude/
+
+# Foundry artifacts + deps (see contracts/README)
+contracts/out/
+contracts/cache/
+contracts/lib/
+contracts/broadcast/

@@ -1,3 +1,4 @@
+import os
 import typing as t
 
 from web3 import Web3
@@ -5,6 +6,7 @@ from web3.types import TxReceipt
 
 from prediction_market_agent_tooling.config import APIKeys
 from prediction_market_agent_tooling.gtypes import (
+    ABI,
     ChecksumAddress,
     HexBytes,
     OutcomeWei,
@@ -12,6 +14,7 @@ from prediction_market_agent_tooling.gtypes import (
 )
 from prediction_market_agent_tooling.markets.polymarket.constants import (
     STATA_POL_USDCN_ADDRESS,
+    WRAPPED_1155_FACTORY_ADDRESS,
 )
 from prediction_market_agent_tooling.tools.contract import (
     ConditionalTokenContract,
@@ -20,6 +23,7 @@ from prediction_market_agent_tooling.tools.contract import (
     ContractERC4626OnPolygonChain,
     ContractOnPolygonChain,
     PayoutRedemptionEvent,
+    abi_field_validator,
 )
 from prediction_market_agent_tooling.tools.web3_utils import (
     SafeBatchCall,
@@ -53,6 +57,68 @@ class StataPolUSDCnContract(ContractERC4626OnPolygonChain):
     # Aave V3 static ERC-4626 wrapper over the aToken for USDC native on
     # Polygon. Asset is USDC native (0x3c499c54…). Non-rebasing.
     address: ChecksumAddress = STATA_POL_USDCN_ADDRESS
+
+
+class Wrapped1155FactoryContract(ContractOnPolygonChain):
+    """Canonical Gnosis Guild Wrapped1155Factory.
+
+    Wraps any ERC-1155 token ID into a per-(multiToken, tokenId, metadata)
+    ERC-20 via deterministic CREATE2. Lets CTF outcome tokens trade as
+    normal ERC-20s on CoW, Uniswap, Balancer, etc.
+    """
+
+    address: ChecksumAddress = WRAPPED_1155_FACTORY_ADDRESS
+    abi: ABI = abi_field_validator(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "../../abis/wrapped_1155_factory.abi.json",
+        )
+    )
+
+    def get_wrapped_1155(
+        self,
+        multi_token: ChecksumAddress,
+        token_id: int,
+        data: bytes,
+        web3: Web3 | None = None,
+    ) -> ChecksumAddress:
+        """Return the CREATE2 address of the wrapped ERC-20 (may not yet be deployed)."""
+        addr: str = self.call(
+            "getWrapped1155", [multi_token, token_id, data], web3=web3
+        )
+        return Web3.to_checksum_address(addr)
+
+    @staticmethod
+    def encode_metadata(name: str, symbol: str, decimals: int = 6) -> bytes:
+        """Pack (name, symbol, decimals) into the 65-byte `data` payload.
+
+        The factory writes the first 32 bytes to the ERC-20 `_name` storage
+        slot, the next 32 to `_symbol`, and the last byte to `_decimals`.
+        Names/symbols use Solidity's "short string" form: up to 31 UTF-8
+        bytes, right-padded with zeros, with `length * 2` in the final byte.
+        """
+
+        def _short_string(s: str) -> bytes:
+            b = s.encode("utf-8")
+            if len(b) > 31:
+                raise ValueError(
+                    f"string too long for ERC-20 short-string form "
+                    f"(max 31 bytes, got {len(b)}): {s!r}"
+                )
+            return b.ljust(31, b"\x00") + bytes([len(b) * 2])
+
+        if not 0 <= decimals < 256:
+            raise ValueError(f"decimals must fit in one byte, got {decimals}")
+        return _short_string(name) + _short_string(symbol) + bytes([decimals])
+
+
+class Wrapped1155Contract(ContractERC20BaseClass, ContractOnPolygonChain):
+    """Per-position ERC-20 produced by `Wrapped1155FactoryContract`.
+
+    Instantiate with the CREATE2 address returned by
+    `Wrapped1155FactoryContract.get_wrapped_1155()`. Uses the standard
+    ERC-20 ABI; `factory.unwrap(...)` is the way to burn back to ERC-1155.
+    """
 
 
 class PolymarketConditionalTokenContract(
@@ -228,14 +294,15 @@ class PolymarketConditionalTokenContract(
         to: ChecksumAddress,
         position_id: int,
         amount: OutcomeWei,
+        data: bytes = b"",
     ) -> SafeBatchCall:
-        """Build a `SafeBatchCall` for ERC1155 `safeTransferFrom(frm, to, id, amount, b'')`."""
+        """Build a `SafeBatchCall` for ERC1155 `safeTransferFrom(frm, to, id, amount, data)`."""
         return encode_contract_call(
             web3=web3,
             contract_address=self.address,
             contract_abi=self.abi,
             function_name="safeTransferFrom",
-            function_params=[frm, to, position_id, amount.value, b""],
+            function_params=[frm, to, position_id, amount.value, data],
         )
 
     def _position_id_for(

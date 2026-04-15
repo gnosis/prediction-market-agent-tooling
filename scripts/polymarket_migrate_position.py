@@ -75,6 +75,10 @@ def migrate_polymarket_position(
         False,
         help="After migration, merge any matched YES+NO Safe holds back to collateral.",
     ),
+    wrap_output: bool = typer.Option(
+        False,
+        help="Wrap the user's output outcome token into an ERC-20 via Wrapped1155Factory (CoW-tradeable).",
+    ),
 ) -> None:
     api_keys = APIKeys()
     if api_keys.safe_address_checksum is None:
@@ -119,6 +123,7 @@ def migrate_polymarket_position(
         outcome_slot_count=2,
         exchange_rate=exchange_rate,
         auto_reconcile=auto_reconcile,
+        wrap_output=wrap_output,
         web3=web3,
     )
 
@@ -126,6 +131,7 @@ def migrate_polymarket_position(
         f"Migration done. path={result.source} "
         f"in={result.amount_in_wei} out={result.amount_out_wei} "
         f"leftover_no={result.leftover_no_wei} "
+        f"wrapped_erc20={result.wrapped_erc20_address} "
         f"tx={result.receipt['transactionHash'].hex()}"
     )
 

@@ -154,7 +154,7 @@ def auto_deposit_erc20(
     keeping_token = keeping_erc20_token or KEEPING_ERC20_TOKEN
     # How much do we have already in the other token (collateral token).
     collateral_balance_wei = collateral_token_contract.balanceOf(
-        api_keys.bet_from_address
+        api_keys.bet_from_address, web3=web3
     )
     # Amount of collateral token remaining to get.
     remaining_to_get_in_collateral_wei = max(
@@ -170,7 +170,9 @@ def auto_deposit_erc20(
         chain=chain,
     )
     # If we don't have enough of the source token.
-    if amount_to_sell_wei > keeping_token.balanceOf(api_keys.bet_from_address):
+    if amount_to_sell_wei > keeping_token.balanceOf(
+        api_keys.bet_from_address, web3=web3
+    ):
         # Try to deposit it, if it's depositable token (like Wrapped xDai, agent could have xDai).
         if isinstance(keeping_token, ContractDepositableWrapperERC20BaseClass):
             auto_deposit_depositable_wrapper_erc20(

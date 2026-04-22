@@ -13,6 +13,8 @@ from joblib import Parallel, delayed
 from pydantic.types import SecretStr
 from safe_eth.eth import EthereumClient
 from safe_eth.eth.ethereum_client import TxSpeed
+from safe_eth.safe.enums import SafeOperationEnum
+from safe_eth.safe.multi_send import MultiSend, MultiSendOperation, MultiSendTx
 from safe_eth.safe.safe import SafeV141
 from web3 import Web3
 from web3.constants import HASH_ZERO
@@ -315,6 +317,96 @@ def send_function_on_contract_tx_using_safe(
     safe_tx.call()  # simulate call
     eoa_nonce = web3.eth.get_transaction_count(eoa_public_key)
     tx_hash, tx = safe_tx.execute(
+        from_private_key.get_secret_value(),
+        tx_nonce=eoa_nonce,
+        eip1559_speed=TxSpeed.FAST,
+    )
+    receipt_tx = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
+    check_tx_receipt(receipt_tx)
+    return receipt_tx
+
+
+class SafeBatchCall:
+    """One leg of a Safe MultiSend batch. CALL only (no DELEGATECALL legs)."""
+
+    def __init__(
+        self,
+        to: ChecksumAddress,
+        data: HexBytes,
+        value: int = 0,
+    ):
+        self.to = to
+        self.data = data
+        self.value = value
+
+
+def encode_contract_call(
+    web3: Web3,
+    contract_address: ChecksumAddress,
+    contract_abi: ABI,
+    function_name: str,
+    function_params: Optional[list[Any] | dict[str, Any]] = None,
+    value: int = 0,
+) -> SafeBatchCall:
+    """Build a single `SafeBatchCall` (to, data, value) for a contract call.
+
+    Useful when assembling a MultiSend batch — encodes calldata without
+    submitting the tx.
+    """
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+    data = contract.encode_abi(
+        abi_element_identifier=function_name,
+        args=parse_function_params(function_params),
+    )
+    return SafeBatchCall(to=contract_address, data=HexBytes(data), value=value)
+
+
+def send_safe_batch_tx(
+    web3: Web3,
+    safe_address: ChecksumAddress,
+    from_private_key: PrivateKey,
+    calls: list[SafeBatchCall],
+    timeout: int = 180,
+) -> TxReceipt:
+    """Submit one Safe multisig tx that atomically executes every call in `calls`.
+
+    Uses the canonical call-only MultiSend contract; if any leg reverts the
+    whole batch reverts. The Safe signs once, the EOA pays gas once, and the
+    ordering is guaranteed.
+    """
+    if not calls:
+        raise ValueError("send_safe_batch_tx requires at least one call")
+    if not web3.provider.endpoint_uri:  # type: ignore
+        raise EnvironmentError("RPC_URL not available in web3 object.")
+    ethereum_client = EthereumClient(ethereum_node_url=URI(web3.provider.endpoint_uri))  # type: ignore
+    multi_send = MultiSend(ethereum_client=ethereum_client, call_only=True)
+    multi_send_txs = [
+        MultiSendTx(
+            operation=MultiSendOperation.CALL,
+            to=c.to,
+            value=c.value,
+            data=bytes(c.data),
+        )
+        for c in calls
+    ]
+    payload = multi_send.build_tx_data(multi_send_txs)
+    if multi_send.address is None:
+        raise RuntimeError(
+            "MultiSend contract address is None — library could not resolve "
+            "a canonical call-only MultiSend deployment for this chain."
+        )
+    s = SafeV141(safe_address, ethereum_client)
+    safe_tx = s.build_multisig_tx(
+        to=multi_send.address,
+        value=0,
+        data=bytes(payload),
+        operation=SafeOperationEnum.DELEGATE_CALL.value,
+    )
+    safe_tx.sign(from_private_key.get_secret_value())
+    safe_tx.call()  # simulate
+    eoa_public_key = private_key_to_public_key(from_private_key)
+    eoa_nonce = web3.eth.get_transaction_count(eoa_public_key)
+    tx_hash, _tx = safe_tx.execute(
         from_private_key.get_secret_value(),
         tx_nonce=eoa_nonce,
         eip1559_speed=TxSpeed.FAST,

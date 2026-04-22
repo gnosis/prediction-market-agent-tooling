@@ -634,6 +634,25 @@ class ContractDepositableWrapperERC20OnPolygonChain(
     """
 
 
+class ContractWrapped1155OnPolygonChain(
+    ContractWrapped1155BaseClass, ContractERC20OnPolygonChain
+):
+    pass
+
+
+class ContractERC4626OnPolygonChain(
+    ContractERC4626BaseClass, ContractERC20OnPolygonChain
+):
+    """
+    ERC-4626 standard base class with Polygon Chain configuration.
+    """
+
+    def get_asset_token_contract(
+        self, web3: Web3 | None = None
+    ) -> ContractERC20OnPolygonChain | ContractDepositableWrapperERC20OnPolygonChain:
+        return to_polygon_chain_contract(super().get_asset_token_contract(web3=web3))
+
+
 class ContractProxyOnGnosisChain(ContractProxyBaseClass, ContractOnGnosisChain):
     """
     Proxy contract base class with Gnosis Chain configuration.
@@ -1178,6 +1197,21 @@ def to_gnosis_chain_contract(
         return ContractWrapped1155OnGnosisChain(address=contract.address)
     elif isinstance(contract, ContractERC20BaseClass):
         return ContractERC20OnGnosisChain(address=contract.address)
+    else:
+        raise ValueError("Unsupported contract type")
+
+
+def to_polygon_chain_contract(
+    contract: ContractERC20BaseClass,
+) -> ContractERC20OnPolygonChain:
+    if isinstance(contract, ContractERC4626BaseClass):
+        return ContractERC4626OnPolygonChain(address=contract.address)
+    elif isinstance(contract, ContractDepositableWrapperERC20BaseClass):
+        return ContractDepositableWrapperERC20OnPolygonChain(address=contract.address)
+    elif isinstance(contract, ContractWrapped1155BaseClass):
+        return ContractWrapped1155OnPolygonChain(address=contract.address)
+    elif isinstance(contract, ContractERC20BaseClass):
+        return ContractERC20OnPolygonChain(address=contract.address)
     else:
         raise ValueError("Unsupported contract type")
 

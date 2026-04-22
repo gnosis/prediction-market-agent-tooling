@@ -16,11 +16,14 @@ def get_positions_from_recent_account(
     Retries because The Graph indexers are intermittently unavailable
     for the marketPositions entity on this subgraph.
     """
-    accounts = subgraph.conditions_subgraph.Query.accounts(
-        first=10, orderBy="lastTradedTimestamp", orderDirection="desc"
+    items = subgraph.query_subgraph(
+        url=subgraph.conditions_subgraph_url,
+        entity="accounts",
+        fields="id",
+        first=10,
+        order_by="lastTradedTimestamp",
+        order_direction="desc",
     )
-    result = subgraph.sg.query_json([accounts.id])
-    items = subgraph._parse_items_from_json(result)
     assert len(items) > 0, "No accounts found in conditions subgraph"
 
     for item in items:

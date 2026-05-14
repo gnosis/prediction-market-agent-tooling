@@ -22,6 +22,43 @@ BET_FROM_PRIVATE_KEY=...
 OPENAI_API_KEY=...
 ```
 
+### Cross-Chain Bridge Setup (Optional)
+
+For Polymarket agents, you can enable automatic cross-chain bridging from Gnosis to Polygon when funds are insufficient. This allows agents holding xDAI on Gnosis to automatically bridge to USDC.e or POL on Polygon before placing bets.
+
+**Requirements:**
+- Node.js >= 18 (for CoW Protocol bridge service)
+- xDAI balance on Gnosis chain
+
+**Setup:**
+
+1. Install Node.js dependencies:
+   ```bash
+   cd services/cow-bridge
+   npm install
+   npm run build
+   cd ../..
+   ```
+
+2. Enable cross-chain bridge in `.env`:
+   ```bash
+   ENABLE_CROSS_CHAIN_BRIDGE=true
+   BRIDGE_TIMEOUT_SECONDS=180
+   BRIDGE_MIN_AMOUNT_USD=1.0
+   ```
+
+3. Fund your wallet with xDAI on Gnosis chain.
+
+**How it works:**
+
+When a Polymarket agent calls `place_bet()` and has insufficient USDC.e/POL on Polygon, the system automatically:
+1. Checks xDAI balance on Gnosis
+2. Initiates cross-chain bridge via CoW Protocol
+3. Waits for settlement (~30s-2min)
+4. Proceeds with bet placement
+
+**Note:** The CoW Protocol SDK integration is currently a placeholder. Full implementation requires 3-4 hours of integration work with `@cowprotocol/sdk-bridging`. See `services/cow-bridge/README.md` for details.
+
 ## Benchmarking
 
 Create a benchmarkable agent by subclassing the `AbstractBenchmarkedAgent` base class, and plug in your agent's research and prediction functions into the `predict` method.

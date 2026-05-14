@@ -178,6 +178,29 @@ def auto_deposit_erc20(
             auto_deposit_depositable_wrapper_erc20(
                 keeping_token, amount_to_sell_wei, api_keys, web3
             )
+        # If on Polygon and insufficient funds, try cross-chain bridge from Gnosis
+        elif chain == Chain.POLYGON:
+            from prediction_market_agent_tooling.tools.tokens.cross_chain_bridge import (
+                check_gnosis_balance_and_bridge_if_needed,
+            )
+            
+            logger.info(
+                f"Insufficient {keeping_token.symbol()} on Polygon. "
+                f"Attempting cross-chain bridge from Gnosis..."
+            )
+            
+            bridged = check_gnosis_balance_and_bridge_if_needed(
+                polygon_token=collateral_token_contract.address,
+                required_amount_wei=remaining_to_get_in_collateral_wei,
+                api_keys=api_keys,
+            )
+            
+            if not bridged:
+                raise ValueError(
+                    f"Insufficient funds on both Polygon and Gnosis. "
+                    f"Need {remaining_to_get_in_collateral_wei.as_token} {collateral_token_contract.symbol()} on Polygon, "
+                    f"but cross-chain bridge from Gnosis also failed."
+                )
         else:
             raise ValueError(
                 "Not enough of the source token to sell to get the desired amount of the collateral token."

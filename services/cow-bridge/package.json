@@ -1,0 +1,28 @@
+{
+  "name": "cow-bridge-service",
+  "version": "1.0.0",
+  "description": "CoW Protocol cross-chain bridge service for Gnosis → Polygon swaps",
+  "main": "dist/bridge.js",
+  "bin": {
+    "cow-bridge": "dist/bridge.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/bridge.js",
+    "dev": "ts-node src/bridge.ts",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["cow-protocol", "bridge", "cross-chain", "gnosis", "polygon"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@cowprotocol/cow-sdk": "^7.0.0",
+    "ethers": "^6.13.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}

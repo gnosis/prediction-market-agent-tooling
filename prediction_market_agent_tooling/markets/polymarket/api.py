@@ -91,8 +91,14 @@ def get_polymarkets_with_pagination(
 
         markets_to_add = []
         for m in market_response.data:
-            # Some Polymarket markets are missing the markets field
-            if not m.markets or m.markets[0].clobTokenIds is None:
+            if not m.markets:
+                # Leftover events from before Polymarket grouped markets under a shared
+                # parent event: the inner markets were re-parented and are still returned
+                # under the new event, so nothing is lost by skipping this one. Logged so
+                # that we notice if events start losing their markets for another reason.
+                logger.info(f"Event {m.id} ({m.slug}) has no markets. Skipping.")
+                continue
+            if m.markets[0].clobTokenIds is None:
                 continue
             if excluded_questions and m.title in excluded_questions:
                 continue
